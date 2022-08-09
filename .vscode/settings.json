@@ -6,7 +6,6 @@
     "**/*.js.map": true,
     "**/*.js": {"when": "$(basename).ts"},
     "**/*.map": {"when": "$(basename).map"},
-    "**/dist": true,
   },
   "files.watcherExclude": {
     "**/.git/objects/**": true,

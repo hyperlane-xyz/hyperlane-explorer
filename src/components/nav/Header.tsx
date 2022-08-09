@@ -1,7 +1,6 @@
 import Image from 'next/future/image';
 import Link from 'next/link';
 
-import { WalletControlBar } from '../../features/wallet/WalletControlBar';
 import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
@@ -19,9 +18,30 @@ export function Header() {
                 height={50}
               />
             </div>
+            <div className="font-serif text-xl text-green">Explorer</div>
           </a>
         </Link>
-        <WalletControlBar />
+        <div className="flex space-x-12">
+          <Link href="/">
+            <a className="flex items-center text-lg">Home</a>
+          </Link>
+          <a
+            className="flex items-center text-lg"
+            target="_blank"
+            href="https://docs.useabacus.network"
+            rel="noopener noreferrer"
+          >
+            Docs
+          </a>
+          <a
+            className="flex items-center text-lg"
+            target="_blank"
+            href="https://www.useabacus.network"
+            rel="noopener noreferrer"
+          >
+            About
+          </a>
+        </div>
       </div>
     </header>
   );

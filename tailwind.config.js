@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     fontFamily: {
       sans: ['Neue Haas Grotesk',  'Helvetica', 'sans-serif'],
-      serif: ['serif'],
+      serif: ['Garamond', 'serif'],
       mono: ['Courier New', 'monospace'],
     },
     extend: {
@@ -28,15 +28,26 @@ module.exports = {
           900: '#908E8B',
         },
         red: {
-          100: '#F28B84',
-          200: '#F07770',
-          300: '#EE645B',
-          400: '#EC5147',
-          500: '#EA3E33',
-          600: '#D2372D',
-          700: '#BB3128',
-          800: '#A32B23',
-          900: '#8C251E',
+          100: '#F4CFCC',
+          200: '#EDAFAB',
+          300: '#E58F89',
+          400: '#DE6F67',
+          500: '#DB5F57',
+          600: '#C5554E',
+          700: '#99423C',
+          800: '#6D2F2B',
+          900: '#411C1A',
+        },
+        green: {
+          100: '#E9ECE7',
+          200: '#D3DAD0',
+          300: '#BDC8B8',
+          400: '#A7B6A1',
+          500: '#92A48A',
+          600: '#83937C',
+          700: '#667260',
+          800: '#495245',
+          900: '#2B3129',
         }
       },
       spacing: {
