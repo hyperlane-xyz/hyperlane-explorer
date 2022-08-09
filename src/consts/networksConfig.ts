@@ -1,14 +1,6 @@
 import { Chain, allChains as allChainsWagmi, chain } from 'wagmi';
 
-import { RouterConfig, chainConnectionConfigs } from '@abacus-network/sdk';
-
-export type AbcERC721Config = RouterConfig;
-
-export const localTestConfigs = {
-  test1: chainConnectionConfigs.test1,
-  test2: chainConnectionConfigs.test2,
-  test3: chainConnectionConfigs.test3,
-};
+import { chainConnectionConfigs } from '@abacus-network/sdk';
 
 export const testConfigs = {
   goerli: chainConnectionConfigs.goerli,

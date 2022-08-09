@@ -29,33 +29,30 @@ export default function Document() {
         <meta name="msapplication-TileColor" content="#da532c" />
         <meta name="theme-color" content="#ffffff" />
 
-        <meta name="application-name" content="Abacus Nft Example App" />
+        <meta name="application-name" content="Abacus Explorer" />
         <meta
           name="keywords"
-          content="Abacus Nft Example App App Cross-chain"
+          content="Abacus Explorer App Multi-chain Cross-chain"
         />
         <meta
           name="description"
-          content="A cross-chain NFT app built on Abacus"
+          content="A multi-chain explorer app for the Abacus protocol and network"
         />
 
         <meta name="HandheldFriendly" content="true" />
-        <meta
-          name="apple-mobile-web-app-title"
-          content="Abacus Nft Example App"
-        />
+        <meta name="apple-mobile-web-app-title" content="Abacus Explorer" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
-        <meta property="og:url" content="https://www.useabacus.network/nft" />
-        <meta property="og:title" content="Abacus Nft Example App" />
+        <meta property="og:url" content="https://explorer.useabacus.network" />
+        <meta property="og:title" content="Abacus Explorer" />
         <meta property="og:type" content="website" />
         <meta
           property="og:image"
-          content="https://www.useabacus.network/nft/logo-with-text.png"
+          content="https://explorer.useabacus.network/logo-with-text.png"
         />
         <meta
           property="og:description"
-          content="A cross-chain NFT app built on Abacus"
+          content="A multi-chain explorer app for the Abacus protocol and network"
         />
       </Head>
       <body className="text-black">

@@ -10,7 +10,7 @@ export function ContentFrame(props: PropsWithChildren) {
   return (
     <div className="flex flex-col justify-center items-center h-full">
       <div className="w-112 px-4 pt-2 pb-1 bg-red-400 rounded-t-lg">
-        <h1 className="text-gray-50 text-center">Abacus Example Nft App</h1>
+        <h1 className="text-gray-50 text-center">Abacus Explorer</h1>
         <div className="flex justify-center mt-3 space-x-20">
           <PageNavLink href="/" active={!pathname.includes('transfer')}>
             Search

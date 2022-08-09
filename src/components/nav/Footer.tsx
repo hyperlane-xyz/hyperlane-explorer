@@ -17,7 +17,7 @@ export function Footer() {
             alt="Twitter"
           />
           <FooterIconLink
-            to="https://github.com/abacus-network/abacus-nft"
+            to="https://github.com/abacus-network"
             imgSrc={Github}
             alt="Github"
           />
