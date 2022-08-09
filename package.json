@@ -1,12 +1,11 @@
 {
-  "name": "@abacus-network/nft",
-  "description": "A cross-chain NFT app built on Abacus",
+  "name": "@abacus-network/explorer-app",
+  "description": "A multi-chain explorer app for the Abacus protocol and network.",
   "version": "0.1.0",
   "author": "J M Rossy",
   "dependencies": {
-    "@abacus-network/sdk": "^0.4.0-beta0",
+    "@abacus-network/sdk": "^0.4.0",
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6",
-    "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@rainbow-me/rainbowkit": "^0.4.5",
     "ethers": "^5.6.8",
     "formik": "^2.2.9",
@@ -18,34 +17,20 @@
     "wagmi": "^0.5.11"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.5",
-    "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@trivago/prettier-plugin-sort-imports": "^3.2.0",
-    "@typechain/ethers-v5": "10.0.0",
-    "@typechain/hardhat": "^6.0.0",
-    "@types/mocha": "^9.1.0",
     "@types/node": "18.0.4",
     "@types/react": "18.0.15",
     "@types/react-dom": "18.0.6",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "autoprefixer": "^10.4.7",
-    "chai": "^4.3.0",
     "eslint": "^8.19.0",
     "eslint-config-next": "^12.2.2",
     "eslint-config-prettier": "^8.5.0",
-    "ethereum-waffle": "^3.4.4",
-    "hardhat": "^2.8.4",
-    "hardhat-gas-reporter": "^1.0.7",
     "postcss": "^8.4.14",
     "prettier": "^2.4.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.5",
-    "solhint": "^3.3.2",
-    "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.7.14",
     "tailwindcss": "^3.1.6",
     "ts-node": "^10.8.0",
-    "typechain": "8.0.0",
     "typescript": "^4.7.4"
   },
   "homepage": "https://www.useabacus.network",
@@ -55,20 +40,16 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/abacus-network/abacus-nft"
+    "url": "https://github.com/abacus-network/abacus-explorer-app"
   },
   "scripts": {
-    "clean": "hardhat clean && rm -rf dist cache src/types .next",
+    "clean": "rm -rf dist cache .next",
     "dev": "next dev",
-    "build": "yarn build:contracts && yarn build:app",
-    "build:contracts": "hardhat compile",
-    "build:app": "next build",
+    "build": "next build",
     "typecheck": "tsc",
     "lint": "next lint",
     "start": "next start",
-    "prettier": "prettier --write ./contracts ./src",
-    "test": "hardhat test ./src/test/**/*.test.ts",
-    "test:coverage": "hardhat coverage"
+    "prettier": "prettier --write ./src"
   },
   "types": "dist/src/index.d.ts"
 }

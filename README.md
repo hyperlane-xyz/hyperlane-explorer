@@ -1,6 +1,6 @@
-# Abacus Nft Example App
+# Abacus Explorer App
 
-A cross-chain NFT app built on Abacus.
+A multi-chain explorer app for the Abacus protocol and network.
 
 ## Setup
 
