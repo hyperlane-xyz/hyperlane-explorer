@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/NeueHaasDisplayThin.woff2') format('woff2'),
+    url('/fonts/NeueHaasDisplayThin.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/NeueHaasDisplayRoman.woff2') format('woff2'),
+    url('/fonts/NeueHaasDisplayRoman.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/NeueHaasDisplayBold.woff2') format('woff2'),
+    url('/fonts/NeueHaasDisplayBold.woff') format('woff');
+}

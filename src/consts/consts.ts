@@ -1,0 +1,2 @@
+export const TOKEN_STORAGE_KEY = 'ABC_ERC_721_TOKENS';
+export const TOKEN_FETCH_LIMIT = 100;
