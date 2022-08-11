@@ -1,9 +1,17 @@
 @font-face {
   font-family: 'Neue Haas Grotesk';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 200;
   src: url('/fonts/NeueHaasDisplayThin.woff2') format('woff2'),
     url('/fonts/NeueHaasDisplayThin.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 300;
+  src: url('/fonts/NeueHaasDisplayLight.woff2') format('woff2'),
+    url('/fonts/NeueHaasDisplayLight.woff') format('woff');
 }
 
 @font-face {
@@ -12,6 +20,14 @@
   font-weight: 400;
   src: url('/fonts/NeueHaasDisplayRoman.woff2') format('woff2'),
     url('/fonts/NeueHaasDisplayRoman.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  src: url('/fonts/NeueHaasDisplayMedium.woff2') format('woff2'),
+    url('/fonts/NeueHaasDisplayMedium.woff') format('woff');
 }
 
 @font-face {

@@ -14,11 +14,16 @@ export function Header() {
                 src={Logo}
                 alt="Abacus Logo"
                 quality={100}
-                width={170}
-                height={50}
+                width={140}
+                height={40}
               />
             </div>
-            <div className="font-serif text-xl text-green">Explorer</div>
+            <div
+              style={{ fontSize: '2rem' }}
+              className="font-serif text-green-500 ml-2 pt-px"
+            >
+              Explorer
+            </div>
           </a>
         </Link>
         <div className="flex space-x-12">
