@@ -25,7 +25,7 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-6">
+        <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-8">
           <FooterIconLink
             to="https://twitter.com/Abacus_Network"
             imgSrc={Twitter}

@@ -1,50 +1,15 @@
-import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { PropsWithChildren } from 'react';
 
-import { FloatingBox } from '../layout/FloatingBox';
-
 export function ContentFrame(props: PropsWithChildren) {
-  const { pathname } = useRouter();
-
   return (
     <div className="flex flex-col justify-center items-center h-full">
-      <div className="w-112 px-4 pt-2 pb-1 bg-red-400 rounded-t-lg">
-        <h1 className="text-gray-50 text-center">Abacus Explorer</h1>
-        <div className="flex justify-center mt-3 space-x-20">
-          <PageNavLink href="/" active={!pathname.includes('transfer')}>
-            Search
-          </PageNavLink>
-          <PageNavLink href="/transfer" active={pathname.includes('transfer')}>
-            Transfer
-          </PageNavLink>
-        </div>
-      </div>
-      <FloatingBox width="w-112" classes="relative -top-1">
+      <div
+        style={{ width: 'min(1024px,95vw)' }}
+        className="relative overflow-visible"
+      >
+        <div className="absolute -top-4 -left-4 -right-4 h-32 bg-green-500 rounded-sm z-10"></div>
         {props.children}
-      </FloatingBox>
+      </div>
     </div>
-  );
-}
-
-function PageNavLink(
-  props: PropsWithChildren<{ href: string; active: boolean }>,
-) {
-  const { href, active, children } = props;
-  return (
-    <Link href={href}>
-      <a className="flex flex-col items-center transition-all hover:opacity-70 active:opacity-60">
-        <h2
-          className={`text-sm uppercase tracking-wide ${
-            active ? 'text-gray-50' : 'text-gray-100'
-          }`}
-        >
-          {children}
-        </h2>
-        <div
-          className={`w-full mt-1 h-1 bg-gray-50 ${active ? '' : 'hidden'}`}
-        />
-      </a>
-    </Link>
   );
 }
