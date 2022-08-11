@@ -3,7 +3,6 @@ interface Config {
   debug: boolean;
   version: string | null;
   url: string;
-  discordUrl: string;
 }
 
 const isDevMode = process?.env?.NODE_ENV === 'development';
@@ -14,5 +13,4 @@ export const config: Config = Object.freeze({
   debug: isDevMode,
   version,
   url: 'https://explorer.useabacus.network',
-  discordUrl: 'https://discord.gg/VK9ZUy3aTV',
 });

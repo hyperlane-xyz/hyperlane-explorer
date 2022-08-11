@@ -5,7 +5,7 @@ import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
   return (
-    <header className="w-screen py-5 px-3 sm:pl-5 sm:pr-6">
+    <header className="w-screen p-3 sm:py-5 sm:pl-6 sm:pr-8">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
@@ -28,10 +28,10 @@ export function Header() {
         </Link>
         <div className="flex space-x-12">
           <Link href="/">
-            <a className="flex items-center text-lg">Home</a>
+            <a className={styles.navLink}>Home</a>
           </Link>
           <a
-            className="flex items-center text-lg"
+            className={styles.navLink}
             target="_blank"
             href="https://docs.useabacus.network"
             rel="noopener noreferrer"
@@ -39,7 +39,7 @@ export function Header() {
             Docs
           </a>
           <a
-            className="flex items-center text-lg"
+            className={styles.navLink}
             target="_blank"
             href="https://www.useabacus.network"
             rel="noopener noreferrer"
@@ -51,3 +51,8 @@ export function Header() {
     </header>
   );
 }
+
+const styles = {
+  navLink:
+    'flex items-center text-lg tracking-wide hover:underline hover:opacity-70 transition-all',
+};
