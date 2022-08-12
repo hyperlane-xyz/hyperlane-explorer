@@ -1,12 +1,12 @@
 import type { NextPage } from 'next';
 
 import { ContentFrame } from '../components/nav/ContentFrame';
-import { SearchForm } from '../features/search/SearchForm';
+import { MessageSearch } from '../features/search/MessageSearch';
 
 const Home: NextPage = () => {
   return (
     <ContentFrame>
-      <SearchForm />
+      <MessageSearch />
     </ContentFrame>
   );
 };

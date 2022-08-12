@@ -5,11 +5,11 @@ interface Props {
   classes?: string;
 }
 
-export function FloatingBox(props: PropsWithChildren<Props>) {
+export function Card(props: PropsWithChildren<Props>) {
   const { width, classes } = props;
   return (
     <div
-      className={`${width} p-4 bg-white shadow-md rounded-sm overflow-auto ${classes}`}
+      className={`${width} p-4 bg-white shadow-md rounded overflow-auto ${classes}`}
     >
       {props.children}
     </div>

@@ -1,33 +1,36 @@
-import { Field } from 'formik';
-import { ComponentProps } from 'react';
+import { ChangeEvent } from 'react';
 
-import { useIsSsr } from '../../utils/ssr';
-
-type Props = ComponentProps<typeof Field> & {
-  placeholder;
+type Props = React.DetailedHTMLProps<
+  React.SelectHTMLAttributes<HTMLSelectElement>,
+  HTMLSelectElement
+> & {
   options: Array<{ value: string; display: string }>;
+  value: string;
+  onValueSelect: (value: string) => void;
+  classes?: string;
 };
 
 export function SelectField(props: Props) {
-  // To silence hydration error due to differing options on server
-  const isSSr = useIsSsr();
-  if (isSSr) return null;
+  const { options, value, onValueSelect, classes, ...passThruProps } = props;
 
-  const { options, placeholder, ...passThruProps } = props;
+  const onChangeSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    onValueSelect(event?.target?.value || '');
+  };
+
   return (
-    <Field
-      as="select"
-      className="w-100 mt-2 p-2 text-sm invalid:text-gray-400 border border-color-gray-800 rounded focus:outline-none"
+    <select
+      className={`px-2 py-1.5 text-sm border border-gray-500 rounded invalid:text-gray-400 focus:outline-none ${
+        classes || ''
+      }`}
       {...passThruProps}
+      value={value}
+      onChange={onChangeSelect}
     >
-      <option value="" disabled selected>
-        {placeholder}
-      </option>
       {options.map((o, i) => (
         <option key={`option-${i}`} value={o.value}>
           {o.display}
         </option>
       ))}
-    </Field>
+    </select>
   );
 }

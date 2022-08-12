@@ -8,15 +8,52 @@ export const testConfigs = {
 };
 
 export const prodConfigs = {
-  ethereum: chainConnectionConfigs.ethereum,
   arbitrum: chainConnectionConfigs.arbitrum,
+  avalanche: chainConnectionConfigs.avalanche,
+  bsc: chainConnectionConfigs.bsc,
+  celo: chainConnectionConfigs.celo,
+  ethereum: chainConnectionConfigs.ethereum,
   optimism: chainConnectionConfigs.optimism,
   polygon: chainConnectionConfigs.polygon,
-  celo: chainConnectionConfigs.celo,
-  // TODO add BSC?
 };
 
-const celoMainnetWagmiChain: Chain = {
+export const avalancheChain: Chain = {
+  id: 43114,
+  name: 'Avalanche',
+  network: 'avalanche',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Avalanche',
+    symbol: 'AVAX',
+  },
+  rpcUrls: {
+    default: 'https://api.avax.network/ext/bc/C/rpc',
+  },
+  blockExplorers: {
+    default: { name: 'SnowTrace', url: 'https://snowtrace.io' },
+  },
+  testnet: false,
+};
+
+export const bscChain: Chain = {
+  id: 56,
+  name: 'Binance Smart Chain',
+  network: 'bsc',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'BNB',
+    symbol: 'BNB',
+  },
+  rpcUrls: {
+    default: 'https://bsc-dataseed.binance.org',
+  },
+  blockExplorers: {
+    default: { name: 'BscScan', url: 'https://bscscan.com' },
+  },
+  testnet: false,
+};
+
+export const celoMainnetChain: Chain = {
   id: 42220,
   name: 'Celo',
   network: 'celo',
@@ -34,7 +71,7 @@ const celoMainnetWagmiChain: Chain = {
   testnet: false,
 };
 
-const celoAlfajoresWagmiChain: Chain = {
+export const celoAlfajoresChain: Chain = {
   id: 44787,
   name: 'Alfajores',
   network: 'alfajores',
@@ -56,18 +93,21 @@ const celoAlfajoresWagmiChain: Chain = {
 };
 
 export const prodChains = [
-  chain.mainnet,
   chain.arbitrum,
+  avalancheChain,
+  bscChain,
+  celoMainnetChain,
+  chain.mainnet,
   chain.optimism,
   chain.polygon,
-  celoMainnetWagmiChain,
-  // TODO add BSC?
 ];
 
-export const testChains = [chain.goerli, celoAlfajoresWagmiChain];
+export const testChains = [chain.goerli, celoAlfajoresChain];
 
 export const allChains = [
   ...allChainsWagmi,
-  celoMainnetWagmiChain,
-  celoAlfajoresWagmiChain,
+  avalancheChain,
+  bscChain,
+  celoMainnetChain,
+  celoAlfajoresChain,
 ];
