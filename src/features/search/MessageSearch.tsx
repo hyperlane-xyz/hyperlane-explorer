@@ -41,14 +41,14 @@ export function MessageSearch() {
           onChange={onChangeSearch}
           type="text"
           placeholder="Search for messages by address, transaction hash, or block hash"
-          className="p2 sm:p-4 flex-1 h-12 sm:h-14 rounded focus:outline-none"
+          className="p2 sm:p-4 flex-1 h-10 sm:h-12 rounded focus:outline-none"
         />
-        <div className="bg-beige-500 h-12 sm:h-14 w-12 sm:w-14 flex items-center justify-center rounded">
+        <div className="bg-beige-500 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
           <Image src={SearchIcon} alt="Search" width={20} height={20} />
         </div>
       </div>
       <Card width="w-full" classes="mt-6 p-0">
-        <div className="p-4 flex items-center justify-between border-b border-gray-300">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-gray-300">
           <h2 className="text-gray-800">Latest Messages</h2>
           <div className="flex items-center space-x-3">
             <div className="w-px h-8 bg-gray-300"></div>

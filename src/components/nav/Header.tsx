@@ -5,7 +5,7 @@ import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
   return (
-    <header className="w-screen p-3 sm:py-5 sm:pl-6 sm:pr-8">
+    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">

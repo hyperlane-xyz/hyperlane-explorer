@@ -28,11 +28,12 @@ const CHAIN_TO_ICON = {
 
 function _ChainIcon({
   chainId,
-  size = 50,
+  size = 46,
 }: {
   chainId: number;
   size?: number;
 }) {
+  //TODO replace cube with question mark as default
   const imageSrc = CHAIN_TO_ICON[chainId] || Cube;
   return (
     <div

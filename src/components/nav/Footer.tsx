@@ -10,14 +10,14 @@ import Twitter from '../../images/logos/twitter.svg';
 
 export function Footer() {
   return (
-    <footer className="w-screen px-3 py-5 sm:pl-6 sm:pr-8 opacity-90">
+    <footer className="mt-3 px-2 py-4 sm:pl-6 sm:pr-8 opacity-90">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
-          <Image src={Abacus} alt="Abacus Logo" width={60} height={60} />
+          <Image src={Abacus} alt="Abacus Logo" width={52} height={52} />
           <div className="flex flex-col ml-3">
-            <h2 className="font-medium leading-4 pt-px">Abacus</h2>
-            <p className="text-xs font-light">
-              Abacus is a platform
+            <p className="text-sm font-light">
+              <span className="text-base font-medium">Abacus</span> is a
+              platform
               <br />
               for building interchain
               <br />
@@ -25,7 +25,7 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-8">
+        <div className="grid grid-rows-2 grid-cols-3 gap-y-3 gap-x-8">
           <FooterIconLink
             to="https://twitter.com/Abacus_Network"
             imgSrc={Twitter}

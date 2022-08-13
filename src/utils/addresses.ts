@@ -27,13 +27,17 @@ export function normalizeAddress(address: string) {
 }
 
 export function shortenAddress(address: string, capitalize?: boolean) {
-  validateAddress(address, 'shorten');
-  const normalized = normalizeAddress(address);
-  const shortened =
-    normalized.substring(0, 6) +
-    '...' +
-    normalized.substring(normalized.length - 4);
-  return capitalize ? capitalizeAddress(shortened) : shortened;
+  try {
+    const normalized = normalizeAddress(address);
+    const shortened =
+      normalized.substring(0, 6) +
+      '...' +
+      normalized.substring(normalized.length - 4);
+    return capitalize ? capitalizeAddress(shortened) : shortened;
+  } catch (error) {
+    logger.error('Unable to shorten invalid address', address, error);
+    return null;
+  }
 }
 
 export function capitalizeAddress(address: string) {
