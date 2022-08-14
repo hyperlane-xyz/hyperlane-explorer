@@ -1,6 +1,7 @@
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { Message, MessageStatus } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
+import { getHumanReadableTimeString } from '../../utils/time';
 
 export function MessageSummary({ message }: { message: Message }) {
   const {
@@ -23,19 +24,19 @@ export function MessageSummary({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex items-center justify-between space-x-8 sm:space-x-12 md:space-x-16">
+    <div className="flex items-center justify-between space-x-5 sm:space-x-12 md:space-x-16">
       <ChainToChain
         originChainId={originChainId}
         destinationChainId={destinationChainId}
       />
-      <div className="flex items-center justify-between flex-1 mx-4">
+      <div className="flex items-center justify-between flex-1">
         <div className={styles.valueContainer}>
           <div className={styles.label}>Sender</div>
           <div className={styles.value}>
             {shortenAddress(sender) || 'Invalid Address'}
           </div>
         </div>
-        <div className={styles.valueContainer}>
+        <div className="hidden sm:flex flex-col">
           <div className={styles.label}>Recipient</div>
           <div className={styles.value}>
             {shortenAddress(recipient) || 'Invalid Address'}
@@ -44,23 +45,17 @@ export function MessageSummary({ message }: { message: Message }) {
         <div className={styles.valueContainer}>
           <div className={styles.label}>Time sent</div>
           <div className={styles.value}>
-            {getDateTimeString(originTimeSent)}
+            {getHumanReadableTimeString(originTimeSent)}
           </div>
         </div>
       </div>
       <div
-        className={`w-20 sm:w-24 py-2 text-sm text-center rounded ${statusColor}`}
+        className={`w-20 md:w-24 py-2 text-sm text-center rounded ${statusColor}`}
       >
         {statusText}
       </div>
     </div>
   );
-}
-
-// TODO smarter datetime
-function getDateTimeString(timestamp: number) {
-  const date = new Date(timestamp);
-  return `${date.toLocaleTimeString()} - ${date.toLocaleDateString()}`;
 }
 
 const styles = {

@@ -1,11 +1,15 @@
 import Image from 'next/future/image';
 import Link from 'next/link';
+import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
+import Hamburger from '../../images/icons/hamburger.svg';
 import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(3);
+
   return (
-    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8">
+    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8 w-full">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
@@ -20,13 +24,13 @@ export function Header() {
             </div>
             <div
               style={{ fontSize: '2rem' }}
-              className="font-serif text-green-500 ml-2 pt-px"
+              className="font-serif text-green-500 sm:ml-2 pt-px"
             >
               Explorer
             </div>
           </a>
         </Link>
-        <div className="flex space-x-12">
+        <div className="hidden sm:flex sm:space-x-8 md:space-x-12">
           <Link href="/">
             <a className={styles.navLink}>Home</a>
           </Link>
@@ -47,6 +51,45 @@ export function Header() {
             About
           </a>
         </div>
+        <div className="relative flex item-center sm:hidden mr-2">
+          <button className="hover:opactiy-70 transition-all" {...buttonProps}>
+            <Image src={Hamburger} alt="Nav menu" width={26} height={26} />
+          </button>
+        </div>
+      </div>
+      <div
+        className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}
+        role="menu"
+      >
+        <Link href="/">
+          <a
+            {...itemProps[0]}
+            className={styles.dropdownOption}
+            onClick={() => setIsOpen(false)}
+          >
+            <div>Home</div>
+          </a>
+        </Link>
+        <a
+          {...itemProps[1]}
+          onClick={() => setIsOpen(false)}
+          className={styles.dropdownOption}
+          target="_blank"
+          href="https://docs.useabacus.network"
+          rel="noopener noreferrer"
+        >
+          Docs
+        </a>
+        <a
+          {...itemProps[2]}
+          onClick={() => setIsOpen(false)}
+          className={styles.dropdownOption}
+          target="_blank"
+          href="https://www.useabacus.network"
+          rel="noopener noreferrer"
+        >
+          About
+        </a>
       </div>
     </header>
   );
@@ -55,4 +98,7 @@ export function Header() {
 const styles = {
   navLink:
     'flex items-center text-lg tracking-wide hover:underline hover:opacity-70 transition-all',
+  dropdownContainer: 'dropdown-menu w-28 mt-1 mr-px bg-beige-500',
+  dropdownOption:
+    'flex items-center justify-center cursor-pointer p-2 mt-1 rounded hover:underline',
 };

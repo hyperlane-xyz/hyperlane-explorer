@@ -10,7 +10,7 @@ import Twitter from '../../images/logos/twitter.svg';
 
 export function Footer() {
   return (
-    <footer className="mt-3 px-2 py-4 sm:pl-6 sm:pr-8 opacity-90">
+    <footer className="mt-3 px-4 py-4 sm:pl-6 sm:pr-8 opacity-90">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           <Image src={Abacus} alt="Abacus Logo" width={52} height={52} />
@@ -25,7 +25,7 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <div className="grid grid-rows-2 grid-cols-3 gap-y-3 gap-x-8">
+        <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-5 md:gap-x-8">
           <FooterIconLink
             to="https://twitter.com/Abacus_Network"
             imgSrc={Twitter}
@@ -79,7 +79,7 @@ function FooterIconLink({
       className="flex items-center hover:underline hover:opacity-70 transition-all"
     >
       <Image src={imgSrc} alt={text} width={18} height={18} />
-      <span className="ml-2 text-sm">{text}</span>
+      <span className="hidden sm:inline ml-2 text-sm">{text}</span>
     </a>
   );
 }
