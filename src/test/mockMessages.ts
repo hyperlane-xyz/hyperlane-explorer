@@ -8,6 +8,15 @@ import {
 } from '../consts/networksConfig';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../types';
 
+function randomAddress() {
+  return (
+    '0x' +
+    [...Array(40)]
+      .map(() => Math.floor(Math.random() * 16).toString(16))
+      .join('')
+  );
+}
+
 export const MOCK_TX_HASH =
   '0x0948a5377b757038b3f1a9948b8b5b2e5370c4d0801e68e005eb598048393d68';
 
@@ -23,8 +32,8 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '1',
     status: MessageStatus.Delivered,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: chain.mainnet.id,
     destinationChainId: chain.arbitrum.id,
@@ -36,8 +45,8 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '2',
     status: MessageStatus.Delivered,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: chain.polygon.id,
     destinationChainId: chain.optimism.id,
@@ -49,8 +58,8 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '3',
     status: MessageStatus.Delivered,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: avalancheChain.id,
     destinationChainId: celoMainnetChain.id,
@@ -62,8 +71,8 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '4',
     status: MessageStatus.Delivered,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: bscChain.id,
     destinationChainId: chain.mainnet.id,
@@ -75,8 +84,8 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '5',
     status: MessageStatus.Failing,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: chain.mainnet.id,
     destinationChainId: chain.goerli.id,
@@ -87,11 +96,47 @@ export const MOCK_MESSAGES: Message[] = [
   {
     id: '6',
     status: MessageStatus.Pending,
-    sender: constants.AddressZero,
-    recipient: constants.AddressZero,
+    sender: randomAddress(),
+    recipient: randomAddress(),
     body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
     originChainId: chain.mainnet.id,
     destinationChainId: celoMainnetChain.id,
+    originTransaction: MOCK_TRANSACTION,
+    destinationTransaction: undefined,
+    originTimeSent: Date.now() - 90_000,
+  },
+  {
+    id: '7',
+    status: MessageStatus.Pending,
+    sender: randomAddress(),
+    recipient: randomAddress(),
+    body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
+    originChainId: chain.optimism.id,
+    destinationChainId: avalancheChain.id,
+    originTransaction: MOCK_TRANSACTION,
+    destinationTransaction: undefined,
+    originTimeSent: Date.now() - 80_000,
+  },
+  {
+    id: '8',
+    status: MessageStatus.Pending,
+    sender: randomAddress(),
+    recipient: randomAddress(),
+    body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
+    originChainId: bscChain.id,
+    destinationChainId: avalancheChain.id,
+    originTransaction: MOCK_TRANSACTION,
+    destinationTransaction: undefined,
+    originTimeSent: Date.now(),
+  },
+  {
+    id: '9',
+    status: MessageStatus.Pending,
+    sender: randomAddress(),
+    recipient: randomAddress(),
+    body: constants.AddressZero + constants.AddressZero + constants.AddressZero,
+    originChainId: chain.arbitrum.id,
+    destinationChainId: chain.polygon.id,
     originTransaction: MOCK_TRANSACTION,
     destinationTransaction: undefined,
     originTimeSent: Date.now(),

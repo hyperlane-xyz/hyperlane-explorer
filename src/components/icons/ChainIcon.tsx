@@ -28,7 +28,7 @@ const CHAIN_TO_ICON = {
 
 function _ChainIcon({
   chainId,
-  size = 46,
+  size = 44,
 }: {
   chainId: number;
   size?: number;

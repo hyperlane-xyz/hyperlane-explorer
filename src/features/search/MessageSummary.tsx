@@ -42,7 +42,7 @@ export function MessageSummary({ message }: { message: Message }) {
             {shortenAddress(recipient) || 'Invalid Address'}
           </div>
         </div>
-        <div className={styles.valueContainer}>
+        <div className={styles.valueContainer + ' w-28'}>
           <div className={styles.label}>Time sent</div>
           <div className={styles.value}>
             {getHumanReadableTimeString(originTimeSent)}

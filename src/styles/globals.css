@@ -19,6 +19,15 @@ a {
 }
 
 /*
+Text and shadows
+================
+*/
+
+.black-shadow {
+  text-shadow: 0 0 #010101;
+}
+
+/*
 Scrollbar Overrides
 ===================
 */
