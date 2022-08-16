@@ -10,13 +10,12 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import XCircleIcon from '../../images/icons/x-circle.svg';
 import { MOCK_MESSAGES } from '../../test/mockMessages';
 import { MessageStatus } from '../../types';
-import { shortenAddress } from '../../utils/addresses';
-import { toShortened } from '../../utils/string';
 import { getHumanReadableTimeString } from '../../utils/time';
 
 export function MessageDetails({ messageId }: { messageId: string }) {
   const {
     status,
+    body,
     sender,
     recipient,
     originTimeSent,
@@ -31,10 +30,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
       <div className="flex items-center justify-between px-1 -mt-1">
         <h2 className="text-white text-lg">Message</h2>
         {status === MessageStatus.Pending && (
-          <div className="flex items-center">
-            <div className="text-white text-lg">Status: Pending</div>
-            <Spinner classes="scale-50 filter-full-bright" />
-          </div>
+          <div className="text-white text-lg">Status: Pending</div>
         )}
         {status === MessageStatus.Delivered && (
           <div className="flex items-center">
@@ -49,8 +45,8 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           </div>
         )}
       </div>
-      <div className="flex flex-wrap items-center justify-between mt-5 space-x-4">
-        <Card classes="flex-1 space-y-4">
+      <div className="flex flex-wrap items-center justify-between mt-5 gap-4">
+        <Card classes="flex-1 min-w-fit space-y-4">
           <div className="flex items-center justify-between">
             <div className="relative -top-px -left-0.5">
               <ChainIcon chainId={originChainId} />
@@ -59,20 +55,22 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <h3 className="text-gray-800 black-shadow mr-2">
                 Origin Transaction
               </h3>
-              <HelpIcon size={16} text="TODO" />
+              <HelpIcon size={16} text={helpText.origin} />
             </div>
           </div>
           <ValueRow
             label="Tx hash:"
             labelWidth="w-16"
-            display={toShortened(originTransaction.transactionHash, 32)}
-            copyValue={originTransaction.transactionHash}
+            display={originTransaction.transactionHash}
+            displayWidth="w-44 sm:w-56"
+            showCopy={true}
           />
           <ValueRow
             label="From:"
             labelWidth="w-16"
-            display={toShortened(originTransaction.from, 32)}
-            copyValue={originTransaction.from}
+            display={originTransaction.from}
+            displayWidth="w-44 sm:w-56"
+            showCopy={true}
           />
           <ValueRow
             label="Block:"
@@ -80,6 +78,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             display={`${
               originTransaction.blockNumber
             } (${getHumanReadableTimeString(originTimeSent)})`}
+            displayWidth="w-44 sm:w-56"
           />
           <a
             className="block text-sm text-gray-500 pl-px underline"
@@ -90,7 +89,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             View in block explorer
           </a>
         </Card>
-        <Card classes="flex-1 space-y-4">
+        <Card classes="flex-1 min-w-fit space-y-4">
           <div className="flex items-center justify-between">
             <div className="relative -top-px -left-0.5">
               <ChainIcon chainId={destinationChainId} />
@@ -99,61 +98,91 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <h3 className="text-gray-800 black-shadow mr-2">
                 Destination Transaction
               </h3>
-              <HelpIcon size={16} text="TODO" />
+              <HelpIcon size={16} text={helpText.destination} />
             </div>
           </div>
-          <ValueRow
-            label="Tx hash:"
-            labelWidth="w-16"
-            display={toShortened(originTransaction.transactionHash, 32)}
-            copyValue={originTransaction.transactionHash}
-          />
-          <ValueRow
-            label="From:"
-            labelWidth="w-16"
-            display={toShortened(originTransaction.from, 32)}
-            copyValue={originTransaction.from}
-          />
-          <ValueRow
-            label="Block:"
-            labelWidth="w-16"
-            display={`${
-              originTransaction.blockNumber
-            } (${getHumanReadableTimeString(originTimeSent)})`}
-          />
-          <a
-            className="block text-sm text-gray-500 pl-px underline"
-            href="TODO"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View in block explorer
-          </a>
+          {destinationTransaction ? (
+            <>
+              <ValueRow
+                label="Tx hash:"
+                labelWidth="w-16"
+                display={originTransaction.transactionHash}
+                displayWidth="w-44 sm:w-56"
+                showCopy={true}
+              />
+              <ValueRow
+                label="From:"
+                labelWidth="w-16"
+                display={originTransaction.from}
+                displayWidth="w-44 sm:w-56"
+                showCopy={true}
+              />
+              <ValueRow
+                label="Block:"
+                labelWidth="w-16"
+                display={`${
+                  originTransaction.blockNumber
+                } (${getHumanReadableTimeString(originTimeSent)})`}
+                displayWidth="w-44 sm:w-56"
+              />
+              <a
+                className="block text-sm text-gray-500 pl-px underline"
+                href="TODO"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View in block explorer
+              </a>
+            </>
+          ) : (
+            <div className="flex flex-col items-center py-6">
+              <div className="text-gray-500">
+                {status === MessageStatus.Failing
+                  ? 'Destination chain transaction currently failing'
+                  : 'Destination chain transaction still in progress'}
+              </div>
+              <Spinner classes="mt-4" />
+            </div>
+          )}
         </Card>
       </div>
-      <Card classes="mt-4">
-        <ChainToChain
-          originChainId={originChainId}
-          destinationChainId={destinationChainId}
+      <Card classes="mt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="relative -top-px -left-0.5">
+            <ChainToChain
+              originChainId={originChainId}
+              destinationChainId={destinationChainId}
+            />
+          </div>
+          <div className="flex items-center pb-1">
+            <h3 className="text-gray-800 black-shadow mr-2">Message Details</h3>
+            <HelpIcon size={16} text={helpText.details} />
+          </div>
+        </div>
+        <ValueRow
+          label="Sender to outbox:"
+          labelWidth="w-24 sm:w-36"
+          display={sender}
+          displayWidth="w-48 sm:w-80"
+          showCopy={true}
         />
-        <div className="flex items-center justify-between flex-1">
-          <div className={styles.valueContainer}>
-            <div className={styles.label}>Sender</div>
-            <div className={styles.value}>
-              {shortenAddress(sender) || 'Invalid Address'}
-            </div>
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <div className={styles.label}>Recipient</div>
-            <div className={styles.value}>
-              {shortenAddress(recipient) || 'Invalid Address'}
-            </div>
-          </div>
-          <div className={styles.valueContainer + ' w-28'}>
-            <div className={styles.label}>Time sent</div>
-            <div className={styles.value}>
-              {getHumanReadableTimeString(originTimeSent)}
-            </div>
+        <ValueRow
+          label="Recipient from outbox:"
+          labelWidth="w-24 sm:w-36"
+          display={recipient}
+          displayWidth="w-48 sm:w-80"
+          showCopy={true}
+        />
+        <div>
+          <label className="text-sm text-gray-500">Message content:</label>
+          <div className="relative max-w-full break-words py-2 pl-2 pr-9 mt-2 bg-gray-100 text-sm font-mono rounded">
+            {body}
+            <CopyButton
+              copyValue={body}
+              width={15}
+              height={15}
+              classes="absolute top-2 right-2 opacity-70"
+            />
           </div>
         </div>
       </Card>
@@ -165,20 +194,22 @@ function ValueRow({
   label,
   labelWidth,
   display,
-  copyValue,
+  displayWidth,
+  showCopy,
 }: {
   label: string;
   labelWidth: string;
   display: string;
-  copyValue?: string;
+  displayWidth: string;
+  showCopy?: boolean;
 }) {
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <span className="text-sm ml-2">{display}</span>
-      {copyValue && (
+      <span className={`text-sm ml-2 truncate ${displayWidth}`}>{display}</span>
+      {showCopy && (
         <CopyButton
-          copyValue={copyValue}
+          copyValue={display}
           width={15}
           height={15}
           classes="ml-3 opacity-50"
@@ -188,8 +219,11 @@ function ValueRow({
   );
 }
 
-const styles = {
-  valueContainer: 'flex flex-col',
-  label: 'text-sm text-gray-500',
-  value: 'text-sm mt-1',
+const helpText = {
+  origin:
+    'Info about the transaction that initiated the message placement into the outbox.',
+  destination:
+    'Info about the transaction that triggered the delivery of the message from an inbox.',
+  details:
+    'Immutable information about the message itself such as its contents.',
 };

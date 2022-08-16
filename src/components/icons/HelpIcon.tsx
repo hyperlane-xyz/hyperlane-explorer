@@ -6,7 +6,7 @@ import { IconButton } from '../buttons/IconButton';
 
 function _HelpIcon({ text, size = 20 }: { text: string; size?: number }) {
   const onClick = () => {
-    toast.info(text);
+    toast.info(text, { autoClose: 8000 });
   };
 
   return (
