@@ -1,20 +1,19 @@
-import Link from 'next/link';
-
 import { ChainToChain } from '../../components/icons/ChainToChain';
-import { Message, MessageStatus } from '../../types';
+import { Card } from '../../components/layout/Card';
+import { MOCK_MESSAGES } from '../../test/mockMessages';
+import { MessageStatus } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableTimeString } from '../../utils/time';
 
-export function MessageSummary({ message }: { message: Message }) {
+export function MessageDetails({ messageId }: { messageId: string }) {
   const {
-    id,
     status,
     sender,
     recipient,
     originTimeSent,
     originChainId,
     destinationChainId,
-  } = message;
+  } = MOCK_MESSAGES[0];
 
   let statusColor = 'bg-beige-500';
   let statusText = 'Pending';
@@ -27,8 +26,14 @@ export function MessageSummary({ message }: { message: Message }) {
   }
 
   return (
-    <Link href={`/message/${id}`}>
-      <div className="flex items-center justify-between space-x-5 sm:space-x-12 md:space-x-16">
+    <div className="flex flex-wrap items-center justify-between">
+      <Card>
+        <div>c1</div>
+      </Card>
+      <Card>
+        <div>c1</div>
+      </Card>
+      <Card>
         <ChainToChain
           originChainId={originChainId}
           destinationChainId={destinationChainId}
@@ -58,8 +63,8 @@ export function MessageSummary({ message }: { message: Message }) {
         >
           {statusText}
         </div>
-      </div>
-    </Link>
+      </Card>
+    </div>
   );
 }
 

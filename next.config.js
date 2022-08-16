@@ -30,15 +30,6 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/:any*',
-        destination: '/',
-      },
-    ]
-  },
-
   async headers() {
     return [
       {
