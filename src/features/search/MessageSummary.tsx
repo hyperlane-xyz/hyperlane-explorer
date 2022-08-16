@@ -28,7 +28,7 @@ export function MessageSummary({ message }: { message: Message }) {
 
   return (
     <Link href={`/message/${id}`}>
-      <div className="flex items-center justify-between space-x-5 sm:space-x-12 md:space-x-16">
+      <a className="flex items-center justify-between space-x-5 sm:space-x-12 md:space-x-16">
         <ChainToChain
           originChainId={originChainId}
           destinationChainId={destinationChainId}
@@ -58,7 +58,7 @@ export function MessageSummary({ message }: { message: Message }) {
         >
           {statusText}
         </div>
-      </div>
+      </a>
     </Link>
   );
 }

@@ -24,7 +24,7 @@ export function Header() {
             </div>
             <div
               style={{ fontSize: '2rem' }}
-              className="font-serif text-green-500 sm:ml-2 pt-px"
+              className="font-serif text-green-600 sm:ml-2 pt-px"
             >
               Explorer
             </div>

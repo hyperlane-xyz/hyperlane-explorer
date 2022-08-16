@@ -118,6 +118,15 @@ Common animations
   }
 }
 
+/*
+Common filters
+=================
+*/
+
+.filter-full-bright {
+  filter: brightness(10)
+}
+
 /* 
 Dropdowns
 =========

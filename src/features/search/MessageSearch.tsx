@@ -118,7 +118,7 @@ export function MessageSearch() {
         {searchResults.map((m) => (
           <div
             key={`message-${m.id}`}
-            className="px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100"
+            className="px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50"
           >
             <MessageSummary message={m} />
           </div>
@@ -138,13 +138,13 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
 // TODO move this to backend
 function findMessageWithValue(query: string, messages: Message[]) {
   if (!query) {
-    return messages
+    return [...messages]
       .sort((a, b) => b.originTimeSent - a.originTimeSent)
       .slice(0, 8);
   }
 
   const normalizedQuery = query.trim().toLowerCase();
-  return messages
+  return [...messages]
     .filter((m) => {
       return (
         m.sender.toLowerCase().includes(normalizedQuery) ||

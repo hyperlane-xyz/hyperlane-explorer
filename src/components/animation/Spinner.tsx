@@ -3,9 +3,9 @@ import { memo } from 'react';
 import styles from './Spinner.module.css';
 
 // From https://loading.io/css/
-function _Spinner() {
+function _Spinner({ classes }: { classes: string }) {
   return (
-    <div className={styles.spinner}>
+    <div className={`${styles.spinner} ${classes}`}>
       <div></div>
       <div></div>
       <div></div>

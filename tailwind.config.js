@@ -1,14 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 
-const colors = require('tailwindcss/colors')
+const colors = require('tailwindcss/colors');
 
 module.exports = {
-  content: [
-    './src/**/*.{js,ts,jsx,tsx}',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     fontFamily: {
-      sans: ['Neue Haas Grotesk',  'Helvetica', 'sans-serif'],
+      sans: ['Neue Haas Grotesk', 'Helvetica', 'sans-serif'],
       serif: ['Garamond', 'serif'],
       mono: ['Courier New', 'monospace'],
     },
@@ -39,27 +37,40 @@ module.exports = {
           900: '#411C1A',
         },
         green: {
-          100: '#E9ECE7',
-          200: '#D3DAD0',
-          300: '#BDC8B8',
-          400: '#A7B6A1',
-          500: '#92A48A',
-          600: '#83937C',
-          700: '#667260',
-          800: '#495245',
-          900: '#2B3129',
+          50: '#CFD8CF',
+          100: '#C1CCC1',
+          200: '#B3C1B3',
+          300: '#A5B5A5',
+          400: '#97AA97',
+          500: '#899E89',
+          600: '#7B937B',
+          700: '#6E866E',
+          800: '#637863',
+          900: '#576A57',
         },
-        gray: {
-          100: '#E7E9E8',
-          200: '#CDD0CE',
-          300: '#B3B7B4',
-          400: '#999E9A',
-          500: '#7E8680',
-          600: '#666C67',
-          700: '#4D514E',
-          800: '#343734',
-          900: '#1B1D1C',
-        }
+        // gray: {
+        //   100: '#E7E9E8',
+        //   200: '#CDD0CE',
+        //   300: '#B3B7B4',
+        //   400: '#999E9A',
+        //   500: '#7E8680',
+        //   600: '#666C67',
+        //   700: '#4D514E',
+        //   800: '#343734',
+        //   900: '#1B1D1C',
+        // },
+        slate: {
+          50: '#879CA2',
+          100: '#789097',
+          200: '#6B848B',
+          300: '#60767D',
+          400: '#55696E',
+          500: '#4A5B60',
+          600: '#3F4D52',
+          700: '#344043',
+          800: '#293235',
+          900: '#1E2427',
+        },
       },
       spacing: {
         100: '26rem',
@@ -68,9 +79,14 @@ module.exports = {
         144: '36rem',
       },
       borderRadius: {
-        '4xl': '2rem',
+        none: '0',
+        sm: '0.1rem',
+        DEFAULT: '0.15rem',
+        md: '0.2rem',
+        lg: '0.4rem',
+        full: '9999px',
       },
     },
   },
   plugins: [],
-}
+};

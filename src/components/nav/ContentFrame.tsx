@@ -15,7 +15,7 @@ export function ContentFrame(props: PropsWithChildren) {
         style={{ width: 'min(900px,96vw)' }}
         className="relative overflow-visible mt-6 mb-8"
       >
-        <div className="absolute -top-5 -left-4 -right-4 h-36 bg-green-500 rounded z-10"></div>
+        <div className="absolute -top-5 -left-4 -right-4 h-36 bg-green-600 rounded z-10"></div>
         <div className="relative z-20">{props.children}</div>
       </div>
     </div>
