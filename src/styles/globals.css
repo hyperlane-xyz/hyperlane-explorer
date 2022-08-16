@@ -124,7 +124,7 @@ Common filters
 */
 
 .filter-full-bright {
-  filter: brightness(10)
+  filter: brightness(10);
 }
 
 /* 
