@@ -13,7 +13,9 @@ export function Footer() {
     <footer className="mt-3 px-4 py-4 sm:pl-6 sm:pr-8 opacity-90">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
-          <Image src={Abacus} alt="Abacus Logo" width={52} height={52} />
+          <div className="flex scale-90 sm:scale-100">
+            <Image src={Abacus} alt="Abacus Logo" width={52} height={52} />
+          </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">
               <span className="text-base font-medium">Abacus</span> is a

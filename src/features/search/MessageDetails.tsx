@@ -52,7 +52,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <ChainIcon chainId={originChainId} />
             </div>
             <div className="flex items-center pb-1">
-              <h3 className="text-gray-800 black-shadow mr-2">
+              <h3 className="text-gray-500 font-medium text-md mr-2">
                 Origin Transaction
               </h3>
               <HelpIcon size={16} text={helpText.origin} />
@@ -95,7 +95,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <ChainIcon chainId={destinationChainId} />
             </div>
             <div className="flex items-center pb-1">
-              <h3 className="text-gray-800 black-shadow mr-2">
+              <h3 className="text-gray-500 font-medium text-md mr-2">
                 Destination Transaction
               </h3>
               <HelpIcon size={16} text={helpText.destination} />
@@ -155,7 +155,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             />
           </div>
           <div className="flex items-center pb-1">
-            <h3 className="text-gray-800 black-shadow mr-2">Message Details</h3>
+            <h3 className="text-gray-500 font-medium text-md mr-2">
+              Message Details
+            </h3>
             <HelpIcon size={16} text={helpText.details} />
           </div>
         </div>

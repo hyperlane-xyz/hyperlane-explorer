@@ -18,14 +18,11 @@ export function Header() {
                 src={Logo}
                 alt="Abacus Logo"
                 quality={100}
-                width={140}
-                height={40}
+                width={130}
+                height={35}
               />
             </div>
-            <div
-              style={{ fontSize: '2rem' }}
-              className="font-serif text-green-600 sm:ml-2 pt-px"
-            >
+            <div className="font-serif text-[1.9rem] text-green-600 sm:ml-2 pt-px">
               Explorer
             </div>
           </a>
@@ -97,7 +94,7 @@ export function Header() {
 
 const styles = {
   navLink:
-    'flex items-center text-lg tracking-wide hover:underline hover:opacity-70 transition-all',
+    'flex items-center font-medium text-md tracking-wider opacity-90 hover:underline hover:opacity-70 transition-all',
   dropdownContainer: 'dropdown-menu w-28 mt-1 mr-px bg-beige-500',
   dropdownOption:
     'flex items-center justify-center cursor-pointer p-2 mt-1 rounded hover:underline',
