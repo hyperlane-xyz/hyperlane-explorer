@@ -2,7 +2,6 @@ import jazzicon from '@metamask/jazzicon';
 import { CSSProperties, memo } from 'react';
 
 import { isValidAddress, normalizeAddress } from '../../utils/addresses';
-import { useIsSsr } from '../../utils/ssr';
 
 type Props = {
   address: string;
@@ -17,10 +16,6 @@ function addressToSeed(address: string) {
 }
 
 function _Identicon({ address, size: _size, styles }: Props) {
-  const isSsr = useIsSsr();
-  if (isSsr) {
-    return null;
-  }
   const size = _size ?? 34;
 
   if (!isValidAddress(address)) return null;

@@ -1,14 +1,6 @@
 import { PropsWithChildren } from 'react';
 
-import { useIsSsr } from '../../utils/ssr';
-
 export function ContentFrame(props: PropsWithChildren) {
-  const isSsr = useIsSsr();
-  if (isSsr) {
-    // https://github.com/wagmi-dev/wagmi/issues/542#issuecomment-1144178142
-    return null;
-  }
-
   return (
     <div className="flex flex-col justify-center items-center min-h-full">
       <div
