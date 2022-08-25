@@ -94,7 +94,7 @@ export function Header() {
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-md tracking-wider opacity-90 hover:underline hover:opacity-70 transition-all',
+    'flex items-center font-medium text-md tracking-wider opacity-90 hover:underline hover:opacity-70 decoration-2 underline-offset-4 transition-all',
   dropdownContainer: 'dropdown-menu w-28 mt-1 mr-px bg-beige-500',
   dropdownOption:
     'flex items-center justify-center cursor-pointer p-2 mt-1 rounded hover:underline',

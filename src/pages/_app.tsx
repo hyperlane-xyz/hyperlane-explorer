@@ -1,7 +1,8 @@
 import {
   RainbowKitProvider,
-  getDefaultWallets,
+  connectorsForWallets,
   lightTheme,
+  wallet,
 } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import type { AppProps } from 'next/app';
@@ -29,10 +30,17 @@ import { useIsSsr } from '../utils/ssr';
 
 const { chains, provider } = configureChains(prodChains, [publicProvider()]);
 
-const { connectors } = getDefaultWallets({
-  appName: config.name,
-  chains,
-});
+const connectors = connectorsForWallets([
+  {
+    groupName: 'Recommended',
+    wallets: [
+      wallet.metaMask({ chains }),
+      wallet.walletConnect({ chains }),
+      wallet.rainbow({ chains }),
+      wallet.steak({ chains }),
+    ],
+  },
+]);
 
 const wagmiClient = createWagmiClient({
   autoConnect: true,
@@ -73,6 +81,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <ToastContainer
           transition={Zoom}
           position={toast.POSITION.BOTTOM_RIGHT}
+          limit={3}
         />
       </WagmiConfig>
     </ErrorBoundary>

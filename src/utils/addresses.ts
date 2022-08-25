@@ -2,6 +2,7 @@ import { getAddress, isAddress } from '@ethersproject/address';
 
 import { logger } from './logger';
 
+// Validates content and checksum
 export function isValidAddress(address: string) {
   // Need to catch because ethers' isAddress throws in some cases (bad checksum)
   try {
@@ -11,6 +12,12 @@ export function isValidAddress(address: string) {
     logger.warn('Invalid address', error, address);
     return false;
   }
+}
+
+// Faster then above and avoids exceptions but less thorough
+const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+export function isValidAddressFast(address: string) {
+  return addressRegex.test(address);
 }
 
 export function validateAddress(address: string, context: string) {
@@ -56,4 +63,9 @@ export function trimLeading0x(input: string) {
 
 export function ensureLeading0x(input: string) {
   return input.startsWith('0x') ? input : `0x${input}`;
+}
+
+const txHashRegex = /^0x([A-Fa-f0-9]{64})$/;
+export function isValidTransactionHash(input: string) {
+  return txHashRegex.test(input);
 }
