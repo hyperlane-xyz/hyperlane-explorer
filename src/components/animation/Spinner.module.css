@@ -10,7 +10,7 @@
   animation: spinner 1.2s linear infinite;
 }
 .spinner div:after {
-  content: " ";
+  content: ' ';
   display: block;
   position: absolute;
   top: 3px;
