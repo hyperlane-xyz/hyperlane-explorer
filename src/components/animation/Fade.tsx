@@ -15,8 +15,10 @@ export function Fade(props: PropsWithChildren<{ show: boolean }>) {
   return render ? (
     <div
       style={{
-        animation: `${show ? 'fadeIn' : 'fadeOut'} 1s`,
-        position: 'relative',
+        animationName: show ? 'fadeIn' : 'fadeOut',
+        animationDuration: '1s',
+        //https://github.com/radix-ui/primitives/issues/1074#issuecomment-1089555751
+        animationFillMode: 'forwards',
       }}
       onAnimationEnd={onAnimationEnd}
     >

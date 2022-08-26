@@ -106,7 +106,6 @@ Common animations
   }
   100% {
     opacity: 0;
-    display: none;
   }
 }
 @keyframes fadeIn {

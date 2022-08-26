@@ -1,20 +1,24 @@
 import Image from 'next/future/image';
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
+import { ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useQuery } from 'urql';
 
+import { Fade } from '../../components/animation/Fade';
 import { Spinner } from '../../components/animation/Spinner';
 import { IconButton } from '../../components/buttons/IconButton';
 import { SelectField } from '../../components/input/SelectField';
 import { prodChains } from '../../consts/networksConfig';
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
+import ErrorIcon from '../../images/icons/error-circle.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
+import SearchOffIcon from '../../images/icons/search-off.svg';
 import SearchIcon from '../../images/icons/search.svg';
+import ShrugIcon from '../../images/icons/shrug.svg';
 import XIcon from '../../images/icons/x.svg';
 import { MOCK_TRANSACTION } from '../../test/mockMessages';
 import { Message, MessageStatus } from '../../types';
 import useDebounce from '../../utils/debounce';
 import { sanitizeString } from '../../utils/string';
+import { useInterval } from '../../utils/timeout';
 
 import { MessageSummary } from './MessageSummary';
 import { isValidSearchQuery } from './utils';
@@ -40,25 +44,29 @@ export function MessageSearch() {
   };
 
   // GraphQL query and results
+  const hasInput = !!debouncedSearchInput;
   const sanitizedInput = sanitizeString(debouncedSearchInput);
-  const hasInput = !!sanitizedInput;
+  const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput) : true;
   const query = hasInput ? searchMessagesQuery : latestMessagesQuery;
   const variables = hasInput ? { search: sanitizedInput } : undefined;
-  const isValid = hasInput ? isValidSearchQuery(sanitizedInput) : true;
   //TODO remove
-  console.log('san:', sanitizedInput, 'query:', query, 'valid:', isValid);
+  console.log('san:', sanitizedInput, 'valid:', isValidInput);
   const [result, reexecuteQuery] = useQuery<MessagesResult>({
     query,
     variables,
-    pause: !isValid,
+    pause: !isValidInput,
   });
-  const { data, fetching, error } = result;
+  console.log(result);
+  const { data, fetching, error, operation } = result;
   const messageList = useMemo(() => parseResultData(data), [data]);
-  useEffect(() => {
-    if (!error) return;
-    toast.error(`Error: ${error.message}`);
-  }, [error]);
-  // TODO add useInterval re-executor for latest
+  const hasError = !!error;
+  const hasDoneQuery = !!operation;
+  const reExecutor = useCallback(() => {
+    if (query && isValidInput) {
+      reexecuteQuery({ requestPolicy: 'network-only' });
+    }
+  }, [reexecuteQuery, query, isValidInput]);
+  useInterval(reExecutor, 5000);
 
   return (
     <>
@@ -86,7 +94,8 @@ export function MessageSearch() {
           )}
         </div>
       </div>
-      <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md rounded overflow-auto">
+      <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md rounded overflow-auto relative">
+        {/* Content header and filter bar */}
         <div className="px-2 py-3 sm:px-4 md:px-5 md:py-3 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-gray-500 black-shadow">
             {!hasInput ? 'Latest Messages' : 'Search Results'}
@@ -121,19 +130,79 @@ export function MessageSearch() {
             />
           </div>
         </div>
-        {/* TODO content for invalid search, empty list, and maybe error (instead of toast) */}
-        {messageList.map((m) => (
-          <div
-            key={`message-${m.id}`}
-            className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 ${
-              fetching && 'blur-sm'
-            } transition-all duration-500`}
-          >
-            <MessageSummary message={m} />
-          </div>
-        ))}
+        <Fade show={!hasError && isValidInput && messageList.length > 0}>
+          {messageList.map((m) => (
+            <div
+              key={`message-${m.id}`}
+              className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 ${
+                fetching && 'blur-sm'
+              } transition-all duration-500`}
+            >
+              <MessageSummary message={m} />
+            </div>
+          ))}
+        </Fade>
+        <SearchInfoBox
+          show={!isValidInput}
+          imgSrc={SearchOffIcon}
+          imgAlt="Search invalid"
+          text="Sorry, that search input is not valid. Please try an account
+                addresses or a transaction hash like 0x123..."
+          imgWidth={70}
+        />
+        <SearchInfoBox
+          show={
+            !hasError && !fetching && isValidInput && messageList.length === 0
+          }
+          imgSrc={ShrugIcon}
+          imgAlt="No results"
+          text="Sorry, no results found. Please try a different address or hash."
+          imgWidth={110}
+        />
+        <SearchInfoBox
+          show={hasError && isValidInput}
+          imgSrc={ErrorIcon}
+          imgAlt="Error"
+          text="Sorry, an error has occurred. Please try a query or try again later."
+          imgWidth={70}
+        />
       </div>
     </>
+  );
+}
+
+function SearchInfoBox({
+  show,
+  text,
+  imgSrc,
+  imgAlt,
+  imgWidth,
+}: {
+  show: boolean;
+  text: string;
+  imgSrc: any;
+  imgAlt: string;
+  imgWidth: number;
+}) {
+  return (
+    // Absolute position for overlaying cross-fade
+    <div className="absolute left-0 right-0 top-10">
+      <Fade show={show}>
+        <div className="flex justify-center my-10">
+          <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
+            <Image
+              src={imgSrc}
+              alt={imgAlt}
+              width={imgWidth}
+              className="opacity-80"
+            />
+            <div className="mt-4 text-center leading-loose text-gray-700 black-shadow">
+              {text}
+            </div>
+          </div>
+        </div>
+      </Fade>
+    </div>
   );
 }
 
