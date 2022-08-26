@@ -1,4 +1,6 @@
 import Image from 'next/future/image';
+import { useCallback, useMemo } from 'react';
+import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
 import { CopyButton } from '../../components/buttons/CopyButton';
@@ -8,11 +10,27 @@ import { HelpIcon } from '../../components/icons/HelpIcon';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import XCircleIcon from '../../images/icons/x-circle.svg';
-import { MOCK_MESSAGES } from '../../test/mockMessages';
 import { MessageStatus } from '../../types';
 import { getHumanReadableTimeString } from '../../utils/time';
+import { useInterval } from '../../utils/timeout';
+
+import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
+import { parseResultData } from './query';
+import { MessagesQueryResult } from './types';
+
+const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageDetails({ messageId }: { messageId: string }) {
+  const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
+    query: messageQuery,
+    variables: { messageId: parseInt(messageId) },
+  });
+
+  const { data, fetching, error } = result;
+  const messages = useMemo(() => parseResultData(data), [data]);
+
+  const isMessageFound = messages.length > 0;
+  const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
   const {
     status,
     body,
@@ -23,7 +41,17 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationChainId,
     originTransaction,
     destinationTransaction,
-  } = MOCK_MESSAGES[0];
+  } = message;
+
+  const reExecutor = useCallback(() => {
+    if (status !== MessageStatus.Delivered) {
+      reexecuteQuery({ requestPolicy: 'network-only' });
+    }
+  }, [reexecuteQuery, status]);
+  useInterval(reExecutor, AUTO_REFRESH_DELAY);
+
+  // TODO handle message not found and error cases
+  // TODO hide chain logos in circles while loading
 
   return (
     <>
@@ -64,6 +92,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             display={originTransaction.transactionHash}
             displayWidth="w-44 sm:w-56"
             showCopy={true}
+            blurValue={fetching}
           />
           <ValueRow
             label="From:"
@@ -71,6 +100,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             display={originTransaction.from}
             displayWidth="w-44 sm:w-56"
             showCopy={true}
+            blurValue={fetching}
           />
           <ValueRow
             label="Block:"
@@ -79,6 +109,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               originTransaction.blockNumber
             } (${getHumanReadableTimeString(originTimeSent)})`}
             displayWidth="w-44 sm:w-56"
+            blurValue={fetching}
           />
           <a
             className="block text-sm text-gray-500 pl-px underline"
@@ -109,6 +140,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 display={originTransaction.transactionHash}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
+                blurValue={fetching}
               />
               <ValueRow
                 label="From:"
@@ -116,6 +148,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 display={originTransaction.from}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
+                blurValue={fetching}
               />
               <ValueRow
                 label="Block:"
@@ -124,6 +157,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                   originTransaction.blockNumber
                 } (${getHumanReadableTimeString(originTimeSent)})`}
                 displayWidth="w-44 sm:w-56"
+                blurValue={fetching}
               />
               <a
                 className="block text-sm text-gray-500 pl-px underline"
@@ -167,6 +201,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           display={sender}
           displayWidth="w-48 sm:w-80"
           showCopy={true}
+          blurValue={fetching}
         />
         <ValueRow
           label="Recipient from outbox:"
@@ -174,6 +209,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           display={recipient}
           displayWidth="w-48 sm:w-80"
           showCopy={true}
+          blurValue={fetching}
         />
         <div>
           <label className="text-sm text-gray-500">Message content:</label>
@@ -198,17 +234,25 @@ function ValueRow({
   display,
   displayWidth,
   showCopy,
+  blurValue,
 }: {
   label: string;
   labelWidth: string;
   display: string;
   displayWidth: string;
   showCopy?: boolean;
+  blurValue?: boolean;
 }) {
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <span className={`text-sm ml-2 truncate ${displayWidth}`}>{display}</span>
+      <span
+        className={`text-sm ml-2 truncate ${displayWidth} ${
+          blurValue && 'blur-sm'
+        }`}
+      >
+        {display}
+      </span>
       {showCopy && (
         <CopyButton
           copyValue={display}
@@ -220,6 +264,21 @@ function ValueRow({
     </div>
   );
 }
+
+const messageQuery = `
+query message ($messageId: Int!) {
+  messages(where: {id: {_eq: $messageId}}, limit: 1) {
+    id
+    destinationtimesent
+    destinationchainid
+    body
+    originchainid
+    origintimesent
+    recipient
+    status
+    sender
+  }
+}`;
 
 const helpText = {
   origin:

@@ -14,14 +14,16 @@ import SearchOffIcon from '../../images/icons/search-off.svg';
 import SearchIcon from '../../images/icons/search.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import XIcon from '../../images/icons/x.svg';
-import { MOCK_TRANSACTION } from '../../test/mockMessages';
-import { Message, MessageStatus } from '../../types';
 import useDebounce from '../../utils/debounce';
 import { sanitizeString } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageSummary } from './MessageSummary';
+import { parseResultData } from './query';
+import { MessagesQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
+
+const AUTO_REFRESH_DELAY = 5000;
 
 export function MessageSearch() {
   // Search text input
@@ -49,27 +51,24 @@ export function MessageSearch() {
   const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput) : true;
   const query = hasInput ? searchMessagesQuery : latestMessagesQuery;
   const variables = hasInput ? { search: sanitizedInput } : undefined;
-  //TODO remove
-  console.log('san:', sanitizedInput, 'valid:', isValidInput);
-  const [result, reexecuteQuery] = useQuery<MessagesResult>({
+  const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query,
     variables,
     pause: !isValidInput,
   });
-  console.log(result);
-  const { data, fetching, error, operation } = result;
+  const { data, fetching, error } = result;
   const messageList = useMemo(() => parseResultData(data), [data]);
   const hasError = !!error;
-  const hasDoneQuery = !!operation;
   const reExecutor = useCallback(() => {
     if (query && isValidInput) {
       reexecuteQuery({ requestPolicy: 'network-only' });
     }
   }, [reexecuteQuery, query, isValidInput]);
-  useInterval(reExecutor, 5000);
+  useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   return (
     <>
+      {/* Search bar */}
       <div className="flex items-center bg-white w-full rounded shadow-md">
         <input
           value={searchInput}
@@ -130,11 +129,12 @@ export function MessageSearch() {
             />
           </div>
         </div>
+        {/* Message list */}
         <Fade show={!hasError && isValidInput && messageList.length > 0}>
           {messageList.map((m) => (
             <div
               key={`message-${m.id}`}
-              className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 ${
+              className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 ${
                 fetching && 'blur-sm'
               } transition-all duration-500`}
             >
@@ -142,6 +142,7 @@ export function MessageSearch() {
             </div>
           ))}
         </Fade>
+        {/* Invalid input state */}
         <SearchInfoBox
           show={!isValidInput}
           imgSrc={SearchOffIcon}
@@ -150,6 +151,7 @@ export function MessageSearch() {
                 addresses or a transaction hash like 0x123..."
           imgWidth={70}
         />
+        {/* No results state */}
         <SearchInfoBox
           show={
             !hasError && !fetching && isValidInput && messageList.length === 0
@@ -159,6 +161,7 @@ export function MessageSearch() {
           text="Sorry, no results found. Please try a different address or hash."
           imgWidth={110}
         />
+        {/* Search error state */}
         <SearchInfoBox
           show={hasError && isValidInput}
           imgSrc={ErrorIcon}
@@ -213,24 +216,6 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
   ];
 }
 
-function parseResultData(data: MessagesResult | undefined): Message[] {
-  // if (!data?.messages?.length) return PLACEHOLDER_MESSAGES; TODO
-  if (!data?.messages?.length) return [];
-  return data.messages.map((m) => ({
-    id: m.id,
-    status: m.status as MessageStatus,
-    sender: m.sender,
-    recipient: m.recipient,
-    body: m.body,
-    originChainId: m.originchainid,
-    originTimeSent: m.origintimesent,
-    destinationChainId: m.destinationchainid,
-    destinationTimeSent: m.destinationtimesent,
-    originTransaction: MOCK_TRANSACTION,
-    destinationTransaction: MOCK_TRANSACTION,
-  }));
-}
-
 // TODO automatic typings
 const latestMessagesQuery = `
   query latestMessages {
@@ -245,8 +230,7 @@ const latestMessagesQuery = `
       destinationchainid
       destinationtimesent
     }
-  }
-`;
+  }`;
 
 const searchMessagesQuery = `
 query searchMessages ($search: String!) {
@@ -261,21 +245,4 @@ query searchMessages ($search: String!) {
     destinationchainid
     destinationtimesent
   }
-}
-`;
-
-interface MessageEntry {
-  id: string;
-  status: string;
-  sender: string;
-  recipient: string;
-  body: string;
-  originchainid: number;
-  origintimesent: number;
-  destinationchainid: number;
-  destinationtimesent: number;
-}
-
-interface MessagesResult {
-  messages: MessageEntry[];
-}
+}`;
