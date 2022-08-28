@@ -20,6 +20,9 @@
   border-radius: 20%;
   background: #010101;
 }
+.spinner.white div:after {
+  background: #ffffff;
+}
 .spinner div:nth-child(1) {
   transform: rotate(0deg);
   animation-delay: -1.1s;

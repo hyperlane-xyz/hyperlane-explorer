@@ -1,5 +1,5 @@
 import Image from 'next/future/image';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
@@ -7,6 +7,7 @@ import { CopyButton } from '../../components/buttons/CopyButton';
 import { ChainIcon } from '../../components/icons/ChainIcon';
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { HelpIcon } from '../../components/icons/HelpIcon';
+import { useBackgroundBanner } from '../../components/layout/BackgroundBanner';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import XCircleIcon from '../../images/icons/x-circle.svg';
@@ -43,6 +44,18 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationTransaction,
   } = message;
 
+  const { bannerClassName, setBannerClassName } = useBackgroundBanner();
+  useEffect(() => {
+    if (!setBannerClassName) return;
+    if (error || message.status === MessageStatus.Failing) {
+      setBannerClassName('bg-red-600');
+    } else if (bannerClassName) {
+      setBannerClassName('');
+    }
+
+    // TODO toast on error or surface some other way
+  }, [error, message, bannerClassName, setBannerClassName]);
+
   const reExecutor = useCallback(() => {
     if (status !== MessageStatus.Delivered) {
       reexecuteQuery({ requestPolicy: 'network-only' });
@@ -50,15 +63,23 @@ export function MessageDetails({ messageId }: { messageId: string }) {
   }, [reexecuteQuery, status]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
-  // TODO handle message not found and error cases
+  // TODO handle message not found
   // TODO hide chain logos in circles while loading
+  // TODO show spinner while message is fetching, not just found and pending
 
   return (
     <>
       <div className="flex items-center justify-between px-1 -mt-1">
         <h2 className="text-white text-lg">Message</h2>
         {status === MessageStatus.Pending && (
-          <div className="text-white text-lg">Status: Pending</div>
+          <div className="flex items-center">
+            <div className="text-white text-lg mr-3">Status: Pending</div>
+            <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+              <div className="scale-[35%]">
+                <Spinner white={true} />
+              </div>
+            </div>
+          </div>
         )}
         {status === MessageStatus.Delivered && (
           <div className="flex items-center">
