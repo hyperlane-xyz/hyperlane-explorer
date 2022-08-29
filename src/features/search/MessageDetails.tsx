@@ -1,5 +1,6 @@
 import Image from 'next/future/image';
-import { useCallback, useEffect, useMemo } from 'react';
+import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
+import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
@@ -10,8 +11,9 @@ import { HelpIcon } from '../../components/icons/HelpIcon';
 import { useBackgroundBanner } from '../../components/layout/BackgroundBanner';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
-import XCircleIcon from '../../images/icons/x-circle.svg';
+import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { MessageStatus } from '../../types';
+import { logger } from '../../utils/logger';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 
@@ -31,6 +33,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
   const messages = useMemo(() => parseResultData(data), [data]);
 
   const isMessageFound = messages.length > 0;
+  const shouldBlur = !isMessageFound || fetching;
   const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
   const {
     status,
@@ -46,52 +49,60 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   const { bannerClassName, setBannerClassName } = useBackgroundBanner();
   useEffect(() => {
-    if (!setBannerClassName) return;
-    if (error || message.status === MessageStatus.Failing) {
+    if (!setBannerClassName || fetching) return;
+    if (error) {
+      logger.error('Error fetching message details', error);
+      toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
       setBannerClassName('bg-red-600');
+    } else if (message.status === MessageStatus.Failing) {
+      setBannerClassName('bg-red-600');
+    } else if (!isMessageFound) {
+      setBannerClassName('bg-gray-500');
     } else if (bannerClassName) {
       setBannerClassName('');
     }
-
-    // TODO toast on error or surface some other way
-  }, [error, message, bannerClassName, setBannerClassName]);
+  }, [
+    error,
+    fetching,
+    message,
+    isMessageFound,
+    bannerClassName,
+    setBannerClassName,
+  ]);
 
   const reExecutor = useCallback(() => {
-    if (status !== MessageStatus.Delivered) {
+    if (!isMessageFound || status !== MessageStatus.Delivered) {
       reexecuteQuery({ requestPolicy: 'network-only' });
     }
-  }, [reexecuteQuery, status]);
+  }, [isMessageFound, status, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
-
-  // TODO handle message not found
-  // TODO hide chain logos in circles while loading
-  // TODO show spinner while message is fetching, not just found and pending
 
   return (
     <>
       <div className="flex items-center justify-between px-1 -mt-1">
         <h2 className="text-white text-lg">Message</h2>
-        {status === MessageStatus.Pending && (
-          <div className="flex items-center">
-            <div className="text-white text-lg mr-3">Status: Pending</div>
-            <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
-              <div className="scale-[35%]">
-                <Spinner white={true} />
-              </div>
-            </div>
-          </div>
+        {isMessageFound && status === MessageStatus.Pending && (
+          <StatusHeader text="Status: Pending" fetching={fetching} />
         )}
-        {status === MessageStatus.Delivered && (
-          <div className="flex items-center">
-            <div className="text-white text-lg mr-2">Status: Delivered</div>
+        {isMessageFound && status === MessageStatus.Delivered && (
+          <StatusHeader text="Status: Delivered" fetching={fetching}>
             <Image src={CheckmarkIcon} alt="checkmark" width={24} height={24} />
-          </div>
+          </StatusHeader>
         )}
-        {status === MessageStatus.Failing && (
-          <div className="flex items-center">
-            <div className="text-white text-lg mr-3">Status: Failing</div>
-            <Image src={XCircleIcon} alt="failure" width={30} height={30} />
-          </div>
+        {isMessageFound && status === MessageStatus.Failing && (
+          <StatusHeader text="Status: Failing" fetching={fetching}>
+            <ErrorIcon />
+          </StatusHeader>
+        )}
+        {!isMessageFound && !error && (
+          <StatusHeader text="Message not found" fetching={fetching}>
+            <ErrorIcon />
+          </StatusHeader>
+        )}
+        {!isMessageFound && error && (
+          <StatusHeader text="Error finding message" fetching={fetching}>
+            <ErrorIcon />
+          </StatusHeader>
         )}
       </div>
       <div className="flex flex-wrap items-center justify-between mt-5 gap-4">
@@ -113,7 +124,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             display={originTransaction.transactionHash}
             displayWidth="w-44 sm:w-56"
             showCopy={true}
-            blurValue={fetching}
+            blurValue={shouldBlur}
           />
           <ValueRow
             label="From:"
@@ -121,7 +132,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             display={originTransaction.from}
             displayWidth="w-44 sm:w-56"
             showCopy={true}
-            blurValue={fetching}
+            blurValue={shouldBlur}
           />
           <ValueRow
             label="Block:"
@@ -130,7 +141,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               originTransaction.blockNumber
             } (${getHumanReadableTimeString(originTimeSent)})`}
             displayWidth="w-44 sm:w-56"
-            blurValue={fetching}
+            blurValue={shouldBlur}
           />
           <a
             className="block text-sm text-gray-500 pl-px underline"
@@ -161,7 +172,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 display={originTransaction.transactionHash}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
-                blurValue={fetching}
+                blurValue={shouldBlur}
               />
               <ValueRow
                 label="From:"
@@ -169,7 +180,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 display={originTransaction.from}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
-                blurValue={fetching}
+                blurValue={shouldBlur}
               />
               <ValueRow
                 label="Block:"
@@ -178,7 +189,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                   originTransaction.blockNumber
                 } (${getHumanReadableTimeString(originTimeSent)})`}
                 displayWidth="w-44 sm:w-56"
-                blurValue={fetching}
+                blurValue={shouldBlur}
               />
               <a
                 className="block text-sm text-gray-500 pl-px underline"
@@ -222,7 +233,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           display={sender}
           displayWidth="w-48 sm:w-80"
           showCopy={true}
-          blurValue={fetching}
+          blurValue={shouldBlur}
         />
         <ValueRow
           label="Recipient from outbox:"
@@ -230,7 +241,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           display={recipient}
           displayWidth="w-48 sm:w-80"
           showCopy={true}
-          blurValue={fetching}
+          blurValue={shouldBlur}
         />
         <div>
           <label className="text-sm text-gray-500">Message content:</label>
@@ -246,6 +257,27 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         </div>
       </Card>
     </>
+  );
+}
+
+function StatusHeader({
+  text,
+  fetching,
+  children,
+}: PropsWithChildren<{ text: string; fetching: boolean }>) {
+  return (
+    <div className="flex items-center">
+      <h3 className="text-white text-lg mr-3">{text}</h3>
+      {fetching || !children ? (
+        <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+          <div className="scale-[35%]">
+            <Spinner white={true} />
+          </div>
+        </div>
+      ) : (
+        children
+      )}
+    </div>
   );
 }
 
@@ -269,7 +301,7 @@ function ValueRow({
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <span
         className={`text-sm ml-2 truncate ${displayWidth} ${
-          blurValue && 'blur-sm'
+          blurValue && 'blur-xs'
         }`}
       >
         {display}
@@ -283,6 +315,18 @@ function ValueRow({
         />
       )}
     </div>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <Image
+      src={ErrorCircleIcon}
+      alt="failure"
+      width={24}
+      height={24}
+      className="invert"
+    />
   );
 }
 

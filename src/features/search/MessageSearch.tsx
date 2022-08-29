@@ -135,7 +135,7 @@ export function MessageSearch() {
             <div
               key={`message-${m.id}`}
               className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 ${
-                fetching && 'blur-sm'
+                fetching && 'blur-xs'
               } transition-all duration-500`}
             >
               <MessageSummary message={m} />

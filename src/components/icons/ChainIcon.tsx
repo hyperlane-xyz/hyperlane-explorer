@@ -7,7 +7,7 @@ import {
   bscChain,
   celoMainnetChain,
 } from '../../consts/networksConfig';
-import Cube from '../../images/icons/cube.svg';
+import QuestionMark from '../../images/icons/question-mark.svg';
 import Arbitrum from '../../images/logos/arbitrum.svg';
 import Avalanche from '../../images/logos/avalanche.svg';
 import Bsc from '../../images/logos/bsc.svg';
@@ -30,15 +30,14 @@ function _ChainIcon({
   chainId,
   size = 44,
 }: {
-  chainId: number;
+  chainId?: number;
   size?: number;
 }) {
-  //TODO replace cube with question mark as default
-  const imageSrc = CHAIN_TO_ICON[chainId] || Cube;
+  const imageSrc = (chainId && CHAIN_TO_ICON[chainId]) || QuestionMark;
   return (
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
-      className="flex items-center justify-center rounded-full bg-beige-500"
+      className="flex items-center justify-center rounded-full bg-beige-500 transition-all"
     >
       <Image
         src={imageSrc}
