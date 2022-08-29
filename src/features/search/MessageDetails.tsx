@@ -25,7 +25,7 @@ const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageDetails({ messageId }: { messageId: string }) {
   const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
-    query: messageQuery,
+    query: messageDetailsQuery,
     variables: { messageId: parseInt(messageId) },
   });
 
@@ -40,7 +40,6 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     body,
     sender,
     recipient,
-    originTimeSent,
     originChainId,
     destinationChainId,
     originTransaction,
@@ -139,7 +138,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             labelWidth="w-16"
             display={`${
               originTransaction.blockNumber
-            } (${getHumanReadableTimeString(originTimeSent)})`}
+            } (${getHumanReadableTimeString(originTransaction.timestamp)})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -169,7 +168,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <ValueRow
                 label="Tx hash:"
                 labelWidth="w-16"
-                display={originTransaction.transactionHash}
+                display={destinationTransaction.transactionHash}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
                 blurValue={shouldBlur}
@@ -177,7 +176,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
               <ValueRow
                 label="From:"
                 labelWidth="w-16"
-                display={originTransaction.from}
+                display={destinationTransaction.from}
                 displayWidth="w-44 sm:w-56"
                 showCopy={true}
                 blurValue={shouldBlur}
@@ -186,8 +185,10 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 label="Block:"
                 labelWidth="w-16"
                 display={`${
-                  originTransaction.blockNumber
-                } (${getHumanReadableTimeString(originTimeSent)})`}
+                  destinationTransaction.blockNumber
+                } (${getHumanReadableTimeString(
+                  destinationTransaction.timestamp,
+                )})`}
                 displayWidth="w-44 sm:w-56"
                 blurValue={shouldBlur}
               />
@@ -330,20 +331,62 @@ function ErrorIcon() {
   );
 }
 
-const messageQuery = `
-query message ($messageId: Int!) {
-  messages(where: {id: {_eq: $messageId}}, limit: 1) {
+const messageDetailsQuery = `
+query MessageDetails ($messageId: bigint!){
+  message(where: {id: {_eq: $messageId}}, limit: 1) {
+    destination
     id
-    destinationtimesent
-    destinationchainid
-    body
-    originchainid
-    origintimesent
+    msg_body
+    origin
+    origin_tx_id
+    transaction {
+      id
+      block_id
+      gas_used
+      hash
+      sender
+      block {
+        hash
+        domain
+        height
+        id
+        timestamp
+      }
+    }
+    outbox_address
     recipient
-    status
     sender
+    timestamp
+    delivered_message {
+      id
+      tx_id
+      inbox_address
+      transaction {
+        block_id
+        gas_used
+        hash
+        id
+        sender
+        block {
+          domain
+          hash
+          height
+          id
+          timestamp
+        }
+      }
+    }
+    message_states {
+      block_height
+      block_timestamp
+      error_msg
+      estimated_gas_cost
+      id
+      processable
+    }
   }
-}`;
+}
+`;
 
 const helpText = {
   origin:

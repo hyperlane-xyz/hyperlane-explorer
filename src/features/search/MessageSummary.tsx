@@ -11,7 +11,7 @@ export function MessageSummary({ message }: { message: Message }) {
     status,
     sender,
     recipient,
-    originTimeSent,
+    timestamp,
     originChainId,
     destinationChainId,
   } = message;
@@ -49,7 +49,7 @@ export function MessageSummary({ message }: { message: Message }) {
           <div className={styles.valueContainer + ' w-28'}>
             <div className={styles.label}>Time sent</div>
             <div className={styles.value}>
-              {getHumanReadableTimeString(originTimeSent)}
+              {getHumanReadableTimeString(timestamp)}
             </div>
           </div>
         </div>
