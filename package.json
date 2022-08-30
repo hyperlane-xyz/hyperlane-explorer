@@ -7,6 +7,7 @@
     "@abacus-network/sdk": "^0.4.1",
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6",
     "@rainbow-me/rainbowkit": "^0.4.5",
+    "buffer": "^6.0.3",
     "ethers": "^5.6.8",
     "formik": "^2.2.9",
     "graphql": "^16.6.0",

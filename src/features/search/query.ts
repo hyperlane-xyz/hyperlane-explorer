@@ -5,6 +5,7 @@ import {
   MessageStub,
   PartialTransactionReceipt,
 } from '../../types';
+import { ensureLeading0x } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 import {
@@ -37,8 +38,8 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
     return {
       id: m.id,
       status,
-      sender: decodeBinaryHex(m.sender),
-      recipient: decodeBinaryHex(m.recipient),
+      sender: ensureLeading0x(m.sender),
+      recipient: ensureLeading0x(m.recipient),
       originChainId: DomainToChain[m.origin],
       destinationChainId: DomainToChain[m.destination],
       timestamp: parseTimestampString(m.timestamp),
@@ -59,8 +60,8 @@ function parseMessage(m: MessageEntry): Message | null {
     return {
       id: m.id,
       status,
-      sender: decodeBinaryHex(m.sender),
-      recipient: decodeBinaryHex(m.recipient),
+      sender: ensureLeading0x(m.sender),
+      recipient: ensureLeading0x(m.recipient),
       body: decodeBinaryHex(m.msg_body ?? ''),
       originChainId: DomainToChain[m.origin],
       destinationChainId: DomainToChain[m.destination],
@@ -76,8 +77,8 @@ function parseMessage(m: MessageEntry): Message | null {
 
 function parseTransaction(t: TransactionEntry): PartialTransactionReceipt {
   return {
-    from: decodeBinaryHex(t.sender),
-    transactionHash: decodeBinaryHex(t.hash),
+    from: ensureLeading0x(t.sender),
+    transactionHash: ensureLeading0x(t.hash),
     blockNumber: t.block.height,
     gasUsed: t.gas_used,
     timestamp: parseTimestampString(t.block.timestamp),
@@ -88,9 +89,11 @@ function parseTimestampString(t: string) {
   return new Date(t).getTime();
 }
 
-// TODO remove when db uses text
+// TODO Find correct way to decode postgres bytea format
+// https://github.com/bendrucker/postgres-bytea/blob/master/decoder.js
 function decodeBinaryHex(b: string) {
-  return btoa(b);
+  const buffer = Buffer.from(b.substring(2), 'hex');
+  return ensureLeading0x(buffer.toString('hex'));
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {

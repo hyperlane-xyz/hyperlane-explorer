@@ -51,6 +51,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
     autoprefixer: ^10.4.7
+    buffer: ^6.0.3
     eslint: ^8.19.0
     eslint-config-next: ^12.2.2
     eslint-config-prettier: ^8.5.0
