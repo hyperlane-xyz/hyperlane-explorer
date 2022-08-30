@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
 import { ChainToChain } from '../../components/icons/ChainToChain';
-import { Message, MessageStatus } from '../../types';
+import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableTimeString } from '../../utils/time';
 
-export function MessageSummary({ message }: { message: Message }) {
+export function MessageSummary({ message }: { message: MessageStub }) {
   const {
     id,
     status,

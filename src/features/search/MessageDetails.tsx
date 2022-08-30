@@ -18,7 +18,7 @@ import { getHumanReadableTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
-import { parseResultData } from './query';
+import { parseMessageQueryResult } from './query';
 import { MessagesQueryResult } from './types';
 
 const AUTO_REFRESH_DELAY = 10000;
@@ -26,11 +26,10 @@ const AUTO_REFRESH_DELAY = 10000;
 export function MessageDetails({ messageId }: { messageId: string }) {
   const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query: messageDetailsQuery,
-    variables: { messageId: parseInt(messageId) },
+    variables: { messageId },
   });
-
   const { data, fetching, error } = result;
-  const messages = useMemo(() => parseResultData(data), [data]);
+  const messages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   const isMessageFound = messages.length > 0;
   const shouldBlur = !isMessageFound || fetching;
@@ -385,8 +384,7 @@ query MessageDetails ($messageId: bigint!){
       processable
     }
   }
-}
-`;
+}`;
 
 const helpText = {
   origin:

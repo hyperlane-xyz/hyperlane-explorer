@@ -22,10 +22,13 @@ export interface TransactionEntry {
   block: BlockEntry;
 }
 
-export interface DeliveredMessageEntry {
+export interface DeliveredMessageStubEntry {
   id: number;
   inbox_address: string; // binary e.g. \\x123
   tx_id: number;
+}
+
+export interface DeliveredMessageEntry extends DeliveredMessageStubEntry {
   transaction: TransactionEntry;
 }
 
@@ -38,19 +41,29 @@ export interface MessageStateEntry {
   processable: boolean;
 }
 
-export interface MessageEntry {
+export interface MessageStubEntry {
   id: number;
   destination: number;
   origin: number;
   recipient: string; // binary e.g. \\x123
   sender: string; // binary e.g. \\x123
+  timestamp: string; // e.g. "2022-08-28T17:30:15"
+  transaction: TransactionEntry; // origin transaction
+  delivered_message: DeliveredMessageStubEntry | null | undefined;
+  message_states: MessageStateEntry[];
+}
+
+export interface MessageEntry extends MessageStubEntry {
   outbox_address: string; // binary e.g. \\x123
   msg_body: string | null | undefined; // binary e.g. \\x123
-  timestamp: string; // e.g. "2022-08-28T17:30:15"
   origin_tx_id: number;
   transaction: TransactionEntry; // origin transaction
   delivered_message: DeliveredMessageEntry | null | undefined;
   message_states: MessageStateEntry[];
+}
+
+export interface MessagesStubQueryResult {
+  message: MessageStubEntry[];
 }
 
 export interface MessagesQueryResult {

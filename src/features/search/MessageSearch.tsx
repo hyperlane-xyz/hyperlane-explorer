@@ -19,11 +19,11 @@ import { sanitizeString } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageSummary } from './MessageSummary';
-import { parseResultData } from './query';
-import { MessagesQueryResult } from './types';
+import { parseMessageStubResult } from './query';
+import { MessagesStubQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
 
-const AUTO_REFRESH_DELAY = 5000;
+const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageSearch() {
   // Search text input
@@ -33,6 +33,9 @@ export function MessageSearch() {
     setSearchInput(value);
   };
   const debouncedSearchInput = useDebounce(searchInput, 750);
+  const hasInput = !!debouncedSearchInput;
+  const sanitizedInput = sanitizeString(debouncedSearchInput);
+  const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput) : true;
 
   // Filter state and handlers
   const chainOptions = useMemo(getChainOptionList, []);
@@ -46,18 +49,15 @@ export function MessageSearch() {
   };
 
   // GraphQL query and results
-  const hasInput = !!debouncedSearchInput;
-  const sanitizedInput = sanitizeString(debouncedSearchInput);
-  const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput) : true;
   const query = hasInput ? searchMessagesQuery : latestMessagesQuery;
   const variables = hasInput ? { search: sanitizedInput } : undefined;
-  const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
+  const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
     variables,
     pause: !isValidInput,
   });
   const { data, fetching, error } = result;
-  const messageList = useMemo(() => parseResultData(data), [data]);
+  const messageList = useMemo(() => parseMessageStubResult(data), [data]);
   const hasError = !!error;
   const reExecutor = useCallback(() => {
     if (query && isValidInput) {
@@ -216,22 +216,32 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
   ];
 }
 
-// TODO automatic typings
 const latestMessagesQuery = `
-  query latestMessages {
-    messages(order_by: {origintimesent: desc}, limit: 8) {
+query MessageDetails {
+  message(order_by: {timestamp: desc}, limit: 8) {
+    destination
+    id
+    origin
+    recipient
+    sender
+    timestamp
+    delivered_message {
       id
-      status
-      sender
-      recipient
-      body
-      originchainid
-      origintimesent
-      destinationchainid
-      destinationtimesent
+      tx_id
+      inbox_address
     }
-  }`;
+    message_states {
+      block_height
+      block_timestamp
+      error_msg
+      estimated_gas_cost
+      id
+      processable
+    }
+  }
+}`;
 
+// TODO
 const searchMessagesQuery = `
 query searchMessages ($search: String!) {
   messages (search: $search, order_by: {origintimesent: desc}, limit: 8) {

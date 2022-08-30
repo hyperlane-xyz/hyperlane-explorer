@@ -14,16 +14,18 @@ export enum MessageStatus {
   Failing = 'failing',
 }
 
-// Partially modeled after SDK AbacusMessage class
-export interface Message {
+export interface MessageStub {
   id: number;
   status: MessageStatus;
   sender: Address;
   recipient: Address;
-  body: string;
   originChainId: number;
   destinationChainId: number;
   timestamp: number; // Note, equivalent to timestamp in originTx
+}
+
+export interface Message extends MessageStub {
+  body: string;
   originTransaction: PartialTransactionReceipt;
   destinationTransaction?: PartialTransactionReceipt;
 }
