@@ -9,5 +9,5 @@ export function toTitleCase(str: string) {
 const alphanumericRgex = /[^a-zA-Z0-9]/gi;
 export function sanitizeString(str: string) {
   if (!str || typeof str !== 'string') return '';
-  return str.replaceAll(alphanumericRgex, '');
+  return str.replaceAll(alphanumericRgex, '').toLowerCase();
 }

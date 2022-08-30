@@ -158,7 +158,9 @@ export function MessageSearch() {
           }
           imgSrc={ShrugIcon}
           imgAlt="No results"
-          text="Sorry, no results found. Please try a different address or hash."
+          text={`Sorry, no results found. Please try ${
+            hasInput ? 'a different address or hash' : 'again later'
+          }.`}
           imgWidth={110}
         />
         {/* Search error state */}
@@ -217,7 +219,7 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
 }
 
 const latestMessagesQuery = `
-query MessageDetails {
+query LatestMessages {
   message(order_by: {timestamp: desc}, limit: 8) {
     destination
     id
@@ -241,18 +243,37 @@ query MessageDetails {
   }
 }`;
 
-// TODO
 const searchMessagesQuery = `
-query searchMessages ($search: String!) {
-  messages (search: $search, order_by: {origintimesent: desc}, limit: 8) {
+query SearchMessages ($search: bpchar!) {
+  message(
+      where: {
+        _or: [
+          {sender: {_eq: $search}},
+          {recipient: {_eq: $search}},
+          {transaction: {hash: {_eq: $search}}},
+          {delivered_message: {transaction: {hash: {_eq: $search}}}},
+        ]
+      },
+      order_by: {timestamp: desc},
+      limit: 40) {
+    destination
     id
-    status
-    sender
+    origin
     recipient
-    body
-    originchainid
-    origintimesent
-    destinationchainid
-    destinationtimesent
+    sender
+    timestamp
+    delivered_message {
+      id
+      tx_id
+      inbox_address
+    }
+    message_states {
+      block_height
+      block_timestamp
+      error_msg
+      estimated_gas_cost
+      id
+      processable
+    }
   }
 }`;
