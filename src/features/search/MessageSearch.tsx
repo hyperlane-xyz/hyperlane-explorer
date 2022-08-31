@@ -6,6 +6,7 @@ import { Fade } from '../../components/animation/Fade';
 import { Spinner } from '../../components/animation/Spinner';
 import { IconButton } from '../../components/buttons/IconButton';
 import { SelectField } from '../../components/input/SelectField';
+import { chainToDomain } from '../../consts/domains';
 import { prodChains } from '../../consts/networksConfig';
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
@@ -25,6 +26,8 @@ import { MessagesStubQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
+const LATEST_QUERY_LIMIT = 8;
+const SEARCH_QUERY_LIMIT = 40;
 
 export function MessageSearch() {
   // Search text input
@@ -50,10 +53,11 @@ export function MessageSearch() {
   };
 
   // GraphQL query and results
-  const query = hasInput ? searchMessagesQuery : latestMessagesQuery;
-  const variables = hasInput
-    ? { search: trimLeading0x(sanitizedInput) }
-    : undefined;
+  const { query, variables } = assembleQuery(
+    sanitizedInput,
+    originChainFilter,
+    destinationChainFilter,
+  );
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
     variables,
@@ -221,64 +225,68 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
   ];
 }
 
-const latestMessagesQuery = `
-query LatestMessages {
-  message(order_by: {timestamp: desc}, limit: 8) {
-    destination
-    id
-    origin
-    recipient
-    sender
-    timestamp
-    delivered_message {
-      id
-      tx_id
-      inbox_address
-    }
-    message_states {
-      block_height
-      block_timestamp
-      error_msg
-      estimated_gas_cost
-      id
-      processable
-    }
-  }
-}`;
+function assembleQuery(
+  searchInput: string,
+  originFilter: string,
+  destFilter: string,
+) {
+  const hasInput = !!searchInput;
+  const variables = {
+    search: hasInput ? trimLeading0x(searchInput) : undefined,
+    originChain: originFilter ? chainToDomain[originFilter] : undefined,
+    destinationChain: destFilter ? chainToDomain[destFilter] : undefined,
+  };
+  const limit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
 
-const searchMessagesQuery = `
-query SearchMessages ($search: String!) {
-  message(
+  const query = `
+  query ($search: String, $originChain: Int, $destinationChain: Int) {
+    message(
       where: {
-        _or: [
-          {sender: {_eq: $search}},
-          {recipient: {_eq: $search}},
-          {transaction: {hash: {_eq: $search}}},
-          {transaction: {sender: {_eq: $search}}},
-          {delivered_message: {transaction: {hash: {_eq: $search}}}},
-          {delivered_message: {transaction: {sender: {_eq: $search}}}},
+        _and: [
+          ${originFilter ? '{origin: {_eq: $originChain}},' : ''}
+          ${destFilter ? '{destination: {_eq: $destinationChain}},' : ''}
+          ${hasInput ? searchWhereClause : ''}
         ]
       },
       order_by: {timestamp: desc},
-      limit: 40) {
-    destination
-    id
-    origin
-    recipient
-    sender
-    timestamp
-    delivered_message {
-      id
-      tx_id
-      inbox_address
-    }
-    message_states {
-      block_height
-      block_timestamp
-      error_msg
-      estimated_gas_cost
-      id
-      processable
-    }
+      limit: ${limit}
+      ) {
+        ${messageStubProps}
+      }
   }
-}`;
+  `;
+  return { query, variables };
+}
+
+const searchWhereClause = `
+  {_or: [
+    {sender: {_eq: $search}},
+    {recipient: {_eq: $search}},
+    {transaction: {hash: {_eq: $search}}},
+    {transaction: {sender: {_eq: $search}}},
+    {delivered_message: {transaction: {hash: {_eq: $search}}}},
+    {delivered_message: {transaction: {sender: {_eq: $search}}}}
+  ]}
+`;
+
+const messageStubProps = `
+  id
+  destination
+  origin
+  recipient
+  sender
+  timestamp
+  delivered_message {
+    id
+    tx_id
+    inbox_address
+  }
+  message_states {
+    block_height
+    block_timestamp
+    error_msg
+    estimated_gas_cost
+    id
+    processable
+  }
+`;

@@ -1,4 +1,4 @@
-import { DomainToChain } from '../../consts/domains';
+import { domainToChain } from '../../consts/domains';
 import {
   Message,
   MessageStatus,
@@ -40,8 +40,8 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       status,
       sender: ensureLeading0x(m.sender),
       recipient: ensureLeading0x(m.recipient),
-      originChainId: DomainToChain[m.origin],
-      destinationChainId: DomainToChain[m.destination],
+      originChainId: domainToChain[m.origin],
+      destinationChainId: domainToChain[m.destination],
       timestamp: parseTimestampString(m.timestamp),
     };
   } catch (error) {
@@ -63,8 +63,8 @@ function parseMessage(m: MessageEntry): Message | null {
       sender: ensureLeading0x(m.sender),
       recipient: ensureLeading0x(m.recipient),
       body: decodeBinaryHex(m.msg_body ?? ''),
-      originChainId: DomainToChain[m.origin],
-      destinationChainId: DomainToChain[m.destination],
+      originChainId: domainToChain[m.origin],
+      destinationChainId: domainToChain[m.destination],
       timestamp: parseTimestampString(m.timestamp),
       originTransaction: parseTransaction(m.transaction),
       destinationTransaction,

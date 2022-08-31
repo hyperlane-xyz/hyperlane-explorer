@@ -10,7 +10,7 @@ import Twitter from '../../images/logos/twitter.svg';
 
 export function Footer() {
   return (
-    <footer className="mt-3 px-4 py-4 sm:pl-6 sm:pr-8 opacity-90">
+    <footer className="mt-3 px-4 py-4 sm:pl-6 sm:pr-8 opacity-80">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">

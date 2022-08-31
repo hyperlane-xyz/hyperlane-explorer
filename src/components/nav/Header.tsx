@@ -9,7 +9,7 @@ export function Header() {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(3);
 
   return (
-    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8 w-full">
+    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8 w-full opacity-90">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">

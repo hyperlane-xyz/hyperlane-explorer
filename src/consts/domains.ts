@@ -3,7 +3,7 @@ import { invertKeysAndValues } from '../utils/objects';
 // TODO move these to SDK
 // Hard-coding here for better perf and reduced queries
 // Should match Domain table in db
-export const DomainToChain = {
+export const domainToChain = {
   1000: 44787, // alfajores
   6386274: 42161, // arbitrum
   1634872690: 421611, // arbitrumrinkeby
@@ -22,4 +22,4 @@ export const DomainToChain = {
   1886350457: 137, // polygon
 };
 
-export const ChainToDomain = invertKeysAndValues(DomainToChain);
+export const chainToDomain = invertKeysAndValues(domainToChain);
