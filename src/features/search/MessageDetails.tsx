@@ -20,6 +20,7 @@ import { useInterval } from '../../utils/timeout';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import { MessagesQueryResult } from './types';
+import { getTxExplorerLink } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
 
@@ -44,6 +45,14 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     originTransaction,
     destinationTransaction,
   } = message;
+  const originTxExplorerLink = getTxExplorerLink(
+    originChainId,
+    originTransaction?.transactionHash,
+  );
+  const destinationTxExplorerLink = getTxExplorerLink(
+    destinationChainId,
+    destinationTransaction?.transactionHash,
+  );
 
   const { bannerClassName, setBannerClassName } = useBackgroundBanner();
   useEffect(() => {
@@ -141,14 +150,16 @@ export function MessageDetails({ messageId }: { messageId: string }) {
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
-          <a
-            className="block text-sm text-gray-500 pl-px underline"
-            href="TODO"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View in block explorer
-          </a>
+          {originTxExplorerLink && (
+            <a
+              className="block text-sm text-gray-500 pl-px underline"
+              href={originTxExplorerLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View in block explorer
+            </a>
+          )}
         </Card>
         <Card classes="flex-1 min-w-fit space-y-4">
           <div className="flex items-center justify-between">
@@ -191,14 +202,16 @@ export function MessageDetails({ messageId }: { messageId: string }) {
                 displayWidth="w-44 sm:w-56"
                 blurValue={shouldBlur}
               />
-              <a
-                className="block text-sm text-gray-500 pl-px underline"
-                href="TODO"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View in block explorer
-              </a>
+              {destinationTxExplorerLink && (
+                <a
+                  className="block text-sm text-gray-500 pl-px underline"
+                  href={destinationTxExplorerLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View in block explorer
+                </a>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center py-6">

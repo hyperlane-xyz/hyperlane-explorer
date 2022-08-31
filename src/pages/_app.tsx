@@ -81,7 +81,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <ToastContainer
           transition={Zoom}
           position={toast.POSITION.BOTTOM_RIGHT}
-          limit={3}
+          limit={2}
         />
       </WagmiConfig>
     </ErrorBoundary>

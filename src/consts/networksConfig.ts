@@ -30,6 +30,7 @@ export const avalancheChain: Chain = {
     default: 'https://api.avax.network/ext/bc/C/rpc',
   },
   blockExplorers: {
+    etherscan: { name: 'SnowTrace', url: 'https://snowtrace.io' },
     default: { name: 'SnowTrace', url: 'https://snowtrace.io' },
   },
   testnet: false,
@@ -48,6 +49,7 @@ export const bscChain: Chain = {
     default: 'https://bsc-dataseed.binance.org',
   },
   blockExplorers: {
+    etherscan: { name: 'BscScan', url: 'https://bscscan.com' },
     default: { name: 'BscScan', url: 'https://bscscan.com' },
   },
   testnet: false,
@@ -66,6 +68,11 @@ export const celoMainnetChain: Chain = {
     default: 'https://forno.celo.org',
   },
   blockExplorers: {
+    etherscan: { name: 'CeloScan', url: 'https://celoscan.io' },
+    blockscout: {
+      name: 'Blockscout',
+      url: 'https://explorer.celo.org',
+    },
     default: { name: 'CeloScan', url: 'https://celoscan.io' },
   },
   testnet: false,
@@ -84,6 +91,10 @@ export const celoAlfajoresChain: Chain = {
     default: 'https://alfajores-forno.celo-testnet.org',
   },
   blockExplorers: {
+    blockscout: {
+      name: 'Blockscout',
+      url: 'https://alfajores-blockscout.celo-testnet.org',
+    },
     default: {
       name: 'Blockscout',
       url: 'https://alfajores-blockscout.celo-testnet.org',
@@ -111,3 +122,11 @@ export const allChains = [
   celoMainnetChain,
   celoAlfajoresChain,
 ];
+
+export const chainIdToChain = allChains.reduce<Record<number, Chain>>(
+  (result, chain) => {
+    result[chain.id] = chain;
+    return result;
+  },
+  {},
+);

@@ -1,8 +1,8 @@
-// Hard-coding here for better perf and reduced queries
-// Should match Domain table in db
 import { invertKeysAndValues } from '../utils/objects';
 
 // TODO move these to SDK
+// Hard-coding here for better perf and reduced queries
+// Should match Domain table in db
 export const DomainToChain = {
   1000: 44787, // alfajores
   6386274: 42161, // arbitrum
