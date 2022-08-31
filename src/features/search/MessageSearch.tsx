@@ -14,6 +14,7 @@ import SearchOffIcon from '../../images/icons/search-off.svg';
 import SearchIcon from '../../images/icons/search.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import XIcon from '../../images/icons/x.svg';
+import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
 import { sanitizeString } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
@@ -50,7 +51,9 @@ export function MessageSearch() {
 
   // GraphQL query and results
   const query = hasInput ? searchMessagesQuery : latestMessagesQuery;
-  const variables = hasInput ? { search: sanitizedInput } : undefined;
+  const variables = hasInput
+    ? { search: trimLeading0x(sanitizedInput) }
+    : undefined;
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
     variables,
@@ -244,14 +247,16 @@ query LatestMessages {
 }`;
 
 const searchMessagesQuery = `
-query SearchMessages ($search: bpchar!) {
+query SearchMessages ($search: String!) {
   message(
       where: {
         _or: [
           {sender: {_eq: $search}},
           {recipient: {_eq: $search}},
           {transaction: {hash: {_eq: $search}}},
+          {transaction: {sender: {_eq: $search}}},
           {delivered_message: {transaction: {hash: {_eq: $search}}}},
+          {delivered_message: {transaction: {sender: {_eq: $search}}}},
         ]
       },
       order_by: {timestamp: desc},
