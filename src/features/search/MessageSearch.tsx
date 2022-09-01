@@ -123,7 +123,7 @@ export function MessageSearch() {
             />
             <Image
               src={ArrowRightIcon}
-              alt="Arrow-right"
+              alt="Right"
               width={30}
               height={30}
               className="opacity-50"

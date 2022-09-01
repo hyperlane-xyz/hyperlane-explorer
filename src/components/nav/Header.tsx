@@ -2,21 +2,27 @@ import Image from 'next/future/image';
 import Link from 'next/link';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
-import Hamburger from '../../images/icons/hamburger.svg';
+import { Environment, allConfigs, config } from '../../consts/appConfig';
+import BookIcon from '../../images/icons/book.svg';
+import HamburgerIcon from '../../images/icons/hamburger.svg';
+import HouseIcon from '../../images/icons/house.svg';
+import HubIcon from '../../images/icons/hub.svg';
+import InfoIcon from '../../images/icons/info-circle.svg';
 import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(3);
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
+  const isMainnet = config.environment === Environment.Mainnet;
 
   return (
-    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8 w-full opacity-90">
+    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-8 w-full">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
             <div className="flex scale-90 sm:scale-100">
               <Image
                 src={Logo}
-                alt="Abacus Logo"
+                alt="Abacus"
                 quality={100}
                 width={130}
                 height={35}
@@ -27,7 +33,7 @@ export function Header() {
             </div>
           </a>
         </Link>
-        <div className="hidden sm:flex sm:space-x-8 md:space-x-12">
+        <div className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-12">
           <Link href="/">
             <a className={styles.navLink}>Home</a>
           </Link>
@@ -47,13 +53,15 @@ export function Header() {
           >
             About
           </a>
+          <NetworkSelector />
         </div>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>
-            <Image src={Hamburger} alt="Nav menu" width={26} height={26} />
+            <Image src={HamburgerIcon} alt="Nav" width={22} height={22} />
           </button>
         </div>
       </div>
+      {/* Dropdown menu, used on mobile */}
       <div
         className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}
         role="menu"
@@ -64,7 +72,7 @@ export function Header() {
             className={styles.dropdownOption}
             onClick={() => setIsOpen(false)}
           >
-            <div>Home</div>
+            <DropdownItemContent icon={HouseIcon} text="Home" />
           </a>
         </Link>
         <a
@@ -75,7 +83,7 @@ export function Header() {
           href="https://docs.useabacus.network"
           rel="noopener noreferrer"
         >
-          Docs
+          <DropdownItemContent icon={BookIcon} text="Docs" />
         </a>
         <a
           {...itemProps[2]}
@@ -85,17 +93,103 @@ export function Header() {
           href="https://www.useabacus.network"
           rel="noopener noreferrer"
         >
-          About
+          <DropdownItemContent icon={InfoIcon} text="About" />
+        </a>
+        <a
+          {...itemProps[3]}
+          onClick={() => setIsOpen(false)}
+          className={styles.dropdownOption}
+          href={isMainnet ? allConfigs.testnet2.url : allConfigs.mainnet.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <DropdownItemContent
+            icon={HubIcon}
+            text={isMainnet ? 'Testnet' : 'Mainnet'}
+          />
         </a>
       </div>
     </header>
   );
 }
 
+function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
+  return (
+    <>
+      <Image
+        src={icon}
+        alt=""
+        width={18}
+        height={18}
+        className="opacity-70 mr-2.5"
+      />
+      <span>{text}</span>
+    </>
+  );
+}
+
+function NetworkSelector() {
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(2);
+  return (
+    <div className="relative">
+      <button
+        className="flex items-center pb-px hover:opacity-60 transition-all"
+        {...buttonProps}
+      >
+        <Image
+          src={HubIcon}
+          alt="Hub"
+          width={20}
+          height={20}
+          className="opacity-70"
+        />
+      </button>
+      <div
+        className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}
+        role="menu"
+      >
+        <a
+          {...itemProps[0]}
+          className={`${styles.dropdownOption} justify-center ${
+            config.environment === Environment.Mainnet && styles.activeEnv
+          }`}
+          onClick={() => setIsOpen(false)}
+          href={
+            config.environment !== Environment.Mainnet
+              ? allConfigs.mainnet.url
+              : undefined
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Mainnet
+        </a>
+        <a
+          {...itemProps[1]}
+          onClick={() => setIsOpen(false)}
+          className={`${styles.dropdownOption} justify-center ${
+            config.environment === Environment.Testnet2 && styles.activeEnv
+          }`}
+          href={
+            config.environment !== Environment.Testnet2
+              ? allConfigs.testnet2.url
+              : undefined
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Testnet
+        </a>
+      </div>
+    </div>
+  );
+}
+
 const styles = {
   navLink:
-    'flex items-center font-medium tracking-wide opacity-90 hover:underline hover:opacity-70 decoration-2 underline-offset-4 transition-all',
-  dropdownContainer: 'dropdown-menu w-28 mt-1 mr-px bg-beige-500',
+    'flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-70 decoration-2 underline-offset-4 transition-all',
+  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50',
   dropdownOption:
-    'flex items-center justify-center cursor-pointer p-2 mt-1 rounded hover:underline',
+    'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
+  activeEnv: 'font-medium cursor-default hover:no-underline',
 };
