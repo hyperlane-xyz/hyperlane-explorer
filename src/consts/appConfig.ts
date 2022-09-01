@@ -22,8 +22,8 @@ export const allConfigs: Record<Environment, Config> = {
     environment: Environment.Testnet2,
     debug: true,
     version,
-    url: 'https://abacus-explorer-app.vercel.app/', //TODO
-    apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql', //TODO
+    url: 'TODO',
+    apiUrl: 'TODO',
   },
 };
 
