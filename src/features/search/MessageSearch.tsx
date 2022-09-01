@@ -17,7 +17,7 @@ import ShrugIcon from '../../images/icons/shrug.svg';
 import XIcon from '../../images/icons/x.svg';
 import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
-import { sanitizeString } from '../../utils/string';
+import { sanitizeString, trimToLength } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageSummary } from './MessageSummary';
@@ -221,7 +221,10 @@ function SearchInfoBox({
 function getChainOptionList(): Array<{ value: string; display: string }> {
   return [
     { value: '', display: 'All Chains' },
-    ...prodChains.map((c) => ({ value: c.id.toString(), display: c.name })),
+    ...prodChains.map((c) => ({
+      value: c.id.toString(),
+      display: trimToLength(c.name, 12),
+    })),
   ];
 }
 
