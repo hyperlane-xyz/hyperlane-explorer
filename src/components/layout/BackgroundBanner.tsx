@@ -24,7 +24,7 @@ export function BackgroundBanner() {
   return (
     <div
       className={`absolute -top-5 -left-4 -right-4 h-36 rounded z-10 transition-all duration-500 ${
-        bannerClassName || 'bg-green-600'
+        bannerClassName || 'bg-blue-500'
       }`}
     ></div>
   );

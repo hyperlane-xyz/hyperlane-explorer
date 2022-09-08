@@ -8,7 +8,8 @@ import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import HubIcon from '../../images/icons/hub.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
-import Logo from '../../images/logos/abacus-with-name.svg';
+import Logo from '../../images/logos/hyperlane-logo.svg';
+import Name from '../../images/logos/hyperlane-name.svg';
 
 export function Header() {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
@@ -22,11 +23,16 @@ export function Header() {
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
-            <div className="flex scale-90 sm:scale-100">
-              <Image src={Logo} quality={100} width={130} height={35} />
-            </div>
-            <div className="font-serif text-[1.9rem] text-green-600 sm:ml-2 pt-px">
-              Explorer
+            <div className="flex items-center scale-90 sm:scale-100">
+              <div className="relative">
+                <Image src={Logo} width={24} height={28} />
+              </div>
+              <div className="relative pt-1 ml-2">
+                <Image src={Name} width={124} height={28} alt="Hyperlane" />
+              </div>
+              <div className="font-serif text-[1.9rem] text-blue-500 sm:ml-2 pt-px">
+                Explorer
+              </div>
             </div>
           </a>
         </Link>

@@ -76,7 +76,7 @@ export function MessageSearch() {
   return (
     <>
       {/* Search bar */}
-      <div className="flex items-center bg-white w-full rounded shadow-md">
+      <div className="flex items-center bg-white w-full rounded shadow-md border border-blue-50">
         <input
           value={searchInput}
           onChange={onChangeSearch}
@@ -84,7 +84,7 @@ export function MessageSearch() {
           placeholder="Search for messages by address or transaction hash"
           className="p-2 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 rounded focus:outline-none"
         />
-        <div className="bg-beige-500 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
+        <div className="bg-beige-300 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
           {fetching && <Spinner classes="scale-[30%] mr-2.5" />}
           {!fetching && !searchInput && (
             <Image src={SearchIcon} width={20} height={20} />
@@ -100,7 +100,7 @@ export function MessageSearch() {
           )}
         </div>
       </div>
-      <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md rounded overflow-auto relative">
+      <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         {/* Content header and filter bar */}
         <div className="px-2 py-3 sm:px-4 md:px-5 md:py-3 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-gray-500 black-shadow">

@@ -15,12 +15,14 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
       <Head>
         {/* https://nextjs.org/docs/messages/no-document-viewport-meta */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{`Abacus Explorer [BETA] | ${getHeadTitle(pathName)}`}</title>
+        <title>{`Hyperlane Explorer [BETA] | ${getHeadTitle(pathName)}`}</title>
       </Head>
-      <div className="flex flex-col justify-between h-full min-h-screen w-full min-w-screen bg-beige-500">
-        <Header />
-        <main className="w-full">{children}</main>
-        <Footer />
+      <div className="h-full min-h-screen w-full min-w-screen bg-gray-100">
+        <div className="max-w-5xl mx-auto flex flex-col justify-between min-h-screen">
+          <Header />
+          <main className="w-full">{children}</main>
+          <Footer />
+        </div>
       </div>
     </>
   );
