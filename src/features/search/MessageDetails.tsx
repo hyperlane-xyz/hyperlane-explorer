@@ -86,7 +86,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   return (
     <>
-      <div className="flex items-center justify-between px-1 -mt-1">
+      <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">Message</h2>
         {isMessageFound && status === MessageStatus.Pending && (
           <StatusHeader text="Status: Pending" fetching={fetching} />
