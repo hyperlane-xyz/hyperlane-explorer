@@ -22,7 +22,8 @@ select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' fill='%23010101'><polygon points='0,0 100,0 50,50'/></svg>") no-repeat;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' fill='%23010101'><polygon points='0,0 100,0 50,50'/></svg>")
+    no-repeat;
   background-size: 8px;
   background-position: 92% 60%;
   background-repeat: no-repeat;
@@ -130,15 +131,6 @@ Common animations
   100% {
     opacity: 1;
   }
-}
-
-/*
-Common filters
-=================
-*/
-
-.filter-full-bright {
-  filter: brightness(10);
 }
 
 /* 
