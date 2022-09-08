@@ -12,6 +12,9 @@ import Logo from '../../images/logos/abacus-with-name.svg';
 
 export function Header() {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
+  const closeDropdown = () => {
+    setIsOpen(false);
+  };
   const isMainnet = config.environment === Environment.Mainnet;
 
   return (
@@ -20,13 +23,7 @@ export function Header() {
         <Link href="/">
           <a className="flex items-center">
             <div className="flex scale-90 sm:scale-100">
-              <Image
-                src={Logo}
-                alt="Abacus"
-                quality={100}
-                width={130}
-                height={35}
-              />
+              <Image src={Logo} quality={100} width={130} height={35} />
             </div>
             <div className="font-serif text-[1.9rem] text-green-600 sm:ml-2 pt-px">
               Explorer
@@ -57,7 +54,7 @@ export function Header() {
         </div>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>
-            <Image src={HamburgerIcon} alt="Nav" width={22} height={22} />
+            <Image src={HamburgerIcon} width={22} height={22} />
           </button>
         </div>
       </div>
@@ -70,14 +67,14 @@ export function Header() {
           <a
             {...itemProps[0]}
             className={styles.dropdownOption}
-            onClick={() => setIsOpen(false)}
+            onClick={closeDropdown}
           >
             <DropdownItemContent icon={HouseIcon} text="Home" />
           </a>
         </Link>
         <a
           {...itemProps[1]}
-          onClick={() => setIsOpen(false)}
+          onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
           href="https://docs.useabacus.network"
@@ -87,7 +84,7 @@ export function Header() {
         </a>
         <a
           {...itemProps[2]}
-          onClick={() => setIsOpen(false)}
+          onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
           href="https://www.useabacus.network"
@@ -97,7 +94,7 @@ export function Header() {
         </a>
         <a
           {...itemProps[3]}
-          onClick={() => setIsOpen(false)}
+          onClick={closeDropdown}
           className={styles.dropdownOption}
           href={isMainnet ? allConfigs.testnet2.url : allConfigs.mainnet.url}
           target="_blank"
@@ -116,13 +113,7 @@ export function Header() {
 function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
   return (
     <>
-      <Image
-        src={icon}
-        alt=""
-        width={18}
-        height={18}
-        className="opacity-70 mr-2.5"
-      />
+      <Image src={icon} width={18} height={18} className="opacity-70 mr-2.5" />
       <span>{text}</span>
     </>
   );
@@ -136,13 +127,7 @@ function NetworkSelector() {
         className="flex items-center pb-px hover:opacity-60 transition-all"
         {...buttonProps}
       >
-        <Image
-          src={HubIcon}
-          alt="Hub"
-          width={20}
-          height={20}
-          className="opacity-70"
-        />
+        <Image src={HubIcon} width={20} height={20} className="opacity-70" />
       </button>
       <div
         className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}

@@ -87,7 +87,7 @@ export function MessageSearch() {
         <div className="bg-beige-500 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
           {fetching && <Spinner classes="scale-[30%] mr-2.5" />}
           {!fetching && !searchInput && (
-            <Image src={SearchIcon} alt="Search" width={20} height={20} />
+            <Image src={SearchIcon} width={20} height={20} />
           )}
           {!fetching && searchInput && (
             <IconButton
@@ -110,7 +110,6 @@ export function MessageSearch() {
             <div className="w-px h-8 bg-gray-100"></div>
             <Image
               src={FunnelIcon}
-              alt="Filter"
               width={22}
               height={22}
               className="opacity-50"
@@ -123,7 +122,6 @@ export function MessageSearch() {
             />
             <Image
               src={ArrowRightIcon}
-              alt="Right"
               width={30}
               height={30}
               className="opacity-50"

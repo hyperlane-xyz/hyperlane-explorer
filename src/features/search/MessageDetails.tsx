@@ -93,7 +93,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         )}
         {isMessageFound && status === MessageStatus.Delivered && (
           <StatusHeader text="Status: Delivered" fetching={fetching}>
-            <Image src={CheckmarkIcon} alt="checkmark" width={24} height={24} />
+            <Image src={CheckmarkIcon} width={24} height={24} />
           </StatusHeader>
         )}
         {isMessageFound && status === MessageStatus.Failing && (
@@ -333,13 +333,7 @@ function ValueRow({
 
 function ErrorIcon() {
   return (
-    <Image
-      src={ErrorCircleIcon}
-      alt="failure"
-      width={24}
-      height={24}
-      className="invert"
-    />
+    <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />
   );
 }
 

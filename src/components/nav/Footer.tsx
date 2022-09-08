@@ -14,7 +14,7 @@ export function Footer() {
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">
-            <Image src={Abacus} alt="Abacus" width={52} height={52} />
+            <Image src={Abacus} width={52} height={52} />
           </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">

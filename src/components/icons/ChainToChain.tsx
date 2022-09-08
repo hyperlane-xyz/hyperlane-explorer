@@ -17,7 +17,7 @@ function _ChainToChain({
   return (
     <div className="flex items-center justify-center sm:space-x-1 md:space-x-2">
       <ChainIcon chainId={originChainId} size={size} />
-      <Image src={ArrowRightIcon} alt="right" width={32} height={32} />
+      <Image src={ArrowRightIcon} width={32} height={32} />
       <ChainIcon chainId={destinationChainId} size={size} />
     </div>
   );
