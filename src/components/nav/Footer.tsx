@@ -18,12 +18,12 @@ export function Footer() {
           </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">
-              <span className="text-base font-medium">Hyperlane</span> is a
+              <span className="text-base font-medium">Hyperlane</span> is the
               platform
               <br />
-              for building interchain
+              for developers building
               <br />
-              decentralized applications
+              the interchain universe
             </p>
           </div>
         </div>

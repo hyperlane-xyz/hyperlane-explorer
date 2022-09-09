@@ -11,7 +11,23 @@ interface Props {
 }
 
 function _ChevronIcon({ width, height, direction, color, classes }: Props) {
-  const directionClass = chevronDirectionToClass(direction);
+  let directionClass;
+  switch (direction) {
+    case 'n':
+      directionClass = 'rotate-180';
+      break;
+    case 'e':
+      directionClass = '-rotate-90';
+      break;
+    case 's':
+      directionClass = '';
+      break;
+    case 'w':
+      directionClass = 'rotate-90';
+      break;
+    default:
+      throw new Error(`Invalid chevron direction ${direction}`);
+  }
 
   return (
     <svg
@@ -35,22 +51,3 @@ function _ChevronIcon({ width, height, direction, color, classes }: Props) {
 }
 
 export const ChevronIcon = memo(_ChevronIcon);
-
-export function chevronDirectionToClass(direction: 'n' | 'e' | 's' | 'w') {
-  switch (direction) {
-    case 'n':
-      return 'rotate-180';
-      break;
-    case 'e':
-      return 'rotate-270';
-      break;
-    case 's':
-      return '';
-      break;
-    case 'w':
-      return 'rotate-90';
-      break;
-    default:
-      throw new Error(`Invalid chevron direction ${direction}`);
-  }
-}

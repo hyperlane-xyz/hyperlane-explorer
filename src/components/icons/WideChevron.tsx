@@ -2,8 +2,6 @@ import { memo } from 'react';
 
 import { Color } from '../../styles/Color';
 
-import { chevronDirectionToClass } from './Chevron';
-
 interface Props {
   width?: string | number;
   height?: string | number;
@@ -13,7 +11,23 @@ interface Props {
 }
 
 function _WideChevronIcon({ width, height, direction, color, classes }: Props) {
-  const directionClass = chevronDirectionToClass(direction);
+  let directionClass;
+  switch (direction) {
+    case 'n':
+      directionClass = '-rotate-90';
+      break;
+    case 'e':
+      directionClass = '';
+      break;
+    case 's':
+      directionClass = 'rotate-90';
+      break;
+    case 'w':
+      directionClass = 'rotate-180';
+      break;
+    default:
+      throw new Error(`Invalid chevron direction ${direction}`);
+  }
 
   return (
     <svg
