@@ -268,7 +268,7 @@ function DetailsCard({
   shouldBlur,
 }: DetailsCardProps) {
   return (
-    <Card classes="mt-4 space-y-4">
+    <Card classes="mt-2 space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainToChain
@@ -341,12 +341,7 @@ function ValueRow({
         {display}
       </span>
       {showCopy && (
-        <CopyButton
-          copyValue={display}
-          width={15}
-          height={15}
-          classes="ml-3 opacity-50"
-        />
+        <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />
       )}
     </div>
   );

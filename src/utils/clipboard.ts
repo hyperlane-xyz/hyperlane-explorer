@@ -7,8 +7,10 @@ export function isClipboardReadSupported() {
 export async function tryClipboardSet(value: string) {
   try {
     await navigator.clipboard.writeText(value);
+    return true;
   } catch (error) {
     logger.error('Failed to set clipboard', error);
+    return false;
   }
 }
 
