@@ -26,3 +26,8 @@ export function getHumanReadableTimeString(timestamp: number) {
   const date = new Date(timestamp);
   return date.toLocaleDateString();
 }
+
+export function getDateTimeString(timestamp: number) {
+  const date = new Date(timestamp);
+  return `${date.toLocaleTimeString()} ${date.toLocaleDateString()}`;
+}

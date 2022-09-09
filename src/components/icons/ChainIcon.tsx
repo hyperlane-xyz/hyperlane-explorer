@@ -15,6 +15,7 @@ import Celo from '../../images/logos/celo.svg';
 import EthMainnet from '../../images/logos/eth-mainnet.svg';
 import Optimism from '../../images/logos/optimism.svg';
 import Polygon from '../../images/logos/polygon.svg';
+import { getChainName } from '../../utils/chains';
 
 const CHAIN_TO_ICON = {
   [chain.arbitrum.id]: Arbitrum,
@@ -38,6 +39,7 @@ function _ChainIcon({
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
       className="flex items-center justify-center rounded-full bg-beige-300 transition-all"
+      title={getChainName(chainId)}
     >
       <Image
         src={imageSrc}
