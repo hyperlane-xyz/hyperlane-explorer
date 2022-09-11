@@ -28,7 +28,7 @@ export function MessageSummary({ message }: { message: MessageStub }) {
 
   return (
     <Link href={`/message/${id}`}>
-      <a className="flex items-center justify-between space-x-5 sm:space-x-12 md:space-x-16">
+      <a className="flex items-center justify-between space-x-4 xs:space-x-9 sm:space-x-12 md:space-x-16">
         <ChainToChain
           originChainId={originChainId}
           destinationChainId={destinationChainId}
@@ -46,7 +46,7 @@ export function MessageSummary({ message }: { message: MessageStub }) {
               {shortenAddress(recipient) || 'Invalid Address'}
             </div>
           </div>
-          <div className={styles.valueContainer + ' w-28'}>
+          <div className={styles.valueContainer + ' sm:w-28'}>
             <div className={styles.label}>Time sent</div>
             <div className={styles.value}>
               {getHumanReadableTimeString(timestamp)}

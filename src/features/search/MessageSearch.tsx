@@ -106,13 +106,13 @@ export function MessageSearch() {
           <h2 className="text-gray-500 black-shadow">
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
-          <div className="flex items-center space-x-2 md:space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
             <div className="w-px h-8 bg-gray-100"></div>
             <Image
               src={FunnelIcon}
               width={22}
               height={22}
-              className="opacity-50"
+              className="hidden sm:block opacity-50"
             />
             <SelectField
               classes="w-24 md:w-32"
