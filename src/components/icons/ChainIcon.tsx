@@ -35,6 +35,7 @@ function _ChainIcon({
   size?: number;
 }) {
   const imageSrc = (chainId && CHAIN_TO_ICON[chainId]) || QuestionMark;
+
   return (
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
@@ -44,8 +45,8 @@ function _ChainIcon({
       <Image
         src={imageSrc}
         alt={`chain-${chainId}`}
-        width={size / 2.2}
-        height={size / 2.2}
+        width={Math.floor(size / 2.2)}
+        height={Math.floor(size / 2.2)}
       />
     </div>
   );

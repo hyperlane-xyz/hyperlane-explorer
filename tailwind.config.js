@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 
-const colors = require('tailwindcss/colors');
+const defaultTheme = require('tailwindcss/defaultTheme')
+
 
 module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
@@ -9,6 +10,10 @@ module.exports = {
       sans: ['Neue Haas Grotesk', 'Helvetica', 'sans-serif'],
       serif: ['Garamond', 'serif'],
       mono: ['Courier New', 'monospace'],
+    },
+    screens: {
+      xs: '480px',
+      ...defaultTheme.screens,
     },
     extend: {
       colors: {
@@ -62,7 +67,7 @@ module.exports = {
         },
       },
       fontSize: {
-        'md': '0.95rem'
+        md: '0.95rem',
       },
       spacing: {
         88: '22rem',
@@ -81,7 +86,7 @@ module.exports = {
       },
       blur: {
         xs: '3px',
-      }
+      },
     },
   },
   plugins: [],
