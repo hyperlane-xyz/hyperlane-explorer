@@ -1,5 +1,6 @@
 import Image from 'next/future/image';
 
+import { links } from '../../consts/links';
 import Book from '../../images/icons/book.svg';
 import Briefcase from '../../images/icons/briefcase.svg';
 import InfoCircle from '../../images/icons/info-circle.svg';
@@ -28,36 +29,12 @@ export function Footer() {
           </div>
         </div>
         <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-5 md:gap-x-8">
-          <FooterIconLink
-            to="https://twitter.com/Abacus_Network"
-            imgSrc={Twitter}
-            text="Twitter"
-          />
-          <FooterIconLink
-            to="https://docs.useabacus.network"
-            imgSrc={Book}
-            text="Docs"
-          />
-          <FooterIconLink
-            to="https://www.hyperlane.xyz"
-            imgSrc={InfoCircle}
-            text="About"
-          />
-          <FooterIconLink
-            to="https://discord.gg/VK9ZUy3aTV"
-            imgSrc={Discord}
-            text="Discord"
-          />
-          <FooterIconLink
-            to="https://github.com/abacus-network"
-            imgSrc={Github}
-            text="Github"
-          />
-          <FooterIconLink
-            to="https://jobs.lever.co/Abacus"
-            imgSrc={Briefcase}
-            text="Jobs"
-          />
+          <FooterIconLink to={links.twitter} imgSrc={Twitter} text="Twitter" />
+          <FooterIconLink to={links.docs} imgSrc={Book} text="Docs" />
+          <FooterIconLink to={links.home} imgSrc={InfoCircle} text="About" />
+          <FooterIconLink to={links.discord} imgSrc={Discord} text="Discord" />
+          <FooterIconLink to={links.github} imgSrc={Github} text="Github" />
+          <FooterIconLink to={links.jobs} imgSrc={Briefcase} text="Jobs" />
         </div>
       </div>
     </footer>

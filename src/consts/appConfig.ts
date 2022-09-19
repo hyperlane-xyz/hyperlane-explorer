@@ -14,7 +14,7 @@ export const allConfigs: Record<Environment, Config> = {
     environment: Environment.Mainnet,
     debug: isDevMode,
     version,
-    url: 'https://abacus-explorer-app.vercel.app/',
+    url: 'https://hyperlane-explorer.vercel.app/',
     apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql',
   },
   testnet2: {

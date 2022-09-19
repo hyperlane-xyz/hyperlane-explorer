@@ -3,6 +3,7 @@ import Link from 'next/link';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { Environment, allConfigs, config } from '../../consts/appConfig';
+import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
@@ -43,7 +44,7 @@ export function Header() {
           <a
             className={styles.navLink}
             target="_blank"
-            href="https://docs.useabacus.network"
+            href={links.docs}
             rel="noopener noreferrer"
           >
             Docs
@@ -51,7 +52,7 @@ export function Header() {
           <a
             className={styles.navLink}
             target="_blank"
-            href="https://www.useabacus.network"
+            href={links.home}
             rel="noopener noreferrer"
           >
             About
@@ -83,7 +84,7 @@ export function Header() {
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
-          href="https://docs.useabacus.network"
+          href={links.docs}
           rel="noopener noreferrer"
         >
           <DropdownItemContent icon={BookIcon} text="Docs" />
@@ -93,7 +94,7 @@ export function Header() {
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
-          href="https://www.useabacus.network"
+          href={links.home}
           rel="noopener noreferrer"
         >
           <DropdownItemContent icon={InfoIcon} text="About" />

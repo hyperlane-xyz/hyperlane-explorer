@@ -1,6 +1,6 @@
-# Abacus Explorer App
+# Hyperlane Explorer App
 
-A multi-chain explorer app for the Abacus protocol and network.
+A multi-chain explorer for the Hyperlane protocol and network.
 
 ## Setup
 
@@ -31,4 +31,4 @@ yarn lint
 
 ## Learn more
 
-For more information, see the [Abacus documentation](https://docs.useabacus.network/abacus-docs/developers/getting-started).
+For more information, see the [Hyperlane documentation](https://docs.hyperlane.xyz/hyperlane-docs/).

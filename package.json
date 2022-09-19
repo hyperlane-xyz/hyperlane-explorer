@@ -1,6 +1,6 @@
 {
-  "name": "@abacus-network/explorer-app",
-  "description": "A multi-chain explorer app for the Abacus protocol and network.",
+  "name": "@hyperlane-xyz/explorer",
+  "description": "A multi-chain explorer for the Hyperlane protocol and network.",
   "version": "0.1.0",
   "author": "J M Rossy",
   "dependencies": {
@@ -36,14 +36,14 @@
     "ts-node": "^10.8.0",
     "typescript": "^4.7.4"
   },
-  "homepage": "https://www.useabacus.network",
+  "homepage": "https://www.hyperlane.xyz",
   "license": "Apache-2.0",
   "main": "dist/src/index.js",
   "packageManager": "yarn@3.2.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/abacus-network/abacus-explorer-app"
+    "url": "https://github.com/hyperlane-xyz/hyperlane-explorer"
   },
   "scripts": {
     "clean": "rm -rf dist cache .next",
