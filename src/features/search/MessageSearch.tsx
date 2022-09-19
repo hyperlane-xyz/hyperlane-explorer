@@ -1,5 +1,6 @@
 import Image from 'next/future/image';
-import { ChangeEvent, useCallback, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
 
 import { Fade } from '../../components/animation/Fade';
@@ -29,7 +30,19 @@ const AUTO_REFRESH_DELAY = 10000;
 const LATEST_QUERY_LIMIT = 8;
 const SEARCH_QUERY_LIMIT = 40;
 
+let showedWarning = false;
+
 export function MessageSearch() {
+  // TODO remove when live for real
+  useEffect(() => {
+    if (!showedWarning) {
+      showedWarning = true;
+      toast.info(
+        'Welcome! This explorer is still under construction but feel free to look around!',
+      );
+    }
+  }, []);
+
   // Search text input
   const [searchInput, setSearchInput] = useState('');
   const onChangeSearch = (event: ChangeEvent<HTMLInputElement> | null) => {

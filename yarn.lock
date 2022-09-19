@@ -37,42 +37,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@abacus-network/explorer-app@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@abacus-network/explorer-app@workspace:."
-  dependencies:
-    "@abacus-network/sdk": ^0.4.1
-    "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
-    "@rainbow-me/rainbowkit": ^0.4.5
-    "@trivago/prettier-plugin-sort-imports": ^3.2.0
-    "@types/node": 18.0.4
-    "@types/react": 18.0.15
-    "@types/react-dom": 18.0.6
-    "@typescript-eslint/eslint-plugin": ^5.27.0
-    "@typescript-eslint/parser": ^5.27.0
-    autoprefixer: ^10.4.7
-    buffer: ^6.0.3
-    eslint: ^8.19.0
-    eslint-config-next: ^12.2.2
-    eslint-config-prettier: ^8.5.0
-    ethers: ^5.6.8
-    formik: ^2.2.9
-    graphql: ^16.6.0
-    next: ^12.2.2
-    postcss: ^8.4.14
-    prettier: ^2.4.1
-    react: ^18.2.0
-    react-accessible-dropdown-menu-hook: ^3.2.0
-    react-dom: ^18.2.0
-    react-toastify: ^9.0.5
-    tailwindcss: ^3.1.6
-    ts-node: ^10.8.0
-    typescript: ^4.7.4
-    urql: ^3.0.1
-    wagmi: ^0.5.11
-  languageName: unknown
-  linkType: soft
-
 "@abacus-network/sdk@npm:^0.4.1":
   version: 0.4.1
   resolution: "@abacus-network/sdk@npm:0.4.1"
@@ -939,6 +903,42 @@ __metadata:
   checksum: a824a1ec31591231e4bad5787641f59e9633827d0a2eaae131a288d33c9ef0290bd16fda8da6f7c0fcb014147865d12118df10db57f27f41e20da92369fcb3f1
   languageName: node
   linkType: hard
+
+"@hyperlane-xyz/explorer@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@hyperlane-xyz/explorer@workspace:."
+  dependencies:
+    "@abacus-network/sdk": ^0.4.1
+    "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
+    "@rainbow-me/rainbowkit": ^0.4.5
+    "@trivago/prettier-plugin-sort-imports": ^3.2.0
+    "@types/node": 18.0.4
+    "@types/react": 18.0.15
+    "@types/react-dom": 18.0.6
+    "@typescript-eslint/eslint-plugin": ^5.27.0
+    "@typescript-eslint/parser": ^5.27.0
+    autoprefixer: ^10.4.7
+    buffer: ^6.0.3
+    eslint: ^8.19.0
+    eslint-config-next: ^12.2.2
+    eslint-config-prettier: ^8.5.0
+    ethers: ^5.6.8
+    formik: ^2.2.9
+    graphql: ^16.6.0
+    next: ^12.2.2
+    postcss: ^8.4.14
+    prettier: ^2.4.1
+    react: ^18.2.0
+    react-accessible-dropdown-menu-hook: ^3.2.0
+    react-dom: ^18.2.0
+    react-toastify: ^9.0.5
+    tailwindcss: ^3.1.6
+    ts-node: ^10.8.0
+    typescript: ^4.7.4
+    urql: ^3.0.1
+    wagmi: ^0.5.11
+  languageName: unknown
+  linkType: soft
 
 "@jridgewell/gen-mapping@npm:^0.3.2":
   version: 0.3.2
