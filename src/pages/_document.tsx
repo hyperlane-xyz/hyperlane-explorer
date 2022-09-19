@@ -26,7 +26,7 @@ export default function Document() {
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#025aa1" />
         <link rel="shortcut icon" href="/favicon.ico" />
-        <meta name="msapplication-TileColor" content="#2b5797" />
+        <meta name="msapplication-TileColor" content="#025aa1" />
         <meta name="theme-color" content="#ffffff" />
 
         <meta name="application-name" content="Hyperlane Explorer" />
