@@ -24,35 +24,35 @@ export default function Document() {
           href="/favicon-16x16.png"
         />
         <link rel="manifest" href="/site.webmanifest" />
-        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#025aa1" />
         <link rel="shortcut icon" href="/favicon.ico" />
-        <meta name="msapplication-TileColor" content="#da532c" />
+        <meta name="msapplication-TileColor" content="#2b5797" />
         <meta name="theme-color" content="#ffffff" />
 
-        <meta name="application-name" content="Abacus Explorer" />
+        <meta name="application-name" content="Hyperlane Explorer" />
         <meta
           name="keywords"
-          content="Abacus Explorer App Multi-chain Cross-chain"
+          content="Hyperlane Explorer App Multi-chain Cross-chain"
         />
         <meta
           name="description"
-          content="A multi-chain explorer app for the Abacus protocol and network"
+          content="A multi-chain explorer for the Hyperlane protocol and network"
         />
 
         <meta name="HandheldFriendly" content="true" />
-        <meta name="apple-mobile-web-app-title" content="Abacus Explorer" />
+        <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
-        <meta property="og:url" content="https://explorer.useabacus.network" />
-        <meta property="og:title" content="Abacus Explorer" />
+        <meta property="og:url" content="https://explorer.hyperlane.xyz" />
+        <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
         <meta
           property="og:image"
-          content="https://explorer.useabacus.network/logo-with-text.png"
+          content="https://explorer.hyperlane.xyz/logo-with-text.png"
         />
         <meta
           property="og:description"
-          content="A multi-chain explorer app for the Abacus protocol and network"
+          content="A multi-chain explorer for the Hyperlane protocol and network"
         />
       </Head>
       <body className="text-black">

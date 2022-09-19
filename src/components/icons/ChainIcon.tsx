@@ -39,7 +39,7 @@ function _ChainIcon({
   return (
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
-      className="flex items-center justify-center rounded-full bg-beige-500 transition-all"
+      className="flex items-center justify-center rounded-full bg-beige-300 transition-all"
       title={getChainName(chainId)}
     >
       <Image

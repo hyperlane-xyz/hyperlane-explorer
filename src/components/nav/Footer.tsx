@@ -3,9 +3,9 @@ import Image from 'next/future/image';
 import Book from '../../images/icons/book.svg';
 import Briefcase from '../../images/icons/briefcase.svg';
 import InfoCircle from '../../images/icons/info-circle.svg';
-import Abacus from '../../images/logos/abacus.svg';
 import Discord from '../../images/logos/discord.svg';
 import Github from '../../images/logos/github.svg';
+import Hyperlane from '../../images/logos/hyperlane-logo.svg';
 import Twitter from '../../images/logos/twitter.svg';
 
 export function Footer() {
@@ -14,16 +14,16 @@ export function Footer() {
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">
-            <Image src={Abacus} width={52} height={52} />
+            <Image src={Hyperlane} width={52} height={52} />
           </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">
-              <span className="text-base font-medium">Abacus</span> is a
+              <span className="text-base font-medium">Hyperlane</span> is the
               platform
               <br />
-              for building interchain
+              for developers building
               <br />
-              decentralized applications
+              the interchain universe
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@ export function Footer() {
             text="Docs"
           />
           <FooterIconLink
-            to="https://www.useabacus.network"
+            to="https://www.hyperlane.xyz"
             imgSrc={InfoCircle}
             text="About"
           />

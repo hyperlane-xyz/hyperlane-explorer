@@ -1,5 +1,8 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
+import { classNameToColor } from '../../styles/Color';
+import { WideChevronIcon } from '../icons/WideChevron';
+
 export const BannerColorContext = createContext<{
   bannerClassName: string;
   setBannerClassName?: (name: string) => void;
@@ -21,11 +24,22 @@ export function useBackgroundBanner() {
 
 export function BackgroundBanner() {
   const { bannerClassName } = useBackgroundBanner();
+  const colorClass = bannerClassName || 'bg-blue-500';
+
   return (
     <div
-      className={`absolute -top-5 -left-4 -right-4 h-36 rounded z-10 transition-all duration-500 ${
-        bannerClassName || 'bg-green-600'
-      }`}
-    ></div>
+      className={`absolute -top-5 -left-4 -right-4 h-36 rounded z-10 transition-all duration-500 ${colorClass} overflow-visible`}
+    >
+      <Chevron pos="-left-11" color={classNameToColor(colorClass)} />
+      <Chevron pos="-right-11" color={classNameToColor(colorClass)} />
+    </div>
+  );
+}
+
+function Chevron({ color, pos }: { color: string; pos: string }) {
+  return (
+    <div className={`absolute w-24 top-0 bottom-0 ${pos} overflow-visible`}>
+      <WideChevronIcon direction="e" color={color} height="100%" width="auto" />
+    </div>
   );
 }

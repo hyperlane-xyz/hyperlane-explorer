@@ -26,7 +26,7 @@ export function ConnectAwareSubmitButton<FormValues = any>(props: Props) {
     Object.keys(touched).length > 0 && Object.keys(errors).length > 0;
   const firstError = `${Object.values(errors)[0]}` || 'Unknown error';
 
-  const color = hasError ? 'red' : 'beige';
+  const color = hasError ? 'red' : 'blue';
   const text = hasError
     ? firstError
     : isAccountReady

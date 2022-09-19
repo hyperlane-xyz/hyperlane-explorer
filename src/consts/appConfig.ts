@@ -10,7 +10,7 @@ const version = process?.env?.NEXT_PUBLIC_VERSION ?? null;
 
 export const allConfigs: Record<Environment, Config> = {
   mainnet: {
-    name: 'Abacus Explorer',
+    name: 'Hyperlane Explorer',
     environment: Environment.Mainnet,
     debug: isDevMode,
     version,
@@ -18,7 +18,7 @@ export const allConfigs: Record<Environment, Config> = {
     apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql',
   },
   testnet2: {
-    name: 'Abacus Testnet Explorer',
+    name: 'Hyperlane Testnet Explorer',
     environment: Environment.Testnet2,
     debug: true,
     version,
