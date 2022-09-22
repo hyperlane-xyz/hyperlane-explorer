@@ -5,6 +5,7 @@ import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 import { Environment, allConfigs, config } from '../../consts/appConfig';
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
+import BugIcon from '../../images/icons/bug.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import HubIcon from '../../images/icons/hub.svg';
@@ -13,7 +14,7 @@ import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 
 export function Header() {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(5);
   const closeDropdown = () => {
     setIsOpen(false);
   };
@@ -40,6 +41,9 @@ export function Header() {
         <div className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-12">
           <Link href="/">
             <a className={styles.navLink}>Home</a>
+          </Link>
+          <Link href="/debugger">
+            <a className={styles.navLink}>Transaction Debugger</a>
           </Link>
           <a
             className={styles.navLink}
@@ -79,8 +83,17 @@ export function Header() {
             <DropdownItemContent icon={HouseIcon} text="Home" />
           </a>
         </Link>
+        <Link href="/debugger">
+          <a
+            {...itemProps[1]}
+            className={styles.dropdownOption}
+            onClick={closeDropdown}
+          >
+            <DropdownItemContent icon={BugIcon} text="Debugger" />
+          </a>
+        </Link>
         <a
-          {...itemProps[1]}
+          {...itemProps[2]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
@@ -90,7 +103,7 @@ export function Header() {
           <DropdownItemContent icon={BookIcon} text="Docs" />
         </a>
         <a
-          {...itemProps[2]}
+          {...itemProps[3]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
@@ -100,7 +113,7 @@ export function Header() {
           <DropdownItemContent icon={InfoIcon} text="About" />
         </a>
         <a
-          {...itemProps[3]}
+          {...itemProps[4]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           href={isMainnet ? allConfigs.testnet2.url : allConfigs.mainnet.url}
