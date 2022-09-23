@@ -47,9 +47,7 @@ export function MessageSearch() {
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const hasInput = !!debouncedSearchInput;
   const sanitizedInput = sanitizeString(debouncedSearchInput);
-  const isValidInput = hasInput
-    ? isValidSearchQuery(sanitizedInput, true)
-    : true;
+  const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput, true) : true;
 
   // Filter state and handlers
   const chainOptions = useMemo(getChainOptionList, []);
@@ -85,37 +83,21 @@ export function MessageSearch() {
 
   return (
     <>
-      <SearchBar
-        value={searchInput}
-        onChangeValue={setSearchInput}
-        fetching={fetching}
-      />
+      <SearchBar value={searchInput} onChangeValue={setSearchInput} fetching={fetching} />
       <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         {/* Content header and filter bar */}
         <div className="px-2 py-3 sm:px-4 md:px-5 md:py-3 flex items-center justify-between border-b border-gray-100">
-          <h2 className="text-gray-600">
-            {!hasInput ? 'Latest Messages' : 'Search Results'}
-          </h2>
+          <h2 className="text-gray-600">{!hasInput ? 'Latest Messages' : 'Search Results'}</h2>
           <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
             <div className="w-px h-8 bg-gray-100"></div>
-            <Image
-              src={FunnelIcon}
-              width={22}
-              height={22}
-              className="hidden sm:block opacity-50"
-            />
+            <Image src={FunnelIcon} width={22} height={22} className="hidden sm:block opacity-50" />
             <SelectField
               classes="w-24 md:w-32"
               options={chainOptions}
               value={originChainFilter}
               onValueSelect={onChangeOriginFilter}
             />
-            <Image
-              src={ArrowRightIcon}
-              width={30}
-              height={30}
-              className="opacity-50"
-            />
+            <Image src={ArrowRightIcon} width={30} height={30} className="opacity-50" />
             <SelectField
               classes="w-24 md:w-32"
               options={chainOptions}
@@ -143,9 +125,7 @@ export function MessageSearch() {
         <SearchUnknownError show={isValidInput && hasError} />
 
         <SearchEmptyError
-          show={
-            isValidInput && !hasError && !fetching && messageList.length === 0
-          }
+          show={isValidInput && !hasError && !fetching && messageList.length === 0}
           hasInput={hasInput}
         />
       </div>
@@ -163,11 +143,7 @@ function getChainOptionList(): Array<{ value: string; display: string }> {
   ];
 }
 
-function assembleQuery(
-  searchInput: string,
-  originFilter: string,
-  destFilter: string,
-) {
+function assembleQuery(searchInput: string, originFilter: string, destFilter: string) {
   const hasInput = !!searchInput;
   const variables = {
     search: hasInput ? trimLeading0x(searchInput) : undefined,

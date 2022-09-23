@@ -19,19 +19,13 @@ export function ConnectAwareSubmitButton<FormValues = any>(props: Props) {
 
   const isAccountReady = !!(address && isConnected && connector);
 
-  const { errors, setErrors, touched, setTouched } =
-    useFormikContext<FormValues>();
+  const { errors, setErrors, touched, setTouched } = useFormikContext<FormValues>();
 
-  const hasError =
-    Object.keys(touched).length > 0 && Object.keys(errors).length > 0;
+  const hasError = Object.keys(touched).length > 0 && Object.keys(errors).length > 0;
   const firstError = `${Object.values(errors)[0]}` || 'Unknown error';
 
   const color = hasError ? 'red' : 'blue';
-  const text = hasError
-    ? firstError
-    : isAccountReady
-    ? connectText
-    : 'Connect Wallet';
+  const text = hasError ? firstError : isAccountReady ? connectText : 'Connect Wallet';
   const type = isAccountReady ? 'submit' : 'button';
   const onClick = isAccountReady ? undefined : openConnectModal;
 

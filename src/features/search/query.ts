@@ -1,10 +1,5 @@
 import { domainToChain } from '../../consts/domains';
-import {
-  Message,
-  MessageStatus,
-  MessageStub,
-  PartialTransactionReceipt,
-} from '../../types';
+import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../types';
 import { ensureLeading0x } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
@@ -16,18 +11,12 @@ import {
   TransactionEntry,
 } from './types';
 
-export function parseMessageStubResult(
-  data: MessagesStubQueryResult | undefined,
-): MessageStub[] {
+export function parseMessageStubResult(data: MessagesStubQueryResult | undefined): MessageStub[] {
   if (!data?.message?.length) return [];
-  return data.message
-    .map(parseMessageStub)
-    .filter((m): m is MessageStub => !!m);
+  return data.message.map(parseMessageStub).filter((m): m is MessageStub => !!m);
 }
 
-export function parseMessageQueryResult(
-  data: MessagesQueryResult | undefined,
-): Message[] {
+export function parseMessageQueryResult(data: MessagesQueryResult | undefined): Message[] {
   if (!data?.message?.length) return [];
   return data.message.map(parseMessage).filter((m): m is Message => !!m);
 }

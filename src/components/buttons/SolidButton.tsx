@@ -28,8 +28,7 @@ export function SolidButton(props: PropsWithChildren<ButtonProps>) {
   } = props;
   const color = _color ?? 'blue';
 
-  const base =
-    'flex items-center justify-center rounded-full transition-all duration-1000';
+  const base = 'flex items-center justify-center rounded-full transition-all duration-1000';
   const sizing = sizeToClasses(size);
   let baseColors, onHover, onActive;
   if (color === 'blue') {

@@ -2,11 +2,7 @@ import Image from 'next/future/image';
 import { memo } from 'react';
 import { chain } from 'wagmi';
 
-import {
-  avalancheChain,
-  bscChain,
-  celoMainnetChain,
-} from '../../consts/networksConfig';
+import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/networksConfig';
 import QuestionMark from '../../images/icons/question-mark.svg';
 import Arbitrum from '../../images/logos/arbitrum.svg';
 import Avalanche from '../../images/logos/avalanche.svg';
@@ -27,13 +23,7 @@ const CHAIN_TO_ICON = {
   [chain.polygon.id]: Polygon,
 };
 
-function _ChainIcon({
-  chainId,
-  size = 44,
-}: {
-  chainId?: number;
-  size?: number;
-}) {
+function _ChainIcon({ chainId, size = 44 }: { chainId?: number; size?: number }) {
   const imageSrc = (chainId && CHAIN_TO_ICON[chainId]) || QuestionMark;
 
   return (

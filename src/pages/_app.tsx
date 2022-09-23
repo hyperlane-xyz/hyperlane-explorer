@@ -8,15 +8,8 @@ import '@rainbow-me/rainbowkit/styles.css';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {
-  Provider as UrqlProvider,
-  createClient as createUrqlClient,
-} from 'urql';
-import {
-  WagmiConfig,
-  configureChains,
-  createClient as createWagmiClient,
-} from 'wagmi';
+import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
+import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
@@ -78,11 +71,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
             </AppLayout>
           </UrqlProvider>
         </RainbowKitProvider>
-        <ToastContainer
-          transition={Zoom}
-          position={toast.POSITION.BOTTOM_RIGHT}
-          limit={2}
-        />
+        <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
       </WagmiConfig>
     </ErrorBoundary>
   );

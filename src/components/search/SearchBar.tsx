@@ -29,9 +29,7 @@ export function SearchBar({ value, onChangeValue, fetching }: Props) {
       />
       <div className="bg-beige-300 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
         {fetching && <Spinner classes="scale-[30%] mr-2.5" />}
-        {!fetching && !value && (
-          <Image src={SearchIcon} width={20} height={20} />
-        )}
+        {!fetching && !value && <Image src={SearchIcon} width={20} height={20} />}
         {!fetching && value && (
           <IconButton
             imgSrc={XIcon}

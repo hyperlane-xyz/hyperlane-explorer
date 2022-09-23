@@ -67,17 +67,12 @@ export async function fetchWithTimeout(
 }
 
 export function sleep(milliseconds: number) {
-  return new Promise((resolve) =>
-    setTimeout(() => resolve(true), milliseconds),
-  );
+  return new Promise((resolve) => setTimeout(() => resolve(true), milliseconds));
 }
 
 export const PROMISE_TIMEOUT = '__promise_timeout__';
 
-export async function promiseTimeout<T>(
-  promise: Promise<T>,
-  milliseconds: number,
-) {
+export async function promiseTimeout<T>(promise: Promise<T>, milliseconds: number) {
   // Create a promise that rejects in <ms> milliseconds
   const timeout = new Promise<T>((_resolve, reject) => {
     const id = setTimeout(() => {

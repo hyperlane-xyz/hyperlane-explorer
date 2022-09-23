@@ -19,8 +19,7 @@ export function Footer() {
           </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">
-              <span className="text-base font-medium">Hyperlane</span> is the
-              platform
+              <span className="text-base font-medium">Hyperlane</span> is the platform
               <br />
               for developers building
               <br />
@@ -41,15 +40,7 @@ export function Footer() {
   );
 }
 
-function FooterIconLink({
-  to,
-  imgSrc,
-  text,
-}: {
-  to: string;
-  imgSrc: any;
-  text: string;
-}) {
+function FooterIconLink({ to, imgSrc, text }: { to: string; imgSrc: any; text: string }) {
   return (
     <a
       href={to}

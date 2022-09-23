@@ -23,9 +23,7 @@ export function SearchError({
         <div className="flex justify-center my-10">
           <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
             <Image src={imgSrc} width={imgWidth} className="opacity-80" />
-            <div className="mt-4 text-center leading-loose text-gray-700">
-              {text}
-            </div>
+            <div className="mt-4 text-center leading-loose text-gray-700">{text}</div>
           </div>
         </div>
       </Fade>
@@ -45,13 +43,7 @@ export function SearchInvalidError({ show }: { show: boolean }) {
   );
 }
 
-export function SearchEmptyError({
-  show,
-  hasInput,
-}: {
-  show: boolean;
-  hasInput: boolean;
-}) {
+export function SearchEmptyError({ show, hasInput }: { show: boolean; hasInput: boolean }) {
   return (
     <SearchError
       show={show}

@@ -1,15 +1,10 @@
 import { constants } from 'ethers';
 import { chain } from 'wagmi';
 
-import {
-  avalancheChain,
-  bscChain,
-  celoMainnetChain,
-} from '../../consts/networksConfig';
+import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/networksConfig';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
 
-const TX_HASH_ZERO =
-  '0x0000000000000000000000000000000000000000000000000000000000000000';
+const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 export const TX_ZERO: PartialTransactionReceipt = {
   from: constants.AddressZero,

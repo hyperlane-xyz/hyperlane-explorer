@@ -13,16 +13,7 @@ export interface IconButtonProps {
 }
 
 export function IconButton(props: PropsWithChildren<IconButtonProps>) {
-  const {
-    width,
-    height,
-    classes,
-    onClick,
-    imgSrc,
-    disabled,
-    title,
-    passThruProps,
-  } = props;
+  const { width, height, classes, onClick, imgSrc, disabled, title, passThruProps } = props;
 
   const base = 'flex items-center justify-center transition-all';
   const onHover = 'hover:opacity-70';

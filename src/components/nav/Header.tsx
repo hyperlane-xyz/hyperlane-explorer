@@ -32,9 +32,7 @@ export function Header() {
               <div className="relative pt-1 ml-2">
                 <Image src={Name} width={124} height={28} alt="Hyperlane" />
               </div>
-              <div className="font-serif text-[1.9rem] text-blue-500 sm:ml-2 pt-px">
-                Explorer
-              </div>
+              <div className="font-serif text-[1.9rem] text-blue-500 sm:ml-2 pt-px">Explorer</div>
             </div>
           </a>
         </Link>
@@ -45,20 +43,10 @@ export function Header() {
           <Link href="/debugger">
             <a className={styles.navLink}>Transaction Debugger</a>
           </Link>
-          <a
-            className={styles.navLink}
-            target="_blank"
-            href={links.docs}
-            rel="noopener noreferrer"
-          >
+          <a className={styles.navLink} target="_blank" href={links.docs} rel="noopener noreferrer">
             Docs
           </a>
-          <a
-            className={styles.navLink}
-            target="_blank"
-            href={links.home}
-            rel="noopener noreferrer"
-          >
+          <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
           <NetworkSelector />
@@ -70,25 +58,14 @@ export function Header() {
         </div>
       </div>
       {/* Dropdown menu, used on mobile */}
-      <div
-        className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}
-        role="menu"
-      >
+      <div className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
         <Link href="/">
-          <a
-            {...itemProps[0]}
-            className={styles.dropdownOption}
-            onClick={closeDropdown}
-          >
+          <a {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
             <DropdownItemContent icon={HouseIcon} text="Home" />
           </a>
         </Link>
         <Link href="/debugger">
-          <a
-            {...itemProps[1]}
-            className={styles.dropdownOption}
-            onClick={closeDropdown}
-          >
+          <a {...itemProps[1]} className={styles.dropdownOption} onClick={closeDropdown}>
             <DropdownItemContent icon={BugIcon} text="Debugger" />
           </a>
         </Link>
@@ -120,10 +97,7 @@ export function Header() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <DropdownItemContent
-            icon={HubIcon}
-            text={isMainnet ? 'Testnet' : 'Mainnet'}
-          />
+          <DropdownItemContent icon={HubIcon} text={isMainnet ? 'Testnet' : 'Mainnet'} />
         </a>
       </div>
     </header>
@@ -143,27 +117,17 @@ function NetworkSelector() {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(2);
   return (
     <div className="relative">
-      <button
-        className="flex items-center pb-px hover:opacity-60 transition-all"
-        {...buttonProps}
-      >
+      <button className="flex items-center pb-px hover:opacity-60 transition-all" {...buttonProps}>
         <Image src={HubIcon} width={20} height={20} className="opacity-70" />
       </button>
-      <div
-        className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`}
-        role="menu"
-      >
+      <div className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
         <a
           {...itemProps[0]}
           className={`${styles.dropdownOption} justify-center ${
             config.environment === Environment.Mainnet && styles.activeEnv
           }`}
           onClick={() => setIsOpen(false)}
-          href={
-            config.environment !== Environment.Mainnet
-              ? allConfigs.mainnet.url
-              : undefined
-          }
+          href={config.environment !== Environment.Mainnet ? allConfigs.mainnet.url : undefined}
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -175,11 +139,7 @@ function NetworkSelector() {
           className={`${styles.dropdownOption} justify-center ${
             config.environment === Environment.Testnet2 && styles.activeEnv
           }`}
-          href={
-            config.environment !== Environment.Testnet2
-              ? allConfigs.testnet2.url
-              : undefined
-          }
+          href={config.environment !== Environment.Testnet2 ? allConfigs.testnet2.url : undefined}
           target="_blank"
           rel="noopener noreferrer"
         >

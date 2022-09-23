@@ -1,8 +1,5 @@
 import { chainIdToChain } from '../../consts/networksConfig';
-import {
-  isValidAddressFast,
-  isValidTransactionHash,
-} from '../../utils/addresses';
+import { isValidAddressFast, isValidTransactionHash } from '../../utils/addresses';
 
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
   if (!input) return false;

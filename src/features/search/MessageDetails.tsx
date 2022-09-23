@@ -62,14 +62,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     } else if (bannerClassName) {
       setBannerClassName('');
     }
-  }, [
-    error,
-    fetching,
-    message,
-    isMessageFound,
-    bannerClassName,
-    setBannerClassName,
-  ]);
+  }, [error, fetching, message, isMessageFound, bannerClassName, setBannerClassName]);
 
   const reExecutor = useCallback(() => {
     if (!isMessageFound || status !== MessageStatus.Delivered) {
@@ -174,10 +167,7 @@ function TransactionCard({
   help,
   shouldBlur,
 }: TransactionCardProps) {
-  const txExplorerLink = getTxExplorerLink(
-    chainId,
-    transaction?.transactionHash,
-  );
+  const txExplorerLink = getTxExplorerLink(chainId, transaction?.transactionHash);
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">
@@ -194,9 +184,7 @@ function TransactionCard({
           <ValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainName(chainId)} (${chainId} / ${
-              chainToDomain[chainId]
-            })`}
+            display={`${getChainName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -219,9 +207,7 @@ function TransactionCard({
           <ValueRow
             label="Block:"
             labelWidth="w-16"
-            display={`${transaction.blockNumber} (${getDateTimeString(
-              transaction.timestamp,
-            )})`}
+            display={`${transaction.blockNumber} (${getDateTimeString(transaction.timestamp)})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -271,15 +257,10 @@ function DetailsCard({
     <Card classes="mt-2 space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
-          <ChainToChain
-            originChainId={originChainId}
-            destinationChainId={destinationChainId}
-          />
+          <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">
-            Message Details
-          </h3>
+          <h3 className="text-gray-500 font-medium text-md mr-2">Message Details</h3>
           <HelpIcon size={16} text={helpText.details} />
         </div>
       </div>
@@ -333,24 +314,16 @@ function ValueRow({
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <span
-        className={`text-sm ml-2 truncate ${displayWidth} ${
-          blurValue && 'blur-xs'
-        }`}
-      >
+      <span className={`text-sm ml-2 truncate ${displayWidth} ${blurValue && 'blur-xs'}`}>
         {display}
       </span>
-      {showCopy && (
-        <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />
-      )}
+      {showCopy && <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />}
     </div>
   );
 }
 
 function ErrorIcon() {
-  return (
-    <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />
-  );
+  return <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />;
 }
 
 const messageDetailsQuery = `
@@ -410,10 +383,8 @@ query MessageDetails ($messageId: bigint!){
 }`;
 
 const helpText = {
-  origin:
-    'Info about the transaction that initiated the message placement into the outbox.',
+  origin: 'Info about the transaction that initiated the message placement into the outbox.',
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',
-  details:
-    'Immutable information about the message itself such as its contents.',
+  details: 'Immutable information about the message itself such as its contents.',
 };

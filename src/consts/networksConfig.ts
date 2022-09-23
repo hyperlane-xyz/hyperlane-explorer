@@ -123,10 +123,7 @@ export const allChains = [
   celoAlfajoresChain,
 ];
 
-export const chainIdToChain = allChains.reduce<Record<number, Chain>>(
-  (result, chain) => {
-    result[chain.id] = chain;
-    return result;
-  },
-  {},
-);
+export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {
+  result[chain.id] = chain;
+  return result;
+}, {});
