@@ -15,6 +15,7 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainName } from '../../utils/chains';
+import { getTxExplorerLink } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
@@ -22,7 +23,6 @@ import { useInterval } from '../../utils/timeout';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import { MessagesQueryResult } from './types';
-import { getTxExplorerLink } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
 
