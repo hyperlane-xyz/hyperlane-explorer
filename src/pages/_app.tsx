@@ -14,7 +14,8 @@ import { publicProvider } from 'wagmi/providers/public';
 
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
-import { Environment, configs } from '../consts/appConfig';
+import { configs } from '../consts/appConfig';
+import { Environment } from '../consts/environments';
 import { prodChains } from '../consts/networksConfig';
 import { useStore } from '../store';
 import { Color } from '../styles/Color';

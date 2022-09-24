@@ -1,6 +1,6 @@
 import create from 'zustand';
 
-import { Environment } from './consts/appConfig';
+import { Environment } from './consts/environments';
 
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary

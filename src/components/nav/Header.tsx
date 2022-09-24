@@ -2,7 +2,7 @@ import Image from 'next/future/image';
 import Link from 'next/link';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
-import { Environment } from '../../consts/appConfig';
+import { Environment, envDisplayValue } from '../../consts/environments';
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
 import BugIcon from '../../images/icons/bug.svg';
@@ -118,8 +118,8 @@ function NetworkSelector() {
 }
 
 const envOptions = [
-  { value: Environment.Mainnet, display: 'Mainnet' },
-  { value: Environment.Testnet2, display: 'Testnet' },
+  { value: Environment.Mainnet, display: envDisplayValue[Environment.Mainnet] },
+  { value: Environment.Testnet2, display: envDisplayValue[Environment.Testnet2] },
 ];
 
 const styles = {
