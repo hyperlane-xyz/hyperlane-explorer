@@ -108,7 +108,7 @@ function NetworkSelector() {
     <div className="relative">
       {/* <Image src={HubIcon} width={20} height={20} className="opacity-70" /> */}
       <SelectField
-        classes="w-24 text-gray-600 text-[0.95rem]"
+        classes="w-24 text-gray-600 border-gray-600 text-[0.95rem]"
         options={envOptions}
         value={environment}
         onValueSelect={(e: string) => setEnvironment(e as Environment)}

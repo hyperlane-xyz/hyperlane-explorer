@@ -5,64 +5,6 @@ __metadata:
   version: 6
   cacheKey: 8
 
-"@abacus-network/app@npm:0.4.1":
-  version: 0.4.1
-  resolution: "@abacus-network/app@npm:0.4.1"
-  dependencies:
-    "@abacus-network/core": 0.4.1
-    "@abacus-network/utils": 0.4.1
-    "@openzeppelin/contracts-upgradeable": ^4.5.0
-  checksum: bf1dc46b769bfef8ef2f1b568b5ea23f5c4148e68e3771d95510adb919b1ea030cff9080f9fc8a05889f973b1ff718b783414d8e5e86749e78f56799c38fe4df
-  languageName: node
-  linkType: hard
-
-"@abacus-network/celo-ethers-provider@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@abacus-network/celo-ethers-provider@npm:0.1.0"
-  peerDependencies:
-    ethers: ^5
-  checksum: 06f440366bbd9ddf9962aa46c471be1fb587909c4da71a0d816497a5c0c8597e9b315d70fe9ae728ed51fc936097da50da2cd18f750861f3d602660b8ea1ecfd
-  languageName: node
-  linkType: hard
-
-"@abacus-network/core@npm:0.4.1":
-  version: 0.4.1
-  resolution: "@abacus-network/core@npm:0.4.1"
-  dependencies:
-    "@abacus-network/utils": 0.4.1
-    "@openzeppelin/contracts": ^4.6.0
-    "@openzeppelin/contracts-upgradeable": ^4.6.0
-    "@summa-tx/memview-sol": ^2.0.0
-  checksum: 5fdeb32eb33ad6a470b4b7f801ed419da2065cb6c6f155d651576cd66379663e3d1b35f9b9016d581b1ffd7aa038d7cdab8f8574bc259d801bc317753de41e1d
-  languageName: node
-  linkType: hard
-
-"@abacus-network/sdk@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "@abacus-network/sdk@npm:0.4.1"
-  dependencies:
-    "@abacus-network/app": 0.4.1
-    "@abacus-network/celo-ethers-provider": ^0.1.0
-    "@abacus-network/core": 0.4.1
-    "@abacus-network/utils": 0.4.1
-    "@types/debug": ^4.1.7
-    coingecko-api: ^1.0.10
-    cross-fetch: ^3.1.5
-    debug: ^4.3.4
-    ethers: ^5.6.8
-  checksum: d6f43d26666b07711ab82688b4b5d5b3de718019223b048b753dbf04ca38eed79bc3f634c9de66592babb86b1cfcf3250dc7065e3ae8bb3386a98ca7aed7258c
-  languageName: node
-  linkType: hard
-
-"@abacus-network/utils@npm:0.4.1":
-  version: 0.4.1
-  resolution: "@abacus-network/utils@npm:0.4.1"
-  dependencies:
-    ethers: ^5.6.8
-  checksum: dd69c911619412b138e12a1bfa1c52a57e56b40cdd416122cb98a4c04032295978b45cfecc47b8038af72d01eab9811245cfb6e3d50cd21ec11b263f426e6b1a
-  languageName: node
-  linkType: hard
-
 "@babel/code-frame@npm:^7.12.13, @babel/code-frame@npm:^7.18.6":
   version: 7.18.6
   resolution: "@babel/code-frame@npm:7.18.6"
@@ -904,11 +846,43 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hyperlane-xyz/app@npm:0.5.0-beta0":
+  version: 0.5.0-beta0
+  resolution: "@hyperlane-xyz/app@npm:0.5.0-beta0"
+  dependencies:
+    "@hyperlane-xyz/core": 0.5.0-beta0
+    "@hyperlane-xyz/utils": 0.5.0-beta0
+    "@openzeppelin/contracts-upgradeable": ^4.5.0
+  checksum: 14dac843eb418bd9807116bb0dd56aca08bd4a8645cd635f534dc75bb8fbfd1b5a12c1d1b2e9343d12592798e827f191c48725d0e6d943e2e9d7fe3bd3fddf47
+  languageName: node
+  linkType: hard
+
+"@hyperlane-xyz/celo-ethers-provider@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "@hyperlane-xyz/celo-ethers-provider@npm:0.1.1"
+  peerDependencies:
+    ethers: ^5
+  checksum: 5ea495505b3e4338ec6c419f69b66af2d35b86e7cdab9bc7ee65ba4a233729b2143b0a72cc637f8e8795ecacc18eeda5ac803e8b3de9a63e7ceb5dc14014b3d4
+  languageName: node
+  linkType: hard
+
+"@hyperlane-xyz/core@npm:0.5.0-beta0":
+  version: 0.5.0-beta0
+  resolution: "@hyperlane-xyz/core@npm:0.5.0-beta0"
+  dependencies:
+    "@hyperlane-xyz/utils": 0.5.0-beta0
+    "@openzeppelin/contracts": ^4.6.0
+    "@openzeppelin/contracts-upgradeable": ^4.6.0
+    "@summa-tx/memview-sol": ^2.0.0
+  checksum: 7c3f88d4140d63b50013feddd1a13275e28eeb1ff1e7cd119480aee904a11c6ff0b50535159e90058b6a80cf28176a7ef0bdd13a20e99f82ef722a34b807a193
+  languageName: node
+  linkType: hard
+
 "@hyperlane-xyz/explorer@workspace:.":
   version: 0.0.0-use.local
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
-    "@abacus-network/sdk": ^0.4.1
+    "@hyperlane-xyz/sdk": ^0.5.0-beta0
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.4.5
     "@trivago/prettier-plugin-sort-imports": ^3.2.0
@@ -940,6 +914,32 @@ __metadata:
     zustand: ^4.1.1
   languageName: unknown
   linkType: soft
+
+"@hyperlane-xyz/sdk@npm:^0.5.0-beta0":
+  version: 0.5.0-beta0
+  resolution: "@hyperlane-xyz/sdk@npm:0.5.0-beta0"
+  dependencies:
+    "@hyperlane-xyz/app": 0.5.0-beta0
+    "@hyperlane-xyz/celo-ethers-provider": ^0.1.1
+    "@hyperlane-xyz/core": 0.5.0-beta0
+    "@hyperlane-xyz/utils": 0.5.0-beta0
+    "@types/debug": ^4.1.7
+    coingecko-api: ^1.0.10
+    cross-fetch: ^3.1.5
+    debug: ^4.3.4
+    ethers: ^5.6.8
+  checksum: 85ef5c70ad290f1ff67297fdd76419d8b4290b22c3a1eb9ed5c1ac4876c7fef5c11471a063190aa8940156bc622e6527950d24aac9e58897cd301da33c41c1c7
+  languageName: node
+  linkType: hard
+
+"@hyperlane-xyz/utils@npm:0.5.0-beta0":
+  version: 0.5.0-beta0
+  resolution: "@hyperlane-xyz/utils@npm:0.5.0-beta0"
+  dependencies:
+    ethers: ^5.6.8
+  checksum: 7628b0624a1b7bbab77b04ada38d0842dee8076273f58c0cd608877b430e46f2d965de0293d53b6bdcfe66b4fb36840ded0ee2a9e30894394415be38817e223f
+  languageName: node
+  linkType: hard
 
 "@jridgewell/gen-mapping@npm:^0.3.2":
   version: 0.3.2
