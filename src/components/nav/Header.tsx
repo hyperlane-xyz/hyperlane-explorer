@@ -2,23 +2,23 @@ import Image from 'next/future/image';
 import Link from 'next/link';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
-import { Environment, allConfigs, config } from '../../consts/appConfig';
+import { Environment } from '../../consts/appConfig';
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
 import BugIcon from '../../images/icons/bug.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
-import HubIcon from '../../images/icons/hub.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
+import { useStore } from '../../store';
+import { SelectField } from '../input/SelectField';
 
 export function Header({ pathName }: { pathName: string }) {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(5);
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
   const closeDropdown = () => {
     setIsOpen(false);
   };
-  const isMainnet = config.environment === Environment.Mainnet;
 
   return (
     <header className="p-2 sm:py-3 sm:pl-6 sm:pr-10 w-full">
@@ -84,16 +84,6 @@ export function Header({ pathName }: { pathName: string }) {
         >
           <DropdownItemContent icon={InfoIcon} text="About" />
         </a>
-        <a
-          {...itemProps[4]}
-          onClick={closeDropdown}
-          className={styles.dropdownOption}
-          href={isMainnet ? allConfigs.testnet2.url : allConfigs.mainnet.url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <DropdownItemContent icon={HubIcon} text={isMainnet ? 'Testnet' : 'Mainnet'} />
-        </a>
       </div>
     </header>
   );
@@ -109,41 +99,28 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 }
 
 function NetworkSelector() {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(2);
+  const { environment, setEnvironment } = useStore((s) => ({
+    environment: s.environment,
+    setEnvironment: s.setEnvironment,
+  }));
+
   return (
     <div className="relative">
-      <button className="flex items-center pb-px hover:opacity-60 transition-all" {...buttonProps}>
-        <Image src={HubIcon} width={20} height={20} className="opacity-70" />
-      </button>
-      <div className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
-        <a
-          {...itemProps[0]}
-          className={`${styles.dropdownOption} justify-center ${
-            config.environment === Environment.Mainnet && styles.activeEnv
-          }`}
-          onClick={() => setIsOpen(false)}
-          href={config.environment !== Environment.Mainnet ? allConfigs.mainnet.url : undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Mainnet
-        </a>
-        <a
-          {...itemProps[1]}
-          onClick={() => setIsOpen(false)}
-          className={`${styles.dropdownOption} justify-center ${
-            config.environment === Environment.Testnet2 && styles.activeEnv
-          }`}
-          href={config.environment !== Environment.Testnet2 ? allConfigs.testnet2.url : undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Testnet
-        </a>
-      </div>
+      {/* <Image src={HubIcon} width={20} height={20} className="opacity-70" /> */}
+      <SelectField
+        classes="w-24 text-gray-600 text-[0.95rem]"
+        options={envOptions}
+        value={environment}
+        onValueSelect={(e: string) => setEnvironment(e as Environment)}
+      />
     </div>
   );
 }
+
+const envOptions = [
+  { value: Environment.Mainnet, display: 'Mainnet' },
+  { value: Environment.Testnet2, display: 'Testnet' },
+];
 
 const styles = {
   navLink:

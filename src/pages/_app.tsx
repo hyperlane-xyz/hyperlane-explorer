@@ -8,14 +8,15 @@ import '@rainbow-me/rainbowkit/styles.css';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
+import { Client, Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
-import { config } from '../consts/appConfig';
+import { Environment, configs } from '../consts/appConfig';
 import { prodChains } from '../consts/networksConfig';
+import { useStore } from '../store';
 import { Color } from '../styles/Color';
 import '../styles/fonts.css';
 import '../styles/globals.css';
@@ -41,11 +42,18 @@ const wagmiClient = createWagmiClient({
   connectors,
 });
 
-const urqlClient = createUrqlClient({
-  url: config.apiUrl,
-});
+const urqlClients: Record<Environment, Client> = {
+  [Environment.Mainnet]: createUrqlClient({
+    url: configs.mainnet.apiUrl,
+  }),
+  [Environment.Testnet2]: createUrqlClient({
+    url: configs.testnet2.apiUrl,
+  }),
+};
 
 export default function App({ Component, router, pageProps }: AppProps) {
+  const environment = useStore((s) => s.environment);
+
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration
   const isSsr = useIsSsr();
@@ -65,7 +73,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
             fontStack: 'system',
           })}
         >
-          <UrqlProvider value={urqlClient}>
+          <UrqlProvider value={urqlClients[environment]}>
             <AppLayout pathName={pathName}>
               <Component {...pageProps} />
             </AppLayout>

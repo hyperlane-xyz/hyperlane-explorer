@@ -3,18 +3,16 @@ export enum Environment {
   Testnet2 = 'testnet2',
 }
 
-// Toggle for testnet2 vs mainnet
-const environment: Environment = Environment.Mainnet;
 const isDevMode = process?.env?.NODE_ENV === 'development';
 const version = process?.env?.NEXT_PUBLIC_VERSION ?? null;
 
-export const allConfigs: Record<Environment, Config> = {
+export const configs: Record<Environment, Config> = {
   mainnet: {
     name: 'Hyperlane Explorer',
     environment: Environment.Mainnet,
     debug: isDevMode,
     version,
-    url: 'https://hyperlane-explorer.vercel.app/',
+    url: 'https://explorer.hyperlane.xyz',
     apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql',
   },
   testnet2: {
@@ -22,12 +20,10 @@ export const allConfigs: Record<Environment, Config> = {
     environment: Environment.Testnet2,
     debug: true,
     version,
-    url: 'TODO',
-    apiUrl: 'TODO',
+    url: 'https://explorer.hyperlane.xyz',
+    apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql', // TODO change
   },
 };
-
-export const config = Object.freeze(allConfigs[environment]);
 
 interface Config {
   name: string;
