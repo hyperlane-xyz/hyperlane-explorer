@@ -8,11 +8,11 @@ import { CopyButton } from '../../components/buttons/CopyButton';
 import { ChainIcon } from '../../components/icons/ChainIcon';
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { HelpIcon } from '../../components/icons/HelpIcon';
-import { useBackgroundBanner } from '../../components/layout/BackgroundBanner';
 import { Card } from '../../components/layout/Card';
 import { chainToDomain } from '../../consts/domains';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
+import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainName } from '../../utils/chains';
 import { getTxExplorerLink } from '../../utils/explorers';
@@ -48,21 +48,25 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationTransaction,
   } = message;
 
-  const { bannerClassName, setBannerClassName } = useBackgroundBanner();
+  const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
-    if (!setBannerClassName || fetching) return;
+    if (fetching) return;
     if (error) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
-      setBannerClassName('bg-red-600');
+      setBanner('bg-red-600');
     } else if (message.status === MessageStatus.Failing) {
-      setBannerClassName('bg-red-600');
+      setBanner('bg-red-600');
     } else if (!isMessageFound) {
-      setBannerClassName('bg-gray-500');
-    } else if (bannerClassName) {
-      setBannerClassName('');
+      setBanner('bg-gray-500');
+    } else {
+      setBanner('');
     }
-  }, [error, fetching, message, isMessageFound, bannerClassName, setBannerClassName]);
+  }, [error, fetching, message, isMessageFound, setBanner]);
+
+  useEffect(() => {
+    return () => setBanner('');
+  }, [setBanner]);
 
   const reExecutor = useCallback(() => {
     if (!isMessageFound || status !== MessageStatus.Delivered) {

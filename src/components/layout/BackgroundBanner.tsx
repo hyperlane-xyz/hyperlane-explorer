@@ -1,29 +1,13 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-
+import { useStore } from '../../store';
 import { classNameToColor } from '../../styles/Color';
 import { WideChevronIcon } from '../icons/WideChevron';
 
-export const BannerColorContext = createContext<{
-  bannerClassName: string;
-  setBannerClassName?: (name: string) => void;
-}>({ bannerClassName: '', setBannerClassName: undefined });
-
-export function useBackgroundBannerState() {
-  // State for managing banner class, to be used as context value
-  const [bannerClassName, setBannerClassName] = useState('');
-  const bannerState = useMemo(
-    () => ({ bannerClassName, setBannerClassName }),
-    [bannerClassName, setBannerClassName],
-  );
-  return bannerState;
-}
-
 export function useBackgroundBanner() {
-  return useContext(BannerColorContext);
+  return useStore((s) => s.bannerClassName);
 }
 
 export function BackgroundBanner() {
-  const { bannerClassName } = useBackgroundBanner();
+  const bannerClassName = useStore((s) => s.bannerClassName);
   const colorClass = bannerClassName || 'bg-blue-500';
 
   return (

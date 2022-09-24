@@ -937,6 +937,7 @@ __metadata:
     typescript: ^4.7.4
     urql: ^3.0.1
     wagmi: ^0.5.11
+    zustand: ^4.1.1
   languageName: unknown
   linkType: soft
 
@@ -7177,5 +7178,22 @@ __metadata:
     react:
       optional: true
   checksum: d4506fa171a9b2eab14071590903150d8b2c4f8b97b71c08cbc63da172a1b79fee9bcdf33833b6242ba5cee302430013437892bb02b2534dfe1622d9fd11790e
+  languageName: node
+  linkType: hard
+
+"zustand@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "zustand@npm:4.1.1"
+  dependencies:
+    use-sync-external-store: 1.2.0
+  peerDependencies:
+    immer: ">=9.0"
+    react: ">=16.8"
+  peerDependenciesMeta:
+    immer:
+      optional: true
+    react:
+      optional: true
+  checksum: 03eefb193e2ecb43a761c81cb60f517c2780289dab0f55f2cbdb91400924c6291abb5a007b32ee19787b8f72b6769f891a38b64fd296660c170d632c3182f6e1
   languageName: node
   linkType: hard
