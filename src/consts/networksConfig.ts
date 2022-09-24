@@ -1,6 +1,6 @@
 import { Chain, allChains as allChainsWagmi, chain } from 'wagmi';
 
-import { chainConnectionConfigs } from '@abacus-network/sdk';
+import { chainConnectionConfigs } from '@hyperlane-xyz/sdk';
 
 export const testConfigs = {
   goerli: chainConnectionConfigs.goerli,

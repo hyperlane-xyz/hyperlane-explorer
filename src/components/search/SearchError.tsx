@@ -1,5 +1,6 @@
 import Image from 'next/future/image';
 
+import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import SearchOffIcon from '../../images/icons/search-off.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
@@ -31,25 +32,55 @@ export function SearchError({
   );
 }
 
-export function SearchInvalidError({ show }: { show: boolean }) {
+export function NoSearchError({ show }: { show: boolean }) {
+  return (
+    <SearchError
+      show={show}
+      imgSrc={BugIcon}
+      text="Enter a transaction hash that involved at least one Hyperlane message to begin."
+      imgWidth={50}
+    />
+  );
+}
+
+export function SearchInvalidError({
+  show,
+  allowAddress,
+}: {
+  show: boolean;
+  allowAddress: boolean;
+}) {
   return (
     <SearchError
       show={show}
       imgSrc={SearchOffIcon}
-      text="Sorry, that search input is not valid. Please try an account
-          addresses or a transaction hash like 0x123..."
+      text={`Sorry, that search input is not valid. Please try ${
+        allowAddress ? 'an account addresses or ' : ''
+      }a transaction hash like 0xABC123...`}
       imgWidth={70}
     />
   );
 }
 
-export function SearchEmptyError({ show, hasInput }: { show: boolean; hasInput: boolean }) {
+export function SearchEmptyError({
+  show,
+  hasInput,
+  allowAddress,
+}: {
+  show: boolean;
+  hasInput: boolean;
+  allowAddress: boolean;
+}) {
   return (
     <SearchError
       show={show}
       imgSrc={ShrugIcon}
       text={`Sorry, no results found. Please try ${
-        hasInput ? 'a different address or hash' : 'again later'
+        hasInput
+          ? allowAddress
+            ? 'a different address or transaction hash'
+            : 'a different transaction hash'
+          : 'again later'
       }.`}
       imgWidth={110}
     />

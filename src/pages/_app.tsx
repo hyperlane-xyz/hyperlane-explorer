@@ -5,6 +5,7 @@ import {
   wallet,
 } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -52,6 +53,8 @@ const urqlClients: Record<Environment, Client> = {
   }),
 };
 
+const reactQueryClient = new QueryClient();
+
 export default function App({ Component, router, pageProps }: AppProps) {
   const environment = useStore((s) => s.environment);
 
@@ -74,11 +77,13 @@ export default function App({ Component, router, pageProps }: AppProps) {
             fontStack: 'system',
           })}
         >
-          <UrqlProvider value={urqlClients[environment]}>
-            <AppLayout pathName={pathName}>
-              <Component {...pageProps} />
-            </AppLayout>
-          </UrqlProvider>
+          <QueryClientProvider client={reactQueryClient}>
+            <UrqlProvider value={urqlClients[environment]}>
+              <AppLayout pathName={pathName}>
+                <Component {...pageProps} />
+              </AppLayout>
+            </UrqlProvider>
+          </QueryClientProvider>
         </RainbowKitProvider>
         <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
       </WagmiConfig>

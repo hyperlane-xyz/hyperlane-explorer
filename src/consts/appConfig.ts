@@ -9,7 +9,7 @@ export const configs: Record<Environment, Config> = {
     debug: isDevMode,
     version,
     url: 'https://explorer.hyperlane.xyz',
-    apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql',
+    apiUrl: 'https://abacus-explorer-api.hasura.app/v1/graphql', // TODO change
   },
   testnet2: {
     environment: Environment.Testnet2,

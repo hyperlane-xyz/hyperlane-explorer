@@ -885,6 +885,7 @@ __metadata:
     "@hyperlane-xyz/sdk": ^0.5.0-beta0
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.4.5
+    "@tanstack/react-query": ^4.6.0
     "@trivago/prettier-plugin-sort-imports": ^3.2.0
     "@types/node": 18.0.4
     "@types/react": 18.0.15
@@ -1254,6 +1255,32 @@ __metadata:
   dependencies:
     tslib: ^2.4.0
   checksum: 0b8c86ad03b17b8fe57dc4498e25dc294ea6bc42558a6b92d8fcd789351dac80199409bef38a2e3ac06aae0fedddfc0ab9c34409acbf74e55d1bbbd74f68b6b7
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-core@npm:4.6.0":
+  version: 4.6.0
+  resolution: "@tanstack/query-core@npm:4.6.0"
+  checksum: 945a3b1ddc89ddf484f828cee0be5db0939f51865b2518f8c4ef351c6a3fc992f8c9fbbd32a5bf16b97d0250e95f43c1e571d5a1dfefd99ab835ffe0f934b159
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^4.6.0":
+  version: 4.6.0
+  resolution: "@tanstack/react-query@npm:4.6.0"
+  dependencies:
+    "@tanstack/query-core": 4.6.0
+    use-sync-external-store: ^1.2.0
+  peerDependencies:
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
+    react-native: "*"
+  peerDependenciesMeta:
+    react-dom:
+      optional: true
+    react-native:
+      optional: true
+  checksum: 39b9f5a71b1c699927db515419889b04e60410472481c5b08645eda8310c73c0c8acfcdffd9d63a5730eefff5e74a4a84939082fbe467d3af0571d837978fbb5
   languageName: node
   linkType: hard
 

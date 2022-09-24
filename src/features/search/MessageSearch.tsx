@@ -125,11 +125,12 @@ export function MessageSearch() {
           ))}
         </Fade>
 
-        <SearchInvalidError show={!isValidInput} />
+        <SearchInvalidError show={!isValidInput} allowAddress={true} />
         <SearchUnknownError show={isValidInput && hasError} />
         <SearchEmptyError
           show={isValidInput && !hasError && !fetching && messageList.length === 0}
           hasInput={hasInput}
+          allowAddress={true}
         />
       </div>
     </>
