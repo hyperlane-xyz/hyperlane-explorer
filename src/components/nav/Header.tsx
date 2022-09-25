@@ -32,7 +32,7 @@ export function Header({ pathName }: { pathName: string }) {
             </div>
           </a>
         </Link>
-        <div className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-10">
+        <nav className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-10">
           <Link href="/">
             <a className={styles.navLink + (pathName === '/' ? ' underline' : '')}>Home</a>
           </Link>
@@ -45,7 +45,7 @@ export function Header({ pathName }: { pathName: string }) {
             About
           </a>
           <NetworkSelector />
-        </div>
+        </nav>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>
             <Image src={HamburgerIcon} width={22} height={22} />
@@ -53,7 +53,7 @@ export function Header({ pathName }: { pathName: string }) {
         </div>
       </div>
       {/* Dropdown menu, used on mobile */}
-      <div className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
+      <nav className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
         <Link href="/">
           <a {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
             <DropdownItemContent icon={HouseIcon} text="Home" />
@@ -84,7 +84,7 @@ export function Header({ pathName }: { pathName: string }) {
         >
           <DropdownItemContent icon={InfoIcon} text="About" />
         </a>
-      </div>
+      </nav>
     </header>
   );
 }

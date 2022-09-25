@@ -55,7 +55,10 @@ export interface DebugMessagesFoundResult {
   messageDetails: MessageDetails[];
 }
 
-type MessageDebugResult = DebugNotFoundResult | DebugNoMessagesResult | DebugMessagesFoundResult;
+export type MessageDebugResult =
+  | DebugNotFoundResult
+  | DebugNoMessagesResult
+  | DebugMessagesFoundResult;
 
 export async function debugMessageForHash(
   txHash: string,
@@ -89,9 +92,9 @@ export async function debugMessageForHash(
   logger.debug(`Found ${dispatchedMessages.length} messages`);
   const messageDetails: MessageDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
-    logger.debug(`Checking message ${i} of ${dispatchedMessages.length}`);
+    logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
     messageDetails.push(await checkMessage(core, multiProvider, dispatchedMessages[i]));
-    logger.debug(`Done checking message ${i}`);
+    logger.debug(`Done checking message ${i + 1}`);
   }
   return {
     status: TxDebugStatus.MessagesFound,

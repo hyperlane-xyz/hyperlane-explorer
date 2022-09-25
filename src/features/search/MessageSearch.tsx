@@ -91,7 +91,7 @@ export function MessageSearch() {
       />
       <div className="w-full h-[38.05rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         {/* Content header and filter bar */}
-        <div className="px-2 py-3 sm:px-4 md:px-5 md:py-3 flex items-center justify-between border-b border-gray-100">
+        <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-gray-600">{!hasInput ? 'Latest Messages' : 'Search Results'}</h2>
           <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
             <div className="w-px h-8 bg-gray-100"></div>
