@@ -3,7 +3,6 @@
 import { IMessageRecipient__factory } from '@hyperlane-xyz/core';
 import {
   ChainName,
-  Chains,
   DispatchedMessage,
   DomainIdToChainName,
   HyperlaneCore,
@@ -13,28 +12,129 @@ import {
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
+import { errorToString } from '../../utils/errors';
+import { logger } from '../../utils/logger';
+import { chunk } from '../../utils/string';
 
-export async function debugMessageForHash(txHash: string, environment: Environment) {
-  const originChain = Chains.ethereum; // TODO check every chain
+export enum TxDebugStatus {
+  NotFound = 'notFound',
+  NoMessages = 'noMessages',
+  MessagesFound = 'messagesFound',
+}
 
+export enum MessageDebugStatus {
+  NoErrorsFound = 'noErrorsFound',
+  InvalidDestDomain = 'invalidDestDomain',
+  UnknownDestChain = 'unknownDestChain',
+  RecipientNotContract = 'RecipientNotContract',
+  HandleCallFailure = 'handleCallFailure',
+}
+
+export interface DebugNotFoundResult {
+  status: TxDebugStatus.NotFound;
+  details: string;
+}
+
+export interface DebugNoMessagesResult {
+  status: TxDebugStatus.NoMessages;
+  chainName: string;
+  details: string;
+  explorerLink?: string;
+}
+
+interface MessageDetails {
+  status: MessageDebugStatus;
+  properties: Map<string, string>;
+  summary: string;
+}
+
+export interface DebugMessagesFoundResult {
+  status: TxDebugStatus.MessagesFound;
+  chainName: string;
+  explorerLink?: string;
+  messageDetails: MessageDetails[];
+}
+
+type MessageDebugResult = DebugNotFoundResult | DebugNoMessagesResult | DebugMessagesFoundResult;
+
+export async function debugMessageForHash(
+  txHash: string,
+  environment: Environment,
+): Promise<MessageDebugResult> {
   // TODO use RPC with api keys
   const multiProvider = new MultiProvider(chainConnectionConfigs);
 
-  const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
-
-  const originProvider = multiProvider.getChainProvider(originChain);
-  const dispatchReceipt = await originProvider.getTransactionReceipt(txHash);
-  const dispatchedMessages = core.getDispatchedMessages(dispatchReceipt);
-
-  // 1 indexed for human friendly logs
-  let currentMessage = 1;
-  for (const message of dispatchedMessages) {
-    console.log(`Message ${currentMessage} of ${dispatchedMessages.length}...`);
-    await checkMessage(core, multiProvider, message);
-    console.log('==========');
-    currentMessage++;
+  const txDetails = await findTransactionDetails(txHash, multiProvider);
+  if (!txDetails?.transactionReceipt) {
+    return {
+      status: TxDebugStatus.NotFound,
+      details: 'No transaction found for this hash on any supported networks.',
+    };
   }
-  console.log(`Evaluated ${dispatchedMessages.length} messages`);
+
+  const { transactionReceipt, chainName, explorerLink } = txDetails;
+  const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
+  const dispatchedMessages = core.getDispatchedMessages(transactionReceipt);
+
+  if (!dispatchedMessages?.length) {
+    return {
+      status: TxDebugStatus.NoMessages,
+      details:
+        'No messages found for this transaction. Please check that the hash and environment are set correctly.',
+      chainName,
+      explorerLink,
+    };
+  }
+
+  logger.debug(`Found ${dispatchedMessages.length} messages`);
+  const messageDetails: MessageDetails[] = [];
+  for (let i = 0; i < dispatchedMessages.length; i++) {
+    logger.debug(`Checking message ${i} of ${dispatchedMessages.length}`);
+    messageDetails.push(await checkMessage(core, multiProvider, dispatchedMessages[i]));
+    logger.debug(`Done checking message ${i}`);
+  }
+  return {
+    status: TxDebugStatus.MessagesFound,
+    chainName,
+    explorerLink,
+    messageDetails,
+  };
+}
+
+async function findTransactionDetails(txHash: string, multiProvider: MultiProvider) {
+  const chains = multiProvider.chains().filter((n) => !n.startsWith('test'));
+  const chainChunks = chunk(chains, 10);
+  for (const chunk of chainChunks) {
+    try {
+      const queries = chunk.map((c) => fetchTransactionDetails(txHash, multiProvider, c));
+      const result = await Promise.any(queries);
+      return result;
+    } catch (error) {
+      logger.debug('Tx not found, trying next chunk');
+    }
+  }
+  logger.debug('Tx not found on any networks');
+  return null;
+}
+
+async function fetchTransactionDetails(
+  txHash: string,
+  multiProvider: MultiProvider,
+  chainName: ChainName,
+) {
+  const { provider, blockExplorerUrl } = multiProvider.getChainConnection(chainName);
+  // TODO explorer may be faster, more robust way to get tx and its logs
+  // Note: receipt is null if tx not found
+  const transactionReceipt = await provider.getTransactionReceipt(txHash);
+  if (transactionReceipt) {
+    logger.info('Tx found', txHash, chainName);
+    // TODO use getTxExplorerLink here, must reconcile wagmi consts and sdk consts
+    const explorerLink = blockExplorerUrl ? `${blockExplorerUrl}/tx/${txHash}` : undefined;
+    return { transactionReceipt, chainName, explorerLink };
+  } else {
+    logger.debug('Tx not found', txHash, chainName);
+    throw new Error(`Tx not found on ${chainName}`);
+  }
 }
 
 async function checkMessage(
@@ -42,22 +142,36 @@ async function checkMessage(
   multiProvider: MultiProvider<any>,
   message: DispatchedMessage,
 ) {
-  console.log(`Leaf index: ${message.leafIndex.toString()}`);
-  console.log(`Raw bytes: ${message.message}`);
-  console.log('Parsed message:', message.parsed);
+  logger.debug(JSON.stringify(message));
+  const properties = new Map<string, string>();
+  properties.set('Sender', message.parsed.sender.toString());
+  properties.set('Recipient', message.parsed.sender.toString());
+  properties.set('Origin Domain', message.parsed.origin.toString());
+  properties.set('Destination Domain', message.parsed.destination.toString());
+  properties.set('Leaf index', message.leafIndex.toString());
+  properties.set('Raw Bytes', message.message);
 
   const destinationChain = DomainIdToChainName[message.parsed.destination];
 
-  if (destinationChain === undefined) {
-    console.error(`ERROR: Unknown destination domain ${message.parsed.destination}`);
-    return;
+  if (!destinationChain) {
+    logger.info(`Unknown destination domain ${message.parsed.destination}`);
+    return {
+      status: MessageDebugStatus.InvalidDestDomain,
+      properties,
+      summary:
+        'The destination domain id is invalid. Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains',
+    };
   }
 
-  console.log(`Destination chain: ${destinationChain}`);
+  logger.debug(`Destination chain: ${destinationChain}`);
 
   if (!core.knownChain(destinationChain)) {
-    console.error(`ERROR: destination chain ${destinationChain} unknown for environment`);
-    return;
+    logger.info(`Destination chain ${destinationChain} unknown for environment`);
+    return {
+      status: MessageDebugStatus.UnknownDestChain,
+      properties,
+      summary: `Destination chain ${destinationChain} is not included in this message's environment. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+    };
   }
 
   const destinationInbox = core.getMailboxPair(
@@ -66,27 +180,31 @@ async function checkMessage(
   ).destinationInbox;
 
   const messageHash = utils.messageHash(message.message, message.leafIndex);
-  console.log(`Message hash: ${messageHash}`);
+  logger.debug(`Message hash: ${messageHash}`);
 
   const processed = await destinationInbox.messages(messageHash);
   if (processed === 1) {
-    console.log('Message has already been processed');
-
+    logger.info('Message has already been processed');
     // TODO: look for past events to find the exact tx in which the message was processed.
-
-    return;
+    return {
+      status: MessageDebugStatus.NoErrorsFound,
+      properties,
+      summary: 'No errors found, this message has already been processed.',
+    };
   } else {
-    console.log('Message not yet processed');
+    logger.debug('Message not yet processed');
   }
 
   const recipientAddress = utils.bytes32ToAddress(message.parsed.recipient);
   const recipientIsContract = await isContract(multiProvider, destinationChain, recipientAddress);
 
   if (!recipientIsContract) {
-    console.error(
-      `ERROR: recipient address ${recipientAddress} is not a contract, maybe a malformed bytes32 recipient?`,
-    );
-    return;
+    logger.info(`Recipient address ${recipientAddress} is not a contract`);
+    return {
+      status: MessageDebugStatus.RecipientNotContract,
+      properties,
+      summary: `Recipient address ${recipientAddress} is not a contract. Ensure bytes32 value is not malformed.`,
+    };
   }
 
   const destinationProvider = multiProvider.getChainProvider(destinationChain);
@@ -99,14 +217,22 @@ async function checkMessage(
       message.parsed.body,
       { from: destinationInbox.address },
     );
-    console.log('Calling recipient `handle` function from the inbox does not revert');
+    logger.debug('Calling recipient `handle` function from the inbox does not revert');
+    return {
+      status: MessageDebugStatus.NoErrorsFound,
+      properties,
+      summary: 'No errors found, this message appears to be deliverable.',
+    };
   } catch (err: any) {
-    console.error(`Error calling recipient \`handle\` function from the inbox`);
-    if (err.reason) {
-      console.error('Reason: ', err.reason);
-    } else {
-      console.error(err);
-    }
+    logger.info(`Error calling recipient handle function from the inbox`);
+    const errorString = errorToString(err);
+    logger.debug(errorString);
+    return {
+      status: MessageDebugStatus.HandleCallFailure,
+      properties,
+      // TODO format the error string better to be easier to understand
+      summary: `Error calling handle on the recipient contract. Details: ${errorString}`,
+    };
   }
 }
 

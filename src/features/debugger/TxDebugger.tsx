@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -27,13 +27,18 @@ export function TxDebugger() {
   const sanitizedInput = sanitizeString(debouncedSearchInput);
   const isValidInput = isValidSearchQuery(sanitizedInput, false);
 
-  // Debugger query
-  const query = useCallback(() => {
-    if (!isValidInput || !sanitizedInput) return null;
-    else return debugMessageForHash(sanitizedInput, environment);
-  }, [isValidInput, sanitizedInput, environment]);
-  const { isLoading: fetching, error, data } = useQuery(['debugMessage'], query);
-  const hasError = !!error;
+  const {
+    isLoading: fetching,
+    isError: hasError,
+    data,
+  } = useQuery(
+    ['debugMessage', isValidInput, sanitizedInput, environment],
+    () => {
+      if (!isValidInput || !sanitizedInput) return null;
+      else return debugMessageForHash(sanitizedInput, environment);
+    },
+    { retry: false },
+  );
 
   return (
     <>
