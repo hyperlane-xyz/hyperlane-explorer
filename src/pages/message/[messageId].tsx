@@ -12,9 +12,7 @@ const Message: NextPage = () => {
 
   useEffect(() => {
     if (!messageId || typeof messageId !== 'string')
-      router
-        .replace('/')
-        .catch((e) => logger.error('Error routing back to home', e));
+      router.replace('/').catch((e) => logger.error('Error routing back to home', e));
   }, [router, messageId]);
   if (!messageId || typeof messageId !== 'string') return null;
 

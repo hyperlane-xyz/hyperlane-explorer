@@ -1,6 +1,6 @@
 import { Chain, allChains as allChainsWagmi, chain } from 'wagmi';
 
-import { chainConnectionConfigs } from '@abacus-network/sdk';
+import { chainConnectionConfigs } from '@hyperlane-xyz/sdk';
 
 export const testConfigs = {
   goerli: chainConnectionConfigs.goerli,
@@ -123,10 +123,7 @@ export const allChains = [
   celoAlfajoresChain,
 ];
 
-export const chainIdToChain = allChains.reduce<Record<number, Chain>>(
-  (result, chain) => {
-    result[chain.id] = chain;
-    return result;
-  },
-  {},
-);
+export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {
+  result[chain.id] = chain;
+  return result;
+}, {});

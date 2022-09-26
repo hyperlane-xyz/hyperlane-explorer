@@ -1,8 +1,9 @@
 {
   "tabWidth": 2,
+  "printWidth": 100,
   "singleQuote": true,
   "trailingComma": "all",
-  "importOrder": ["^@abacus-network/(.*)$", "^../(.*)$", "^./(.*)$"],
+  "importOrder": ["^@hyperlane-xyz/(.*)$", "^../(.*)$", "^./(.*)$"],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true
 }

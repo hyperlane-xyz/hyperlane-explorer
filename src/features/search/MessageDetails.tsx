@@ -8,13 +8,14 @@ import { CopyButton } from '../../components/buttons/CopyButton';
 import { ChainIcon } from '../../components/icons/ChainIcon';
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { HelpIcon } from '../../components/icons/HelpIcon';
-import { useBackgroundBanner } from '../../components/layout/BackgroundBanner';
 import { Card } from '../../components/layout/Card';
 import { chainToDomain } from '../../consts/domains';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
+import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainName } from '../../utils/chains';
+import { getTxExplorerLink } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
@@ -22,7 +23,6 @@ import { useInterval } from '../../utils/timeout';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import { MessagesQueryResult } from './types';
-import { getTxExplorerLink } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
 
@@ -48,28 +48,25 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationTransaction,
   } = message;
 
-  const { bannerClassName, setBannerClassName } = useBackgroundBanner();
+  const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
-    if (!setBannerClassName || fetching) return;
+    if (fetching) return;
     if (error) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
-      setBannerClassName('bg-red-600');
+      setBanner('bg-red-600');
     } else if (message.status === MessageStatus.Failing) {
-      setBannerClassName('bg-red-600');
+      setBanner('bg-red-600');
     } else if (!isMessageFound) {
-      setBannerClassName('bg-gray-500');
-    } else if (bannerClassName) {
-      setBannerClassName('');
+      setBanner('bg-gray-500');
+    } else {
+      setBanner('');
     }
-  }, [
-    error,
-    fetching,
-    message,
-    isMessageFound,
-    bannerClassName,
-    setBannerClassName,
-  ]);
+  }, [error, fetching, message, isMessageFound, setBanner]);
+
+  useEffect(() => {
+    return () => setBanner('');
+  }, [setBanner]);
 
   const reExecutor = useCallback(() => {
     if (!isMessageFound || status !== MessageStatus.Delivered) {
@@ -174,10 +171,7 @@ function TransactionCard({
   help,
   shouldBlur,
 }: TransactionCardProps) {
-  const txExplorerLink = getTxExplorerLink(
-    chainId,
-    transaction?.transactionHash,
-  );
+  const txExplorerLink = getTxExplorerLink(chainId, transaction?.transactionHash);
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">
@@ -194,9 +188,7 @@ function TransactionCard({
           <ValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainName(chainId)} (${chainId} / ${
-              chainToDomain[chainId]
-            })`}
+            display={`${getChainName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -219,9 +211,7 @@ function TransactionCard({
           <ValueRow
             label="Block:"
             labelWidth="w-16"
-            display={`${transaction.blockNumber} (${getDateTimeString(
-              transaction.timestamp,
-            )})`}
+            display={`${transaction.blockNumber} (${getDateTimeString(transaction.timestamp)})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -271,15 +261,10 @@ function DetailsCard({
     <Card classes="mt-2 space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
-          <ChainToChain
-            originChainId={originChainId}
-            destinationChainId={destinationChainId}
-          />
+          <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">
-            Message Details
-          </h3>
+          <h3 className="text-gray-500 font-medium text-md mr-2">Message Details</h3>
           <HelpIcon size={16} text={helpText.details} />
         </div>
       </div>
@@ -333,24 +318,16 @@ function ValueRow({
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <span
-        className={`text-sm ml-2 truncate ${displayWidth} ${
-          blurValue && 'blur-xs'
-        }`}
-      >
+      <span className={`text-sm ml-2 truncate ${displayWidth} ${blurValue && 'blur-xs'}`}>
         {display}
       </span>
-      {showCopy && (
-        <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />
-      )}
+      {showCopy && <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />}
     </div>
   );
 }
 
 function ErrorIcon() {
-  return (
-    <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />
-  );
+  return <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />;
 }
 
 const messageDetailsQuery = `
@@ -410,10 +387,8 @@ query MessageDetails ($messageId: bigint!){
 }`;
 
 const helpText = {
-  origin:
-    'Info about the transaction that initiated the message placement into the outbox.',
+  origin: 'Info about the transaction that initiated the message placement into the outbox.',
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',
-  details:
-    'Immutable information about the message itself such as its contents.',
+  details: 'Immutable information about the message itself such as its contents.',
 };

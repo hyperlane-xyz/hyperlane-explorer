@@ -5,24 +5,20 @@ import {
   wallet,
 } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {
-  Provider as UrqlProvider,
-  createClient as createUrqlClient,
-} from 'urql';
-import {
-  WagmiConfig,
-  configureChains,
-  createClient as createWagmiClient,
-} from 'wagmi';
+import { Client, Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
+import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
-import { config } from '../consts/appConfig';
+import { configs } from '../consts/appConfig';
+import { Environment } from '../consts/environments';
 import { prodChains } from '../consts/networksConfig';
+import { useStore } from '../store';
 import { Color } from '../styles/Color';
 import '../styles/fonts.css';
 import '../styles/globals.css';
@@ -48,11 +44,20 @@ const wagmiClient = createWagmiClient({
   connectors,
 });
 
-const urqlClient = createUrqlClient({
-  url: config.apiUrl,
-});
+const urqlClients: Record<Environment, Client> = {
+  [Environment.Mainnet]: createUrqlClient({
+    url: configs.mainnet.apiUrl,
+  }),
+  [Environment.Testnet2]: createUrqlClient({
+    url: configs.testnet2.apiUrl,
+  }),
+};
+
+const reactQueryClient = new QueryClient();
 
 export default function App({ Component, router, pageProps }: AppProps) {
+  const environment = useStore((s) => s.environment);
+
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration
   const isSsr = useIsSsr();
@@ -72,17 +77,15 @@ export default function App({ Component, router, pageProps }: AppProps) {
             fontStack: 'system',
           })}
         >
-          <UrqlProvider value={urqlClient}>
-            <AppLayout pathName={pathName}>
-              <Component {...pageProps} />
-            </AppLayout>
-          </UrqlProvider>
+          <QueryClientProvider client={reactQueryClient}>
+            <UrqlProvider value={urqlClients[environment]}>
+              <AppLayout pathName={pathName}>
+                <Component {...pageProps} />
+              </AppLayout>
+            </UrqlProvider>
+          </QueryClientProvider>
         </RainbowKitProvider>
-        <ToastContainer
-          transition={Zoom}
-          position={toast.POSITION.BOTTOM_RIGHT}
-          limit={2}
-        />
+        <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
       </WagmiConfig>
     </ErrorBoundary>
   );

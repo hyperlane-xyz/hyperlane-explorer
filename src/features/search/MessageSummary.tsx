@@ -6,15 +6,7 @@ import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableTimeString } from '../../utils/time';
 
 export function MessageSummary({ message }: { message: MessageStub }) {
-  const {
-    id,
-    status,
-    sender,
-    recipient,
-    timestamp,
-    originChainId,
-    destinationChainId,
-  } = message;
+  const { id, status, sender, recipient, timestamp, originChainId, destinationChainId } = message;
 
   let statusColor = 'bg-beige-500';
   let statusText = 'Pending';
@@ -29,33 +21,22 @@ export function MessageSummary({ message }: { message: MessageStub }) {
   return (
     <Link href={`/message/${id}`}>
       <a className="flex items-center justify-between space-x-4 xs:space-x-9 sm:space-x-12 md:space-x-16">
-        <ChainToChain
-          originChainId={originChainId}
-          destinationChainId={destinationChainId}
-        />
+        <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
         <div className="flex items-center justify-between flex-1">
           <div className={styles.valueContainer}>
             <div className={styles.label}>Sender</div>
-            <div className={styles.value}>
-              {shortenAddress(sender) || 'Invalid Address'}
-            </div>
+            <div className={styles.value}>{shortenAddress(sender) || 'Invalid Address'}</div>
           </div>
           <div className="hidden sm:flex flex-col">
             <div className={styles.label}>Recipient</div>
-            <div className={styles.value}>
-              {shortenAddress(recipient) || 'Invalid Address'}
-            </div>
+            <div className={styles.value}>{shortenAddress(recipient) || 'Invalid Address'}</div>
           </div>
           <div className={styles.valueContainer + ' sm:w-28'}>
             <div className={styles.label}>Time sent</div>
-            <div className={styles.value}>
-              {getHumanReadableTimeString(timestamp)}
-            </div>
+            <div className={styles.value}>{getHumanReadableTimeString(timestamp)}</div>
           </div>
         </div>
-        <div
-          className={`w-20 md:w-24 py-2 text-sm text-center rounded ${statusColor}`}
-        >
+        <div className={`w-20 md:w-24 py-2 text-sm text-center rounded ${statusColor}`}>
           {statusText}
         </div>
       </a>

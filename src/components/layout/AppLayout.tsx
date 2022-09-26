@@ -19,7 +19,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
       </Head>
       <div className="h-full min-h-screen w-full min-w-screen bg-gray-100">
         <div className="max-w-5xl mx-auto flex flex-col justify-between min-h-screen">
-          <Header />
+          <Header pathName={pathName} />
           <main className="w-full flex-1">{children}</main>
           <Footer />
         </div>
