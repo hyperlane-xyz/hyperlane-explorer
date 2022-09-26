@@ -15,7 +15,7 @@ import { envDisplayValue } from '../../consts/environments';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
-import { sanitizeString } from '../../utils/string';
+import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../search/utils';
 
 import { MessageDebugResult, TxDebugStatus, debugMessageForHash } from './debugMessage';
@@ -79,7 +79,7 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
 
   if (result.status === TxDebugStatus.NotFound) {
     return (
-      <div className="py-8 flex flex-col items-center">
+      <div className="py-12 flex flex-col items-center">
         <Image src={ShrugIcon} width={110} className="opacity-80" />
         <h2 className="mt-4 text-lg text-gray-600">No transaction found</h2>
         <p className="mt-4 leading-relaxed">{result.details}</p>
@@ -89,11 +89,11 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
 
   if (result.status === TxDebugStatus.NoMessages) {
     return (
-      <div className="py-8 flex flex-col items-center">
+      <div className="py-12 flex flex-col items-center">
         <Image src={ShrugIcon} width={110} className="opacity-80" />
         <h2 className="mt-4 text-lg text-gray-600">No message found</h2>
         <p className="mt-4 leading-relaxed">{result.details}</p>
-        <TxExplorerLink href={result.explorerLink} />
+        <TxExplorerLink href={result.explorerLink} chainName={result.chainName} />
       </div>
     );
   }
@@ -122,7 +122,7 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
             </div>
           </div>
         ))}
-        <TxExplorerLink href={result.explorerLink} />
+        <TxExplorerLink href={result.explorerLink} chainName={result.chainName} />
       </>
     );
   }
@@ -130,8 +130,14 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
   return null;
 }
 
-function TxExplorerLink({ href }: { href: string | undefined }) {
-  if (!href) return null;
+function TxExplorerLink({
+  href,
+  chainName,
+}: {
+  href: string | undefined;
+  chainName: string | undefined;
+}) {
+  if (!href || !chainName) return null;
   return (
     <a
       className="block my-5 text-blue-600 hover:text-blue-500 underline underline-offset-4"
@@ -139,7 +145,7 @@ function TxExplorerLink({ href }: { href: string | undefined }) {
       target="_blank"
       rel="noopener noreferrer"
     >
-      View transaction in explorer
+      {`View transaction in ${toTitleCase(chainName)} explorer`}
     </a>
   );
 }
