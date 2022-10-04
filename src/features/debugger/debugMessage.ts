@@ -42,9 +42,14 @@ export interface DebugNoMessagesResult {
   explorerLink?: string;
 }
 
+interface LinkProperty {
+  url: string;
+  text: string;
+}
+
 interface MessageDetails {
   status: MessageDebugStatus;
-  properties: Map<string, string>;
+  properties: Map<string, string | LinkProperty>;
   summary: string;
 }
 
@@ -146,11 +151,28 @@ async function checkMessage(
   message: DispatchedMessage,
 ) {
   logger.debug(JSON.stringify(message));
-  const properties = new Map<string, string>();
-  properties.set('Sender', message.parsed.sender.toString());
-  properties.set('Recipient', message.parsed.sender.toString());
+  const properties = new Map<string, string | LinkProperty>();
+
+  if (message.parsed.sender.toString().startsWith('0x000000000000000000000000')) {
+    const originChainName = DomainIdToChainName[message.parsed.origin];
+    const originCC = multiProvider.getChainConnection(originChainName);
+    const address = '0x' + message.parsed.sender.toString().substring(26);
+    properties.set('Sender', { url: await originCC.getAddressUrl(address), text: address });
+  } else {
+    properties.set('Sender', message.parsed.sender.toString());
+  }
+  if (message.parsed.recipient.toString().startsWith('0x000000000000000000000000')) {
+    const originChainName = DomainIdToChainName[message.parsed.origin];
+    const originCC = multiProvider.getChainConnection(originChainName);
+    const address = '0x' + message.parsed.recipient.toString().substring(26);
+    properties.set('Recipient', { url: await originCC.getAddressUrl(address), text: address });
+  } else {
+    properties.set('Recipient', message.parsed.recipient.toString());
+  }
   properties.set('Origin Domain', message.parsed.origin.toString());
+  properties.set('Origin Chain', DomainIdToChainName[message.parsed.origin] || 'Unknown');
   properties.set('Destination Domain', message.parsed.destination.toString());
+  properties.set('Destination Chain', DomainIdToChainName[message.parsed.destination] || 'Unknown');
   properties.set('Leaf index', message.leafIndex.toString());
   properties.set('Raw Bytes', message.message);
 
@@ -173,7 +195,7 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.UnknownDestChain,
       properties,
-      summary: `Destination chain ${destinationChain} is not included in this message's environment. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      summary: `Destination chain ${destinationChain} is not included in this message's environment. Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -188,10 +210,21 @@ async function checkMessage(
   const processed = await destinationInbox.messages(messageHash);
   if (processed === 1) {
     logger.info('Message has already been processed');
-    // TODO: look for past events to find the exact tx in which the message was processed.
+
+    const filter = destinationInbox.filters.Process(messageHash);
+    const matchedEvents = await destinationInbox.queryFilter(filter);
+    if (matchedEvents.length > 0) {
+      const event = matchedEvents[0];
+      const url = multiProvider
+        .getChainConnection(destinationChain)
+        // @ts-ignore
+        .getTxUrl({ hash: event.transactionHash });
+      properties.set('Process TX', { url, text: event.transactionHash });
+    }
     return {
       status: MessageDebugStatus.NoErrorsFound,
       properties,
+
       summary: 'No errors found, this message has already been processed.',
     };
   } else {

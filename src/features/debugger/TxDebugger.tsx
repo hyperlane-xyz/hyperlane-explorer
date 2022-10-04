@@ -3,7 +3,6 @@ import Image from 'next/future/image';
 import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
-import { CopyButton } from '../../components/buttons/CopyButton';
 import { SearchBar } from '../../components/search/SearchBar';
 import {
   NoSearchError,
@@ -111,11 +110,21 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
               {Array.from(m.properties.entries()).map(([key, val]) => (
                 <div className="flex mt-1" key={`message-${i}-prop-${key}`}>
                   <label className="text-gray-600 w-32">{key}</label>
-                  <div className="relative ml-2 truncate max-w-xs sm:max-w-sm md:max-w-lg">
-                    {val}
-                  </div>
-                  {val.length > 20 && (
-                    <CopyButton copyValue={val} width={12} height={12} classes="ml-2" />
+                  {typeof val === 'string' ? (
+                    <div className="relative ml-2 truncate max-w-xs sm:max-w-sm md:max-w-lg">
+                      {val}
+                    </div>
+                  ) : (
+                    <div className="relative ml-2 truncate max-w-xs sm:max-w-sm md:max-w-lg">
+                      <a
+                        className="my-5 text-blue-600 hover:text-blue-500 underline underline-offset-4"
+                        href={val.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {val.text}
+                      </a>
+                    </div>
                   )}
                 </div>
               ))}
