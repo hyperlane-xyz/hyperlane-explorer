@@ -17,3 +17,10 @@ export const useStore = create<AppState>()((set) => ({
   bannerClassName: '',
   setBanner: (className: string) => set(() => ({ bannerClassName: className })),
 }));
+
+export function useEnvironment() {
+  return useStore((s) => ({
+    environment: s.environment,
+    setEnvironment: s.setEnvironment,
+  }));
+}

@@ -2,7 +2,6 @@ import Image from 'next/future/image';
 import Link from 'next/link';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
-import { Environment, envDisplayValue } from '../../consts/environments';
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
 import BugIcon from '../../images/icons/bug.svg';
@@ -11,8 +10,8 @@ import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
-import { useStore } from '../../store';
-import { SelectField } from '../input/SelectField';
+
+import { EnvironmentSelector } from './EnvironmentSelector';
 
 export function Header({ pathName }: { pathName: string }) {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
@@ -44,7 +43,7 @@ export function Header({ pathName }: { pathName: string }) {
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
-          <NetworkSelector />
+          <EnvironmentSelector />
         </nav>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>
@@ -97,30 +96,6 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
     </>
   );
 }
-
-function NetworkSelector() {
-  const { environment, setEnvironment } = useStore((s) => ({
-    environment: s.environment,
-    setEnvironment: s.setEnvironment,
-  }));
-
-  return (
-    <div className="relative">
-      {/* <Image src={HubIcon} width={20} height={20} className="opacity-70" /> */}
-      <SelectField
-        classes="w-24 text-gray-600 border-gray-600 text-[0.95rem]"
-        options={envOptions}
-        value={environment}
-        onValueSelect={(e: string) => setEnvironment(e as Environment)}
-      />
-    </div>
-  );
-}
-
-const envOptions = [
-  { value: Environment.Mainnet, display: envDisplayValue[Environment.Mainnet] },
-  { value: Environment.Testnet2, display: envDisplayValue[Environment.Testnet2] },
-];
 
 const styles = {
   navLink:

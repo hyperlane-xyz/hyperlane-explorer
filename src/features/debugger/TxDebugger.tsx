@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/future/image';
+import { useRouter } from 'next/router';
 import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
@@ -14,6 +15,7 @@ import { envDisplayValue } from '../../consts/environments';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
+import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../search/utils';
 
@@ -22,8 +24,11 @@ import { MessageDebugResult, TxDebugStatus, debugMessageForHash } from './debugM
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);
 
+  const router = useRouter();
+  const txHash = getQueryParamString(router.query, 'txHash');
+
   // Search text input
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(txHash);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const hasInput = !!debouncedSearchInput;
   const sanitizedInput = sanitizeString(debouncedSearchInput);
@@ -35,9 +40,13 @@ export function TxDebugger() {
     data,
   } = useQuery(
     ['debugMessage', isValidInput, sanitizedInput, environment],
-    () => {
-      if (!isValidInput || !sanitizedInput) return null;
-      else return debugMessageForHash(sanitizedInput, environment);
+    async () => {
+      if (!isValidInput || !sanitizedInput) {
+        replacePathParam('txHash', '');
+        return null;
+      }
+      replacePathParam('txHash', sanitizedInput);
+      return debugMessageForHash(sanitizedInput, environment);
     },
     { retry: false },
   );
