@@ -40,7 +40,7 @@ export function TxDebugger() {
     data,
   } = useQuery(
     ['debugMessage', isValidInput, sanitizedInput, environment],
-    async () => {
+    () => {
       if (!isValidInput || !sanitizedInput) {
         replacePathParam('txHash', '');
         return null;
