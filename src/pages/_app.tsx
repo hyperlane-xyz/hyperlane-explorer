@@ -65,7 +65,6 @@ export default function App({ Component, router, pageProps }: AppProps) {
     return <div></div>;
   }
 
-  const pathName = router.pathname;
   return (
     <ErrorBoundary>
       <WagmiConfig client={wagmiClient}>
@@ -79,7 +78,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
         >
           <QueryClientProvider client={reactQueryClient}>
             <UrqlProvider value={urqlClients[environment]}>
-              <AppLayout pathName={pathName}>
+              <AppLayout pathName={router.pathname}>
                 <Component {...pageProps} />
               </AppLayout>
             </UrqlProvider>

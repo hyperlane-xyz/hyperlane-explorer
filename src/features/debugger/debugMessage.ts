@@ -1,6 +1,6 @@
 // Based on debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { IMessageRecipient__factory } from '@hyperlane-xyz/core';
+import { IMessageRecipient__factory, Inbox } from '@hyperlane-xyz/core';
 import {
   ChainName,
   DispatchedMessage,
@@ -130,14 +130,13 @@ async function fetchTransactionDetails(
   multiProvider: MultiProvider,
   chainName: ChainName,
 ) {
-  const { provider, blockExplorerUrl } = multiProvider.getChainConnection(chainName);
+  const { provider } = multiProvider.getChainConnection(chainName);
   // TODO explorer may be faster, more robust way to get tx and its logs
   // Note: receipt is null if tx not found
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
   if (transactionReceipt) {
     logger.info('Tx found', txHash, chainName);
-    // TODO use getTxExplorerLink here, must reconcile wagmi consts and sdk consts
-    const explorerLink = blockExplorerUrl ? `${blockExplorerUrl}/tx/${txHash}` : undefined;
+    const explorerLink = getTxExplorerLink(multiProvider, chainName, txHash);
     return { transactionReceipt, chainName, explorerLink };
   } else {
     logger.debug('Tx not found', txHash, chainName);
@@ -210,16 +209,10 @@ async function checkMessage(
   const processed = await destinationInbox.messages(messageHash);
   if (processed === 1) {
     logger.info('Message has already been processed');
-
-    const filter = destinationInbox.filters.Process(messageHash);
-    const matchedEvents = await destinationInbox.queryFilter(filter);
-    if (matchedEvents.length > 0) {
-      const event = matchedEvents[0];
-      const url = multiProvider
-        .getChainConnection(destinationChain)
-        // @ts-ignore
-        .getTxUrl({ hash: event.transactionHash });
-      properties.set('Process TX', { url, text: event.transactionHash });
+    const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
+    if (processTxHash) {
+      const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
+      properties.set('Process TX', { url, text: processTxHash });
     }
     return {
       status: MessageDebugStatus.NoErrorsFound,
@@ -277,4 +270,28 @@ async function isContract(multiProvider: MultiProvider<any>, chain: ChainName, a
   const code = await provider.getCode(address);
   // "Empty" code
   return code && code !== '0x';
+}
+
+// TODO reconcile with function in utils/explorers.ts
+// must reconcile wagmi consts and sdk consts
+function getTxExplorerLink(multiProvider: MultiProvider<any>, chain: ChainName, hash: string) {
+  const url = multiProvider
+    .getChainConnection(chain)
+    // @ts-ignore
+    .getTxUrl({ hash });
+  return url || undefined;
+}
+
+async function tryGetProcessTxHash(destinationInbox: Inbox, messageHash: string) {
+  try {
+    const filter = destinationInbox.filters.Process(messageHash);
+    const matchedEvents = await destinationInbox.queryFilter(filter);
+    if (matchedEvents?.length) {
+      const event = matchedEvents[0];
+      return event.transactionHash;
+    }
+  } catch (error) {
+    logger.error('Error finding process transaction', error);
+  }
+  return null;
 }
