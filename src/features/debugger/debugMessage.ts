@@ -162,10 +162,10 @@ async function checkMessage(
     properties.set('Sender', message.parsed.sender.toString());
   }
   if (message.parsed.recipient.toString().startsWith('0x000000000000000000000000')) {
-    const originChainName = DomainIdToChainName[message.parsed.origin];
-    const originCC = multiProvider.getChainConnection(originChainName);
+    const destinationChainName = DomainIdToChainName[message.parsed.destination];
+    const destinationCC = multiProvider.getChainConnection(destinationChainName);
     const address = '0x' + message.parsed.recipient.toString().substring(26);
-    properties.set('Recipient', { url: await originCC.getAddressUrl(address), text: address });
+    properties.set('Recipient', { url: await destinationCC.getAddressUrl(address), text: address });
   } else {
     properties.set('Recipient', message.parsed.recipient.toString());
   }
