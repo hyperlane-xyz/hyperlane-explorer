@@ -27,6 +27,7 @@ export enum MessageDebugStatus {
   InvalidDestDomain = 'invalidDestDomain',
   UnknownDestChain = 'unknownDestChain',
   RecipientNotContract = 'RecipientNotContract',
+  RecipientNotHandler = 'RecipientNotHandler',
   HandleCallFailure = 'handleCallFailure',
 }
 
@@ -253,14 +254,33 @@ async function checkMessage(
       summary: 'No errors found, this message appears to be deliverable.',
     };
   } catch (err: any) {
-    logger.info(`Error calling recipient handle function from the inbox`);
+    const messagePrefix = 'Error calling handle on the recipient contract';
+    logger.info(messagePrefix);
     const errorString = errorToString(err);
     logger.debug(errorString);
+
+    // scan bytecode for handle function selector
+    const bytecode = await destinationProvider.getCode(recipientAddress);
+    const msgRecipientInterface = IMessageRecipient__factory.createInterface();
+    const handleFunction = msgRecipientInterface.functions['handle(uint32,bytes32,bytes)'];
+    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
+
+    if (!bytecode.includes(handleSignature)) {
+      const bytecodeMessage = `Recipient bytecode does not appear to contain handle function selector ${handleSignature}. Contract may be proxied.`;
+      logger.info(bytecodeMessage);
+      return {
+        status: MessageDebugStatus.RecipientNotHandler,
+        properties,
+        // TODO format the error string better to be easier to understand
+        summary: `${messagePrefix}. ${bytecodeMessage}`,
+      };
+    }
+
     return {
       status: MessageDebugStatus.HandleCallFailure,
       properties,
       // TODO format the error string better to be easier to understand
-      summary: `Error calling handle on the recipient contract. Details: ${errorString}`,
+      summary: `${messagePrefix}. Details: ${errorString}`,
     };
   }
 }
