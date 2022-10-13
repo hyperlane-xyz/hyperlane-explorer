@@ -27,8 +27,8 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
     return {
       id: m.id,
       status,
-      sender: ensureLeading0x(m.sender),
-      recipient: ensureLeading0x(m.recipient),
+      sender: parsePaddedAddress(m.sender),
+      recipient: parsePaddedAddress(m.recipient),
       originChainId: domainToChain[m.origin],
       destinationChainId: domainToChain[m.destination],
       timestamp: parseTimestampString(m.timestamp),
@@ -43,14 +43,14 @@ function parseMessage(m: MessageEntry): Message | null {
   try {
     const status = getMessageStatus(m);
     const destinationTransaction =
-      status === MessageStatus.Delivered && m.delivered_message?.transaction
-        ? parseTransaction(m.delivered_message.transaction)
+      status === MessageStatus.Delivered && m.delivered_messages
+        ? parseTransaction(m.delivered_messages[0].transaction)
         : undefined;
     return {
       id: m.id,
       status,
-      sender: ensureLeading0x(m.sender),
-      recipient: ensureLeading0x(m.recipient),
+      sender: parsePaddedAddress(m.sender),
+      recipient: parsePaddedAddress(m.recipient),
       body: decodeBinaryHex(m.msg_body ?? ''),
       originChainId: domainToChain[m.origin],
       destinationChainId: domainToChain[m.destination],
@@ -75,7 +75,13 @@ function parseTransaction(t: TransactionEntry): PartialTransactionReceipt {
 }
 
 function parseTimestampString(t: string) {
-  return new Date(t).getTime();
+  const asUtc = t.at(-1) === 'Z' ? t : t + 'Z';
+  return new Date(asUtc).getTime();
+}
+
+function parsePaddedAddress(a: string) {
+  if (!a || a.length < 40) return '';
+  return ensureLeading0x(a.slice(-40));
 }
 
 // TODO Find correct way to decode postgres bytea format
@@ -86,8 +92,8 @@ function decodeBinaryHex(b: string) {
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
-  const { delivered_message, message_states } = m;
-  if (delivered_message) {
+  const { delivered_messages, message_states } = m;
+  if (delivered_messages?.length) {
     return MessageStatus.Delivered;
   } else if (message_states.length > 0) {
     const latestState = message_states.at(-1);

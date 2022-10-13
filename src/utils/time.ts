@@ -2,7 +2,7 @@
 export function getHumanReadableTimeString(timestamp: number) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
 
-  if (seconds <= 2) {
+  if (seconds <= 1) {
     return 'Just now';
   }
   if (seconds <= 60) {

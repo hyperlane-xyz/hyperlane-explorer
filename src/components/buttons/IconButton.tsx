@@ -30,7 +30,7 @@ export function IconButton(props: PropsWithChildren<IconButtonProps>) {
       className={allClasses}
       {...passThruProps}
     >
-      <Image src={imgSrc} alt={title} width={width} height={height} />
+      <Image src={imgSrc} alt={title || ''} width={width} height={height} />
     </button>
   );
 }

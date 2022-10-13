@@ -1,21 +1,19 @@
 import { Chain, allChains as allChainsWagmi, chain } from 'wagmi';
 
-import { chainConnectionConfigs } from '@hyperlane-xyz/sdk';
-
-export const testConfigs = {
-  goerli: chainConnectionConfigs.goerli,
-  alfajores: chainConnectionConfigs.alfajores,
-};
-
-export const prodConfigs = {
-  arbitrum: chainConnectionConfigs.arbitrum,
-  avalanche: chainConnectionConfigs.avalanche,
-  bsc: chainConnectionConfigs.bsc,
-  celo: chainConnectionConfigs.celo,
-  ethereum: chainConnectionConfigs.ethereum,
-  optimism: chainConnectionConfigs.optimism,
-  polygon: chainConnectionConfigs.polygon,
-};
+// import { chainConnectionConfigs } from '@hyperlane-xyz/sdk';
+// export const testConfigs = {
+//   goerli: chainConnectionConfigs.goerli,
+//   alfajores: chainConnectionConfigs.alfajores,
+// };
+// export const prodConfigs = {
+//   arbitrum: chainConnectionConfigs.arbitrum,
+//   avalanche: chainConnectionConfigs.avalanche,
+//   bsc: chainConnectionConfigs.bsc,
+//   celo: chainConnectionConfigs.celo,
+//   ethereum: chainConnectionConfigs.ethereum,
+//   optimism: chainConnectionConfigs.optimism,
+//   polygon: chainConnectionConfigs.polygon,
+// };
 
 export const avalancheChain: Chain = {
   id: 43114,
@@ -30,10 +28,30 @@ export const avalancheChain: Chain = {
     default: 'https://api.avax.network/ext/bc/C/rpc',
   },
   blockExplorers: {
-    etherscan: { name: 'SnowTrace', url: 'https://snowtrace.io' },
     default: { name: 'SnowTrace', url: 'https://snowtrace.io' },
   },
   testnet: false,
+};
+
+export const fujiTestnetChain: Chain = {
+  id: 43113,
+  name: 'Fuji Testnet',
+  network: 'fuji',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Avalanche',
+    symbol: 'AVAX',
+  },
+  rpcUrls: {
+    default: 'https://api.avax-test.network/ext/bc/C/rpc',
+  },
+  blockExplorers: {
+    default: {
+      name: 'Snowtrace',
+      url: 'https://testnet.snowtrace.io',
+    },
+  },
+  testnet: true,
 };
 
 export const bscChain: Chain = {
@@ -53,6 +71,25 @@ export const bscChain: Chain = {
     default: { name: 'BscScan', url: 'https://bscscan.com' },
   },
   testnet: false,
+};
+
+export const bscTestnetChain: Chain = {
+  id: 97,
+  name: 'Bsc Testnet',
+  network: 'bscTestnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'BNB',
+    symbol: 'BNB',
+  },
+  rpcUrls: {
+    default: 'https://data-seed-prebsc-1-s3.binance.org:8545',
+  },
+  blockExplorers: {
+    etherscan: { name: 'BscScan', url: 'https://testnet.bscscan.com' },
+    default: { name: 'BscScan', url: 'https://testnet.bscscan.com' },
+  },
+  testnet: true,
 };
 
 export const celoMainnetChain: Chain = {
@@ -103,24 +140,95 @@ export const celoAlfajoresChain: Chain = {
   testnet: true,
 };
 
+export const auroraTestnetChain: Chain = {
+  id: 1313161555,
+  name: 'Aurora Testnet',
+  network: 'auroraTestnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'ETH',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    default: 'https://testnet.aurora.dev',
+  },
+  blockExplorers: {
+    etherscan: {
+      name: 'AuroraScan',
+      url: 'https://testnet.aurorascan.dev',
+    },
+    default: {
+      name: 'AuroraScan',
+      url: 'https://testnet.aurorascan.dev',
+    },
+  },
+  testnet: true,
+};
+
+export const moonbaseAlphaChain: Chain = {
+  id: 1287,
+  name: 'Moonbase Alpha',
+  network: 'moonbaseAlpha',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'DEV',
+    symbol: 'DEV',
+  },
+  rpcUrls: {
+    default: 'https://rpc.api.moonbase.moonbeam.network',
+  },
+  blockExplorers: {
+    etherscan: {
+      name: 'MoonScan',
+      url: 'https://moonbase.moonscan.io/',
+    },
+    default: {
+      name: 'MoonScan',
+      url: 'https://moonbase.moonscan.io/',
+    },
+  },
+  testnet: true,
+};
+
 export const prodChains = [
+  chain.mainnet,
   chain.arbitrum,
+  chain.optimism,
+  chain.polygon,
   avalancheChain,
   bscChain,
   celoMainnetChain,
-  chain.mainnet,
-  chain.optimism,
-  chain.polygon,
 ];
 
-export const testChains = [chain.goerli, celoAlfajoresChain];
+export const testChains = [
+  chain.goerli,
+  chain.kovan,
+  chain.arbitrumGoerli,
+  chain.arbitrumRinkeby,
+  chain.optimismGoerli,
+  chain.optimismKovan,
+  chain.polygonMumbai,
+  fujiTestnetChain,
+  bscTestnetChain,
+  celoAlfajoresChain,
+  auroraTestnetChain,
+  moonbaseAlphaChain,
+];
+
+export const prodAndTestChains = [...prodChains, ...testChains];
 
 export const allChains = [
   ...allChainsWagmi,
   avalancheChain,
   bscChain,
   celoMainnetChain,
+  avalancheChain,
+  bscChain,
+  fujiTestnetChain,
   celoAlfajoresChain,
+  bscTestnetChain,
+  auroraTestnetChain,
+  moonbaseAlphaChain,
 ];
 
 export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {

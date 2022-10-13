@@ -2,10 +2,6 @@ import { useStore } from '../../store';
 import { classNameToColor } from '../../styles/Color';
 import { WideChevronIcon } from '../icons/WideChevron';
 
-export function useBackgroundBanner() {
-  return useStore((s) => s.bannerClassName);
-}
-
 export function BackgroundBanner() {
   const bannerClassName = useStore((s) => s.bannerClassName);
   const colorClass = bannerClassName || 'bg-blue-500';

@@ -84,7 +84,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         )}
         {isMessageFound && status === MessageStatus.Delivered && (
           <StatusHeader text="Status: Delivered" fetching={fetching}>
-            <Image src={CheckmarkIcon} width={24} height={24} />
+            <Image src={CheckmarkIcon} width={24} height={24} alt="" />
           </StatusHeader>
         )}
         {isMessageFound && status === MessageStatus.Failing && (
@@ -227,13 +227,13 @@ function TransactionCard({
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center py-6">
+        <div className="flex flex-col items-center py-5">
           <div className="text-gray-500">
             {status === MessageStatus.Failing
               ? 'Destination chain transaction currently failing'
               : 'Destination chain transaction still in progress'}
           </div>
-          <Spinner classes="mt-4" />
+          <Spinner classes="mt-4 scale-75" />
         </div>
       )}
     </Card>
@@ -258,7 +258,7 @@ function DetailsCard({
   shouldBlur,
 }: DetailsCardProps) {
   return (
-    <Card classes="mt-2 space-y-4">
+    <Card classes="mt-2 space-y-4" width="w-full">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
@@ -327,7 +327,7 @@ function ValueRow({
 }
 
 function ErrorIcon() {
-  return <Image src={ErrorCircleIcon} width={24} height={24} className="invert" />;
+  return <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
 }
 
 const messageDetailsQuery = `
@@ -356,7 +356,7 @@ query MessageDetails ($messageId: bigint!){
     recipient
     sender
     timestamp
-    delivered_message {
+    delivered_messages {
       id
       tx_id
       inbox_address

@@ -12,7 +12,7 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchError';
 import { chainToDomain } from '../../consts/domains';
-import { prodChains } from '../../consts/networksConfig';
+import { prodAndTestChains } from '../../consts/networksConfig';
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { trimLeading0x } from '../../utils/addresses';
@@ -95,14 +95,20 @@ export function MessageSearch() {
           <h2 className="text-gray-600">{!hasInput ? 'Latest Messages' : 'Search Results'}</h2>
           <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
             <div className="w-px h-8 bg-gray-100"></div>
-            <Image src={FunnelIcon} width={22} height={22} className="hidden sm:block opacity-50" />
+            <Image
+              src={FunnelIcon}
+              width={22}
+              height={22}
+              className="hidden sm:block opacity-50"
+              alt=""
+            />
             <SelectField
               classes="w-24 md:w-32"
               options={chainOptions}
               value={originChainFilter}
               onValueSelect={onChangeOriginFilter}
             />
-            <Image src={ArrowRightIcon} width={30} height={30} className="opacity-50" />
+            <Image src={ArrowRightIcon} width={30} height={30} className="opacity-50" alt="" />
             <SelectField
               classes="w-24 md:w-32"
               options={chainOptions}
@@ -140,7 +146,7 @@ export function MessageSearch() {
 function getChainOptionList(): Array<{ value: string; display: string }> {
   return [
     { value: '', display: 'All Chains' },
-    ...prodChains.map((c) => ({
+    ...prodAndTestChains.map((c) => ({
       value: c.id.toString(),
       display: trimToLength(c.name, 12),
     })),
@@ -194,7 +200,7 @@ const messageStubProps = `
   recipient
   sender
   timestamp
-  delivered_message {
+  delivered_messages {
     id
     tx_id
     inbox_address

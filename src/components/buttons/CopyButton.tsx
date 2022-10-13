@@ -33,9 +33,9 @@ export function CopyButton({ width, height, copyValue, classes }: Props) {
       } hover:opacity-70 active:opacity-90 ${classes}`}
     >
       {showCheckmark ? (
-        <Image src={CheckmarkIcon} width={width} height={height} />
+        <Image src={CheckmarkIcon} width={width} height={height} alt="" />
       ) : (
-        <Image src={CopyIcon} width={width} height={height} />
+        <Image src={CopyIcon} width={width} height={height} alt="" />
       )}
     </button>
   );

@@ -15,7 +15,7 @@ export function Footer() {
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">
-            <Image src={Hyperlane} width={52} height={52} />
+            <Image src={Hyperlane} width={52} height={52} alt="" />
           </div>
           <div className="flex flex-col ml-3">
             <p className="text-sm font-light">

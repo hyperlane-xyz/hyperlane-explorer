@@ -17,14 +17,14 @@ import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
 import { configs } from '../consts/appConfig';
 import { Environment } from '../consts/environments';
-import { prodChains } from '../consts/networksConfig';
+import { prodAndTestChains } from '../consts/networksConfig';
 import { useStore } from '../store';
 import { Color } from '../styles/Color';
 import '../styles/fonts.css';
 import '../styles/globals.css';
 import { useIsSsr } from '../utils/ssr';
 
-const { chains, provider } = configureChains(prodChains, [publicProvider()]);
+const { chains, provider } = configureChains(prodAndTestChains, [publicProvider()]);
 
 const connectors = connectorsForWallets([
   {

@@ -88,7 +88,7 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
   if (result.status === TxDebugStatus.NotFound) {
     return (
       <div className="py-12 flex flex-col items-center">
-        <Image src={ShrugIcon} width={110} className="opacity-80" />
+        <Image src={ShrugIcon} width={110} className="opacity-80" alt="" />
         <h2 className="mt-4 text-lg text-gray-600">No transaction found</h2>
         <p className="mt-4 leading-relaxed">{result.details}</p>
       </div>
@@ -98,7 +98,7 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
   if (result.status === TxDebugStatus.NoMessages) {
     return (
       <div className="py-12 flex flex-col items-center">
-        <Image src={ShrugIcon} width={110} className="opacity-80" />
+        <Image src={ShrugIcon} width={110} className="opacity-80" alt="" />
         <h2 className="mt-4 text-lg text-gray-600">No message found</h2>
         <p className="mt-4 leading-relaxed">{result.details}</p>
         <TxExplorerLink href={result.explorerLink} chainName={result.chainName} />

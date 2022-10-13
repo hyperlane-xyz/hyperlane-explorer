@@ -16,6 +16,7 @@ export const domainToChain = {
   43113: 43113, // fuji
   5: 5, // goerli
   3000: 42, // kovan
+  1836002657: 1287, // moonbasealpha
   80001: 80001, // mumbai
   28528: 10, // optimism
   1869622635: 69, // optimismkovan

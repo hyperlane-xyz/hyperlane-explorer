@@ -25,7 +25,7 @@ export function Header({ pathName }: { pathName: string }) {
         <Link href="/">
           <a className="flex items-center">
             <div className="flex items-center scale-90 sm:scale-100">
-              <Image src={Logo} width={24} height={28} />
+              <Image src={Logo} width={24} height={28} alt="" />
               <Image src={Name} width={124} height={28} alt="Hyperlane" className="ml-2 pt-px" />
               <div className="font-serif text-[1.85rem] text-blue-500 ml-2">Explorer</div>
             </div>
@@ -47,7 +47,7 @@ export function Header({ pathName }: { pathName: string }) {
         </nav>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>
-            <Image src={HamburgerIcon} width={22} height={22} />
+            <Image src={HamburgerIcon} width={22} height={22} alt="..." />
           </button>
         </div>
       </div>
@@ -91,7 +91,7 @@ export function Header({ pathName }: { pathName: string }) {
 function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
   return (
     <>
-      <Image src={icon} width={18} height={18} className="opacity-70 mr-2.5" />
+      <Image src={icon} width={18} height={18} className="opacity-70 mr-2.5" alt="" />
       <span>{text}</span>
     </>
   );
