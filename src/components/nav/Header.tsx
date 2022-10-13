@@ -11,8 +11,6 @@ import InfoIcon from '../../images/icons/info-circle.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 
-import { EnvironmentSelector } from './EnvironmentSelector';
-
 export function Header({ pathName }: { pathName: string }) {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
   const closeDropdown = () => {
@@ -43,7 +41,6 @@ export function Header({ pathName }: { pathName: string }) {
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
-          <EnvironmentSelector />
         </nav>
         <div className="relative flex item-center sm:hidden mr-2">
           <button className="hover:opactiy-70 transition-all" {...buttonProps}>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
+import { EnvironmentSelector } from '../../components/nav/EnvironmentSelector';
 import { SearchBar } from '../../components/search/SearchBar';
 import {
   NoSearchError,
@@ -11,7 +12,6 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchError';
-import { envDisplayValue } from '../../consts/environments';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
@@ -61,7 +61,8 @@ export function TxDebugger() {
       />
       <div className="w-full h-[38.2rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between border-b border-gray-100">
-          <h2 className="text-gray-600">{`Transaction Debugger (${envDisplayValue[environment]})`}</h2>
+          <h2 className="text-gray-600">{`Transaction Debugger`}</h2>
+          <EnvironmentSelector />
         </div>
 
         <Fade show={isValidInput && !hasError && !!data}>

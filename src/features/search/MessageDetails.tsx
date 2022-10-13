@@ -141,7 +141,7 @@ function StatusHeader({
   return (
     <div className="flex items-center">
       <h3 className="text-white text-lg mr-3">{text}</h3>
-      {fetching || !children ? (
+      {fetching ? (
         <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
           <div className="scale-[35%]">
             <Spinner white={true} />

@@ -84,7 +84,6 @@ function parsePaddedAddress(a: string) {
   return ensureLeading0x(a.slice(-40));
 }
 
-// TODO Find correct way to decode postgres bytea format
 // https://github.com/bendrucker/postgres-bytea/blob/master/decoder.js
 function decodeBinaryHex(b: string) {
   const buffer = Buffer.from(b.substring(2), 'hex');
