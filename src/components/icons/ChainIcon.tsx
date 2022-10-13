@@ -13,12 +13,12 @@ import {
   moonbaseAlphaChain,
 } from '../../consts/networksConfig';
 import QuestionMark from '../../images/icons/question-mark.svg';
-import Moonbeam from '../../images/logos/Moonbeam.svg';
 import Arbitrum from '../../images/logos/arbitrum.svg';
 import Avalanche from '../../images/logos/avalanche.svg';
 import Bsc from '../../images/logos/bsc.svg';
 import Celo from '../../images/logos/celo.svg';
 import EthMainnet from '../../images/logos/eth-mainnet.svg';
+import Moonbeam from '../../images/logos/moonbeam.svg';
 import Near from '../../images/logos/near.svg';
 import Optimism from '../../images/logos/optimism.svg';
 import Polygon from '../../images/logos/polygon.svg';
