@@ -165,6 +165,31 @@ export const auroraTestnetChain: Chain = {
   testnet: true,
 };
 
+export const moonbeam: Chain = {
+  id: 1284,
+  name: 'Moonbeam',
+  network: 'moonbeam',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'GLMR',
+    symbol: 'GLMR',
+  },
+  rpcUrls: {
+    default: 'https://rpc.api.moonbeam.network',
+  },
+  blockExplorers: {
+    etherscan: {
+      name: 'MoonScan',
+      url: 'https://moonscan.io/',
+    },
+    default: {
+      name: 'MoonScan',
+      url: 'https://moonscan.io/',
+    },
+  },
+  testnet: false,
+};
+
 export const moonbaseAlphaChain: Chain = {
   id: 1287,
   name: 'Moonbase Alpha',
