@@ -55,6 +55,7 @@ export interface MessageStubEntry {
 
 export interface MessageEntry extends MessageStubEntry {
   outbox_address: string; // binary e.g. \\x123
+  leaf_index: number;
   msg_body: string | null | undefined; // binary e.g. \\x123
   origin_tx_id: number;
   delivered_messages: DeliveredMessageEntry[] | null | undefined;

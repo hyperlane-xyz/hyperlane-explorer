@@ -218,7 +218,6 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.NoErrorsFound,
       properties,
-
       summary: 'No errors found, this message has already been processed.',
     };
   } else {
@@ -302,6 +301,8 @@ function getTxExplorerLink(multiProvider: MultiProvider<any>, chain: ChainName, 
   return url || undefined;
 }
 
+// TODO use explorer for this instead of RPC to avoid block age limitations
+// In doing so, de-dupe with features/search/useMessageProcessTx.ts
 async function tryGetProcessTxHash(destinationInbox: Inbox, messageHash: string) {
   try {
     const filter = destinationInbox.filters.Process(messageHash);

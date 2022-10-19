@@ -15,7 +15,7 @@ import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainName } from '../../utils/chains';
-import { getTxExplorerLink } from '../../utils/explorers';
+import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
@@ -171,7 +171,7 @@ function TransactionCard({
   help,
   shouldBlur,
 }: TransactionCardProps) {
-  const txExplorerLink = getTxExplorerLink(chainId, transaction?.transactionHash);
+  const txExplorerLink = getTxExplorerUrl(chainId, transaction?.transactionHash);
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">
@@ -335,6 +335,7 @@ query MessageDetails ($messageId: bigint!){
   message(where: {id: {_eq: $messageId}}, limit: 1) {
     destination
     id
+    leaf_index
     msg_body
     origin
     origin_tx_id

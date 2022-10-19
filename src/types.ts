@@ -25,6 +25,7 @@ export interface MessageStub {
 }
 
 export interface Message extends MessageStub {
+  leafIndex: number;
   body: string;
   originTransaction: PartialTransactionReceipt;
   destinationTransaction?: PartialTransactionReceipt;
