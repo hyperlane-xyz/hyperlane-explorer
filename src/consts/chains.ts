@@ -1,20 +1,5 @@
 import { Chain, allChains as allChainsWagmi, chain } from 'wagmi';
 
-// import { chainConnectionConfigs } from '@hyperlane-xyz/sdk';
-// export const testConfigs = {
-//   goerli: chainConnectionConfigs.goerli,
-//   alfajores: chainConnectionConfigs.alfajores,
-// };
-// export const prodConfigs = {
-//   arbitrum: chainConnectionConfigs.arbitrum,
-//   avalanche: chainConnectionConfigs.avalanche,
-//   bsc: chainConnectionConfigs.bsc,
-//   celo: chainConnectionConfigs.celo,
-//   ethereum: chainConnectionConfigs.ethereum,
-//   optimism: chainConnectionConfigs.optimism,
-//   polygon: chainConnectionConfigs.polygon,
-// };
-
 export const avalancheChain: Chain = {
   id: 43114,
   name: 'Avalanche',
@@ -213,6 +198,30 @@ export const moonbaseAlphaChain: Chain = {
     },
   },
   testnet: true,
+};
+
+// SDK uses name, wagmi uses ID, so this maps id to name
+// Would be nice to use wagmi's chain 'name' or 'network' prop
+// But doesn't match SDK
+export const chainIdToName = {
+  44787: 'alfajores',
+  42161: 'arbitrum',
+  421611: 'arbitrumrinkeby',
+  1313161555: 'auroratestnet',
+  43114: 'avalanche',
+  56: 'bsc',
+  97: 'bsctestnet',
+  42220: 'celo',
+  1: 'ethereum',
+  43113: 'fuji',
+  5: 'goerli',
+  42: 'kovan',
+  1284: 'moonbeam',
+  1287: 'moonbasealpha',
+  80001: 'mumbai',
+  10: 'optimism',
+  69: 'optimismkovan',
+  137: 'polygon',
 };
 
 export const prodChains = [

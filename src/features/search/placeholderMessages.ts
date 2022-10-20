@@ -1,7 +1,7 @@
 import { constants } from 'ethers';
 import { chain } from 'wagmi';
 
-import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/networksConfig';
+import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/chains';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
 
 const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';

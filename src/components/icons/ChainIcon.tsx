@@ -12,7 +12,7 @@ import {
   fujiTestnetChain,
   moonbaseAlphaChain,
   moonbeam,
-} from '../../consts/networksConfig';
+} from '../../consts/chains';
 import QuestionMark from '../../images/icons/question-mark.svg';
 import Arbitrum from '../../images/logos/arbitrum.svg';
 import Avalanche from '../../images/logos/avalanche.svg';
@@ -23,7 +23,7 @@ import Moonbeam from '../../images/logos/moonbeam.svg';
 import Near from '../../images/logos/near.svg';
 import Optimism from '../../images/logos/optimism.svg';
 import Polygon from '../../images/logos/polygon.svg';
-import { getChainName } from '../../utils/chains';
+import { getChainDisplayName } from '../../utils/chains';
 
 // Keep up to date as new chains are added or
 // icon will fallback to default
@@ -60,7 +60,7 @@ function _ChainIcon({ chainId, size = 44 }: { chainId?: number; size?: number })
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
       className="flex items-center justify-center rounded-full bg-beige-300 transition-all"
-      title={getChainName(chainId)}
+      title={getChainDisplayName(chainId)}
     >
       <Image src={imageSrc} alt="" width={Math.floor(size / 2.2)} height={Math.floor(size / 2.2)} />
     </div>

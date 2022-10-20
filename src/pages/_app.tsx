@@ -15,8 +15,8 @@ import { publicProvider } from 'wagmi/providers/public';
 
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
-import { config } from '../consts/appConfig';
-import { prodAndTestChains } from '../consts/networksConfig';
+import { prodAndTestChains } from '../consts/chains';
+import { config } from '../consts/config';
 import { Color } from '../styles/Color';
 import '../styles/fonts.css';
 import '../styles/globals.css';
@@ -46,7 +46,13 @@ const urqlClient = createUrqlClient({
   url: config.apiUrl,
 });
 
-const reactQueryClient = new QueryClient();
+const reactQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and

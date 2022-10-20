@@ -11,8 +11,8 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchError';
+import { prodAndTestChains } from '../../consts/chains';
 import { chainToDomain } from '../../consts/domains';
-import { prodAndTestChains } from '../../consts/networksConfig';
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { trimLeading0x } from '../../utils/addresses';

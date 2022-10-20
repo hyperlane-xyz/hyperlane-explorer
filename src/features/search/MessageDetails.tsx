@@ -14,28 +14,30 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
-import { getChainName } from '../../utils/chains';
+import { getChainDisplayName } from '../../utils/chains';
 import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
+import { MessageDeliveryStatus } from '../deliveryStatus/types';
+import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
-import { MessagesQueryResult } from './types';
+import type { MessagesQueryResult } from './types';
 
 const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageDetails({ messageId }: { messageId: string }) {
-  const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
+  const [graphResult, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query: messageDetailsQuery,
     variables: { messageId },
   });
-  const { data, fetching, error } = result;
+  const { data, fetching: isFetching, error } = graphResult;
   const messages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   const isMessageFound = messages.length > 0;
-  const shouldBlur = !isMessageFound || fetching;
+  const shouldBlur = !isMessageFound || isFetching;
   const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
   const {
     status,
@@ -48,9 +50,21 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationTransaction,
   } = message;
 
+  const {
+    data: deliveryStatus,
+    isFetching: fetchingDeliveryStatus,
+    error: deliveryStatusError,
+  } = useMessageDeliveryStatus(message, isMessageFound);
+  // TODO
+  const resolvedDestinationTransaction = destinationTransaction
+    ? destinationTransaction
+    : deliveryStatus?.status === MessageDeliveryStatus.Success
+    ? deliveryStatus.deliveryTransaction
+    : undefined;
+
   const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
-    if (fetching) return;
+    if (isFetching) return;
     if (error) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
@@ -62,11 +76,14 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     } else {
       setBanner('');
     }
-  }, [error, fetching, message, isMessageFound, setBanner]);
 
-  useEffect(() => {
     return () => setBanner('');
-  }, [setBanner]);
+  }, [error, isFetching, message, isMessageFound, setBanner]);
+
+  // TODO cleanup
+  // useEffect(() => {
+  //   return () => setBanner('');
+  // }, [setBanner]);
 
   const reExecutor = useCallback(() => {
     if (!isMessageFound || status !== MessageStatus.Delivered) {
@@ -80,25 +97,25 @@ export function MessageDetails({ messageId }: { messageId: string }) {
       <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">Message</h2>
         {isMessageFound && status === MessageStatus.Pending && (
-          <StatusHeader text="Status: Pending" fetching={fetching} />
+          <StatusHeader text="Status: Pending" fetching={isFetching} />
         )}
         {isMessageFound && status === MessageStatus.Delivered && (
-          <StatusHeader text="Status: Delivered" fetching={fetching}>
+          <StatusHeader text="Status: Delivered" fetching={isFetching}>
             <Image src={CheckmarkIcon} width={24} height={24} alt="" />
           </StatusHeader>
         )}
         {isMessageFound && status === MessageStatus.Failing && (
-          <StatusHeader text="Status: Failing" fetching={fetching}>
+          <StatusHeader text="Status: Failing" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
         {!isMessageFound && !error && (
-          <StatusHeader text="Message not found" fetching={fetching}>
+          <StatusHeader text="Message not found" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
         {!isMessageFound && error && (
-          <StatusHeader text="Error finding message" fetching={fetching}>
+          <StatusHeader text="Error finding message" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
@@ -116,7 +133,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           title="Destination Transaction"
           chainId={destinationChainId}
           status={status}
-          transaction={destinationTransaction}
+          transaction={resolvedDestinationTransaction}
           help={helpText.destination}
           shouldBlur={shouldBlur}
         />
@@ -188,7 +205,7 @@ function TransactionCard({
           <ValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
+            display={`${getChainDisplayName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />

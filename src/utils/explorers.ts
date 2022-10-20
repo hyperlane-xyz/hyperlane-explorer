@@ -1,4 +1,4 @@
-import { chainIdToChain } from '../consts/networksConfig';
+import { chainIdToChain } from '../consts/chains';
 
 import { retryAsync } from './retry';
 import { fetchWithTimeout } from './timeout';
@@ -44,7 +44,7 @@ export function getTxExplorerUrl(chainId: number, hash?: string) {
 }
 
 export async function queryExplorer<P>(url: string) {
-  const result = await retryAsync(() => executeQuery<P>(url));
+  const result = await retryAsync(() => executeQuery<P>(url), 2, 1000);
   return result;
 }
 

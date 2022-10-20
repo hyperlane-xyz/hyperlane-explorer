@@ -1,6 +1,8 @@
-import { allChains } from '../consts/networksConfig';
+import { chainIdToName } from '../consts/chains';
 
-export function getChainName(chainId?: number) {
-  if (!chainId) return 'unknown';
-  return allChains.find((c) => c.id === chainId)?.name || 'unknown';
+import { toTitleCase } from './string';
+
+export function getChainDisplayName(chainId?: number) {
+  if (!chainId) return 'Unknown';
+  return toTitleCase(chainIdToName[chainId] || 'Unknown');
 }
