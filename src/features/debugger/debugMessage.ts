@@ -1,5 +1,7 @@
 // Based on debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
+import { providers } from 'ethers';
+
 import { IMessageRecipient__factory, Inbox } from '@hyperlane-xyz/core';
 import {
   ChainName,
@@ -66,9 +68,10 @@ export type MessageDebugResult =
   | DebugNoMessagesResult
   | DebugMessagesFoundResult;
 
-export async function debugMessageForHash(
+export async function debugMessagesForHash(
   txHash: string,
   environment: Environment,
+  attemptGetProcessTx = true,
 ): Promise<MessageDebugResult> {
   // TODO use RPC with api keys
   const multiProvider = new MultiProvider(chainConnectionConfigs);
@@ -81,9 +84,26 @@ export async function debugMessageForHash(
     };
   }
 
-  const { transactionReceipt, chainName, explorerLink } = txDetails;
+  const { chainName, transactionReceipt } = txDetails;
+  return debugMessagesForTransaction(
+    chainName,
+    transactionReceipt,
+    environment,
+    attemptGetProcessTx,
+    multiProvider,
+  );
+}
+
+export async function debugMessagesForTransaction(
+  chainName: ChainName,
+  txReceipt: providers.TransactionReceipt,
+  environment: Environment,
+  attemptGetProcessTx = true,
+  multiProvider = new MultiProvider(chainConnectionConfigs),
+): Promise<MessageDebugResult> {
+  const explorerLink = getTxExplorerLink(multiProvider, chainName, txReceipt.transactionHash);
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
-  const dispatchedMessages = core.getDispatchedMessages(transactionReceipt);
+  const dispatchedMessages = core.getDispatchedMessages(txReceipt);
 
   if (!dispatchedMessages?.length) {
     return {
@@ -99,7 +119,9 @@ export async function debugMessageForHash(
   const messageDetails: MessageDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(await checkMessage(core, multiProvider, dispatchedMessages[i]));
+    messageDetails.push(
+      await checkMessage(core, multiProvider, dispatchedMessages[i], attemptGetProcessTx),
+    );
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -137,8 +159,7 @@ async function fetchTransactionDetails(
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
   if (transactionReceipt) {
     logger.info('Tx found', txHash, chainName);
-    const explorerLink = getTxExplorerLink(multiProvider, chainName, txHash);
-    return { transactionReceipt, chainName, explorerLink };
+    return { chainName, transactionReceipt };
   } else {
     logger.debug('Tx not found', txHash, chainName);
     throw new Error(`Tx not found on ${chainName}`);
@@ -149,6 +170,7 @@ async function checkMessage(
   core: HyperlaneCore<any>,
   multiProvider: MultiProvider<any>,
   message: DispatchedMessage,
+  attemptGetProcessTx = true,
 ) {
   logger.debug(JSON.stringify(message));
   const properties = new Map<string, string | LinkProperty>();
@@ -210,10 +232,12 @@ async function checkMessage(
   const processed = await destinationInbox.messages(messageHash);
   if (processed === 1) {
     logger.info('Message has already been processed');
-    const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
-    if (processTxHash) {
-      const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
-      properties.set('Process TX', { url, text: processTxHash });
+    if (attemptGetProcessTx) {
+      const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
+      if (processTxHash) {
+        const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
+        properties.set('Process TX', { url, text: processTxHash });
+      }
     }
     return {
       status: MessageDebugStatus.NoErrorsFound,

@@ -7,7 +7,7 @@ import { logger } from '../../utils/logger';
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<MessageDeliveryStatusResponse>,
+  res: NextApiResponse<MessageDeliveryStatusResponse | string>,
 ) {
   try {
     const message = req.body as Message;
@@ -15,8 +15,9 @@ export default async function handler(
     const deliverStatus = await fetchDeliveryStatus(message);
     res.status(200).json(deliverStatus);
   } catch (error) {
-    logger.error('Error determining message status', error);
-    res.status(500);
+    const msg = 'Unable to determine message status';
+    logger.error(msg, error);
+    res.status(500).send(msg);
   }
 }
 

@@ -115,11 +115,11 @@ export const celoAlfajoresChain: Chain = {
   blockExplorers: {
     blockscout: {
       name: 'Blockscout',
-      url: 'https://alfajores-blockscout.celo-testnet.org',
+      url: 'https://explorer.celo.org/alfajores',
     },
     default: {
       name: 'Blockscout',
-      url: 'https://alfajores-blockscout.celo-testnet.org',
+      url: 'https://explorer.celo.org/alfajores',
     },
   },
   testnet: true,
@@ -165,11 +165,11 @@ export const moonbeam: Chain = {
   blockExplorers: {
     etherscan: {
       name: 'MoonScan',
-      url: 'https://moonscan.io/',
+      url: 'https://moonscan.io',
     },
     default: {
       name: 'MoonScan',
-      url: 'https://moonscan.io/',
+      url: 'https://moonscan.io',
     },
   },
   testnet: false,
@@ -208,23 +208,42 @@ export const chainIdToName = {
   42161: 'arbitrum',
   421611: 'arbitrumrinkeby',
   1313161555: 'auroratestnet',
+  43113: 'fuji',
   43114: 'avalanche',
   56: 'bsc',
   97: 'bsctestnet',
   42220: 'celo',
   1: 'ethereum',
-  43113: 'fuji',
   5: 'goerli',
   42: 'kovan',
   1284: 'moonbeam',
   1287: 'moonbasealpha',
+  137: 'polygon',
   80001: 'mumbai',
   10: 'optimism',
   69: 'optimismkovan',
-  137: 'polygon',
 };
 
-export const prodChains = [
+// Some block explorers use diff urls for their explorer
+// api vs the ui, so setting overrides here
+export const chainIdToExplorerApi = {
+  1: 'https://api.etherscan.io',
+  42: 'https://api-kovan.etherscan.io',
+  5: 'https://api-goerli.etherscan.io',
+  42220: 'https://api.celoscan.io',
+  42161: 'https://api.arbiscan.io',
+  421611: 'https://api-testnet.arbiscan.io',
+  56: 'https://api.bscscan.com',
+  97: 'https://api-testnet.bscscan.com',
+  43113: 'https://api-testnet.snowtrace.io',
+  43114: 'https://api.snowtrace.io',
+  137: 'https://api.polygonscan.com',
+  80001: 'https://api-testnet.polygonscan.com',
+  10: 'https://api-optimistic.etherscan.io',
+  69: 'https://api-kovan-optimistic.etherscan.io',
+};
+
+export const mainnetChains = [
   chain.mainnet,
   chain.arbitrum,
   chain.optimism,
@@ -234,7 +253,7 @@ export const prodChains = [
   celoMainnetChain,
 ];
 
-export const testChains = [
+export const testnetChains = [
   chain.goerli,
   chain.kovan,
   chain.arbitrumGoerli,
@@ -249,7 +268,7 @@ export const testChains = [
   moonbaseAlphaChain,
 ];
 
-export const prodAndTestChains = [...prodChains, ...testChains];
+export const prodAndTestChains = [...mainnetChains, ...testnetChains];
 
 export const allChains = [
   ...allChainsWagmi,

@@ -19,7 +19,7 @@ import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../search/utils';
 
-import { MessageDebugResult, TxDebugStatus, debugMessageForHash } from './debugMessage';
+import { MessageDebugResult, TxDebugStatus, debugMessagesForHash } from './debugMessage';
 
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);
@@ -46,7 +46,7 @@ export function TxDebugger() {
         return null;
       }
       replacePathParam('txHash', sanitizedInput);
-      return debugMessageForHash(sanitizedInput, environment);
+      return debugMessagesForHash(sanitizedInput, environment);
     },
     { retry: false },
   );

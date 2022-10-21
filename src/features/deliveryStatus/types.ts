@@ -1,21 +1,25 @@
-import type { PartialTransactionReceipt } from '../../types';
+import type { MessageStatus, PartialTransactionReceipt } from '../../types';
 import type { MessageDebugStatus } from '../debugger/debugMessage';
 
-export enum MessageDeliveryStatus {
-  Success = 'success',
-  Failing = 'failing',
+interface MessageDeliveryResult {
+  status: MessageStatus;
 }
 
-export interface MessageDeliverySuccessResult {
-  status: MessageDeliveryStatus.Success;
+export interface MessageDeliverySuccessResult extends MessageDeliveryResult {
+  status: MessageStatus.Delivered;
   deliveryTransaction: PartialTransactionReceipt;
 }
 
-export interface MessageDeliveryFailingResult {
-  status: MessageDeliveryStatus.Failing;
+export interface MessageDeliveryFailingResult extends MessageDeliveryResult {
+  status: MessageStatus.Failing;
   debugStatus: MessageDebugStatus;
+}
+
+export interface MessageDeliveryPendingResult extends MessageDeliveryResult {
+  status: MessageStatus.Pending;
 }
 
 export type MessageDeliveryStatusResponse =
   | MessageDeliverySuccessResult
-  | MessageDeliveryFailingResult;
+  | MessageDeliveryFailingResult
+  | MessageDeliveryPendingResult;

@@ -12,7 +12,6 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
     async () => {
       if (!message || !isReady) return null;
 
-      // TODO type this
       const response = await fetch('/api/delivery-status', {
         method: 'POST',
         headers: {
@@ -20,7 +19,10 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
         },
         body: serializedMessage,
       });
-      if (!response.ok) throw new Error('Message status response not okay');
+      if (!response.ok) {
+        const errorMsg = await response.text();
+        throw new Error(errorMsg);
+      }
       const result = (await response.json()) as MessageDeliveryStatusResponse;
       logger.debug('Message delivery status result', result);
       return result;
