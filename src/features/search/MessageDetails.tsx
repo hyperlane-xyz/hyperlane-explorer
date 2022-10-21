@@ -60,6 +60,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     : undefined;
   const resolvedStatus = deliveryStatusResponse ? deliveryStatusResponse.status : status;
 
+  // TODO use debugStatus in deliveryStatusResponse to show message issue when failing
+  // And also link to debugger
+
   const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
     if (isFetching) return;
