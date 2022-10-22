@@ -1,5 +1,7 @@
 // Based on debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
+import { providers } from 'ethers';
+
 import { IMessageRecipient__factory, Inbox } from '@hyperlane-xyz/core';
 import {
   ChainName,
@@ -16,59 +18,19 @@ import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk } from '../../utils/string';
 
-export enum TxDebugStatus {
-  NotFound = 'notFound',
-  NoMessages = 'noMessages',
-  MessagesFound = 'messagesFound',
-}
+import { debugStatusToDesc } from './strings';
+import {
+  LinkProperty,
+  MessageDebugDetails,
+  MessageDebugResult,
+  MessageDebugStatus,
+  TxDebugStatus,
+} from './types';
 
-export enum MessageDebugStatus {
-  NoErrorsFound = 'noErrorsFound',
-  InvalidDestDomain = 'invalidDestDomain',
-  UnknownDestChain = 'unknownDestChain',
-  RecipientNotContract = 'RecipientNotContract',
-  RecipientNotHandler = 'RecipientNotHandler',
-  HandleCallFailure = 'handleCallFailure',
-}
-
-export interface DebugNotFoundResult {
-  status: TxDebugStatus.NotFound;
-  details: string;
-}
-
-export interface DebugNoMessagesResult {
-  status: TxDebugStatus.NoMessages;
-  chainName: string;
-  details: string;
-  explorerLink?: string;
-}
-
-interface LinkProperty {
-  url: string;
-  text: string;
-}
-
-interface MessageDetails {
-  status: MessageDebugStatus;
-  properties: Map<string, string | LinkProperty>;
-  summary: string;
-}
-
-export interface DebugMessagesFoundResult {
-  status: TxDebugStatus.MessagesFound;
-  chainName: string;
-  explorerLink?: string;
-  messageDetails: MessageDetails[];
-}
-
-export type MessageDebugResult =
-  | DebugNotFoundResult
-  | DebugNoMessagesResult
-  | DebugMessagesFoundResult;
-
-export async function debugMessageForHash(
+export async function debugMessagesForHash(
   txHash: string,
   environment: Environment,
+  attemptGetProcessTx = true,
 ): Promise<MessageDebugResult> {
   // TODO use RPC with api keys
   const multiProvider = new MultiProvider(chainConnectionConfigs);
@@ -81,9 +43,26 @@ export async function debugMessageForHash(
     };
   }
 
-  const { transactionReceipt, chainName, explorerLink } = txDetails;
+  const { chainName, transactionReceipt } = txDetails;
+  return debugMessagesForTransaction(
+    chainName,
+    transactionReceipt,
+    environment,
+    attemptGetProcessTx,
+    multiProvider,
+  );
+}
+
+export async function debugMessagesForTransaction(
+  chainName: ChainName,
+  txReceipt: providers.TransactionReceipt,
+  environment: Environment,
+  attemptGetProcessTx = true,
+  multiProvider = new MultiProvider(chainConnectionConfigs),
+): Promise<MessageDebugResult> {
+  const explorerLink = getTxExplorerLink(multiProvider, chainName, txReceipt.transactionHash);
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
-  const dispatchedMessages = core.getDispatchedMessages(transactionReceipt);
+  const dispatchedMessages = core.getDispatchedMessages(txReceipt);
 
   if (!dispatchedMessages?.length) {
     return {
@@ -96,10 +75,12 @@ export async function debugMessageForHash(
   }
 
   logger.debug(`Found ${dispatchedMessages.length} messages`);
-  const messageDetails: MessageDetails[] = [];
+  const messageDetails: MessageDebugDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(await checkMessage(core, multiProvider, dispatchedMessages[i]));
+    messageDetails.push(
+      await checkMessage(core, multiProvider, dispatchedMessages[i], attemptGetProcessTx),
+    );
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -137,8 +118,7 @@ async function fetchTransactionDetails(
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
   if (transactionReceipt) {
     logger.info('Tx found', txHash, chainName);
-    const explorerLink = getTxExplorerLink(multiProvider, chainName, txHash);
-    return { transactionReceipt, chainName, explorerLink };
+    return { chainName, transactionReceipt };
   } else {
     logger.debug('Tx not found', txHash, chainName);
     throw new Error(`Tx not found on ${chainName}`);
@@ -149,6 +129,7 @@ async function checkMessage(
   core: HyperlaneCore<any>,
   multiProvider: MultiProvider<any>,
   message: DispatchedMessage,
+  attemptGetProcessTx = true,
 ) {
   logger.debug(JSON.stringify(message));
   const properties = new Map<string, string | LinkProperty>();
@@ -183,8 +164,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.InvalidDestDomain,
       properties,
-      summary:
-        'The destination domain id is invalid. Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains',
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.InvalidDestDomain]
+      } Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -195,7 +177,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.UnknownDestChain,
       properties,
-      summary: `Destination chain ${destinationChain} is not included in this message's environment. Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.UnknownDestChain]
+      } Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -210,16 +194,17 @@ async function checkMessage(
   const processed = await destinationInbox.messages(messageHash);
   if (processed === 1) {
     logger.info('Message has already been processed');
-    const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
-    if (processTxHash) {
-      const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
-      properties.set('Process TX', { url, text: processTxHash });
+    if (attemptGetProcessTx) {
+      const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
+      if (processTxHash) {
+        const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
+        properties.set('Process TX', { url, text: processTxHash });
+      }
     }
     return {
-      status: MessageDebugStatus.NoErrorsFound,
+      status: MessageDebugStatus.AlreadyProcessed,
       properties,
-
-      summary: 'No errors found, this message has already been processed.',
+      summary: debugStatusToDesc[MessageDebugStatus.AlreadyProcessed],
     };
   } else {
     logger.debug('Message not yet processed');
@@ -233,7 +218,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.RecipientNotContract,
       properties,
-      summary: `Recipient address ${recipientAddress} is not a contract. Ensure bytes32 value is not malformed.`,
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.AlreadyProcessed]
+      } Addr: ${recipientAddress}. Ensure bytes32 value is not malformed.`,
     };
   }
 
@@ -251,10 +238,10 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.NoErrorsFound,
       properties,
-      summary: 'No errors found, this message appears to be deliverable.',
+      summary: debugStatusToDesc[MessageDebugStatus.NoErrorsFound],
     };
   } catch (err: any) {
-    const messagePrefix = 'Error calling handle on the recipient contract';
+    const messagePrefix = debugStatusToDesc[MessageDebugStatus.HandleCallFailure];
     logger.info(messagePrefix);
     const errorString = errorToString(err);
     logger.debug(errorString);
@@ -266,7 +253,9 @@ async function checkMessage(
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
 
     if (!bytecode.includes(handleSignature)) {
-      const bytecodeMessage = `Recipient bytecode does not appear to contain handle function selector ${handleSignature}. Contract may be proxied.`;
+      const bytecodeMessage = `${
+        debugStatusToDesc[MessageDebugStatus.RecipientNotHandler]
+      } ${handleSignature}. Contract may be proxied.`;
       logger.info(bytecodeMessage);
       return {
         status: MessageDebugStatus.RecipientNotHandler,
@@ -302,6 +291,8 @@ function getTxExplorerLink(multiProvider: MultiProvider<any>, chain: ChainName, 
   return url || undefined;
 }
 
+// TODO use explorer for this instead of RPC to avoid block age limitations
+// In doing so, de-dupe with features/search/useMessageProcessTx.ts
 async function tryGetProcessTxHash(destinationInbox: Inbox, messageHash: string) {
   try {
     const filter = destinationInbox.filters.Process(messageHash);

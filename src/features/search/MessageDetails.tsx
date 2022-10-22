@@ -1,4 +1,5 @@
 import Image from 'next/future/image';
+import Link from 'next/link';
 import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
@@ -14,28 +15,31 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
-import { getChainName } from '../../utils/chains';
-import { getTxExplorerLink } from '../../utils/explorers';
+import { getChainDisplayName, getChainEnvironment } from '../../utils/chains';
+import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
+import { debugStatusToDesc } from '../debugger/strings';
+import { MessageDebugStatus } from '../debugger/types';
+import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
-import { MessagesQueryResult } from './types';
+import type { MessagesQueryResult } from './types';
 
 const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageDetails({ messageId }: { messageId: string }) {
-  const [result, reexecuteQuery] = useQuery<MessagesQueryResult>({
+  const [graphResult, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query: messageDetailsQuery,
     variables: { messageId },
   });
-  const { data, fetching, error } = result;
+  const { data, fetching: isFetching, error } = graphResult;
   const messages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   const isMessageFound = messages.length > 0;
-  const shouldBlur = !isMessageFound || fetching;
+  const shouldBlur = !isMessageFound || isFetching;
   const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
   const {
     status,
@@ -48,66 +52,87 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     destinationTransaction,
   } = message;
 
+  const { data: deliveryStatusResponse, error: deliveryStatusError } = useMessageDeliveryStatus(
+    message,
+    isMessageFound,
+  );
+
+  let resolvedDestinationTx = destinationTransaction;
+  let resolvedMsgStatus = status;
+  let debugStatus: MessageDebugStatus | undefined = undefined;
+  // If there's a delivery status response, use those values as s.o.t. instead
+  if (deliveryStatusResponse) {
+    resolvedMsgStatus = deliveryStatusResponse.status;
+    if (deliveryStatusResponse.status === MessageStatus.Delivered) {
+      resolvedDestinationTx = deliveryStatusResponse.deliveryTransaction;
+    } else if (deliveryStatusResponse.status === MessageStatus.Failing) {
+      debugStatus = deliveryStatusResponse.debugStatus;
+    }
+  }
+
   const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
-    if (fetching) return;
+    if (isFetching) return;
     if (error) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
       setBanner('bg-red-600');
-    } else if (message.status === MessageStatus.Failing) {
+    } else if (resolvedMsgStatus === MessageStatus.Failing) {
       setBanner('bg-red-600');
     } else if (!isMessageFound) {
       setBanner('bg-gray-500');
     } else {
       setBanner('');
     }
-  }, [error, fetching, message, isMessageFound, setBanner]);
 
-  useEffect(() => {
+    if (deliveryStatusError) {
+      logger.error('Error fetching delivery status', deliveryStatusError);
+      toast.error(`${deliveryStatusError}`);
+    }
+
     return () => setBanner('');
-  }, [setBanner]);
+  }, [error, deliveryStatusError, isFetching, resolvedMsgStatus, isMessageFound, setBanner]);
 
   const reExecutor = useCallback(() => {
-    if (!isMessageFound || status !== MessageStatus.Delivered) {
+    if (!isMessageFound || resolvedMsgStatus !== MessageStatus.Delivered) {
       reexecuteQuery({ requestPolicy: 'network-only' });
     }
-  }, [isMessageFound, status, reexecuteQuery]);
+  }, [isMessageFound, resolvedMsgStatus, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   return (
     <>
       <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">Message</h2>
-        {isMessageFound && status === MessageStatus.Pending && (
-          <StatusHeader text="Status: Pending" fetching={fetching} />
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Pending && (
+          <StatusHeader text="Status: Pending" fetching={isFetching} />
         )}
-        {isMessageFound && status === MessageStatus.Delivered && (
-          <StatusHeader text="Status: Delivered" fetching={fetching}>
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Delivered && (
+          <StatusHeader text="Status: Delivered" fetching={isFetching}>
             <Image src={CheckmarkIcon} width={24} height={24} alt="" />
           </StatusHeader>
         )}
-        {isMessageFound && status === MessageStatus.Failing && (
-          <StatusHeader text="Status: Failing" fetching={fetching}>
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Failing && (
+          <StatusHeader text="Status: Failing" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
         {!isMessageFound && !error && (
-          <StatusHeader text="Message not found" fetching={fetching}>
+          <StatusHeader text="Message not found" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
         {!isMessageFound && error && (
-          <StatusHeader text="Error finding message" fetching={fetching}>
+          <StatusHeader text="Error finding message" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
         )}
       </div>
-      <div className="flex flex-wrap items-center justify-between mt-5 gap-4">
+      <div className="flex flex-wrap items-stretch justify-between mt-5 gap-4">
         <TransactionCard
           title="Origin Transaction"
           chainId={originChainId}
-          status={status}
+          status={resolvedMsgStatus}
           transaction={originTransaction}
           help={helpText.origin}
           shouldBlur={shouldBlur}
@@ -115,8 +140,13 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         <TransactionCard
           title="Destination Transaction"
           chainId={destinationChainId}
-          status={status}
-          transaction={destinationTransaction}
+          status={resolvedMsgStatus}
+          transaction={resolvedDestinationTx}
+          debugInfo={{
+            status: debugStatus,
+            originChainId: originChainId,
+            originTxHash: originTransaction.transactionHash,
+          }}
           help={helpText.destination}
           shouldBlur={shouldBlur}
         />
@@ -159,6 +189,11 @@ interface TransactionCardProps {
   chainId: number;
   status: MessageStatus;
   transaction?: PartialTransactionReceipt;
+  debugInfo?: {
+    status?: MessageDebugStatus;
+    originChainId: number;
+    originTxHash: string;
+  };
   help: string;
   shouldBlur: boolean;
 }
@@ -168,10 +203,11 @@ function TransactionCard({
   chainId,
   status,
   transaction,
+  debugInfo,
   help,
   shouldBlur,
 }: TransactionCardProps) {
-  const txExplorerLink = getTxExplorerLink(chainId, transaction?.transactionHash);
+  const txExplorerLink = getTxExplorerUrl(chainId, transaction?.transactionHash);
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">
@@ -183,12 +219,12 @@ function TransactionCard({
           <HelpIcon size={16} text={help} />
         </div>
       </div>
-      {transaction ? (
+      {transaction && (
         <>
           <ValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
+            display={`${getChainDisplayName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
             displayWidth="w-44 sm:w-56"
             blurValue={shouldBlur}
           />
@@ -226,13 +262,33 @@ function TransactionCard({
             </a>
           )}
         </>
-      ) : (
+      )}
+      {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
           <div className="text-gray-500">
-            {status === MessageStatus.Failing
-              ? 'Destination chain transaction currently failing'
-              : 'Destination chain transaction still in progress'}
+            Destination chain delivery transaction currently failing
           </div>
+          {debugInfo && (
+            <>
+              <div className="mt-4 text-gray-500">{`Failure reason: ${
+                debugInfo.status ? debugStatusToDesc[debugInfo.status] : 'Unknown'
+              }`}</div>
+              <Link
+                href={`/debugger?env=${getChainEnvironment(debugInfo.originChainId)}&txHash=${
+                  debugInfo.originTxHash
+                }`}
+              >
+                <a className="mt-6 block text-sm text-gray-500 pl-px underline">
+                  View in transaction debugger
+                </a>
+              </Link>
+            </>
+          )}
+        </div>
+      )}
+      {!transaction && status === MessageStatus.Pending && (
+        <div className="flex flex-col items-center py-5">
+          <div className="text-gray-500">Destination chain delivery transaction not yet found</div>
           <Spinner classes="mt-4 scale-75" />
         </div>
       )}
@@ -335,6 +391,7 @@ query MessageDetails ($messageId: bigint!){
   message(where: {id: {_eq: $messageId}}, limit: 1) {
     destination
     id
+    leaf_index
     msg_body
     origin
     origin_tx_id

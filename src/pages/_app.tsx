@@ -1,52 +1,56 @@
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-  lightTheme,
-  wallet,
-} from '@rainbow-me/rainbowkit';
-import '@rainbow-me/rainbowkit/styles.css';
+// import {
+//   RainbowKitProvider,
+//   connectorsForWallets,
+//   lightTheme,
+//   wallet,
+// } from '@rainbow-me/rainbowkit';
+// import '@rainbow-me/rainbowkit/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
-import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
-import { publicProvider } from 'wagmi/providers/public';
 
+// import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
+// import { publicProvider } from 'wagmi/providers/public';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
-import { config } from '../consts/appConfig';
-import { prodAndTestChains } from '../consts/networksConfig';
-import { Color } from '../styles/Color';
+import { config } from '../consts/config';
 import '../styles/fonts.css';
 import '../styles/globals.css';
 import { useIsSsr } from '../utils/ssr';
 
-const { chains, provider } = configureChains(prodAndTestChains, [publicProvider()]);
+// const { chains, provider } = configureChains(prodAndTestChains, [publicProvider()]);
 
-const connectors = connectorsForWallets([
-  {
-    groupName: 'Recommended',
-    wallets: [
-      wallet.metaMask({ chains }),
-      wallet.walletConnect({ chains }),
-      wallet.rainbow({ chains }),
-      wallet.steak({ chains }),
-    ],
-  },
-]);
+// const connectors = connectorsForWallets([
+//   {
+//     groupName: 'Recommended',
+//     wallets: [
+//       wallet.metaMask({ chains }),
+//       wallet.walletConnect({ chains }),
+//       wallet.rainbow({ chains }),
+//       wallet.steak({ chains }),
+//     ],
+//   },
+// ]);
 
-const wagmiClient = createWagmiClient({
-  autoConnect: true,
-  provider,
-  connectors,
-});
+// const wagmiClient = createWagmiClient({
+//   autoConnect: false, // TODO
+//   provider,
+//   connectors,
+// });
 
 const urqlClient = createUrqlClient({
   url: config.apiUrl,
 });
 
-const reactQueryClient = new QueryClient();
+const reactQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
@@ -58,25 +62,25 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <ErrorBoundary>
-      <WagmiConfig client={wagmiClient}>
-        <RainbowKitProvider
+      {/* <WagmiConfig client={wagmiClient}> */}
+      {/* <RainbowKitProvider
           chains={chains}
           theme={lightTheme({
             accentColor: Color.primaryRed,
             borderRadius: 'small',
             fontStack: 'system',
           })}
-        >
-          <QueryClientProvider client={reactQueryClient}>
-            <UrqlProvider value={urqlClient}>
-              <AppLayout pathName={router.pathname}>
-                <Component {...pageProps} />
-              </AppLayout>
-            </UrqlProvider>
-          </QueryClientProvider>
-        </RainbowKitProvider>
-        <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
-      </WagmiConfig>
+        > */}
+      <QueryClientProvider client={reactQueryClient}>
+        <UrqlProvider value={urqlClient}>
+          <AppLayout pathName={router.pathname}>
+            <Component {...pageProps} />
+          </AppLayout>
+        </UrqlProvider>
+      </QueryClientProvider>
+      <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
+      {/* </RainbowKitProvider> */}
+      {/* </WagmiConfig> */}
     </ErrorBoundary>
   );
 }

@@ -1,7 +1,7 @@
 import { constants } from 'ethers';
 import { chain } from 'wagmi';
 
-import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/networksConfig';
+import { avalancheChain, bscChain, celoMainnetChain } from '../../consts/chains';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
 
 const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -20,6 +20,7 @@ const BODY_ZERO =
 export const PLACEHOLDER_MESSAGES: Message[] = [
   {
     id: 1,
+    leafIndex: 1,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -32,6 +33,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 2,
+    leafIndex: 2,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -44,6 +46,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 3,
+    leafIndex: 3,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -56,6 +59,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 4,
+    leafIndex: 4,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -68,6 +72,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 5,
+    leafIndex: 5,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -80,6 +85,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 6,
+    leafIndex: 6,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -92,6 +98,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 7,
+    leafIndex: 7,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
@@ -104,6 +111,7 @@ export const PLACEHOLDER_MESSAGES: Message[] = [
   },
   {
     id: 8,
+    leafIndex: 8,
     status: MessageStatus.Pending,
     sender: constants.AddressZero,
     recipient: constants.AddressZero,
