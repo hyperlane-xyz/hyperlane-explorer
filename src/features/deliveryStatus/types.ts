@@ -1,5 +1,5 @@
 import type { MessageStatus, PartialTransactionReceipt } from '../../types';
-import type { MessageDebugStatus } from '../debugger/debugMessage';
+import type { MessageDebugStatus } from '../debugger/types';
 
 interface MessageDeliveryResult {
   status: MessageStatus;
