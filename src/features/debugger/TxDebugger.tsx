@@ -19,7 +19,8 @@ import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../search/utils';
 
-import { MessageDebugResult, TxDebugStatus, debugMessagesForHash } from './debugMessage';
+import { debugMessagesForHash } from './debugMessage';
+import { MessageDebugResult, TxDebugStatus } from './types';
 
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);

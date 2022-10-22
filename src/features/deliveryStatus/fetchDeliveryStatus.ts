@@ -1,14 +1,13 @@
 import { constants } from 'ethers';
 
 import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
-import { Mainnets } from '@hyperlane-xyz/sdk/dist/consts/chains';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { chainIdToName } from '../../consts/chains';
 import { chainToDomain } from '../../consts/domains';
-import { Environment } from '../../consts/environments';
 import { Message, MessageStatus } from '../../types';
 import { validateAddress } from '../../utils/addresses';
+import { getChainEnvironment } from '../../utils/chains';
 import {
   queryExplorerForLogs,
   queryExplorerForTx,
@@ -16,11 +15,8 @@ import {
 } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { hexToDecimal } from '../../utils/number';
-import {
-  MessageDebugStatus,
-  TxDebugStatus,
-  debugMessagesForTransaction,
-} from '../debugger/debugMessage';
+import { debugMessagesForTransaction } from '../debugger/debugMessage';
+import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
 
 import {
   MessageDeliveryFailingResult,
@@ -63,8 +59,7 @@ export async function fetchDeliveryStatus(
     const originTxHash = message.originTransaction.transactionHash;
     const originChainId = message.originChainId;
     const originName = chainIdToName[originChainId];
-    // TODO fix import path when Mainnets is exported properly from sdk
-    const environment = Mainnets.includes(originName) ? Environment.Mainnet : Environment.Testnet2;
+    const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(originChainId, originTxHash);
     // TODO currently throwing this over the fence to the debugger script
     // which isn't very robust and uses public RPCs. Could be improved
@@ -82,7 +77,9 @@ export async function fetchDeliveryStatus(
       throw new Error('No messages found for transaction');
 
     const firstError = debugResult.messageDetails.find(
-      (m) => m.status !== MessageDebugStatus.NoErrorsFound,
+      (m) =>
+        m.status !== MessageDebugStatus.NoErrorsFound &&
+        m.status !== MessageDebugStatus.AlreadyProcessed,
     );
     if (!firstError) {
       return { status: MessageStatus.Pending };

@@ -1,4 +1,5 @@
 import Image from 'next/future/image';
+import Link from 'next/link';
 import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
@@ -14,11 +15,13 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
 import { MessageStatus, PartialTransactionReceipt } from '../../types';
-import { getChainDisplayName } from '../../utils/chains';
+import { getChainDisplayName, getChainEnvironment } from '../../utils/chains';
 import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
+import { debugStatusToDesc } from '../debugger/strings';
+import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
@@ -53,15 +56,19 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     message,
     isMessageFound,
   );
-  const resolvedDestinationTransaction = destinationTransaction
-    ? destinationTransaction
-    : deliveryStatusResponse?.status === MessageStatus.Delivered
-    ? deliveryStatusResponse.deliveryTransaction
-    : undefined;
-  const resolvedStatus = deliveryStatusResponse ? deliveryStatusResponse.status : status;
 
-  // TODO use debugStatus in deliveryStatusResponse to show message issue when failing
-  // And also link to debugger
+  let resolvedDestinationTx = destinationTransaction;
+  let resolvedMsgStatus = status;
+  let debugStatus: MessageDebugStatus | undefined = undefined;
+  // If there's a delivery status response, use those values as s.o.t. instead
+  if (deliveryStatusResponse) {
+    resolvedMsgStatus = deliveryStatusResponse.status;
+    if (deliveryStatusResponse.status === MessageStatus.Delivered) {
+      resolvedDestinationTx = deliveryStatusResponse.deliveryTransaction;
+    } else if (deliveryStatusResponse.status === MessageStatus.Failing) {
+      debugStatus = deliveryStatusResponse.debugStatus;
+    }
+  }
 
   const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
@@ -70,11 +77,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
       setBanner('bg-red-600');
-    } else if (deliveryStatusError) {
-      logger.error('Error fetching delivery status', deliveryStatusError);
-      toast.error(`Error fetching delivery status: ${deliveryStatusError}`);
-      setBanner('bg-red-600');
-    } else if (resolvedStatus === MessageStatus.Failing) {
+    } else if (resolvedMsgStatus === MessageStatus.Failing) {
       setBanner('bg-red-600');
     } else if (!isMessageFound) {
       setBanner('bg-gray-500');
@@ -82,29 +85,34 @@ export function MessageDetails({ messageId }: { messageId: string }) {
       setBanner('');
     }
 
+    if (deliveryStatusError) {
+      logger.error('Error fetching delivery status', deliveryStatusError);
+      toast.error(`${deliveryStatusError}`);
+    }
+
     return () => setBanner('');
-  }, [error, deliveryStatusError, isFetching, resolvedStatus, isMessageFound, setBanner]);
+  }, [error, deliveryStatusError, isFetching, resolvedMsgStatus, isMessageFound, setBanner]);
 
   const reExecutor = useCallback(() => {
-    if (!isMessageFound || resolvedStatus !== MessageStatus.Delivered) {
+    if (!isMessageFound || resolvedMsgStatus !== MessageStatus.Delivered) {
       reexecuteQuery({ requestPolicy: 'network-only' });
     }
-  }, [isMessageFound, resolvedStatus, reexecuteQuery]);
+  }, [isMessageFound, resolvedMsgStatus, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   return (
     <>
       <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">Message</h2>
-        {isMessageFound && resolvedStatus === MessageStatus.Pending && (
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Pending && (
           <StatusHeader text="Status: Pending" fetching={isFetching} />
         )}
-        {isMessageFound && resolvedStatus === MessageStatus.Delivered && (
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Delivered && (
           <StatusHeader text="Status: Delivered" fetching={isFetching}>
             <Image src={CheckmarkIcon} width={24} height={24} alt="" />
           </StatusHeader>
         )}
-        {isMessageFound && resolvedStatus === MessageStatus.Failing && (
+        {isMessageFound && resolvedMsgStatus === MessageStatus.Failing && (
           <StatusHeader text="Status: Failing" fetching={isFetching}>
             <ErrorIcon />
           </StatusHeader>
@@ -120,11 +128,11 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           </StatusHeader>
         )}
       </div>
-      <div className="flex flex-wrap items-center justify-between mt-5 gap-4">
+      <div className="flex flex-wrap items-stretch justify-between mt-5 gap-4">
         <TransactionCard
           title="Origin Transaction"
           chainId={originChainId}
-          status={resolvedStatus}
+          status={resolvedMsgStatus}
           transaction={originTransaction}
           help={helpText.origin}
           shouldBlur={shouldBlur}
@@ -132,8 +140,13 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         <TransactionCard
           title="Destination Transaction"
           chainId={destinationChainId}
-          status={resolvedStatus}
-          transaction={resolvedDestinationTransaction}
+          status={resolvedMsgStatus}
+          transaction={resolvedDestinationTx}
+          debugInfo={{
+            status: debugStatus,
+            originChainId: originChainId,
+            originTxHash: originTransaction.transactionHash,
+          }}
           help={helpText.destination}
           shouldBlur={shouldBlur}
         />
@@ -176,6 +189,11 @@ interface TransactionCardProps {
   chainId: number;
   status: MessageStatus;
   transaction?: PartialTransactionReceipt;
+  debugInfo?: {
+    status?: MessageDebugStatus;
+    originChainId: number;
+    originTxHash: string;
+  };
   help: string;
   shouldBlur: boolean;
 }
@@ -185,6 +203,7 @@ function TransactionCard({
   chainId,
   status,
   transaction,
+  debugInfo,
   help,
   shouldBlur,
 }: TransactionCardProps) {
@@ -200,7 +219,7 @@ function TransactionCard({
           <HelpIcon size={16} text={help} />
         </div>
       </div>
-      {transaction ? (
+      {transaction && (
         <>
           <ValueRow
             label="Chain:"
@@ -243,13 +262,33 @@ function TransactionCard({
             </a>
           )}
         </>
-      ) : (
+      )}
+      {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
           <div className="text-gray-500">
-            {status === MessageStatus.Failing
-              ? 'Destination chain transaction currently failing'
-              : 'Destination chain transaction not yet found'}
+            Destination chain delivery transaction currently failing
           </div>
+          {debugInfo && (
+            <>
+              <div className="mt-4 text-gray-500">{`Failure reason: ${
+                debugInfo.status ? debugStatusToDesc[debugInfo.status] : 'Unknown'
+              }`}</div>
+              <Link
+                href={`/debugger?env=${getChainEnvironment(debugInfo.originChainId)}&txHash=${
+                  debugInfo.originTxHash
+                }`}
+              >
+                <a className="mt-6 block text-sm text-gray-500 pl-px underline">
+                  View in transaction debugger
+                </a>
+              </Link>
+            </>
+          )}
+        </div>
+      )}
+      {!transaction && status === MessageStatus.Pending && (
+        <div className="flex flex-col items-center py-5">
+          <div className="text-gray-500">Destination chain delivery transaction not yet found</div>
           <Spinner classes="mt-4 scale-75" />
         </div>
       )}

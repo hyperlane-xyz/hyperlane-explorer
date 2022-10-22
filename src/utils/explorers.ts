@@ -46,6 +46,7 @@ export async function queryExplorer<P>(chainId: number, path: string, useKey = t
   if (!baseUrl) throw new Error(`No URL found for explorer for chain ${chainId}`);
 
   let url = `${baseUrl}/${path}`;
+  logger.debug('Querying explorer url:', url);
 
   if (useKey) {
     const apiKey = config.explorerApiKeys[chainId];

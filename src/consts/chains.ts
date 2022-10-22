@@ -113,14 +113,12 @@ export const celoAlfajoresChain: Chain = {
     default: 'https://alfajores-forno.celo-testnet.org',
   },
   blockExplorers: {
+    etherscan: { name: 'CeloScan', url: 'https://alfajores.celoscan.io' },
     blockscout: {
       name: 'Blockscout',
       url: 'https://explorer.celo.org/alfajores',
     },
-    default: {
-      name: 'Blockscout',
-      url: 'https://explorer.celo.org/alfajores',
-    },
+    default: { name: 'CeloScan', url: 'https://alfajores.celoscan.io' },
   },
   testnet: true,
 };
@@ -190,11 +188,11 @@ export const moonbaseAlphaChain: Chain = {
   blockExplorers: {
     etherscan: {
       name: 'MoonScan',
-      url: 'https://moonbase.moonscan.io/',
+      url: 'https://moonbase.moonscan.io',
     },
     default: {
       name: 'MoonScan',
-      url: 'https://moonbase.moonscan.io/',
+      url: 'https://moonbase.moonscan.io',
     },
   },
   testnet: true,
@@ -204,15 +202,15 @@ export const moonbaseAlphaChain: Chain = {
 // Would be nice to use wagmi's chain 'name' or 'network' prop
 // But doesn't match SDK
 export const chainIdToName = {
-  44787: 'alfajores',
   42161: 'arbitrum',
   421611: 'arbitrumrinkeby',
   1313161555: 'auroratestnet',
-  43113: 'fuji',
+  44787: 'alfajores',
+  42220: 'celo',
   43114: 'avalanche',
+  43113: 'fuji',
   56: 'bsc',
   97: 'bsctestnet',
-  42220: 'celo',
   1: 'ethereum',
   5: 'goerli',
   42: 'kovan',
@@ -227,16 +225,19 @@ export const chainIdToName = {
 // Some block explorers use diff urls for their explorer
 // api vs the ui, so setting overrides here
 export const chainIdToExplorerApi = {
-  1: 'https://api.etherscan.io',
-  42: 'https://api-kovan.etherscan.io',
-  5: 'https://api-goerli.etherscan.io',
-  42220: 'https://api.celoscan.io',
   42161: 'https://api.arbiscan.io',
   421611: 'https://api-testnet.arbiscan.io',
+  42220: 'https://api.celoscan.io',
+  44787: 'https://alfajores.celoscan.io',
+  43114: 'https://api.snowtrace.io',
+  43113: 'https://api-testnet.snowtrace.io',
   56: 'https://api.bscscan.com',
   97: 'https://api-testnet.bscscan.com',
-  43113: 'https://api-testnet.snowtrace.io',
-  43114: 'https://api.snowtrace.io',
+  1: 'https://api.etherscan.io',
+  5: 'https://api-goerli.etherscan.io',
+  42: 'https://api-kovan.etherscan.io',
+  1284: 'https://api-moonbeam.moonscan.io',
+  1287: 'https://api-moonbase.moonscan.io',
   137: 'https://api.polygonscan.com',
   80001: 'https://api-testnet.polygonscan.com',
   10: 'https://api-optimistic.etherscan.io',

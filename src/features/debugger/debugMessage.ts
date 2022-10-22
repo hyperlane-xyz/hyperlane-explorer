@@ -18,55 +18,14 @@ import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk } from '../../utils/string';
 
-export enum TxDebugStatus {
-  NotFound = 'notFound',
-  NoMessages = 'noMessages',
-  MessagesFound = 'messagesFound',
-}
-
-export enum MessageDebugStatus {
-  NoErrorsFound = 'noErrorsFound',
-  InvalidDestDomain = 'invalidDestDomain',
-  UnknownDestChain = 'unknownDestChain',
-  RecipientNotContract = 'RecipientNotContract',
-  RecipientNotHandler = 'RecipientNotHandler',
-  HandleCallFailure = 'handleCallFailure',
-}
-
-export interface DebugNotFoundResult {
-  status: TxDebugStatus.NotFound;
-  details: string;
-}
-
-export interface DebugNoMessagesResult {
-  status: TxDebugStatus.NoMessages;
-  chainName: string;
-  details: string;
-  explorerLink?: string;
-}
-
-interface LinkProperty {
-  url: string;
-  text: string;
-}
-
-interface MessageDetails {
-  status: MessageDebugStatus;
-  properties: Map<string, string | LinkProperty>;
-  summary: string;
-}
-
-export interface DebugMessagesFoundResult {
-  status: TxDebugStatus.MessagesFound;
-  chainName: string;
-  explorerLink?: string;
-  messageDetails: MessageDetails[];
-}
-
-export type MessageDebugResult =
-  | DebugNotFoundResult
-  | DebugNoMessagesResult
-  | DebugMessagesFoundResult;
+import { debugStatusToDesc } from './strings';
+import {
+  LinkProperty,
+  MessageDebugDetails,
+  MessageDebugResult,
+  MessageDebugStatus,
+  TxDebugStatus,
+} from './types';
 
 export async function debugMessagesForHash(
   txHash: string,
@@ -116,7 +75,7 @@ export async function debugMessagesForTransaction(
   }
 
   logger.debug(`Found ${dispatchedMessages.length} messages`);
-  const messageDetails: MessageDetails[] = [];
+  const messageDetails: MessageDebugDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
     messageDetails.push(
@@ -205,8 +164,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.InvalidDestDomain,
       properties,
-      summary:
-        'The destination domain id is invalid. Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains',
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.InvalidDestDomain]
+      } Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -217,7 +177,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.UnknownDestChain,
       properties,
-      summary: `Destination chain ${destinationChain} is not included in this message's environment. Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.UnknownDestChain]
+      } Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -240,9 +202,9 @@ async function checkMessage(
       }
     }
     return {
-      status: MessageDebugStatus.NoErrorsFound,
+      status: MessageDebugStatus.AlreadyProcessed,
       properties,
-      summary: 'No errors found, this message has already been processed.',
+      summary: debugStatusToDesc[MessageDebugStatus.AlreadyProcessed],
     };
   } else {
     logger.debug('Message not yet processed');
@@ -256,7 +218,9 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.RecipientNotContract,
       properties,
-      summary: `Recipient address ${recipientAddress} is not a contract. Ensure bytes32 value is not malformed.`,
+      summary: `${
+        debugStatusToDesc[MessageDebugStatus.AlreadyProcessed]
+      } Addr: ${recipientAddress}. Ensure bytes32 value is not malformed.`,
     };
   }
 
@@ -274,10 +238,10 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.NoErrorsFound,
       properties,
-      summary: 'No errors found, this message appears to be deliverable.',
+      summary: debugStatusToDesc[MessageDebugStatus.NoErrorsFound],
     };
   } catch (err: any) {
-    const messagePrefix = 'Error calling handle on the recipient contract';
+    const messagePrefix = debugStatusToDesc[MessageDebugStatus.HandleCallFailure];
     logger.info(messagePrefix);
     const errorString = errorToString(err);
     logger.debug(errorString);
@@ -289,7 +253,9 @@ async function checkMessage(
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
 
     if (!bytecode.includes(handleSignature)) {
-      const bytecodeMessage = `Recipient bytecode does not appear to contain handle function selector ${handleSignature}. Contract may be proxied.`;
+      const bytecodeMessage = `${
+        debugStatusToDesc[MessageDebugStatus.RecipientNotHandler]
+      } ${handleSignature}. Contract may be proxied.`;
       logger.info(bytecodeMessage);
       return {
         status: MessageDebugStatus.RecipientNotHandler,
