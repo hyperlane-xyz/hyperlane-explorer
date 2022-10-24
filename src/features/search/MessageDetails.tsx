@@ -20,7 +20,7 @@ import { MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainDisplayName, getChainEnvironment } from '../../utils/chains';
 import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
-import { getDateTimeString } from '../../utils/time';
+import { getDateTimeString, getHumanReadableTimeString } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 import { debugStatusToDesc } from '../debugger/strings';
 import { MessageDebugStatus } from '../debugger/types';
@@ -233,14 +233,14 @@ function TransactionCard({
             label="Chain:"
             labelWidth="w-16"
             display={`${getChainDisplayName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
-            displayWidth="w-44 sm:w-56"
+            displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />
           <ValueRow
             label="Tx hash:"
             labelWidth="w-16"
             display={transaction.transactionHash}
-            displayWidth="w-44 sm:w-56"
+            displayWidth="w-60 sm:w-64"
             showCopy={true}
             blurValue={shouldBlur}
           />
@@ -248,15 +248,23 @@ function TransactionCard({
             label="From:"
             labelWidth="w-16"
             display={transaction.from}
-            displayWidth="w-44 sm:w-56"
+            displayWidth="w-60 sm:w-64"
             showCopy={true}
+            blurValue={shouldBlur}
+          />
+          <ValueRow
+            label="Time:"
+            labelWidth="w-16"
+            display={getHumanReadableTimeString(transaction.timestamp)}
+            subDisplay={`(${getDateTimeString(transaction.timestamp)})`}
+            displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />
           <ValueRow
             label="Block:"
             labelWidth="w-16"
-            display={`${transaction.blockNumber} (${getDateTimeString(transaction.timestamp)})`}
-            displayWidth="w-44 sm:w-56"
+            display={transaction.blockNumber.toString()}
+            displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />
           {txExplorerLink && (
@@ -340,7 +348,7 @@ function DetailsCard({
         label="Sender:"
         labelWidth="w-20"
         display={sender}
-        displayWidth="w-48 sm:w-80"
+        displayWidth="w-60 sm:w-80"
         showCopy={true}
         blurValue={shouldBlur}
       />
@@ -348,7 +356,7 @@ function DetailsCard({
         label="Recipient:"
         labelWidth="w-20"
         display={recipient}
-        displayWidth="w-48 sm:w-80"
+        displayWidth="w-60 sm:w-80"
         showCopy={true}
         blurValue={shouldBlur}
       />
@@ -356,7 +364,7 @@ function DetailsCard({
         label="Leaf index:"
         labelWidth="w-20"
         display={leafIndex.toString()}
-        displayWidth="w-48 sm:w-80"
+        displayWidth="w-60 sm:w-80"
         blurValue={shouldBlur}
       />
       <HexStringBlock label="Message content:" value={body} />
@@ -370,6 +378,7 @@ function ValueRow({
   labelWidth,
   display,
   displayWidth,
+  subDisplay,
   showCopy,
   blurValue,
 }: {
@@ -377,15 +386,17 @@ function ValueRow({
   labelWidth: string;
   display: string;
   displayWidth: string;
+  subDisplay?: string;
   showCopy?: boolean;
   blurValue?: boolean;
 }) {
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <span className={`text-sm ml-2 truncate ${displayWidth} ${blurValue && 'blur-xs'}`}>
-        {display}
-      </span>
+      <div className={`text-sm ml-2 truncate ${displayWidth} ${blurValue && 'blur-xs'}`}>
+        <span>{display}</span>
+        {subDisplay && <span className="text-xs ml-2">{subDisplay}</span>}
+      </div>
       {showCopy && <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />}
     </div>
   );
