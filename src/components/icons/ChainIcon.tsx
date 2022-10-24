@@ -11,7 +11,7 @@ import {
   celoMainnetChain,
   fujiTestnetChain,
   moonbaseAlphaChain,
-  moonbeam,
+  moonbeamChain,
 } from '../../consts/chains';
 import QuestionMark from '../../images/icons/question-mark.svg';
 import Arbitrum from '../../images/logos/arbitrum.svg';
@@ -49,7 +49,7 @@ const CHAIN_TO_ICON = {
   [bscTestnetChain.id]: Bsc,
   [celoAlfajoresChain.id]: Celo,
   [auroraTestnetChain.id]: Near,
-  [moonbeam.id]: Moonbeam,
+  [moonbeamChain.id]: Moonbeam,
   [moonbaseAlphaChain.id]: Moonbeam,
 };
 

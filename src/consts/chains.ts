@@ -148,7 +148,7 @@ export const auroraTestnetChain: Chain = {
   testnet: true,
 };
 
-export const moonbeam: Chain = {
+export const moonbeamChain: Chain = {
   id: 1284,
   name: 'Moonbeam',
   network: 'moonbeam',
@@ -252,6 +252,7 @@ export const mainnetChains = [
   avalancheChain,
   bscChain,
   celoMainnetChain,
+  moonbeamChain,
 ];
 
 export const testnetChains = [

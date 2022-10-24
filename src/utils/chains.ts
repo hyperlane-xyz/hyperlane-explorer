@@ -1,5 +1,4 @@
-import { ChainName, Chains } from '@hyperlane-xyz/sdk';
-import { Mainnets } from '@hyperlane-xyz/sdk/dist/consts/chains';
+import { ChainName, Chains, Mainnets } from '@hyperlane-xyz/sdk';
 
 import { chainIdToName } from '../consts/chains';
 import { Environment } from '../consts/environments';
