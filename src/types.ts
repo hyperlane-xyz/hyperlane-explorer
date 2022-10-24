@@ -19,6 +19,8 @@ export interface MessageStub {
   status: MessageStatus;
   sender: Address;
   recipient: Address;
+  originDomainId: number;
+  destinationDomainId: number;
   originChainId: number;
   destinationChainId: number;
   timestamp: number; // Note, equivalent to timestamp in originTx

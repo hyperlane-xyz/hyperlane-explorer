@@ -4,7 +4,7 @@ import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { chainIdToName } from '../../consts/chains';
-import { chainToDomain } from '../../consts/domains';
+import { chainToDomain, domainToChain } from '../../consts/domains';
 import { Message, MessageStatus } from '../../types';
 import { validateAddress } from '../../utils/addresses';
 import { getChainEnvironment } from '../../utils/chains';
@@ -95,6 +95,8 @@ export async function fetchDeliveryStatus(
 
 async function fetchExplorerLogsForMessage(message: Message) {
   const {
+    originDomainId,
+    destinationDomainId: destDomainId,
     originChainId,
     originTransaction,
     destinationChainId,
@@ -105,8 +107,6 @@ async function fetchExplorerLogsForMessage(message: Message) {
   } = message;
   logger.debug(`Searching for delivery logs for tx ${originTransaction.transactionHash}`);
 
-  const originDomain = chainToDomain[originChainId];
-  const destDomain = chainToDomain[destinationChainId];
   const originName = chainIdToName[originChainId];
   const destName = chainIdToName[destinationChainId];
 
@@ -114,8 +114,8 @@ async function fetchExplorerLogsForMessage(message: Message) {
   if (!destInboxAddr)
     throw new Error(`No inbox address found for dest ${destName} origin ${originName}`);
 
-  const packedMessage = utils.formatMessage(originDomain, sender, destDomain, recipient, body);
-  const messageHash = utils.messageHash(packedMessage, leafIndex);
+  const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
+  const messageHash = utils.messageHash(msgRawBytes, leafIndex);
 
   const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${messageHash}&address=${destInboxAddr}`;
   return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
@@ -134,8 +134,21 @@ async function tryFetchTransactionDetails(chainId: number, txHash: string) {
 }
 
 function validateMessage(message: Message) {
-  const { originChainId, destinationChainId, leafIndex, originTransaction, recipient, sender } =
-    message;
+  const {
+    originDomainId,
+    destinationDomainId,
+    originChainId,
+    destinationChainId,
+    leafIndex,
+    originTransaction,
+    recipient,
+    sender,
+  } = message;
+
+  if (!originDomainId || !domainToChain[originDomainId])
+    throw new Error(`Invalid origin domain ${originDomainId}`);
+  if (!destinationDomainId || !domainToChain[destinationDomainId])
+    throw new Error(`Invalid dest domain ${destinationDomainId}`);
   if (!originChainId || !chainToDomain[originChainId])
     throw new Error(`Invalid origin chain ${originChainId}`);
   if (!destinationChainId || !chainToDomain[destinationChainId])

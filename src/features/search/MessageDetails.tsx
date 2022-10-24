@@ -4,6 +4,8 @@ import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
 
+import { utils } from '@hyperlane-xyz/utils';
+
 import { Spinner } from '../../components/animation/Spinner';
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { ChainIcon } from '../../components/icons/ChainIcon';
@@ -46,25 +48,29 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     body,
     sender,
     recipient,
+    originDomainId,
+    destinationDomainId: destDomainId,
     originChainId,
-    destinationChainId,
+    destinationChainId: destChainId,
     originTransaction,
-    destinationTransaction,
+    destinationTransaction: destTransaction,
+    leafIndex,
   } = message;
+  const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
 
   const { data: deliveryStatusResponse, error: deliveryStatusError } = useMessageDeliveryStatus(
     message,
     isMessageFound,
   );
 
-  let resolvedDestinationTx = destinationTransaction;
+  let resolvedDestTx = destTransaction;
   let resolvedMsgStatus = status;
   let debugStatus: MessageDebugStatus | undefined = undefined;
   // If there's a delivery status response, use those values as s.o.t. instead
   if (deliveryStatusResponse) {
     resolvedMsgStatus = deliveryStatusResponse.status;
     if (deliveryStatusResponse.status === MessageStatus.Delivered) {
-      resolvedDestinationTx = deliveryStatusResponse.deliveryTransaction;
+      resolvedDestTx = deliveryStatusResponse.deliveryTransaction;
     } else if (deliveryStatusResponse.status === MessageStatus.Failing) {
       debugStatus = deliveryStatusResponse.debugStatus;
     }
@@ -139,9 +145,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         />
         <TransactionCard
           title="Destination Transaction"
-          chainId={destinationChainId}
+          chainId={destChainId}
           status={resolvedMsgStatus}
-          transaction={resolvedDestinationTx}
+          transaction={resolvedDestTx}
           debugInfo={{
             status: debugStatus,
             originChainId: originChainId,
@@ -152,10 +158,12 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         />
         <DetailsCard
           originChainId={originChainId}
-          destinationChainId={destinationChainId}
+          destinationChainId={destChainId}
           sender={sender}
           recipient={recipient}
+          leafIndex={leafIndex}
           body={body}
+          rawBytes={msgRawBytes}
           shouldBlur={shouldBlur}
         />
       </div>
@@ -301,7 +309,9 @@ interface DetailsCardProps {
   destinationChainId: number;
   sender: string;
   recipient: string;
+  leafIndex: number;
   body: string;
+  rawBytes: string;
   shouldBlur: boolean;
 }
 
@@ -310,7 +320,9 @@ function DetailsCard({
   destinationChainId,
   sender,
   recipient,
+  leafIndex,
   body,
+  rawBytes,
   shouldBlur,
 }: DetailsCardProps) {
   return (
@@ -340,18 +352,15 @@ function DetailsCard({
         showCopy={true}
         blurValue={shouldBlur}
       />
-      <div>
-        <label className="text-sm text-gray-500">Message content:</label>
-        <div className="relative max-w-full break-words py-2 pl-2 pr-9 mt-2 bg-gray-100 text-sm font-mono rounded">
-          {body}
-          <CopyButton
-            copyValue={body}
-            width={15}
-            height={15}
-            classes="absolute top-2 right-2 opacity-70"
-          />
-        </div>
-      </div>
+      <ValueRow
+        label="Leaf index:"
+        labelWidth="w-20"
+        display={leafIndex.toString()}
+        displayWidth="w-48 sm:w-80"
+        blurValue={shouldBlur}
+      />
+      <HexStringBlock label="Message content:" value={body} />
+      <HexStringBlock label="Raw bytes:" value={rawBytes} />
     </Card>
   );
 }
@@ -378,6 +387,23 @@ function ValueRow({
         {display}
       </span>
       {showCopy && <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />}
+    </div>
+  );
+}
+
+function HexStringBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="text-sm text-gray-500">{label}</label>
+      <div className="relative max-w-full break-words py-2 pl-2 pr-9 mt-2 bg-gray-100 text-sm font-mono rounded">
+        {value}
+        <CopyButton
+          copyValue={value}
+          width={15}
+          height={15}
+          classes="absolute top-2 right-2 opacity-70"
+        />
+      </div>
     </div>
   );
 }
