@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { logger } from 'ethers';
 
-import type { Message } from '../../types';
+import { Message, MessageStatus } from '../../types';
 
 import type { MessageDeliveryStatusResponse } from './types';
 
@@ -10,7 +10,7 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   return useQuery(
     ['messageProcessTx', serializedMessage, isReady],
     async () => {
-      if (!message || !isReady) return null;
+      if (!isReady || !message || message.status === MessageStatus.Delivered) return null;
 
       const response = await fetch('/api/delivery-status', {
         method: 'POST',

@@ -49,7 +49,7 @@ export interface MessageStubEntry {
   sender: string; // binary e.g. \\x123
   timestamp: string; // e.g. "2022-08-28T17:30:15"
   transaction: TransactionEntry; // origin transaction
-  delivered_messages: DeliveredMessageStubEntry[] | null | undefined;
+  delivered_messages: DeliveredMessageStubEntry | null | undefined;
   message_states: MessageStateEntry[];
 }
 
@@ -58,7 +58,7 @@ export interface MessageEntry extends MessageStubEntry {
   leaf_index: number;
   msg_body: string | null | undefined; // binary e.g. \\x123
   origin_tx_id: number;
-  delivered_messages: DeliveredMessageEntry[] | null | undefined;
+  delivered_messages: DeliveredMessageEntry | null | undefined;
 }
 
 export interface MessagesStubQueryResult {

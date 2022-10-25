@@ -46,7 +46,7 @@ function parseMessage(m: MessageEntry): Message | null {
     const status = getMessageStatus(m);
     const destinationTransaction =
       status === MessageStatus.Delivered && m.delivered_messages
-        ? parseTransaction(m.delivered_messages[0].transaction)
+        ? parseTransaction(m.delivered_messages.transaction)
         : undefined;
     return {
       id: m.id,
@@ -97,7 +97,7 @@ function decodeBinaryHex(b: string) {
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
   const { delivered_messages, message_states } = m;
-  if (delivered_messages?.length) {
+  if (delivered_messages) {
     return MessageStatus.Delivered;
   } else if (message_states.length > 0) {
     const latestState = message_states.at(-1);
