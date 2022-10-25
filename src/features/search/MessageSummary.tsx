@@ -36,7 +36,7 @@ export function MessageSummary({ message }: { message: MessageStub }) {
             <div className={styles.value}>{getHumanReadableTimeString(timestamp)}</div>
           </div>
         </div>
-        <div className={`w-20 md:w-24 py-2 text-sm text-center rounded ${statusColor}`}>
+        <div className={`w-20 md:w-[5.5rem] py-2 text-sm text-center rounded ${statusColor}`}>
           {statusText}
         </div>
       </a>

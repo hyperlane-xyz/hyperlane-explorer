@@ -200,7 +200,7 @@ const messageStubProps = `
   recipient
   sender
   timestamp
-  delivered_messages {
+  delivered_message {
     id
     tx_id
     inbox_address

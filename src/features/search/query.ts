@@ -45,16 +45,17 @@ function parseMessage(m: MessageEntry): Message | null {
   try {
     const status = getMessageStatus(m);
     const destinationTransaction =
-      status === MessageStatus.Delivered && m.delivered_messages
-        ? parseTransaction(m.delivered_messages.transaction)
+      status === MessageStatus.Delivered && m.delivered_message?.transaction
+        ? parseTransaction(m.delivered_message.transaction)
         : undefined;
     return {
       id: m.id,
       status,
       sender: parsePaddedAddress(m.sender),
       recipient: parsePaddedAddress(m.recipient),
-      leafIndex: m.leaf_index,
       body: decodeBinaryHex(m.msg_body ?? ''),
+      leafIndex: m.leaf_index,
+      hash: m.hash,
       originDomainId: m.origin,
       destinationDomainId: m.destination,
       originChainId: domainToChain[m.origin],
@@ -96,8 +97,8 @@ function decodeBinaryHex(b: string) {
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
-  const { delivered_messages, message_states } = m;
-  if (delivered_messages) {
+  const { delivered_message, message_states } = m;
+  if (delivered_message) {
     return MessageStatus.Delivered;
   } else if (message_states.length > 0) {
     const latestState = message_states.at(-1);

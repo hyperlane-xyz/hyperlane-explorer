@@ -55,6 +55,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     originTransaction,
     destinationTransaction: destTransaction,
     leafIndex,
+    hash: msgHash,
   } = message;
   const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
 
@@ -164,6 +165,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           leafIndex={leafIndex}
           body={body}
           rawBytes={msgRawBytes}
+          msgHash={msgHash}
           shouldBlur={shouldBlur}
         />
       </div>
@@ -320,6 +322,7 @@ interface DetailsCardProps {
   leafIndex: number;
   body: string;
   rawBytes: string;
+  msgHash: string;
   shouldBlur: boolean;
 }
 
@@ -331,6 +334,7 @@ function DetailsCard({
   leafIndex,
   body,
   rawBytes,
+  msgHash,
   shouldBlur,
 }: DetailsCardProps) {
   return (
@@ -369,6 +373,7 @@ function DetailsCard({
       />
       <HexStringBlock label="Message content:" value={body} />
       <HexStringBlock label="Raw bytes:" value={rawBytes} />
+      <HexStringBlock label="Message hash:" value={msgHash} />
     </Card>
   );
 }
@@ -429,6 +434,7 @@ query MessageDetails ($messageId: bigint!){
     destination
     id
     leaf_index
+    hash
     msg_body
     origin
     origin_tx_id
@@ -450,7 +456,7 @@ query MessageDetails ($messageId: bigint!){
     recipient
     sender
     timestamp
-    delivered_messages {
+    delivered_message {
       id
       tx_id
       inbox_address
