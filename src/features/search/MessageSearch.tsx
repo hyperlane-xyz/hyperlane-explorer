@@ -188,8 +188,8 @@ const searchWhereClause = `
     {recipient: {_eq: $search}},
     {transaction: {hash: {_eq: $search}}},
     {transaction: {sender: {_eq: $search}}},
-    {delivered_messages: {transaction: {hash: {_eq: $search}}}},
-    {delivered_messages: {transaction: {sender: {_eq: $search}}}}
+    {delivered_message: {transaction: {hash: {_eq: $search}}}},
+    {delivered_message: {transaction: {sender: {_eq: $search}}}}
   ]}
 `;
 
