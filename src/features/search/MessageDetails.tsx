@@ -83,9 +83,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     if (error) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
-      setBanner('bg-red-600');
+      setBanner('bg-red-500');
     } else if (resolvedMsgStatus === MessageStatus.Failing) {
-      setBanner('bg-red-600');
+      setBanner('bg-red-500');
     } else if (!isMessageFound) {
       setBanner('bg-gray-500');
     } else {
