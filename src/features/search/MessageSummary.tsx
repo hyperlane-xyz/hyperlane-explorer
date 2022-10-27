@@ -11,7 +11,7 @@ export function MessageSummary({ message }: { message: MessageStub }) {
   let statusColor = 'bg-beige-500';
   let statusText = 'Pending';
   if (status === MessageStatus.Delivered) {
-    statusColor = 'bg-blue-500 text-white';
+    statusColor = 'bg-green-500 text-white';
     statusText = 'Delivered';
   } else if (status === MessageStatus.Failing) {
     statusColor = 'bg-red-500 text-white';
