@@ -17,7 +17,7 @@ import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
 import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
-import { isValidSearchQuery } from '../search/utils';
+import { isValidSearchQuery } from '../messages/utils';
 
 import { debugMessagesForHash } from './debugMessage';
 import { MessageDebugResult, TxDebugStatus } from './types';

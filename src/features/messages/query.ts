@@ -55,7 +55,7 @@ function parseMessage(m: MessageEntry): Message | null {
       recipient: parsePaddedAddress(m.recipient),
       body: decodeBinaryHex(m.msg_body ?? ''),
       leafIndex: m.leaf_index,
-      hash: m.hash,
+      hash: ensureLeading0x(m.hash),
       originDomainId: m.origin,
       destinationDomainId: m.destination,
       originChainId: domainToChain[m.origin],

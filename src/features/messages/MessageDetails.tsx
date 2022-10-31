@@ -11,12 +11,13 @@ import { CopyButton } from '../../components/buttons/CopyButton';
 import { ChainIcon } from '../../components/icons/ChainIcon';
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { HelpIcon } from '../../components/icons/HelpIcon';
+import { InterchainAccount } from '../../components/icons/InterchainAccount';
 import { Card } from '../../components/layout/Card';
 import { chainToDomain } from '../../consts/domains';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
-import { MessageStatus, PartialTransactionReceipt } from '../../types';
+import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
 import { getChainDisplayName, getChainEnvironment } from '../../utils/chains';
 import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
@@ -26,6 +27,7 @@ import { debugStatusToDesc } from '../debugger/strings';
 import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
+import { isIcaMessage } from './ica';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
@@ -45,19 +47,12 @@ export function MessageDetails({ messageId }: { messageId: string }) {
   const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
   const {
     status,
-    body,
-    sender,
-    recipient,
-    originDomainId,
-    destinationDomainId: destDomainId,
     originChainId,
     destinationChainId: destChainId,
     originTransaction,
     destinationTransaction: destTransaction,
-    leafIndex,
-    hash: msgHash,
   } = message;
-  const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
+  const isIcaMsg = isIcaMessage(message) || true; // TODO
 
   const { data: deliveryStatusResponse, error: deliveryStatusError } = useMessageDeliveryStatus(
     message,
@@ -157,17 +152,8 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           help={helpText.destination}
           shouldBlur={shouldBlur}
         />
-        <DetailsCard
-          originChainId={originChainId}
-          destinationChainId={destChainId}
-          sender={sender}
-          recipient={recipient}
-          leafIndex={leafIndex}
-          body={body}
-          rawBytes={msgRawBytes}
-          msgHash={msgHash}
-          shouldBlur={shouldBlur}
-        />
+        <DetailsCard message={message} shouldBlur={shouldBlur} />
+        {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
     </>
   );
@@ -315,28 +301,31 @@ function TransactionCard({
 }
 
 interface DetailsCardProps {
-  originChainId: number;
-  destinationChainId: number;
-  sender: string;
-  recipient: string;
-  leafIndex: number;
-  body: string;
-  rawBytes: string;
-  msgHash: string;
+  message: Message;
   shouldBlur: boolean;
 }
 
 function DetailsCard({
-  originChainId,
-  destinationChainId,
-  sender,
-  recipient,
-  leafIndex,
-  body,
-  rawBytes,
-  msgHash,
+  message: {
+    originDomainId,
+    originChainId,
+    destinationDomainId,
+    destinationChainId,
+    sender,
+    recipient,
+    leafIndex,
+    body,
+    hash,
+  },
   shouldBlur,
 }: DetailsCardProps) {
+  const rawBytes = utils.formatMessage(
+    originDomainId,
+    sender,
+    destinationDomainId,
+    recipient,
+    body,
+  );
   return (
     <Card classes="mt-2 space-y-4" width="w-full">
       <div className="flex items-center justify-between">
@@ -373,7 +362,35 @@ function DetailsCard({
       />
       <HexStringBlock label="Message content:" value={body} />
       <HexStringBlock label="Raw bytes:" value={rawBytes} />
-      <HexStringBlock label="Message hash:" value={msgHash} />
+      <HexStringBlock label="Message hash:" value={hash} />
+    </Card>
+  );
+}
+
+interface IcaDetailsCardProps {
+  message: Message;
+  shouldBlur: boolean;
+}
+
+function IcaDetailsCard({ message: { sender }, shouldBlur }: IcaDetailsCardProps) {
+  return (
+    <Card classes="mt-2 space-y-4" width="w-full">
+      <div className="flex items-center justify-between">
+        <div className="relative -top-px -left-0.5">
+          <InterchainAccount />
+        </div>
+        <div className="flex items-center pb-1">
+          <h3 className="text-gray-500 font-medium text-md mr-2">ICA Details</h3>
+          <HelpIcon size={16} text={helpText.icaDetails} />
+        </div>
+      </div>
+      <ValueRow
+        label="Sender:"
+        labelWidth="w-20"
+        display={sender}
+        displayWidth="w-60 sm:w-80"
+        blurValue={shouldBlur}
+      />
     </Card>
   );
 }
@@ -491,4 +508,5 @@ const helpText = {
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',
   details: 'Immutable information about the message itself such as its contents.',
+  icaDetails: 'Extra information for messages from Interchain Accounts.',
 };
