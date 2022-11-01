@@ -27,7 +27,7 @@ import { debugStatusToDesc } from '../debugger/strings';
 import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
-import { isIcaMessage } from './ica';
+import { decodeIcaBody, isIcaMessage } from './ica';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
@@ -105,7 +105,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
   return (
     <>
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-white text-lg">Message</h2>
+        <h2 className="text-white text-lg">{`${
+          isIcaMsg ? 'ICA ' : ''
+        } Message to ${getChainDisplayName(destChainId)}`}</h2>
         {isMessageFound && resolvedMsgStatus === MessageStatus.Pending && (
           <StatusHeader text="Status: Pending" fetching={isFetching} />
         )}
@@ -217,14 +219,14 @@ function TransactionCard({
       </div>
       {transaction && (
         <>
-          <ValueRow
+          <KeyValueRow
             label="Chain:"
             labelWidth="w-16"
             display={`${getChainDisplayName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
             displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />
-          <ValueRow
+          <KeyValueRow
             label="Tx hash:"
             labelWidth="w-16"
             display={transaction.transactionHash}
@@ -232,7 +234,7 @@ function TransactionCard({
             showCopy={true}
             blurValue={shouldBlur}
           />
-          <ValueRow
+          <KeyValueRow
             label="From:"
             labelWidth="w-16"
             display={transaction.from}
@@ -240,7 +242,7 @@ function TransactionCard({
             showCopy={true}
             blurValue={shouldBlur}
           />
-          <ValueRow
+          <KeyValueRow
             label="Time:"
             labelWidth="w-16"
             display={getHumanReadableTimeString(transaction.timestamp)}
@@ -248,7 +250,7 @@ function TransactionCard({
             displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />
-          <ValueRow
+          <KeyValueRow
             label="Block:"
             labelWidth="w-16"
             display={transaction.blockNumber.toString()}
@@ -337,7 +339,7 @@ function DetailsCard({
           <HelpIcon size={16} text={helpText.details} />
         </div>
       </div>
-      <ValueRow
+      <KeyValueRow
         label="Sender:"
         labelWidth="w-20"
         display={sender}
@@ -345,7 +347,7 @@ function DetailsCard({
         showCopy={true}
         blurValue={shouldBlur}
       />
-      <ValueRow
+      <KeyValueRow
         label="Recipient:"
         labelWidth="w-20"
         display={recipient}
@@ -353,7 +355,7 @@ function DetailsCard({
         showCopy={true}
         blurValue={shouldBlur}
       />
-      <ValueRow
+      <KeyValueRow
         label="Leaf index:"
         labelWidth="w-20"
         display={leafIndex.toString()}
@@ -372,7 +374,9 @@ interface IcaDetailsCardProps {
   shouldBlur: boolean;
 }
 
-function IcaDetailsCard({ message: { sender }, shouldBlur }: IcaDetailsCardProps) {
+function IcaDetailsCard({ message: { body }, shouldBlur }: IcaDetailsCardProps) {
+  const decodeResult = useMemo(() => decodeIcaBody(body), [body]);
+
   return (
     <Card classes="mt-2 space-y-4" width="w-full">
       <div className="flex items-center justify-between">
@@ -384,18 +388,59 @@ function IcaDetailsCard({ message: { sender }, shouldBlur }: IcaDetailsCardProps
           <HelpIcon size={16} text={helpText.icaDetails} />
         </div>
       </div>
-      <ValueRow
-        label="Sender:"
-        labelWidth="w-20"
-        display={sender}
-        displayWidth="w-60 sm:w-80"
-        blurValue={shouldBlur}
-      />
+      {decodeResult ? (
+        <>
+          <KeyValueRow
+            label="Original sender:"
+            labelWidth="w-28"
+            display={decodeResult.sender}
+            displayWidth="w-60 sm:w-80"
+            showCopy={true}
+            blurValue={shouldBlur}
+          />
+          {decodeResult.calls.length ? (
+            decodeResult.calls.map((c, i) => (
+              <div key={`ica-call-${i}`}>
+                <label className="text-sm text-gray-500">{`Function call ${i + 1} of ${
+                  decodeResult.calls.length
+                }:`}</label>
+                <div className="mt-1.5 pl-4 border-l-2 border-gray-300 space-y-2">
+                  <KeyValueRow
+                    label="Destination address:"
+                    labelWidth="w-32"
+                    display={c.destinationAddress}
+                    displayWidth="w-60 sm:w-80"
+                    showCopy={true}
+                    blurValue={shouldBlur}
+                  />
+                  <KeyValueRow
+                    label="Raw call bytes:"
+                    labelWidth="w-32"
+                    display={c.callBytes}
+                    displayWidth="w-60 sm:w-96 lg:w-112"
+                    showCopy={true}
+                    blurValue={shouldBlur}
+                  />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div>
+              <label className="text-sm text-gray-500">Call List:</label>
+              <div className="mt-1 text-sm italic">No calls found for this message.</div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="py-4 text-red-500 italic">
+          Unable to decode ICA message body, no details currently available.
+        </div>
+      )}
     </Card>
   );
 }
 
-function ValueRow({
+function KeyValueRow({
   label,
   labelWidth,
   display,
@@ -508,5 +553,5 @@ const helpText = {
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',
   details: 'Immutable information about the message itself such as its contents.',
-  icaDetails: 'Extra information for messages from Interchain Accounts.',
+  icaDetails: 'Extra information for messages from/to Interchain Accounts.',
 };
