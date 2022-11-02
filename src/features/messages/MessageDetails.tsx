@@ -27,7 +27,7 @@ import { debugStatusToDesc } from '../debugger/strings';
 import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
-import { decodeIcaBody, isIcaMessage } from './ica';
+import { decodeIcaBody, isIcaMessage, useIcaAddress } from './ica';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
@@ -374,8 +374,14 @@ interface IcaDetailsCardProps {
   shouldBlur: boolean;
 }
 
-function IcaDetailsCard({ message: { body }, shouldBlur }: IcaDetailsCardProps) {
+function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }: IcaDetailsCardProps) {
   const decodeResult = useMemo(() => decodeIcaBody(body), [body]);
+
+  const {
+    data: icaAddress,
+    isFetching,
+    isError,
+  } = useIcaAddress(originDomainId, decodeResult?.sender);
 
   return (
     <Card classes="mt-2 space-y-4" width="w-full">
@@ -398,13 +404,29 @@ function IcaDetailsCard({ message: { body }, shouldBlur }: IcaDetailsCardProps) 
             showCopy={true}
             blurValue={shouldBlur}
           />
+          <KeyValueRow
+            label="ICA Address:"
+            labelWidth="w-28"
+            display={
+              icaAddress
+                ? icaAddress
+                : isFetching
+                ? 'Finding address...'
+                : isError
+                ? 'Error finding address'
+                : 'Unknown address'
+            }
+            displayWidth="w-60 sm:w-80"
+            showCopy={true}
+            blurValue={shouldBlur}
+          />
           {decodeResult.calls.length ? (
             decodeResult.calls.map((c, i) => (
               <div key={`ica-call-${i}`}>
                 <label className="text-sm text-gray-500">{`Function call ${i + 1} of ${
                   decodeResult.calls.length
                 }:`}</label>
-                <div className="mt-1.5 pl-4 border-l-2 border-gray-300 space-y-2">
+                <div className="mt-2 pl-4 border-l-2 border-gray-400 space-y-2.5">
                   <KeyValueRow
                     label="Destination address:"
                     labelWidth="w-32"
@@ -464,7 +486,7 @@ function KeyValueRow({
         <span>{display}</span>
         {subDisplay && <span className="text-xs ml-2">{subDisplay}</span>}
       </div>
-      {showCopy && <CopyButton copyValue={display} width={15} height={15} classes="ml-3" />}
+      {showCopy && <CopyButton copyValue={display} width={13} height={13} classes="ml-3" />}
     </div>
   );
 }
@@ -477,8 +499,8 @@ function HexStringBlock({ label, value }: { label: string; value: string }) {
         {value}
         <CopyButton
           copyValue={value}
-          width={15}
-          height={15}
+          width={13}
+          height={13}
           classes="absolute top-2 right-2 opacity-70"
         />
       </div>

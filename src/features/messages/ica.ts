@@ -1,6 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
 import { BigNumber, utils } from 'ethers';
 
-import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
+import {
+  DomainIdToChainName,
+  chainConnectionConfigs,
+  hyperlaneCoreAddresses,
+} from '@hyperlane-xyz/sdk';
 
 import { Message } from '../../types';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
@@ -35,21 +41,15 @@ export function decodeIcaBody(body: string) {
       sender: string;
       calls: Array<[string, string]>;
     };
-    if (typeof sender !== 'string' || !isValidAddress(sender)) {
+    if (typeof sender !== 'string' || !isValidAddress(sender))
       throw new Error(`Invalid sender address: ${sender}`);
-    }
-    if (!Array.isArray(calls)) {
-      throw new Error(`Invalid call list: ${JSON.stringify(calls)}`);
-    }
+    if (!Array.isArray(calls)) throw new Error(`Invalid call list: ${JSON.stringify(calls)}`);
 
     const formattedCalls = calls.map((c) => {
       const [destinationAddress, callBytes] = c;
-      if (typeof destinationAddress !== 'string' || !isValidAddress(destinationAddress)) {
+      if (typeof destinationAddress !== 'string' || !isValidAddress(destinationAddress))
         throw new Error(`Invalid call dest address: ${destinationAddress}`);
-      }
-      if (typeof callBytes !== 'string') {
-        throw new Error(`Invalid call bytes: ${callBytes}`);
-      }
+      if (typeof callBytes !== 'string') throw new Error(`Invalid call bytes: ${callBytes}`);
       return {
         destinationAddress,
         callBytes,
@@ -64,4 +64,33 @@ export function decodeIcaBody(body: string) {
     logger.error('Error decoding ICA body', error);
     return null;
   }
+}
+
+// TODO do this on backend and use private RPC
+async function fetchIcaAddress(originDomainId: number, senderAddress: string) {
+  try {
+    logger.debug('Fetching Ica address', originDomainId, senderAddress);
+    const chainName = DomainIdToChainName[originDomainId];
+    const connection = chainConnectionConfigs[chainName];
+    if (!connection) throw new Error(`No connection info for ${chainName}`);
+    const icaContract = InterchainAccountRouter__factory.connect(ICA_ADDRESS, connection.provider);
+    const icaAddress = await icaContract.getInterchainAccount(originDomainId, senderAddress);
+    if (!isValidAddress(icaAddress)) throw new Error(`Invalid Ica addr ${icaAddress}`);
+    logger.debug('Ica address found', icaAddress);
+    return icaAddress;
+  } catch (error) {
+    logger.error('Error fetching ICA address', error);
+    return null;
+  }
+}
+
+export function useIcaAddress(originDomainId: number, senderAddress?: string | null) {
+  return useQuery(
+    ['messageIcaAddress', originDomainId, senderAddress],
+    () => {
+      if (!originDomainId || !senderAddress || BigNumber.from(senderAddress).isZero()) return null;
+      return fetchIcaAddress(originDomainId, senderAddress);
+    },
+    { retry: false },
+  );
 }
