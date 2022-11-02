@@ -26,7 +26,7 @@ import { MessagesStubQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
-const LATEST_QUERY_LIMIT = 8;
+const LATEST_QUERY_LIMIT = 12;
 const SEARCH_QUERY_LIMIT = 40;
 
 let showedWarning = false;
@@ -89,7 +89,7 @@ export function MessageSearch() {
         fetching={fetching}
         placeholder="Search for messages by address or transaction hash"
       />
-      <div className="w-full h-[38.2rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
+      <div className="w-full min-h-[38rem] max-h-[47rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         {/* Content header and filter bar */}
         <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-gray-600">{!hasInput ? 'Latest Messages' : 'Search Results'}</h2>
@@ -122,7 +122,7 @@ export function MessageSearch() {
           {messageList.map((m) => (
             <div
               key={`message-${m.id}`}
-              className={`px-2 py-2 sm:px-4 md:px-5 md:py-3 border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 ${
+              className={`px-2 py-2 sm:px-4 md:px-5 md:py-2.5 border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 ${
                 fetching && 'blur-xs'
               } transition-all duration-500`}
             >
