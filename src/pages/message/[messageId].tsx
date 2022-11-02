@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
 import { ContentFrame } from '../../components/layout/ContentFrame';
-import { MessageDetails } from '../../features/search/MessageDetails';
+import { MessageDetails } from '../../features/messages/MessageDetails';
 import { logger } from '../../utils/logger';
 
 const Message: NextPage = () => {
