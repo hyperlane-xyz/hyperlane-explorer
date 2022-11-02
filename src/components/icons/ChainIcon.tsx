@@ -3,11 +3,11 @@ import { memo } from 'react';
 import { chain } from 'wagmi';
 
 import {
+  alfajoresChain,
   auroraTestnetChain,
   avalancheChain,
   bscChain,
   bscTestnetChain,
-  celoAlfajoresChain,
   celoMainnetChain,
   fujiTestnetChain,
   moonbaseAlphaChain,
@@ -36,6 +36,7 @@ const CHAIN_TO_ICON = {
   [avalancheChain.id]: Avalanche,
   [bscChain.id]: Bsc,
   [celoMainnetChain.id]: Celo,
+  [moonbeamChain.id]: Moonbeam,
 
   // Test chains
   [chain.goerli.id]: EthMainnet, // TODO
@@ -47,9 +48,8 @@ const CHAIN_TO_ICON = {
   [chain.polygonMumbai.id]: Polygon,
   [fujiTestnetChain.id]: Avalanche,
   [bscTestnetChain.id]: Bsc,
-  [celoAlfajoresChain.id]: Celo,
+  [alfajoresChain.id]: Celo,
   [auroraTestnetChain.id]: Near,
-  [moonbeamChain.id]: Moonbeam,
   [moonbaseAlphaChain.id]: Moonbeam,
 };
 

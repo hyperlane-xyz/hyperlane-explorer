@@ -18,8 +18,8 @@
     "react-dom": "^18.2.0",
     "react-toastify": "^9.0.8",
     "urql": "^3.0.3",
-    "wagmi": "^0.6.8",
-    "zustand": "^4.1.2"
+    "wagmi": "^0.7.9",
+    "zustand": "^4.1.4"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^3.2.0",
