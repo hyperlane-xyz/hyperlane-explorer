@@ -5,7 +5,7 @@ export enum Color {
   primaryGray = '#6B7280',
   primaryBlue = '#025AA1',
   primaryBeige = '#F1EDE9',
-  primaryRed = '#D2372D',
+  primaryRed = '#BF1B15',
 }
 
 // Useful for cases when using class names isn't convenient
@@ -14,7 +14,7 @@ export function classNameToColor(className) {
   switch (className) {
     case 'bg-blue-500':
       return Color.primaryBlue;
-    case 'bg-red-600':
+    case 'bg-red-500':
       return Color.primaryRed;
     case 'bg-gray-500':
       return Color.primaryGray;
