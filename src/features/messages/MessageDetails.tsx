@@ -52,7 +52,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     originTransaction,
     destinationTransaction: destTransaction,
   } = message;
-  const isIcaMsg = isIcaMessage(message) || true; // TODO
+  const isIcaMsg = isIcaMessage(message);
 
   const { data: deliveryStatusResponse, error: deliveryStatusError } = useMessageDeliveryStatus(
     message,
