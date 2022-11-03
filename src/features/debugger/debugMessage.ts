@@ -14,6 +14,7 @@ import {
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
+import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk } from '../../utils/string';
@@ -251,7 +252,7 @@ async function checkMessage(
     const msgRecipientInterface = IMessageRecipient__factory.createInterface();
     const handleFunction = msgRecipientInterface.functions['handle(uint32,bytes32,bytes)'];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-    if (!bytecode.includes(handleSignature.slice(2))) {
+    if (!bytecode.includes(trimLeading0x(handleSignature))) {
       const bytecodeMessage = `${
         debugStatusToDesc[MessageDebugStatus.RecipientNotHandler]
       } ${handleSignature}. Contract may be proxied.`;
