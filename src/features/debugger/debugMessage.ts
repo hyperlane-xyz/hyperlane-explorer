@@ -251,8 +251,7 @@ async function checkMessage(
     const msgRecipientInterface = IMessageRecipient__factory.createInterface();
     const handleFunction = msgRecipientInterface.functions['handle(uint32,bytes32,bytes)'];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-
-    if (!bytecode.includes(handleSignature)) {
+    if (!bytecode.includes(handleSignature.slice(2))) {
       const bytecodeMessage = `${
         debugStatusToDesc[MessageDebugStatus.RecipientNotHandler]
       } ${handleSignature}. Contract may be proxied.`;
