@@ -22,11 +22,13 @@ import { isValidSearchQuery } from '../messages/utils';
 import { debugMessagesForHash } from './debugMessage';
 import { MessageDebugResult, TxDebugStatus } from './types';
 
+const QUERY_HASH_PARAM = 'txHash';
+
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);
 
   const router = useRouter();
-  const txHash = getQueryParamString(router.query, 'txHash');
+  const txHash = getQueryParamString(router.query, QUERY_HASH_PARAM);
 
   // Search text input
   const [searchInput, setSearchInput] = useState(txHash);
@@ -43,10 +45,10 @@ export function TxDebugger() {
     ['debugMessage', isValidInput, sanitizedInput, environment],
     () => {
       if (!isValidInput || !sanitizedInput) {
-        replacePathParam('txHash', '');
+        replacePathParam(QUERY_HASH_PARAM, '');
         return null;
       }
-      replacePathParam('txHash', sanitizedInput);
+      replacePathParam(QUERY_HASH_PARAM, sanitizedInput);
       return debugMessagesForHash(sanitizedInput, environment);
     },
     { retry: false },

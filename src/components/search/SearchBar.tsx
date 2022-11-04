@@ -24,11 +24,11 @@ export function SearchBar({ value, placeholder, onChangeValue, fetching }: Props
       <input
         value={value}
         onChange={onChange}
-        type="text"
+        type="search"
         placeholder={placeholder}
-        className="p-2 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 rounded focus:outline-none"
+        className="p-2 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 rounded placeholder:text-gray-500 focus:outline-none"
       />
-      <div className="bg-beige-300 h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded">
+      <div className="h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded bg-beige-300">
         {fetching && <Spinner classes="scale-[30%] mr-2.5" />}
         {!fetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
         {!fetching && value && (

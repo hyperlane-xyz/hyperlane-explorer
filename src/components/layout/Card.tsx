@@ -9,7 +9,7 @@ export function Card(props: PropsWithChildren<Props>) {
   const { width, classes } = props;
   return (
     <div
-      className={`${width} p-4 bg-white shadow-md border border-blue-50 rounded overflow-auto ${classes}`}
+      className={`${width} p-4 bg-white shadow border border-blue-50 rounded overflow-auto ${classes}`}
     >
       {props.children}
     </div>
