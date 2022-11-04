@@ -1,4 +1,5 @@
 import Image from 'next/future/image';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
@@ -17,6 +18,8 @@ import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
+import { logger } from '../../utils/logger';
+import { getQueryParamString } from '../../utils/queryParams';
 import { sanitizeString, trimToLength } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
@@ -28,6 +31,7 @@ import { isValidSearchQuery } from './utils';
 const AUTO_REFRESH_DELAY = 10000;
 const LATEST_QUERY_LIMIT = 12;
 const SEARCH_QUERY_LIMIT = 40;
+const QUERY_SEARCH_PARAM = 'search';
 
 let showedWarning = false;
 
@@ -41,13 +45,25 @@ export function MessageSearch() {
       );
     }
   }, []);
+  const router = useRouter();
 
   // Search text input
-  const [searchInput, setSearchInput] = useState('');
+  const defaultSearchQuery = getQueryParamString(router.query, QUERY_SEARCH_PARAM);
+  const [searchInput, setSearchInput] = useState(defaultSearchQuery);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const hasInput = !!debouncedSearchInput;
   const sanitizedInput = sanitizeString(debouncedSearchInput);
   const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput, true) : true;
+
+  // Keep search input in sync with url
+  useEffect(() => {
+    const path = isValidInput && sanitizedInput ? `/?${QUERY_SEARCH_PARAM}=${sanitizedInput}` : '/';
+    router
+      .replace(path, undefined, { shallow: true })
+      .catch((e) => logger.error('Error shallow updating url', e));
+    // Must exclude router for next.js shallow routing, otherwise links break:
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isValidInput, sanitizedInput]);
 
   // Filter state and handlers
   const chainOptions = useMemo(getChainOptionList, []);

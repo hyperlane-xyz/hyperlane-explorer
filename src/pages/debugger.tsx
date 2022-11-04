@@ -12,7 +12,7 @@ const Debugger: NextPage = () => {
 };
 
 // Required for dynamic routing to work by disabling Automatic Static Optimization
-export async function getServerSideProps() {
+export function getServerSideProps() {
   return {
     props: {},
   };

@@ -11,4 +11,11 @@ const Home: NextPage = () => {
   );
 };
 
+// Required for dynamic routing to work by disabling Automatic Static Optimization
+export function getServerSideProps() {
+  return {
+    props: {},
+  };
+}
+
 export default Home;
