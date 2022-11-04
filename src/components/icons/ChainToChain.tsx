@@ -11,11 +11,13 @@ function _ChainToChain({
   destinationChainId,
   size = 44,
   arrowSize = 32,
+  isNarrow = false,
 }: {
   originChainId: number;
   destinationChainId: number;
   size?: number;
   arrowSize?: number;
+  isNarrow?: boolean;
 }) {
   const isMobile = useIsMobile();
   if (isMobile) {
@@ -24,7 +26,9 @@ function _ChainToChain({
   }
 
   return (
-    <div className="flex items-center justify-center sm:space-x-1 md:space-x-2">
+    <div
+      className={`flex items-center justify-center sm:space-x-1 ${isNarrow ? '' : 'md:space-x-2'}`}
+    >
       <ChainIcon chainId={originChainId} size={size} />
       <Image src={ArrowRightIcon} width={arrowSize} height={arrowSize} alt="" />
       <ChainIcon chainId={destinationChainId} size={size} />

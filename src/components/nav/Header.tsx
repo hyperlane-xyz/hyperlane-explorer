@@ -23,7 +23,7 @@ export function Header({ pathName }: { pathName: string }) {
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   return (
-    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:pl-6 sm:pr-12 w-full">
+    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:px-6 lg:pr-12 w-full">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
