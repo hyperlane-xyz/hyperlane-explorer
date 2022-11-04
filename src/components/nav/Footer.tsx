@@ -1,55 +1,79 @@
 import Image from 'next/future/image';
+import Link from 'next/link';
 
 import { links } from '../../consts/links';
-import Book from '../../images/icons/book.svg';
-import Briefcase from '../../images/icons/briefcase.svg';
-import InfoCircle from '../../images/icons/info-circle.svg';
 import Discord from '../../images/logos/discord.svg';
 import Github from '../../images/logos/github.svg';
 import Hyperlane from '../../images/logos/hyperlane-logo.svg';
+import Medium from '../../images/logos/medium.svg';
 import Twitter from '../../images/logos/twitter.svg';
 
 export function Footer() {
   return (
-    <footer className="mt-3 px-4 py-4 sm:pl-6 sm:pr-8 opacity-80">
-      <div className="flex justify-between items-center">
+    <footer className="mt-2 px-4 py-6 sm:px-10 opacity-80">
+      <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-6 sm:gap-0">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">
-            <Image src={Hyperlane} width={52} height={52} alt="" />
+            <Image src={Hyperlane} width={56} height={56} alt="" />
           </div>
           <div className="flex flex-col ml-3">
-            <p className="text-sm font-light">
+            <p className="text-sm font-light leading-5">
               <span className="text-base font-medium">Hyperlane</span> is the platform
               <br />
               for developers building
               <br />
-              the interchain universe
+              the interchain universe.
             </p>
           </div>
         </div>
-        <div className="grid grid-rows-2 grid-cols-3 gap-y-4 gap-x-5 md:gap-x-8">
-          <FooterIconLink to={links.twitter} imgSrc={Twitter} text="Twitter" />
-          <FooterIconLink to={links.docs} imgSrc={Book} text="Docs" />
-          <FooterIconLink to={links.home} imgSrc={InfoCircle} text="About" />
-          <FooterIconLink to={links.discord} imgSrc={Discord} text="Discord" />
-          <FooterIconLink to={links.github} imgSrc={Github} text="Github" />
-          <FooterIconLink to={links.jobs} imgSrc={Briefcase} text="Jobs" />
+        <div className="flex">
+          <div className="flex flex-col">
+            <FooterLink href={links.home} text="About" />
+            <FooterLink href={links.docs} text="Docs" />
+            <FooterLink href={links.chains} text="Chains" />
+            <FooterLink href={links.jobs} text="Jobs" />
+          </div>
+          <div className="flex flex-col ml-24 sm:ml-16">
+            <FooterIconLink href={links.twitter} imgSrc={Twitter} text="Twitter" />
+            <FooterIconLink href={links.discord} imgSrc={Discord} text="Discord" />
+            <FooterIconLink href={links.github} imgSrc={Github} text="Github" />
+            <FooterIconLink href={links.blog} imgSrc={Medium} text="Blog" />
+          </div>
         </div>
       </div>
     </footer>
   );
 }
 
-function FooterIconLink({ to, imgSrc, text }: { to: string; imgSrc: any; text: string }) {
+function FooterLink({ href, text }: { href: string; text: string }) {
+  const aClasses =
+    'mt-1.5 text-sm hover:underline underline-offset-4 hover:opacity-70 transition-all';
+
+  if (href[0] === '/') {
+    return (
+      <Link href={href}>
+        <a className={aClasses}>{text}</a>
+      </Link>
+    );
+  } else {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={aClasses}>
+        {text}
+      </a>
+    );
+  }
+}
+
+function FooterIconLink({ href, imgSrc, text }: { href: string; imgSrc: any; text: string }) {
   return (
     <a
-      href={to}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center hover:underline hover:opacity-70 transition-all"
+      className="mt-1.5 flex items-center hover:underline underline-offset-4 hover:opacity-70 transition-all"
     >
-      <Image src={imgSrc} alt={text} width={18} height={18} />
-      <span className="hidden sm:inline ml-2 text-sm">{text}</span>
+      <Image src={imgSrc} width={18} height={18} alt="" />
+      <span className="ml-2.5 text-sm">{text}</span>
     </a>
   );
 }

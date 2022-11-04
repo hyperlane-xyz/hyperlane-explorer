@@ -18,20 +18,22 @@ export function Header({ pathName }: { pathName: string }) {
   };
 
   return (
-    <header className="p-2 sm:py-3 sm:pl-6 sm:pr-10 w-full">
+    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:pl-6 sm:pr-10 w-full">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
             <div className="flex items-center scale-90 sm:scale-100">
-              <Image src={Logo} width={24} height={28} alt="" />
-              <Image src={Name} width={124} height={28} alt="Hyperlane" className="ml-2 pt-px" />
-              <div className="font-serif text-[1.85rem] text-blue-500 ml-2">Explorer</div>
+              <Image src={Logo} width={22} height={22} alt="" />
+              <Image src={Name} width={110} height={22} alt="Hyperlane" className="ml-2 pt-1" />
+              <div className="font-serif text-[1.8rem] xs:text-[1.65rem] leading-[1.2rem] text-blue-500 ml-2">
+                Explorer
+              </div>
             </div>
           </a>
         </Link>
         <nav className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-10">
           <Link href="/">
-            <a className={styles.navLink + (pathName === '/' ? ' underline' : '')}>Home</a>
+            <a className={styles.navLink}>Home</a>
           </Link>
           <Link href="/debugger">
             <a className={styles.navLink + (pathName === '/debugger' ? ' underline' : '')}>
@@ -96,7 +98,7 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 
 const styles = {
   navLink:
-    'flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-70 decoration-2 underline-offset-[6px] transition-all',
+    'pt-px flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
   dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
