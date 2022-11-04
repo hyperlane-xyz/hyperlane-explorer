@@ -10,6 +10,9 @@ import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
+import { MiniSearchBar } from '../search/MiniSearchBar';
+
+const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
@@ -17,8 +20,10 @@ export function Header({ pathName }: { pathName: string }) {
     setIsOpen(false);
   };
 
+  const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
+
   return (
-    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:pl-6 sm:pr-10 w-full">
+    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:pl-6 sm:pr-12 w-full">
       <div className="flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center">
@@ -31,21 +36,24 @@ export function Header({ pathName }: { pathName: string }) {
             </div>
           </a>
         </Link>
-        <nav className="hidden sm:flex sm:space-x-8 sm:items-center md:space-x-10">
+        <nav
+          className={`hidden sm:flex sm:space-x-8 sm:items-center ${
+            !showSearch ? 'md:space-x-10' : ''
+          }`}
+        >
           <Link href="/">
             <a className={styles.navLink}>Home</a>
           </Link>
           <Link href="/debugger">
-            <a className={styles.navLink + (pathName === '/debugger' ? ' underline' : '')}>
-              Debugger
-            </a>
+            <a className={styles.navLink}>Debugger</a>
           </Link>
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
+          {showSearch && <MiniSearchBar />}
         </nav>
         <div className="relative flex item-center sm:hidden mr-2">
-          <button className="hover:opactiy-70 transition-all" {...buttonProps}>
+          <button className="hover:opacity-70 transition-all" {...buttonProps}>
             <Image src={HamburgerIcon} width={22} height={22} alt="..." />
           </button>
         </div>

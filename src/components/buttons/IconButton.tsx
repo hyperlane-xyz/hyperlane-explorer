@@ -9,12 +9,23 @@ export interface IconButtonProps {
   disabled?: boolean;
   imgSrc?: any;
   title?: string;
+  type?: 'button' | 'submit';
   passThruProps?: any;
 }
 
 export function IconButton(props: PropsWithChildren<IconButtonProps>) {
-  const { width, height, classes, onClick, imgSrc, disabled, title, children, passThruProps } =
-    props;
+  const {
+    width,
+    height,
+    classes,
+    onClick,
+    imgSrc,
+    disabled,
+    title,
+    type,
+    children,
+    passThruProps,
+  } = props;
 
   const base = 'flex items-center justify-center transition-all';
   const onHover = 'hover:opacity-70';
@@ -25,13 +36,13 @@ export function IconButton(props: PropsWithChildren<IconButtonProps>) {
   return (
     <button
       onClick={onClick}
-      type="button"
+      type={type || 'button'}
       disabled={disabled ?? false}
       title={title}
       className={allClasses}
       {...passThruProps}
     >
-      <Image src={imgSrc} alt={title || ''} width={width} height={height} />
+      <Image src={imgSrc} alt={title?.substring(0, 4) || ''} width={width} height={height} />
       {children}
     </button>
   );
