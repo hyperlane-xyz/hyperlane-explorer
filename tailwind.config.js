@@ -90,10 +90,10 @@ module.exports = {
       },
       borderRadius: {
         none: '0',
-        sm: '0.1rem',
-        DEFAULT: '0.15rem',
-        md: '0.2rem',
-        lg: '0.4rem',
+        sm: '0.2rem',
+        DEFAULT: '0.4rem',
+        md: '0.5rem',
+        lg: '0.6rem',
         full: '9999px',
       },
       blur: {

@@ -103,7 +103,7 @@ export function MessageSearch() {
         value={searchInput}
         onChangeValue={setSearchInput}
         fetching={fetching}
-        placeholder="Search for messages by address or transaction hash"
+        placeholder="Search by address or transaction hash"
       />
       <div className="w-full min-h-[38rem] max-h-[47rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
         {/* Content header and filter bar */}
