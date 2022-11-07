@@ -1,6 +1,6 @@
 // Based on debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { providers } from 'ethers';
+import { BigNumber, providers } from 'ethers';
 
 import { IMessageRecipient__factory, Inbox } from '@hyperlane-xyz/core';
 import {
@@ -17,9 +17,8 @@ import { Environment } from '../../consts/environments';
 import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
-import { chunk } from '../../utils/string';
+import { chunk, trimToLength } from '../../utils/string';
 
-import { debugStatusToDesc } from './strings';
 import {
   LinkProperty,
   MessageDebugDetails,
@@ -27,6 +26,9 @@ import {
   MessageDebugStatus,
   TxDebugStatus,
 } from './types';
+
+const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
+const ETHERS_FAILURE_REASON_REGEX = /.*reason="(.*?)".*/gm;
 
 export async function debugMessagesForHash(
   txHash: string,
@@ -49,6 +51,7 @@ export async function debugMessagesForHash(
     chainName,
     transactionReceipt,
     environment,
+    undefined,
     attemptGetProcessTx,
     multiProvider,
   );
@@ -58,6 +61,7 @@ export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
+  leafIndex?: number,
   attemptGetProcessTx = true,
   multiProvider = new MultiProvider(chainConnectionConfigs),
 ): Promise<MessageDebugResult> {
@@ -78,10 +82,13 @@ export async function debugMessagesForTransaction(
   logger.debug(`Found ${dispatchedMessages.length} messages`);
   const messageDetails: MessageDebugDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
+    const msg = dispatchedMessages[i];
+    if (leafIndex && !BigNumber.from(msg.leafIndex).eq(leafIndex)) {
+      logger.debug(`Skipping message ${i + 1}, does not match leafIndex ${leafIndex}`);
+      continue;
+    }
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(
-      await checkMessage(core, multiProvider, dispatchedMessages[i], attemptGetProcessTx),
-    );
+    messageDetails.push(await checkMessage(core, multiProvider, msg, attemptGetProcessTx));
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -131,7 +138,7 @@ async function checkMessage(
   multiProvider: MultiProvider<any>,
   message: DispatchedMessage,
   attemptGetProcessTx = true,
-) {
+): Promise<MessageDebugDetails> {
   logger.debug(JSON.stringify(message));
   const properties = new Map<string, string | LinkProperty>();
 
@@ -165,9 +172,7 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.InvalidDestDomain,
       properties,
-      summary: `${
-        debugStatusToDesc[MessageDebugStatus.InvalidDestDomain]
-      } Note, domain ids usually do not match chain ids. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `No chain found for domain ${message.parsed.destination}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -178,9 +183,7 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.UnknownDestChain,
       properties,
-      summary: `${
-        debugStatusToDesc[MessageDebugStatus.UnknownDestChain]
-      } Did you set the right environment in the top right picker? See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `Hyperlane has multiple environments. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
@@ -205,7 +208,7 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.AlreadyProcessed,
       properties,
-      summary: debugStatusToDesc[MessageDebugStatus.AlreadyProcessed],
+      details: 'See delivery transaction for more details',
     };
   } else {
     logger.debug('Message not yet processed');
@@ -219,9 +222,7 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.RecipientNotContract,
       properties,
-      summary: `${
-        debugStatusToDesc[MessageDebugStatus.AlreadyProcessed]
-      } Addr: ${recipientAddress}. Ensure bytes32 value is not malformed.`,
+      details: `Recipient address is ${recipientAddress}. Ensure that the bytes32 value is not malformed.`,
     };
   }
 
@@ -239,37 +240,27 @@ async function checkMessage(
     return {
       status: MessageDebugStatus.NoErrorsFound,
       properties,
-      summary: debugStatusToDesc[MessageDebugStatus.NoErrorsFound],
+      details: 'Message may just need more time to be processed',
     };
   } catch (err: any) {
-    const messagePrefix = debugStatusToDesc[MessageDebugStatus.HandleCallFailure];
-    logger.info(messagePrefix);
-    const errorString = errorToString(err);
-    logger.debug(errorString);
+    logger.info('Estimate gas call failed');
 
-    // scan bytecode for handle function selector
-    const bytecode = await destinationProvider.getCode(recipientAddress);
-    const msgRecipientInterface = IMessageRecipient__factory.createInterface();
-    const handleFunction = msgRecipientInterface.functions['handle(uint32,bytes32,bytes)'];
-    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-    if (!bytecode.includes(trimLeading0x(handleSignature))) {
-      const bytecodeMessage = `${
-        debugStatusToDesc[MessageDebugStatus.RecipientNotHandler]
-      } ${handleSignature}. Contract may be proxied.`;
-      logger.info(bytecodeMessage);
+    const bytecodeHasHandle = await tryCheckBytecodeHandle(destinationProvider, recipientAddress);
+    if (!bytecodeHasHandle) {
+      logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
         properties,
-        // TODO format the error string better to be easier to understand
-        summary: `${messagePrefix}. ${bytecodeMessage}`,
+        details: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy.`,
       };
     }
 
+    const errorReason = extractReasonString(errorToString(err, 1000));
+    logger.debug(errorReason);
     return {
       status: MessageDebugStatus.HandleCallFailure,
       properties,
-      // TODO format the error string better to be easier to understand
-      summary: `${messagePrefix}. Details: ${errorString}`,
+      details: errorReason,
     };
   }
 }
@@ -305,4 +296,31 @@ async function tryGetProcessTxHash(destinationInbox: Inbox, messageHash: string)
     logger.error('Error finding process transaction', error);
   }
   return null;
+}
+
+async function tryCheckBytecodeHandle(
+  destinationProvider: providers.Provider,
+  recipientAddress: string,
+) {
+  try {
+    // scan bytecode for handle function selector
+    const bytecode = await destinationProvider.getCode(recipientAddress);
+    const msgRecipientInterface = IMessageRecipient__factory.createInterface();
+    const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
+    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
+    return bytecode.includes(trimLeading0x(handleSignature));
+  } catch (error) {
+    logger.error('Error checking bytecode for handle fn', error);
+    return true;
+  }
+}
+
+function extractReasonString(errorString) {
+  const matches = ETHERS_FAILURE_REASON_REGEX.exec(errorString);
+  if (matches && matches.length >= 2) {
+    return `Failure reason: ${matches[1]}`;
+  } else {
+    // TODO handle more cases here as needed
+    return `Failure reason: ${trimToLength(errorString, 300)}`;
+  }
 }

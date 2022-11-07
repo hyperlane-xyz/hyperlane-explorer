@@ -1,5 +1,4 @@
 import Image from 'next/future/image';
-import Link from 'next/link';
 import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
@@ -18,7 +17,7 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
-import { getChainDisplayName, getChainEnvironment } from '../../utils/chains';
+import { getChainDisplayName } from '../../utils/chains';
 import { getTxExplorerUrl } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { getDateTimeString, getHumanReadableTimeString } from '../../utils/time';
@@ -58,14 +57,19 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   let resolvedDestTx = destTransaction;
   let resolvedMsgStatus = status;
-  let debugStatus: MessageDebugStatus | undefined = undefined;
+  let debugInfo: TransactionCardDebugInfo | undefined = undefined;
   // If there's a delivery status response, use those values as s.o.t. instead
   if (deliveryStatusResponse) {
     resolvedMsgStatus = deliveryStatusResponse.status;
     if (deliveryStatusResponse.status === MessageStatus.Delivered) {
       resolvedDestTx = deliveryStatusResponse.deliveryTransaction;
     } else if (deliveryStatusResponse.status === MessageStatus.Failing) {
-      debugStatus = deliveryStatusResponse.debugStatus;
+      debugInfo = {
+        status: deliveryStatusResponse.debugStatus,
+        details: deliveryStatusResponse.debugDetails,
+        originChainId,
+        originTxHash: originTransaction.transactionHash,
+      };
     }
   }
 
@@ -131,7 +135,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           chainId={originChainId}
           status={resolvedMsgStatus}
           transaction={originTransaction}
-          help={helpText.origin}
+          helpText={helpText.origin}
           shouldBlur={shouldBlur}
         />
         <TransactionCard
@@ -139,12 +143,8 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           chainId={destChainId}
           status={resolvedMsgStatus}
           transaction={resolvedDestTx}
-          debugInfo={{
-            status: debugStatus,
-            originChainId: originChainId,
-            originTxHash: originTransaction.transactionHash,
-          }}
-          help={helpText.destination}
+          debugInfo={debugInfo}
+          helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />
         <DetailsCard message={message} shouldBlur={shouldBlur} />
@@ -180,13 +180,16 @@ interface TransactionCardProps {
   chainId: number;
   status: MessageStatus;
   transaction?: PartialTransactionReceipt;
-  debugInfo?: {
-    status?: MessageDebugStatus;
-    originChainId: number;
-    originTxHash: string;
-  };
-  help: string;
+  debugInfo?: TransactionCardDebugInfo;
+  helpText: string;
   shouldBlur: boolean;
+}
+
+interface TransactionCardDebugInfo {
+  status: MessageDebugStatus;
+  details: string;
+  originChainId: number;
+  originTxHash: string;
 }
 
 function TransactionCard({
@@ -195,7 +198,7 @@ function TransactionCard({
   status,
   transaction,
   debugInfo,
-  help,
+  helpText,
   shouldBlur,
 }: TransactionCardProps) {
   const txExplorerLink = getTxExplorerUrl(chainId, transaction?.transactionHash);
@@ -207,7 +210,7 @@ function TransactionCard({
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">{title}</h3>
-          <HelpIcon size={16} text={help} />
+          <HelpIcon size={16} text={helpText} />
         </div>
       </div>
       {transaction && (
@@ -264,23 +267,17 @@ function TransactionCard({
       )}
       {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500">
-            Destination chain delivery transaction currently failing
+          <div className="text-gray-500 text-center">
+            Destination delivery transaction currently failing
           </div>
           {debugInfo && (
             <>
-              <div className="mt-4 text-gray-500">{`Failure reason: ${
-                debugInfo.status ? debugStatusToDesc[debugInfo.status] : 'Unknown'
-              }`}</div>
-              <Link
-                href={`/debugger?env=${getChainEnvironment(debugInfo.originChainId)}&txHash=${
-                  debugInfo.originTxHash
-                }`}
-              >
-                <a className="mt-6 block text-sm text-gray-500 pl-px underline">
-                  View in transaction debugger
-                </a>
-              </Link>
+              <div className="mt-4 text-gray-500 text-center">
+                {debugStatusToDesc[debugInfo.status]}
+              </div>
+              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center">
+                {debugInfo.details}
+              </div>
             </>
           )}
         </div>
