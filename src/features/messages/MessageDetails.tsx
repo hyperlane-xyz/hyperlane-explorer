@@ -54,10 +54,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
   } = message;
   const isIcaMsg = isIcaMessage(message);
 
-  const { data: deliveryStatusResponse, error: deliveryStatusError } = useMessageDeliveryStatus(
-    message,
-    isMessageFound,
-  );
+  const { data: deliveryStatusResponse } = useMessageDeliveryStatus(message, isMessageFound);
 
   let resolvedDestTx = destTransaction;
   let resolvedMsgStatus = status;
@@ -86,14 +83,10 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     } else {
       setBanner('');
     }
-
-    if (deliveryStatusError) {
-      logger.error('Error fetching delivery status', deliveryStatusError);
-      toast.error(`${deliveryStatusError}`);
-    }
-
+  }, [error, isFetching, resolvedMsgStatus, isMessageFound, setBanner]);
+  useEffect(() => {
     return () => setBanner('');
-  }, [error, deliveryStatusError, isFetching, resolvedMsgStatus, isMessageFound, setBanner]);
+  }, [setBanner]);
 
   const reExecutor = useCallback(() => {
     if (!isMessageFound || resolvedMsgStatus !== MessageStatus.Delivered) {

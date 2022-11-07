@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { logger } from 'ethers';
+import { useEffect } from 'react';
+import { toast } from 'react-toastify';
 
 import { Message, MessageStatus } from '../../types';
+import { logger } from '../../utils/logger';
 
 import type { MessageDeliveryStatusResponse } from './types';
 
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   const serializedMessage = JSON.stringify(message);
-  return useQuery(
+  const queryResult = useQuery(
     ['messageProcessTx', serializedMessage, isReady],
     async () => {
       if (!isReady || !message || message.status === MessageStatus.Delivered) return null;
@@ -29,4 +31,14 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
     },
     { retry: false },
   );
+
+  // Show toast on error
+  const error = queryResult.error;
+  useEffect(() => {
+    if (error) {
+      logger.error('Error fetching delivery status', error);
+      toast.error(`${error}`);
+    }
+  }, [error]);
+  return queryResult;
 }
