@@ -13,6 +13,7 @@ export interface MessageDeliverySuccessResult extends MessageDeliveryResult {
 export interface MessageDeliveryFailingResult extends MessageDeliveryResult {
   status: MessageStatus.Failing;
   debugStatus: MessageDebugStatus;
+  debugDetails: string;
 }
 
 export interface MessageDeliveryPendingResult extends MessageDeliveryResult {

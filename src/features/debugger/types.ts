@@ -34,7 +34,7 @@ export interface LinkProperty {
 export interface MessageDebugDetails {
   status: MessageDebugStatus;
   properties: Map<string, string | LinkProperty>;
-  summary: string;
+  details: string;
 }
 
 export interface DebugMessagesFoundResult {

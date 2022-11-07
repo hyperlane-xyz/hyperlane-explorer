@@ -20,6 +20,7 @@ import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../messages/utils';
 
 import { debugMessagesForHash } from './debugMessage';
+import { debugStatusToDesc } from './strings';
 import { MessageDebugResult, TxDebugStatus } from './types';
 
 const QUERY_HASH_PARAM = 'txHash';
@@ -118,7 +119,8 @@ function DebugResult({ result }: { result: MessageDebugResult | null | undefined
             <h2 className="text-lg text-gray-600">{`Message ${i + 1} / ${
               result.messageDetails.length
             }`}</h2>
-            <p className="mt-2 leading-relaxed">{m.summary}</p>
+            <p className="mt-2 leading-relaxed">{debugStatusToDesc[m.status]}</p>
+            <p className="mt-2 leading-relaxed">{m.details}</p>
             <div className="mt-2 text-sm">
               {Array.from(m.properties.entries()).map(([key, val]) => (
                 <div className="flex mt-1" key={`message-${i}-prop-${key}`}>

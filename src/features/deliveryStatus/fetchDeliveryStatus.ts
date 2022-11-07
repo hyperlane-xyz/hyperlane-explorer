@@ -56,8 +56,8 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const originTxHash = message.originTransaction.transactionHash;
-    const originChainId = message.originChainId;
+    const { originChainId, originTransaction, leafIndex } = message;
+    const originTxHash = originTransaction.transactionHash;
     const originName = chainIdToName[originChainId];
     const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(originChainId, originTxHash);
@@ -67,6 +67,7 @@ export async function fetchDeliveryStatus(
       originName,
       originTxReceipt,
       environment,
+      leafIndex,
       false,
     );
 
@@ -87,6 +88,7 @@ export async function fetchDeliveryStatus(
       const result: MessageDeliveryFailingResult = {
         status: MessageStatus.Failing,
         debugStatus: firstError.status,
+        debugDetails: firstError.details,
       };
       return result;
     }
