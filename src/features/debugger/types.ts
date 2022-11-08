@@ -9,8 +9,9 @@ export enum MessageDebugStatus {
   NoErrorsFound = 'noErrorsFound',
   InvalidDestDomain = 'invalidDestDomain',
   UnknownDestChain = 'unknownDestChain',
-  RecipientNotContract = 'RecipientNotContract',
-  RecipientNotHandler = 'RecipientNotHandler',
+  RecipientNotContract = 'recipientNotContract',
+  RecipientNotHandler = 'recipientNotHandler',
+  IcaCallFailure = 'icaCallFailure',
   HandleCallFailure = 'handleCallFailure',
 }
 
@@ -34,7 +35,7 @@ export interface LinkProperty {
 export interface MessageDebugDetails {
   status: MessageDebugStatus;
   properties: Map<string, string | LinkProperty>;
-  summary: string;
+  details: string;
 }
 
 export interface DebugMessagesFoundResult {
