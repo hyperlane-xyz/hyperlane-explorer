@@ -388,6 +388,6 @@ function extractReasonString(rawError: any) {
   } else {
     logger.warn('Cannot extract reason string in tx error msg:', errorString);
     // TODO handle more cases here as needed
-    return `Failure reason: ${trimToLength(errorString, 300)}`;
+    return `Failure reason: ${trimToLength(errorString, 250)}`;
   }
 }

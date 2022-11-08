@@ -275,7 +275,7 @@ function TransactionCard({
               <div className="mt-4 text-gray-500 text-center">
                 {debugStatusToDesc[debugInfo.status]}
               </div>
-              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center">
+              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center break-words">
                 {debugInfo.details}
               </div>
             </>
