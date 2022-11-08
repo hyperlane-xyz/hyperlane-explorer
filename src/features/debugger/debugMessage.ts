@@ -350,7 +350,9 @@ async function checkIcaMessageError(
       call.callBytes,
       destinationProvider,
     );
-    if (errorReason) return errorReason;
+    if (errorReason) {
+      return `ICA call ${i + 1} of ${calls.length} cannot be executed. ${errorReason}`;
+    }
   }
 
   return null;
