@@ -8,14 +8,21 @@ import {
   hyperlaneCoreAddresses,
 } from '@hyperlane-xyz/sdk';
 
-import { Message } from '../../types';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 // This assumes all chains have the same ICA address
 const ICA_ADDRESS = Object.values(hyperlaneCoreAddresses)[0].interchainAccountRouter;
 
-export function isIcaMessage({ hash, sender, recipient }: Message) {
+export function isIcaMessage({
+  sender,
+  recipient,
+  hash,
+}: {
+  sender: string;
+  recipient: string;
+  hash?: string;
+}) {
   const isSenderIca = isAddressIcaRouter(sender);
   const isRecipIca = isAddressIcaRouter(recipient);
   if (isSenderIca && isRecipIca) return true;
@@ -32,7 +39,7 @@ function isAddressIcaRouter(addr: string) {
   return areAddressesEqual(addr, ICA_ADDRESS);
 }
 
-export function decodeIcaBody(body: string) {
+export function tryDecodeIcaBody(body: string) {
   if (!body || BigNumber.from(body).isZero()) return null;
   try {
     const decoder = utils.defaultAbiCoder;
@@ -67,7 +74,7 @@ export function decodeIcaBody(body: string) {
 }
 
 // TODO do this on backend and use private RPC
-async function fetchIcaAddress(originDomainId: number, senderAddress: string) {
+export async function tryFetchIcaAddress(originDomainId: number, senderAddress: string) {
   try {
     logger.debug('Fetching Ica address', originDomainId, senderAddress);
     const chainName = DomainIdToChainName[originDomainId];
@@ -89,7 +96,7 @@ export function useIcaAddress(originDomainId: number, senderAddress?: string | n
     ['messageIcaAddress', originDomainId, senderAddress],
     () => {
       if (!originDomainId || !senderAddress || BigNumber.from(senderAddress).isZero()) return null;
-      return fetchIcaAddress(originDomainId, senderAddress);
+      return tryFetchIcaAddress(originDomainId, senderAddress);
     },
     { retry: false },
   );
