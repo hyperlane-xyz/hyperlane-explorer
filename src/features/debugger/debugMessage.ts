@@ -18,6 +18,7 @@ import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk, trimToLength } from '../../utils/string';
+import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
 import {
   LinkProperty,
@@ -28,7 +29,6 @@ import {
 } from './types';
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
-const ETHERS_FAILURE_REASON_REGEX = /.*reason="(.*?)".*/gm;
 
 export async function debugMessagesForHash(
   txHash: string,
@@ -142,41 +142,35 @@ async function checkMessage(
   logger.debug(JSON.stringify(message));
   const properties = new Map<string, string | LinkProperty>();
 
-  if (message.parsed.sender.toString().startsWith('0x000000000000000000000000')) {
-    const originChainName = DomainIdToChainName[message.parsed.origin];
-    const originCC = multiProvider.getChainConnection(originChainName);
-    const address = '0x' + message.parsed.sender.toString().substring(26);
-    properties.set('Sender', { url: await originCC.getAddressUrl(address), text: address });
-  } else {
-    properties.set('Sender', message.parsed.sender.toString());
-  }
-  if (message.parsed.recipient.toString().startsWith('0x000000000000000000000000')) {
-    const destinationChainName = DomainIdToChainName[message.parsed.destination];
-    const destinationCC = multiProvider.getChainConnection(destinationChainName);
-    const address = '0x' + message.parsed.recipient.toString().substring(26);
-    properties.set('Recipient', { url: await destinationCC.getAddressUrl(address), text: address });
-  } else {
-    properties.set('Recipient', message.parsed.recipient.toString());
-  }
-  properties.set('Origin Domain', message.parsed.origin.toString());
-  properties.set('Origin Chain', DomainIdToChainName[message.parsed.origin] || 'Unknown');
-  properties.set('Destination Domain', message.parsed.destination.toString());
-  properties.set('Destination Chain', DomainIdToChainName[message.parsed.destination] || 'Unknown');
+  const {
+    sender: senderBytes,
+    recipient: recipientBytes,
+    body,
+    destination,
+    origin,
+  } = message.parsed;
+  const senderAddress = utils.bytes32ToAddress(senderBytes.toString());
+  const recipientAddress = utils.bytes32ToAddress(recipientBytes.toString());
+
+  properties.set('Sender', senderAddress);
+  properties.set('Recipient', recipientAddress);
+  properties.set('Origin Domain', origin.toString());
+  properties.set('Origin Chain', DomainIdToChainName[origin] || 'Unknown');
+  properties.set('Destination Domain', destination.toString());
+  properties.set('Destination Chain', DomainIdToChainName[destination] || 'Unknown');
   properties.set('Leaf index', message.leafIndex.toString());
   properties.set('Raw Bytes', message.message);
 
-  const destinationChain = DomainIdToChainName[message.parsed.destination];
-
+  const destinationChain = DomainIdToChainName[destination];
+  logger.debug(`Destination chain: ${destinationChain}`);
   if (!destinationChain) {
-    logger.info(`Unknown destination domain ${message.parsed.destination}`);
+    logger.info(`Unknown destination domain ${destination}`);
     return {
       status: MessageDebugStatus.InvalidDestDomain,
       properties,
-      details: `No chain found for domain ${message.parsed.destination}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `No chain found for domain ${destination}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
-
-  logger.debug(`Destination chain: ${destinationChain}`);
 
   if (!core.knownChain(destinationChain)) {
     logger.info(`Destination chain ${destinationChain} unknown for environment`);
@@ -188,7 +182,7 @@ async function checkMessage(
   }
 
   const destinationInbox = core.getMailboxPair(
-    DomainIdToChainName[message.parsed.origin],
+    DomainIdToChainName[origin],
     destinationChain,
   ).destinationInbox;
 
@@ -214,9 +208,7 @@ async function checkMessage(
     logger.debug('Message not yet processed');
   }
 
-  const recipientAddress = utils.bytes32ToAddress(message.parsed.recipient);
   const recipientIsContract = await isContract(multiProvider, destinationChain, recipientAddress);
-
   if (!recipientIsContract) {
     logger.info(`Recipient address ${recipientAddress} is not a contract`);
     return {
@@ -227,15 +219,14 @@ async function checkMessage(
   }
 
   const destinationProvider = multiProvider.getChainProvider(destinationChain);
-  const recipient = IMessageRecipient__factory.connect(recipientAddress, destinationProvider);
-
+  const recipientContract = IMessageRecipient__factory.connect(
+    recipientAddress,
+    destinationProvider,
+  );
   try {
-    await recipient.estimateGas.handle(
-      message.parsed.origin,
-      message.parsed.sender,
-      message.parsed.body,
-      { from: destinationInbox.address },
-    );
+    await recipientContract.estimateGas.handle(origin, senderBytes, body, {
+      from: destinationInbox.address,
+    });
     logger.debug('Calling recipient `handle` function from the inbox does not revert');
     return {
       status: MessageDebugStatus.NoErrorsFound,
@@ -255,7 +246,23 @@ async function checkMessage(
       };
     }
 
-    const errorReason = extractReasonString(errorToString(err, 1000));
+    const icaCallError = await checkIcaMessageError(
+      senderAddress,
+      recipientAddress,
+      messageHash,
+      body,
+      origin,
+      destinationProvider,
+    );
+    if (icaCallError) {
+      return {
+        status: MessageDebugStatus.IcaCallFailure,
+        properties,
+        details: icaCallError,
+      };
+    }
+
+    const errorReason = extractReasonString(err);
     logger.debug(errorReason);
     return {
       status: MessageDebugStatus.HandleCallFailure,
@@ -315,12 +322,72 @@ async function tryCheckBytecodeHandle(
   }
 }
 
-function extractReasonString(errorString) {
-  const matches = ETHERS_FAILURE_REASON_REGEX.exec(errorString);
+async function checkIcaMessageError(
+  sender: string,
+  recipient: string,
+  hash: string,
+  body: string,
+  originDomainId: number,
+  destinationProvider: providers.Provider,
+) {
+  if (!isIcaMessage({ sender, recipient, hash })) return null;
+  logger.debug('Message is for an ICA');
+
+  const decodedBody = tryDecodeIcaBody(body);
+  if (!decodedBody) return null;
+
+  const { sender: originalSender, calls } = decodedBody;
+
+  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender);
+  if (!icaAddress) return null;
+
+  for (let i = 0; i < calls.length; i++) {
+    const call = calls[i];
+    logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
+    const errorReason = await tryCheckIcaCallError(
+      icaAddress,
+      call.destinationAddress,
+      call.callBytes,
+      destinationProvider,
+    );
+    if (errorReason) {
+      return `ICA call ${i + 1} of ${calls.length} cannot be executed. ${errorReason}`;
+    }
+  }
+
+  return null;
+}
+
+async function tryCheckIcaCallError(
+  icaAddress: string,
+  destinationAddress: string,
+  callBytes: string,
+  destinationProvider: providers.Provider,
+) {
+  try {
+    await destinationProvider.estimateGas({
+      to: destinationAddress,
+      data: callBytes,
+      from: icaAddress,
+    });
+    logger.debug(`No call error found for call from ${icaAddress} to ${destinationAddress}`);
+    return null;
+  } catch (err) {
+    const errorReason = extractReasonString(err);
+    logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, errorReason);
+    return errorReason;
+  }
+}
+
+function extractReasonString(rawError: any) {
+  const errorString = errorToString(rawError, 1000);
+  const ethersReasonRegex = /reason="(.*?)"/gm;
+  const matches = ethersReasonRegex.exec(errorString);
   if (matches && matches.length >= 2) {
     return `Failure reason: ${matches[1]}`;
   } else {
+    logger.warn('Cannot extract reason string in tx error msg:', errorString);
     // TODO handle more cases here as needed
-    return `Failure reason: ${trimToLength(errorString, 300)}`;
+    return `Failure reason: ${trimToLength(errorString, 250)}`;
   }
 }

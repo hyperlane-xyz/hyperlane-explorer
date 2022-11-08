@@ -9,8 +9,9 @@ export enum MessageDebugStatus {
   NoErrorsFound = 'noErrorsFound',
   InvalidDestDomain = 'invalidDestDomain',
   UnknownDestChain = 'unknownDestChain',
-  RecipientNotContract = 'RecipientNotContract',
-  RecipientNotHandler = 'RecipientNotHandler',
+  RecipientNotContract = 'recipientNotContract',
+  RecipientNotHandler = 'recipientNotHandler',
+  IcaCallFailure = 'icaCallFailure',
   HandleCallFailure = 'handleCallFailure',
 }
 

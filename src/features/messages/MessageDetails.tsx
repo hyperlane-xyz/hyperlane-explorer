@@ -26,7 +26,7 @@ import { debugStatusToDesc } from '../debugger/strings';
 import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
-import { decodeIcaBody, isIcaMessage, useIcaAddress } from './ica';
+import { isIcaMessage, tryDecodeIcaBody, useIcaAddress } from './ica';
 import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
@@ -275,7 +275,7 @@ function TransactionCard({
               <div className="mt-4 text-gray-500 text-center">
                 {debugStatusToDesc[debugInfo.status]}
               </div>
-              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center">
+              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center break-words">
                 {debugInfo.details}
               </div>
             </>
@@ -365,7 +365,7 @@ interface IcaDetailsCardProps {
 }
 
 function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }: IcaDetailsCardProps) {
-  const decodeResult = useMemo(() => decodeIcaBody(body), [body]);
+  const decodeResult = useMemo(() => tryDecodeIcaBody(body), [body]);
 
   const {
     data: icaAddress,
