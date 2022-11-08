@@ -28,7 +28,6 @@ import {
 } from './types';
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
-const ETHERS_FAILURE_REASON_REGEX = /.*reason="(.*?)".*/gm;
 
 export async function debugMessagesForHash(
   txHash: string,
@@ -315,11 +314,13 @@ async function tryCheckBytecodeHandle(
   }
 }
 
-function extractReasonString(errorString) {
-  const matches = ETHERS_FAILURE_REASON_REGEX.exec(errorString);
+function extractReasonString(errorString: string) {
+  const ethersReasonRegex = /reason="(.*?)"/gm;
+  const matches = ethersReasonRegex.exec(errorString);
   if (matches && matches.length >= 2) {
     return `Failure reason: ${matches[1]}`;
   } else {
+    logger.warn('Cannot extract reason string in tx error msg:', errorString);
     // TODO handle more cases here as needed
     return `Failure reason: ${trimToLength(errorString, 300)}`;
   }
