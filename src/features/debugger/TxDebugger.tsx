@@ -39,7 +39,7 @@ export function TxDebugger() {
   const isValidInput = isValidSearchQuery(sanitizedInput, false);
 
   const {
-    isLoading: fetching,
+    isLoading: isFetching,
     isError: hasError,
     data,
   } = useQuery(
@@ -60,7 +60,7 @@ export function TxDebugger() {
       <SearchBar
         value={searchInput}
         onChangeValue={setSearchInput}
-        fetching={fetching}
+        isFetching={isFetching}
         placeholder="Search transaction hash to debug message"
       />
       <div className="w-full h-[38.2rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
@@ -75,7 +75,7 @@ export function TxDebugger() {
           </div>
         </Fade>
         <SearchEmptyError
-          show={isValidInput && !hasError && !fetching && !data}
+          show={isValidInput && !hasError && !isFetching && !data}
           hasInput={hasInput}
           allowAddress={false}
         />
