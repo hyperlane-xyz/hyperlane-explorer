@@ -23,7 +23,8 @@ export interface MessageStub {
   destinationDomainId: number;
   originChainId: number;
   destinationChainId: number;
-  timestamp: number; // Note, equivalent to timestamp in originTx
+  originTimestamp: number; // Note, equivalent to timestamp in originTransaction
+  destinationTimestamp?: number; // Note, equivalent to timestamp in destinationTransaction
 }
 
 export interface Message extends MessageStub {

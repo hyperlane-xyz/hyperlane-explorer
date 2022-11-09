@@ -220,6 +220,11 @@ const messageStubProps = `
     id
     tx_id
     inbox_address
+    transaction {
+      block {
+        timestamp
+      }
+    }
   }
   message_states {
     block_height

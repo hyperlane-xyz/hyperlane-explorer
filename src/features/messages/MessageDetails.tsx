@@ -27,7 +27,7 @@ import { MessageDebugStatus } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { isIcaMessage, tryDecodeIcaBody, useIcaAddress } from './ica';
-import { PLACEHOLDER_MESSAGES } from './placeholderMessages';
+import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
 
@@ -43,7 +43,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   const isMessageFound = messages.length > 0;
   const shouldBlur = !isMessageFound || isFetching;
-  const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGES[0];
+  const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGE;
   const {
     status,
     originChainId,

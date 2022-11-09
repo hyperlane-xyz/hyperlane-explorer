@@ -3,10 +3,19 @@ import Link from 'next/link';
 import { ChainToChain } from '../../components/icons/ChainToChain';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
-import { getHumanReadableTimeString } from '../../utils/time';
+import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
 
 export function MessageSummary({ message }: { message: MessageStub }) {
-  const { id, status, sender, recipient, timestamp, originChainId, destinationChainId } = message;
+  const {
+    id,
+    status,
+    sender,
+    recipient,
+    originChainId,
+    destinationChainId,
+    originTimestamp,
+    destinationTimestamp,
+  } = message;
 
   let statusColor = 'bg-beige-500';
   let statusText = 'Pending';
@@ -37,13 +46,19 @@ export function MessageSummary({ message }: { message: MessageStub }) {
             <div className={styles.label}>Recipient</div>
             <div className={styles.value}>{shortenAddress(recipient) || 'Invalid Address'}</div>
           </div>
-          <div className="flex flex-col sm:w-28">
+          <div className="flex flex-col sm:w-24">
             <div className={styles.label}>Time sent</div>
-            <div className={styles.value}>{getHumanReadableTimeString(timestamp)}</div>
+            <div className={styles.valueTruncated}>
+              {getHumanReadableTimeString(originTimestamp)}
+            </div>
           </div>
           <div className="hidden lg:flex flex-col sm:w-16">
             <div className={styles.label}>Duration</div>
-            <div className={styles.value}>{Math.floor((Date.now() - timestamp) / 1000)}</div>
+            <div className={styles.valueTruncated}>
+              {destinationTimestamp
+                ? getHumanReadableDuration(destinationTimestamp - originTimestamp)
+                : '-'}
+            </div>
           </div>
         </div>
         <div className={`w-20 md:w-[5.5rem] py-2 text-sm text-center rounded ${statusColor}`}>
@@ -57,4 +72,5 @@ export function MessageSummary({ message }: { message: MessageStub }) {
 const styles = {
   label: 'text-sm text-gray-500',
   value: 'text-sm mt-1',
+  valueTruncated: 'text-sm mt-1 truncate',
 };

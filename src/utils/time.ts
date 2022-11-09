@@ -27,6 +27,20 @@ export function getHumanReadableTimeString(timestamp: number) {
   return date.toLocaleDateString();
 }
 
+export function getHumanReadableDuration(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+
+  if (seconds <= 60) {
+    return `${seconds} sec`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  return `${hours} hr`;
+}
+
 export function getDateTimeString(timestamp: number) {
   const date = new Date(timestamp);
   return `${date.toLocaleTimeString()} ${date.toLocaleDateString()}`;
