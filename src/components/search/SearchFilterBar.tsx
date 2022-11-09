@@ -1,11 +1,11 @@
 import Image from 'next/future/image';
 import { useMemo } from 'react';
 
-import { SelectField } from '../../components/input/SelectField';
 import { prodAndTestChains } from '../../consts/chains';
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { trimToLength } from '../../utils/string';
+import { SelectField } from '../input/SelectField';
 
 interface Props {
   originChainFilter: string;
