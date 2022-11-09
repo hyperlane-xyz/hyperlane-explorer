@@ -35,7 +35,7 @@ export function ContentDetailsCard({
     body,
   );
   return (
-    <Card classes="mt-2 space-y-4" width="w-full">
+    <Card classes="space-y-4" width="w-full">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />

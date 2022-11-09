@@ -20,7 +20,7 @@ export function MessageTable({
         <th className={`${styles.header} pr-1`}>Chains</th>
         <th className={styles.header}>Sender</th>
         <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
-        <th className={styles.header}>Time Sent</th>
+        <th className={styles.header}>Time sent</th>
         <th className={`${styles.header} hidden lg:table-cell`}>Duration</th>
         <th className={styles.header}>Status</th>
       </tr>

@@ -16,6 +16,7 @@ import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliverySt
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
+import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard, TransactionCardDebugInfo } from './cards/TransactionCard';
 import { isIcaMessage } from './ica';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
@@ -125,6 +126,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />
+        <TimelineCard message={message} shouldBlur={shouldBlur} />
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
