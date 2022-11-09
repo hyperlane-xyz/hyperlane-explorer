@@ -10,10 +10,10 @@ interface Props {
   value: string;
   placeholder: string;
   onChangeValue: (v: string) => void;
-  fetching: boolean;
+  isFetching: boolean;
 }
 
-export function SearchBar({ value, placeholder, onChangeValue, fetching }: Props) {
+export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Props) {
   const onChange = (event: ChangeEvent<HTMLInputElement> | null) => {
     const value = event?.target?.value || '';
     onChangeValue(value);
@@ -29,9 +29,9 @@ export function SearchBar({ value, placeholder, onChangeValue, fetching }: Props
         className="p-2 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 rounded placeholder:text-gray-500 focus:outline-none"
       />
       <div className="h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded bg-beige-300">
-        {fetching && <Spinner classes="scale-[30%] mr-2.5" />}
-        {!fetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
-        {!fetching && value && (
+        {isFetching && <Spinner classes="scale-[30%] mr-2.5" />}
+        {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
+        {!isFetching && value && (
           <IconButton
             imgSrc={XIcon}
             title="Clear search"

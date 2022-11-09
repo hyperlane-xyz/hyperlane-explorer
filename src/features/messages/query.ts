@@ -24,6 +24,9 @@ export function parseMessageQueryResult(data: MessagesQueryResult | undefined): 
 function parseMessageStub(m: MessageStubEntry): MessageStub | null {
   try {
     const status = getMessageStatus(m);
+    const destinationTimestamp = m.delivered_message?.transaction
+      ? parseTimestampString(m.delivered_message.transaction.block.timestamp)
+      : undefined;
     return {
       id: m.id,
       status,
@@ -33,34 +36,29 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       destinationDomainId: m.destination,
       originChainId: domainToChain[m.origin],
       destinationChainId: domainToChain[m.destination],
-      timestamp: parseTimestampString(m.timestamp),
+      originTimestamp: parseTimestampString(m.timestamp),
+      destinationTimestamp,
     };
   } catch (error) {
-    logger.error('Error parsing message', error);
+    logger.error('Error parsing message stub', error);
     return null;
   }
 }
 
 function parseMessage(m: MessageEntry): Message | null {
   try {
-    const status = getMessageStatus(m);
-    const destinationTransaction =
-      status === MessageStatus.Delivered && m.delivered_message?.transaction
-        ? parseTransaction(m.delivered_message.transaction)
-        : undefined;
+    const stub = parseMessageStub(m);
+    if (!stub) throw new Error('Message stub required');
+
+    const destinationTransaction = m.delivered_message?.transaction
+      ? parseTransaction(m.delivered_message.transaction)
+      : undefined;
+
     return {
-      id: m.id,
-      status,
-      sender: parsePaddedAddress(m.sender),
-      recipient: parsePaddedAddress(m.recipient),
+      ...stub,
       body: decodeBinaryHex(m.msg_body ?? ''),
       leafIndex: m.leaf_index,
       hash: ensureLeading0x(m.hash),
-      originDomainId: m.origin,
-      destinationDomainId: m.destination,
-      originChainId: domainToChain[m.origin],
-      destinationChainId: domainToChain[m.destination],
-      timestamp: parseTimestampString(m.timestamp),
       originTransaction: parseTransaction(m.transaction),
       destinationTransaction,
     };
@@ -102,7 +100,7 @@ function getMessageStatus(m: MessageEntry | MessageStubEntry) {
     return MessageStatus.Delivered;
   } else if (message_states.length > 0) {
     const latestState = message_states.at(-1);
-    if (latestState && latestState.processable) {
+    if (latestState && !latestState.processable) {
       return MessageStatus.Failing;
     }
   }

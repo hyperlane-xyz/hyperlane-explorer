@@ -26,6 +26,11 @@ export interface DeliveredMessageStubEntry {
   id: number;
   inbox_address: string; // binary e.g. \\x123
   tx_id: number;
+  transaction: {
+    block: {
+      timestamp: string; // e.g. "2022-08-28T17:30:15"
+    };
+  };
 }
 
 export interface DeliveredMessageEntry extends DeliveredMessageStubEntry {
