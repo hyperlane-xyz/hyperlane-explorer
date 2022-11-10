@@ -28,7 +28,7 @@ export function getHumanReadableTimeString(timestamp: number) {
 }
 
 export function getHumanReadableDuration(ms: number) {
-  const seconds = Math.floor(ms / 1000);
+  const seconds = Math.round(ms / 1000);
 
   if (seconds <= 60) {
     return `${seconds} sec`;

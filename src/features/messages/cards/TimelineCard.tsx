@@ -1,16 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
+import { BigNumber } from 'ethers';
 import Image from 'next/future/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
+import { ChainName, chainMetadata } from '@hyperlane-xyz/sdk';
+
 import { WideChevronIcon } from '../../../components/icons/WideChevron';
 import { Card } from '../../../components/layout/Card';
+import { chainIdToBlockTime, chainIdToName } from '../../../consts/chains';
 import EnvelopeIcon from '../../../images/icons/envelope-check.svg';
 import LockIcon from '../../../images/icons/lock.svg';
 import AirplaneIcon from '../../../images/icons/paper-airplane.svg';
 import ShieldIcon from '../../../images/icons/shield-check.svg';
 import { Message, MessageStatus } from '../../../types';
+import { getChainEnvironment } from '../../../utils/chains';
+import { queryExplorerForBlock } from '../../../utils/explorers';
 import { logger } from '../../../utils/logger';
+import { fetchWithTimeout } from '../../../utils/timeout';
+
+const VALIDATION_TIME_EST = 5;
 
 enum Phase {
   Sent = 0,
@@ -21,14 +30,31 @@ enum Phase {
 
 interface Props {
   message: Message;
+  resolvedStatus: MessageStatus;
   shouldBlur: boolean;
 }
 
-export function TimelineCard({ message, shouldBlur }: Props) {
-  const { status, originTimestamp } = message;
-  const timeSent = new Date(originTimestamp);
+export function TimelineCard({ message, resolvedStatus: status }: Props) {
+  const {
+    originChainId,
+    destinationChainId,
+    originTimestamp,
+    destinationTimestamp,
+    leafIndex,
+    originTransaction,
+  } = message;
 
-  const { phase, timings, isFetching } = useMessagePhase(message);
+  const { phase, timings } = useMessagePhase(
+    status,
+    originChainId,
+    destinationChainId,
+    leafIndex,
+    originTransaction.blockNumber,
+    originTimestamp,
+    destinationTimestamp,
+  );
+
+  const timeSent = new Date(originTimestamp);
 
   return (
     <Card width="w-full">
@@ -150,8 +176,8 @@ function getPhaseHeader(
   } else if (targetPhase === Phase.Relayed) {
     label = currentPhase >= targetPhase ? 'Relayed' : 'Relaying';
   }
-  const timing = timings[currentPhase];
-  if (timing) return `${label} - ${timing}`;
+  const timing = timings[targetPhase];
+  if (timing) return `${label}: ${timing}`;
   else return label;
 }
 
@@ -162,29 +188,95 @@ function getPhaseClass(targetPhase: Phase, currentPhase: Phase, messageStatus: M
   return 'opacity-50';
 }
 
-function useMessagePhase(message: Message) {
-  const { data, isFetching, error } = useQuery(['messagePhase', message], async () => {
-    const { status } = message;
-    let phase = Phase.Sent;
-    if (status === MessageStatus.Delivered) {
-      phase = Phase.Relayed;
-    } else if (status === MessageStatus.Failing) {
-      // TODO Assumes only failures at the relaying step for now
-      phase = Phase.Validated;
-    }
+function useMessagePhase(
+  status: MessageStatus,
+  originChainId: number,
+  destChainId: number,
+  leafIndex: number,
+  originBlockNumber: number,
+  originTimestamp: number,
+  destinationTimestamp?: number,
+) {
+  const { data, isFetching, error } = useQuery(
+    [
+      'messagePhase',
+      status,
+      originChainId,
+      destChainId,
+      originTimestamp,
+      destinationTimestamp,
+      leafIndex,
+      originBlockNumber,
+    ],
+    async () => {
+      if (!originChainId || !destChainId || !leafIndex || !originTimestamp || !originBlockNumber) {
+        return null;
+      }
 
-    const timings: Partial<Record<Phase, string>> = {};
-    return {
-      phase,
-      timings,
-    };
-  });
+      const relayEstimate = Math.floor(chainIdToBlockTime[destChainId] * 1.5);
+      const finalityBlocks = getFinalityBlocks(originChainId);
+      const finalityEstimate = finalityBlocks * (chainIdToBlockTime[originChainId] || 3);
+
+      if (status === MessageStatus.Delivered && destinationTimestamp) {
+        // For delivered messages, just to rough estimates for phases
+        // This saves us from making extra explorer calls. May want to revisit in future
+
+        const totalDuration = Math.round((destinationTimestamp - originTimestamp) / 1000);
+        const finalityDuration = Math.min(finalityEstimate, totalDuration - VALIDATION_TIME_EST);
+        const remaining = totalDuration - finalityDuration;
+        const validateDuration = Math.min(Math.round(remaining * 0.25), VALIDATION_TIME_EST);
+        const relayDuration = remaining - validateDuration;
+        return {
+          phase: Phase.Relayed,
+          timings: {
+            [Phase.Finalized]: `${finalityDuration} sec`,
+            [Phase.Validated]: `${validateDuration} sec`,
+            [Phase.Relayed]: `${relayDuration} sec`,
+          },
+        };
+      }
+
+      const latestLeafIndex = await tryFetchLatestLeafIndex(originChainId);
+      if (latestLeafIndex && latestLeafIndex >= leafIndex) {
+        return {
+          phase: Phase.Validated,
+          timings: {
+            [Phase.Finalized]: `${finalityEstimate} sec`,
+            [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
+            [Phase.Relayed]: `~${relayEstimate} sec`,
+          },
+        };
+      }
+
+      const latestBlock = await tryFetchChainLatestBlock(originChainId);
+      const finalizedBlock = originBlockNumber + finalityBlocks;
+      if (latestBlock && BigNumber.from(latestBlock.number).gte(finalizedBlock)) {
+        return {
+          phase: Phase.Finalized,
+          timings: {
+            [Phase.Finalized]: `${finalityEstimate} sec`,
+            [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
+            [Phase.Relayed]: `~${relayEstimate} sec`,
+          },
+        };
+      }
+
+      return {
+        phase: Phase.Sent,
+        timings: {
+          [Phase.Finalized]: `~${finalityEstimate} sec`,
+          [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
+          [Phase.Relayed]: `~${relayEstimate} sec`,
+        },
+      };
+    },
+  );
 
   // Show toast on error
   useEffect(() => {
     if (error) {
       logger.error('Error fetching message phase', error);
-      toast.error(`Error building timeline: ${error}`);
+      toast.warn(`Error building timeline: ${error}`);
     }
   }, [error]);
 
@@ -193,4 +285,47 @@ function useMessagePhase(message: Message) {
     timings: data?.timings || {},
     isFetching,
   };
+}
+
+function getFinalityBlocks(chainId: number) {
+  const chainName = chainIdToName[chainId] as ChainName;
+  const metadata = chainMetadata[chainName];
+  const finalityBlocks = metadata?.finalityBlocks || 0;
+  return Math.max(finalityBlocks, 1);
+}
+
+async function tryFetchChainLatestBlock(chainId: number) {
+  logger.debug(`Attempting to fetch latest block for:`, chainId);
+  try {
+    // TODO do on backend and use API key
+    const block = await queryExplorerForBlock(chainId, 'latest', false);
+    return block;
+  } catch (error) {
+    logger.error('Error fetching latest block', error);
+    return null;
+  }
+}
+
+async function tryFetchLatestLeafIndex(chainId: number) {
+  logger.debug(`Attempting to fetch leaf index for:`, chainId);
+  try {
+    const url = getS3BucketUrl(chainId);
+    logger.debug(`Querying bucket:`, url);
+    const response = await fetchWithTimeout(url, undefined, 3000);
+    const text = await response.text();
+    const leafIndex = BigNumber.from(text).toNumber();
+    logger.debug(`Found leaf index:`, leafIndex);
+    return leafIndex;
+  } catch (error) {
+    logger.error('Error fetching leaf index', error);
+    return null;
+  }
+}
+
+// Partly copied from https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1fc65f3b7f31f86722204a9de08506f212720a52/typescript/infra/config/environments/mainnet/validators.ts#L12
+function getS3BucketUrl(chainId: number) {
+  const chainName = chainIdToName[chainId] as ChainName;
+  const environment = getChainEnvironment(chainId);
+  const bucketName = `abacus-${environment}-${chainName}-validator-0`;
+  return `https://${bucketName}.s3.us-east-1.amazonaws.com/checkpoint_latest_index.json`;
 }

@@ -36,12 +36,14 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   // Extracting message properties
   const isMessageFound = messages.length > 0;
-  const shouldBlur = !isMessageFound || isFetching;
+  const shouldBlur = !isMessageFound;
   const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGE;
   const {
     status,
     originChainId,
     destinationChainId: destChainId,
+    originTimestamp,
+    destinationTimestamp,
     originTransaction,
     destinationTransaction: destTransaction,
   } = message;
@@ -126,7 +128,11 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />
-        <TimelineCard message={message} shouldBlur={shouldBlur} />
+        <TimelineCard
+          message={message}
+          resolvedStatus={resolvedMsgStatus}
+          shouldBlur={shouldBlur}
+        />
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
