@@ -42,8 +42,6 @@ export function MessageDetails({ messageId }: { messageId: string }) {
     status,
     originChainId,
     destinationChainId: destChainId,
-    originTimestamp,
-    destinationTimestamp,
     originTransaction,
     destinationTransaction: destTransaction,
   } = message;
