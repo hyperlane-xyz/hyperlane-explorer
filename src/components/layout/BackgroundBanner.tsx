@@ -19,7 +19,7 @@ export function BackgroundBanner() {
 function Chevron({ color, pos }: { color: string; pos: string }) {
   return (
     <div className={`absolute w-24 top-0 bottom-0 ${pos} overflow-visible`}>
-      <WideChevronIcon direction="e" color={color} height="100%" width="auto" />
+      <WideChevronIcon direction="e" color={color} height="100%" width="auto" rounded />
     </div>
   );
 }

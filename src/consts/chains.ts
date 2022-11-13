@@ -250,6 +250,30 @@ export const chainIdToName = {
   280: 'zksync2testnet',
 };
 
+export const chainIdToBlockTime = {
+  44787: 5,
+  42161: 3, // Fake
+  421611: 3, // Fake
+  421613: 3, // Fake
+  1313161555: 3, // Fake
+  43114: 2,
+  56: 3,
+  97: 3,
+  42220: 5,
+  1: 13,
+  43113: 2,
+  5: 15,
+  42: 8,
+  1287: 12,
+  1284: 12,
+  80001: 5,
+  10: 3, // Fake
+  420: 3, // Fake
+  69: 3, // Fake
+  137: 2,
+  280: 2, // Closer to 1.2 actually
+};
+
 // Some block explorers use diff urls for their explorer
 // api vs the ui, so setting overrides here
 export const chainIdToExplorerApi = {

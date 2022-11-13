@@ -1,4 +1,4 @@
-import { providers } from 'ethers';
+import { BigNumber, providers } from 'ethers';
 
 import { chainIdToChain, chainIdToExplorerApi } from '../consts/chains';
 import { config } from '../consts/config';
@@ -131,4 +131,21 @@ export async function queryExplorerForTxReceipt(chainId: number, txHash: string,
     throw new Error(msg);
   }
   return tx;
+}
+
+export async function queryExplorerForBlock(
+  chainId: number,
+  blockNumber?: number | string,
+  useKey = true,
+) {
+  const path = `api?module=proxy&action=eth_getBlockByNumber&tag=${
+    blockNumber || 'latest'
+  }&boolean=false`;
+  const block = await queryExplorer<providers.Block>(chainId, path, useKey);
+  if (!block || BigNumber.from(block.number).lte(0)) {
+    const msg = 'Invalid block result';
+    logger.error(msg, JSON.stringify(block), path);
+    throw new Error(msg);
+  }
+  return block;
 }

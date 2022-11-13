@@ -4,7 +4,6 @@ import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
-import BugIcon from '../../images/icons/bug.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
@@ -15,7 +14,7 @@ import { MiniSearchBar } from '../search/MiniSearchBar';
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(3);
   const closeDropdown = () => {
     setIsOpen(false);
   };
@@ -47,6 +46,9 @@ export function Header({ pathName }: { pathName: string }) {
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
+          <a className={styles.navLink} target="_blank" href={links.docs} rel="noopener noreferrer">
+            Docs
+          </a>
           {showSearch && <MiniSearchBar />}
         </nav>
         <div className="relative flex item-center sm:hidden mr-2">
@@ -62,13 +64,8 @@ export function Header({ pathName }: { pathName: string }) {
             <DropdownItemContent icon={HouseIcon} text="Home" />
           </a>
         </Link>
-        <Link href="/debugger">
-          <a {...itemProps[1]} className={styles.dropdownOption} onClick={closeDropdown}>
-            <DropdownItemContent icon={BugIcon} text="Debug" />
-          </a>
-        </Link>
         <a
-          {...itemProps[2]}
+          {...itemProps[1]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
@@ -78,7 +75,7 @@ export function Header({ pathName }: { pathName: string }) {
           <DropdownItemContent icon={BookIcon} text="Docs" />
         </a>
         <a
-          {...itemProps[3]}
+          {...itemProps[2]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"

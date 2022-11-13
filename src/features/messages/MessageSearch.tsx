@@ -10,6 +10,7 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchError';
+import { SearchFilterBar } from '../../components/search/SearchFilterBar';
 import { chainToDomain } from '../../consts/domains';
 import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
@@ -19,7 +20,6 @@ import { sanitizeString } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageTable } from './MessageTable';
-import { SearchFilterBar } from './SearchFilterBar';
 import { parseMessageStubResult } from './query';
 import { MessagesStubQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
