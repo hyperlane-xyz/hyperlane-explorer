@@ -14,14 +14,13 @@ import LockIcon from '../../../images/icons/lock.svg';
 import AirplaneIcon from '../../../images/icons/paper-airplane.svg';
 import ShieldIcon from '../../../images/icons/shield-check.svg';
 import { Message, MessageStatus } from '../../../types';
-import { getChainEnvironment } from '../../../utils/chains';
 import { queryExplorerForBlock } from '../../../utils/explorers';
 import { logger } from '../../../utils/logger';
 import { fetchWithTimeout } from '../../../utils/timeout';
 
 const VALIDATION_TIME_EST = 5;
 
-enum Phase {
+enum Stage {
   Sent = 0,
   Finalized = 1,
   Validated = 2,
@@ -44,7 +43,7 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
     originTransaction,
   } = message;
 
-  const { phase, timings } = useMessagePhase(
+  const { stage, timings } = useMessageStage(
     status,
     originChainId,
     destinationChainId,
@@ -80,9 +79,9 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
         <div className="flex-0 w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
-            className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getPhaseClass(
-              Phase.Finalized,
-              phase,
+            className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getStageClass(
+              Stage.Finalized,
+              stage,
               status,
             )}`}
           >
@@ -99,16 +98,16 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
             </div>
           </div>
           <h4 className="mt-2.5 text-gray-700">
-            {getPhaseHeader(Phase.Finalized, phase, timings)}
+            {getStageHeader(Stage.Finalized, stage, timings, status)}
           </h4>
           <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Origin transaction has sufficient confirmations`}</p>
         </div>
         <div className="flex-0 w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
-            className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getPhaseClass(
-              Phase.Validated,
-              phase,
+            className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getStageClass(
+              Stage.Validated,
+              stage,
               status,
             )}`}
           >
@@ -125,16 +124,16 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
             </div>
           </div>
           <h4 className="mt-2.5 text-gray-700">
-            {getPhaseHeader(Phase.Validated, phase, timings)}
+            {getStageHeader(Stage.Validated, stage, timings, status)}
           </h4>
           <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Validators have signed the message bundle`}</p>
         </div>
         <div className="flex-0 w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
-            className={`w-full h-6 flex items-center justify-center bg-blue-500 rounded-r relative ${getPhaseClass(
-              Phase.Relayed,
-              phase,
+            className={`w-full h-6 flex items-center justify-center bg-blue-500 rounded-r relative ${getStageClass(
+              Stage.Relayed,
+              stage,
               status,
             )}`}
           >
@@ -147,7 +146,9 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
               <WideChevronIcon direction="e" height="100%" width="auto" color="#ffffff" />
             </div>
           </div>
-          <h4 className="mt-2.5 text-gray-700">{getPhaseHeader(Phase.Relayed, phase, timings)}</h4>
+          <h4 className="mt-2.5 text-gray-700">
+            {getStageHeader(Stage.Relayed, stage, timings, status)}
+          </h4>
           <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Destination transaction has been confirmed`}</p>
         </div>
       </div>
@@ -163,32 +164,37 @@ function StageIcon({ src, size }: { src: any; size?: number }) {
   );
 }
 
-function getPhaseHeader(
-  targetPhase: Phase,
-  currentPhase: Phase,
-  timings: Partial<Record<Phase, string>>,
+function getStageHeader(
+  targetStage: Stage,
+  currentStage: Stage,
+  timings: Partial<Record<Stage, string>>,
+  status: MessageStatus,
 ) {
   let label = '';
-  if (targetPhase === Phase.Finalized) {
-    label = currentPhase >= targetPhase ? 'Finalized' : 'Finalizing';
-  } else if (targetPhase === Phase.Validated) {
-    label = currentPhase >= targetPhase ? 'Validated' : 'Validating';
-  } else if (targetPhase === Phase.Relayed) {
-    label = currentPhase >= targetPhase ? 'Relayed' : 'Relaying';
+  if (targetStage === Stage.Finalized) {
+    label = currentStage >= targetStage ? 'Finalized' : 'Finalizing';
+  } else if (targetStage === Stage.Validated) {
+    label = currentStage >= targetStage ? 'Validated' : 'Validating';
+  } else if (targetStage === Stage.Relayed) {
+    label = currentStage >= targetStage ? 'Relayed' : 'Relaying';
   }
-  const timing = timings[targetPhase];
+  const timing = timings[targetStage];
+  if (status === MessageStatus.Failing) {
+    if (targetStage === currentStage + 1) return `${label}: failed`;
+    if (targetStage > currentStage + 1) return label;
+  }
   if (timing) return `${label}: ${timing}`;
   else return label;
 }
 
-function getPhaseClass(targetPhase: Phase, currentPhase: Phase, messageStatus: MessageStatus) {
-  if (currentPhase >= targetPhase) return '';
-  if (currentPhase === targetPhase - 1 && messageStatus !== MessageStatus.Failing)
+function getStageClass(targetStage: Stage, currentStage: Stage, messageStatus: MessageStatus) {
+  if (currentStage >= targetStage) return '';
+  if (currentStage === targetStage - 1 && messageStatus !== MessageStatus.Failing)
     return 'animate-pulse-slow';
   return 'opacity-50';
 }
 
-function useMessagePhase(
+function useMessageStage(
   status: MessageStatus,
   originChainId: number,
   destChainId: number,
@@ -199,7 +205,7 @@ function useMessagePhase(
 ) {
   const { data, isFetching, error } = useQuery(
     [
-      'messagePhase',
+      'messageStage',
       status,
       originChainId,
       destChainId,
@@ -218,20 +224,23 @@ function useMessagePhase(
       const finalityEstimate = finalityBlocks * (chainIdToBlockTime[originChainId] || 3);
 
       if (status === MessageStatus.Delivered && destinationTimestamp) {
-        // For delivered messages, just to rough estimates for phases
+        // For delivered messages, just to rough estimates for stages
         // This saves us from making extra explorer calls. May want to revisit in future
 
         const totalDuration = Math.round((destinationTimestamp - originTimestamp) / 1000);
-        const finalityDuration = Math.min(finalityEstimate, totalDuration - VALIDATION_TIME_EST);
+        const finalityDuration = Math.max(
+          Math.min(finalityEstimate, totalDuration - VALIDATION_TIME_EST),
+          1,
+        );
         const remaining = totalDuration - finalityDuration;
         const validateDuration = Math.min(Math.round(remaining * 0.25), VALIDATION_TIME_EST);
         const relayDuration = remaining - validateDuration;
         return {
-          phase: Phase.Relayed,
+          stage: Stage.Relayed,
           timings: {
-            [Phase.Finalized]: `${finalityDuration} sec`,
-            [Phase.Validated]: `${validateDuration} sec`,
-            [Phase.Relayed]: `${relayDuration} sec`,
+            [Stage.Finalized]: `${finalityDuration} sec`,
+            [Stage.Validated]: `${validateDuration} sec`,
+            [Stage.Relayed]: `${relayDuration} sec`,
           },
         };
       }
@@ -239,11 +248,11 @@ function useMessagePhase(
       const latestLeafIndex = await tryFetchLatestLeafIndex(originChainId);
       if (latestLeafIndex && latestLeafIndex >= leafIndex) {
         return {
-          phase: Phase.Validated,
+          stage: Stage.Validated,
           timings: {
-            [Phase.Finalized]: `${finalityEstimate} sec`,
-            [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
-            [Phase.Relayed]: `~${relayEstimate} sec`,
+            [Stage.Finalized]: `${finalityEstimate} sec`,
+            [Stage.Validated]: `${VALIDATION_TIME_EST} sec`,
+            [Stage.Relayed]: `~${relayEstimate} sec`,
           },
         };
       }
@@ -252,21 +261,21 @@ function useMessagePhase(
       const finalizedBlock = originBlockNumber + finalityBlocks;
       if (latestBlock && BigNumber.from(latestBlock.number).gte(finalizedBlock)) {
         return {
-          phase: Phase.Finalized,
+          stage: Stage.Finalized,
           timings: {
-            [Phase.Finalized]: `${finalityEstimate} sec`,
-            [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
-            [Phase.Relayed]: `~${relayEstimate} sec`,
+            [Stage.Finalized]: `${finalityEstimate} sec`,
+            [Stage.Validated]: `~${VALIDATION_TIME_EST} sec`,
+            [Stage.Relayed]: `~${relayEstimate} sec`,
           },
         };
       }
 
       return {
-        phase: Phase.Sent,
+        stage: Stage.Sent,
         timings: {
-          [Phase.Finalized]: `~${finalityEstimate} sec`,
-          [Phase.Validated]: `~${VALIDATION_TIME_EST} sec`,
-          [Phase.Relayed]: `~${relayEstimate} sec`,
+          [Stage.Finalized]: `~${finalityEstimate} sec`,
+          [Stage.Validated]: `~${VALIDATION_TIME_EST} sec`,
+          [Stage.Relayed]: `~${relayEstimate} sec`,
         },
       };
     },
@@ -275,13 +284,13 @@ function useMessagePhase(
   // Show toast on error
   useEffect(() => {
     if (error) {
-      logger.error('Error fetching message phase', error);
+      logger.error('Error fetching message stage', error);
       toast.warn(`Error building timeline: ${error}`);
     }
   }, [error]);
 
   return {
-    phase: data?.phase || Phase.Sent,
+    stage: data?.stage || Stage.Sent,
     timings: data?.timings || {},
     isFetching,
   };
@@ -309,23 +318,22 @@ async function tryFetchChainLatestBlock(chainId: number) {
 async function tryFetchLatestLeafIndex(chainId: number) {
   logger.debug(`Attempting to fetch leaf index for:`, chainId);
   try {
-    const url = getS3BucketUrl(chainId);
-    logger.debug(`Querying bucket:`, url);
-    const response = await fetchWithTimeout(url, undefined, 3000);
-    const text = await response.text();
-    const leafIndex = BigNumber.from(text).toNumber();
-    logger.debug(`Found leaf index:`, leafIndex);
-    return leafIndex;
+    const response = await fetchWithTimeout(
+      '/api/latest-leaf-index',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chainId }),
+      },
+      3000,
+    );
+    const result = await response.json();
+    logger.debug(`Found leaf index:`, result.leafIndex);
+    return result.leafIndex;
   } catch (error) {
     logger.error('Error fetching leaf index', error);
     return null;
   }
-}
-
-// Partly copied from https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1fc65f3b7f31f86722204a9de08506f212720a52/typescript/infra/config/environments/mainnet/validators.ts#L12
-function getS3BucketUrl(chainId: number) {
-  const chainName = chainIdToName[chainId] as ChainName;
-  const environment = getChainEnvironment(chainId);
-  const bucketName = `abacus-${environment}-${chainName}-validator-0`;
-  return `https://${bucketName}.s3.us-east-1.amazonaws.com/checkpoint_latest_index.json`;
 }
