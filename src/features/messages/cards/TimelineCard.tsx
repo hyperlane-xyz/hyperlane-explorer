@@ -61,7 +61,7 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
         <h3 className="text-gray-500 font-medium text-md mr-2">Delivery Timeline</h3>
         <HelpIcon size={16} text="A breakdown of the stages for delivering a message" />
       </div> */}
-      <div className="px-2 pt-14 pb-1 flex">
+      <div className="sm:px-2 pt-14 pb-1 flex">
         <div className="flex-1 flex flex-col items-center">
           <div className="w-full h-6 flex items-center justify-center bg-blue-500 rounded-l relative">
             <div className="w-3 h-3 rounded-full bg-white"></div>
@@ -73,10 +73,10 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
               <WideChevronIcon direction="e" height="100%" width="auto" />
             </div>
           </div>
-          <h4 className="mt-2.5 text-gray-700">Message sent</h4>
-          <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Origin transaction sent at ${timeSent.toLocaleDateString()} ${timeSent.toLocaleTimeString()}`}</p>
+          <h4 className="mt-2.5 text-gray-700 text-sm sm:text-base">Message sent</h4>
+          <p className="mt-1 sm:px-4 text-xs text-gray-500 text-center">{`Origin transaction sent at ${timeSent.toLocaleDateString()} ${timeSent.toLocaleTimeString()}`}</p>
         </div>
-        <div className="flex-0 w-5"></div>
+        <div className="flex-0 w-2 sm:w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
             className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getStageClass(
@@ -97,12 +97,14 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
               <WideChevronIcon direction="e" height="100%" width="auto" />
             </div>
           </div>
-          <h4 className="mt-2.5 text-gray-700">
+          <h4 className="mt-2.5 text-gray-700 text-sm sm:text-base">
             {getStageHeader(Stage.Finalized, stage, timings, status)}
           </h4>
-          <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Origin transaction has sufficient confirmations`}</p>
+          <p className="mt-1 sm:px-4 text-xs text-gray-500 text-center">
+            Origin transaction has sufficient confirmations
+          </p>
         </div>
-        <div className="flex-0 w-5"></div>
+        <div className="flex-0 w-2 sm:w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
             className={`w-full h-6 flex items-center justify-center bg-blue-500 relative ${getStageClass(
@@ -123,12 +125,14 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
               <WideChevronIcon direction="e" height="100%" width="auto" />
             </div>
           </div>
-          <h4 className="mt-2.5 text-gray-700">
+          <h4 className="mt-2.5 text-gray-700 text-sm sm:text-base">
             {getStageHeader(Stage.Validated, stage, timings, status)}
           </h4>
-          <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Validators have signed the message bundle`}</p>
+          <p className="mt-1 sm:px-4 text-xs text-gray-500 text-center">
+            Validators have signed the message bundle
+          </p>
         </div>
-        <div className="flex-0 w-5"></div>
+        <div className="flex-0 w-2 sm:w-5"></div>
         <div className="flex-1 flex flex-col items-center">
           <div
             className={`w-full h-6 flex items-center justify-center bg-blue-500 rounded-r relative ${getStageClass(
@@ -146,10 +150,12 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
               <WideChevronIcon direction="e" height="100%" width="auto" color="#ffffff" />
             </div>
           </div>
-          <h4 className="mt-2.5 text-gray-700">
+          <h4 className="mt-2.5 text-gray-700 text-sm sm:text-base">
             {getStageHeader(Stage.Relayed, stage, timings, status)}
           </h4>
-          <p className="mt-1 px-2 text-xs text-gray-500 text-center">{`Destination transaction has been confirmed`}</p>
+          <p className="mt-1 sm:px-4 text-xs text-gray-500 text-center">
+            Destination transaction has been confirmed
+          </p>
         </div>
       </div>
     </Card>
