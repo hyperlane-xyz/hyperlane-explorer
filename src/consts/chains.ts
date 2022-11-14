@@ -74,7 +74,7 @@ export const avalancheChain: Chain = {
 
 export const bscChain: Chain = {
   id: 56,
-  name: 'Binance SC',
+  name: 'Binance Smart Chain',
   network: 'bsc',
   nativeCurrency: {
     decimals: 18,
@@ -339,22 +339,7 @@ export const testnetChains = [
 
 export const prodAndTestChains = [...mainnetChains, ...testnetChains];
 
-export const allChains = [
-  ...allChainsWagmi,
-  arbitrumChain,
-  avalancheChain,
-  bscChain,
-  celoMainnetChain,
-  avalancheChain,
-  bscChain,
-  fujiTestnetChain,
-  alfajoresChain,
-  bscTestnetChain,
-  auroraTestnetChain,
-  moonbaseAlphaChain,
-  polygonMumbaiChain,
-  zksync2testnetChain,
-];
+export const allChains = [...allChainsWagmi, ...prodAndTestChains];
 
 export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {
   result[chain.id] = chain;
