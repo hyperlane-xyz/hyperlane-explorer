@@ -129,6 +129,7 @@ export function MessageDetails({ messageId }: { messageId: string }) {
         <TimelineCard
           message={message}
           resolvedStatus={resolvedMsgStatus}
+          resolvedDestinationTx={resolvedDestTx}
           shouldBlur={shouldBlur}
         />
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />

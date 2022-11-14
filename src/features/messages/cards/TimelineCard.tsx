@@ -13,7 +13,7 @@ import EnvelopeIcon from '../../../images/icons/envelope-check.svg';
 import LockIcon from '../../../images/icons/lock.svg';
 import AirplaneIcon from '../../../images/icons/paper-airplane.svg';
 import ShieldIcon from '../../../images/icons/shield-check.svg';
-import { Message, MessageStatus } from '../../../types';
+import { Message, MessageStatus, PartialTransactionReceipt } from '../../../types';
 import { queryExplorerForBlock } from '../../../utils/explorers';
 import { logger } from '../../../utils/logger';
 import { fetchWithTimeout } from '../../../utils/timeout';
@@ -30,10 +30,11 @@ enum Stage {
 interface Props {
   message: Message;
   resolvedStatus: MessageStatus;
-  shouldBlur: boolean;
+  resolvedDestinationTx?: PartialTransactionReceipt;
+  shouldBlur?: boolean;
 }
 
-export function TimelineCard({ message, resolvedStatus: status }: Props) {
+export function TimelineCard({ message, resolvedStatus: status, resolvedDestinationTx }: Props) {
   const {
     originChainId,
     destinationChainId,
@@ -50,7 +51,7 @@ export function TimelineCard({ message, resolvedStatus: status }: Props) {
     leafIndex,
     originTransaction.blockNumber,
     originTimestamp,
-    destinationTimestamp,
+    destinationTimestamp || resolvedDestinationTx?.timestamp,
   );
 
   const timeSent = new Date(originTimestamp);
