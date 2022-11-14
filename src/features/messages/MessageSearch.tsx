@@ -1,6 +1,5 @@
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
 import { useQuery } from 'urql';
 
 import { Fade } from '../../components/animation/Fade';
@@ -29,18 +28,7 @@ const LATEST_QUERY_LIMIT = 12;
 const SEARCH_QUERY_LIMIT = 40;
 const QUERY_SEARCH_PARAM = 'search';
 
-let showedWarning = false;
-
 export function MessageSearch() {
-  // TODO remove when live for real
-  useEffect(() => {
-    if (!showedWarning) {
-      showedWarning = true;
-      toast.info(
-        'Welcome! This explorer is still under construction but feel free to look around!',
-      );
-    }
-  }, []);
   const router = useRouter();
 
   // Search text input
@@ -101,8 +89,10 @@ export function MessageSearch() {
         placeholder="Search by address or transaction hash"
       />
       <div className="w-full min-h-[38rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
-        <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between bg-gray-50">
-          <h2 className="pl-1 text-gray-700">{!hasInput ? 'Latest Messages' : 'Search Results'}</h2>
+        <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between">
+          <h2 className="pl-0.5 text-gray-700">
+            {!hasInput ? 'Latest Messages' : 'Search Results'}
+          </h2>
           <SearchFilterBar
             originChainFilter={originChainFilter}
             onChangeOriginFilter={onChangeOriginFilter}

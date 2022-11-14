@@ -30,7 +30,7 @@ export function MiniSearchBar() {
             placeholder="Hash or address"
             className="w-32 focus:w-64 py-2 px-2.5 h-8 text-sm rounded placeholder:text-gray-500 focus:outline-none transition-[width] ease-in-out duration-500"
           />
-          <div className="h-8 w-8 flex items-center justify-center rounded bg-beige-300">
+          <div className="h-8 w-8 flex items-center justify-center rounded bg-gray-200">
             <IconButton
               type="submit"
               imgSrc={SearchIcon}
