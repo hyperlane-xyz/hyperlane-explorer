@@ -1,8 +1,9 @@
 import { useRouter } from 'next/router';
 
-import { ChainToChain } from '../../components/icons/ChainToChain';
+import { ChainIcon } from '../../components/icons/ChainIcon';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
+import { getChainDisplayName } from '../../utils/chains';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
 
 export function MessageTable({
@@ -16,9 +17,10 @@ export function MessageTable({
 
   return (
     <table className="w-full mb-1">
-      <tr className="px-2 py-2 sm:px-4 md:px-5 md:py-2.5 border-b border-gray-100 bg-gray-50">
-        <th className={`${styles.header} pr-1`}>Chains</th>
-        <th className={styles.header}>Sender</th>
+      <tr className="border-b border-gray-100">
+        <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
+        <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
+        <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
         <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
         <th className={styles.header}>Time sent</th>
         <th className={`${styles.header} hidden lg:table-cell`}>Duration</th>
@@ -27,7 +29,7 @@ export function MessageTable({
       {messageList.map((m) => (
         <tr
           key={`message-${m.id}`}
-          className={`px-2 py-2 sm:px-4 md:px-5 md:py-2.5 cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
+          className={`cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
             isFetching && 'blur-xs'
           } transition-all duration-500`}
           onClick={() => router.push(`/message/${m.id}`)}
@@ -62,16 +64,21 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
 
   return (
     <>
-      <td className="py-2.5">
-        <ChainToChain
-          originChainId={originChainId}
-          destinationChainId={destinationChainId}
-          size={38}
-          arrowSize={30}
-          isNarrow={true}
-        />
+      <td className="py-3.5">
+        <div className="flex items-center pl-3 sm:pl-5">
+          <ChainIcon chainId={originChainId} size={26} />
+          <div className={styles.valueChainName}>{getChainDisplayName(originChainId, true)}</div>
+        </div>
       </td>
       <td>
+        <div className="flex items-center">
+          <ChainIcon chainId={destinationChainId} size={26} />
+          <div className={styles.valueChainName}>
+            {getChainDisplayName(destinationChainId, true)}
+          </div>
+        </div>
+      </td>
+      <td className="hidden sm:table-cell">
         <div className={styles.value}>{shortenAddress(sender) || 'Invalid Address'}</div>
       </td>
       <td className="hidden sm:table-cell">
@@ -100,6 +107,7 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
 
 const styles = {
   header: 'text-sm text-gray-700 font-normal pt-2 pb-3 text-center',
-  value: 'text-sm text-center',
+  value: 'text-sm text-center px-1',
+  valueChainName: 'text-sm ml-2',
   valueTruncated: 'text-sm text-center truncate',
 };

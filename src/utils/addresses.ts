@@ -37,7 +37,7 @@ export function shortenAddress(address: string, capitalize?: boolean) {
   try {
     const normalized = normalizeAddress(address);
     const shortened =
-      normalized.substring(0, 6) + '...' + normalized.substring(normalized.length - 4);
+      normalized.substring(0, 5) + '...' + normalized.substring(normalized.length - 4);
     return capitalize ? capitalizeAddress(shortened) : shortened;
   } catch (error) {
     logger.error('Unable to shorten invalid address', address, error);

@@ -53,16 +53,16 @@ const CHAIN_TO_ICON = {
   [moonbaseAlphaChain.id]: Moonbeam,
 };
 
-function _ChainIcon({ chainId, size = 44 }: { chainId?: number; size?: number }) {
+function _ChainIcon({ chainId, size = 40 }: { chainId?: number; size?: number }) {
   const imageSrc = (chainId && CHAIN_TO_ICON[chainId]) || QuestionMark;
 
   return (
     <div
       style={{ width: `${size}px`, height: `${size}px` }}
-      className="flex items-center justify-center rounded-full bg-beige-300 transition-all"
+      className="flex items-center justify-center rounded-full bg-gray-100 transition-all"
       title={getChainDisplayName(chainId)}
     >
-      <Image src={imageSrc} alt="" width={Math.floor(size / 2.2)} height={Math.floor(size / 2.2)} />
+      <Image src={imageSrc} alt="" width={Math.floor(size / 1.8)} height={Math.floor(size / 1.8)} />
     </div>
   );
 }

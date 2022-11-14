@@ -23,9 +23,15 @@ export const alfajoresChain: Chain = {
   testnet: true,
 };
 
+// Override to set name to just Arbitrum
+const arbitrumChain = {
+  ...chain.arbitrum,
+  name: 'Arbitrum',
+};
+
 export const auroraTestnetChain: Chain = {
   id: 1313161555,
-  name: 'Aurora Testnet',
+  name: 'Aurora',
   network: 'auroraTestnet',
   nativeCurrency: {
     decimals: 18,
@@ -129,7 +135,7 @@ export const celoMainnetChain: Chain = {
 
 export const fujiTestnetChain: Chain = {
   id: 43113,
-  name: 'Fuji Testnet',
+  name: 'Fuji',
   network: 'fuji',
   nativeCurrency: {
     decimals: 18,
@@ -196,6 +202,12 @@ export const moonbeamChain: Chain = {
     },
   },
   testnet: false,
+};
+
+// Override to set name to just Mumbai
+const polygonMumbaiChain = {
+  ...chain.polygonMumbai,
+  name: 'Mumbai',
 };
 
 export const zksync2testnetChain: Chain = {
@@ -300,9 +312,9 @@ export const chainIdToExplorerApi = {
 
 export const mainnetChains = [
   chain.mainnet,
-  chain.arbitrum,
   chain.optimism,
   chain.polygon,
+  arbitrumChain,
   avalancheChain,
   bscChain,
   celoMainnetChain,
@@ -316,31 +328,18 @@ export const testnetChains = [
   chain.arbitrumRinkeby,
   chain.optimismGoerli,
   chain.optimismKovan,
-  chain.polygonMumbai,
   fujiTestnetChain,
   bscTestnetChain,
   alfajoresChain,
   auroraTestnetChain,
   moonbaseAlphaChain,
+  polygonMumbaiChain,
   zksync2testnetChain,
 ];
 
 export const prodAndTestChains = [...mainnetChains, ...testnetChains];
 
-export const allChains = [
-  ...allChainsWagmi,
-  avalancheChain,
-  bscChain,
-  celoMainnetChain,
-  avalancheChain,
-  bscChain,
-  fujiTestnetChain,
-  alfajoresChain,
-  bscTestnetChain,
-  auroraTestnetChain,
-  moonbaseAlphaChain,
-  zksync2testnetChain,
-];
+export const allChains = [...allChainsWagmi, ...prodAndTestChains];
 
 export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {
   result[chain.id] = chain;
