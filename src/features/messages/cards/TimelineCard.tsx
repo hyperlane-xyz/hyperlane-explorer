@@ -233,15 +233,17 @@ function useMessageStage(
       if (status === MessageStatus.Delivered && destinationTimestamp) {
         // For delivered messages, just to rough estimates for stages
         // This saves us from making extra explorer calls. May want to revisit in future
-
         const totalDuration = Math.round((destinationTimestamp - originTimestamp) / 1000);
         const finalityDuration = Math.max(
           Math.min(finalityEstimate, totalDuration - VALIDATION_TIME_EST),
           1,
         );
         const remaining = totalDuration - finalityDuration;
-        const validateDuration = Math.min(Math.round(remaining * 0.25), VALIDATION_TIME_EST);
-        const relayDuration = remaining - validateDuration;
+        const validateDuration = Math.max(
+          Math.min(Math.round(remaining * 0.25), VALIDATION_TIME_EST),
+          1,
+        );
+        const relayDuration = Math.max(remaining - validateDuration, 1);
         return {
           stage: Stage.Relayed,
           timings: {

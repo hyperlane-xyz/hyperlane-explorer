@@ -90,7 +90,7 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
       <td className="hidden lg:table-cell text-center px-4">
         <div className={styles.valueTruncated}>
           {destinationTimestamp
-            ? getHumanReadableDuration(destinationTimestamp - originTimestamp)
+            ? getHumanReadableDuration(destinationTimestamp - originTimestamp, 3)
             : '-'}
         </div>
       </td>

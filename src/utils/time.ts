@@ -27,8 +27,12 @@ export function getHumanReadableTimeString(timestamp: number) {
   return date.toLocaleDateString();
 }
 
-export function getHumanReadableDuration(ms: number) {
-  const seconds = Math.round(ms / 1000);
+export function getHumanReadableDuration(ms: number, minSec?: number) {
+  let seconds = Math.round(ms / 1000);
+
+  if (minSec) {
+    seconds = Math.max(seconds, minSec);
+  }
 
   if (seconds <= 60) {
     return `${seconds} sec`;
