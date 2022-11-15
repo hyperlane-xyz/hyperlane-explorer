@@ -16,10 +16,10 @@ export default function Document() {
         <meta name="theme-color" content="#ffffff" />
 
         <meta name="application-name" content="Hyperlane Explorer" />
-        <meta name="keywords" content="Hyperlane Explorer App Multi-chain Cross-chain" />
+        <meta name="keywords" content="Hyperlane Explorer Scan Interchain App" />
         <meta
           name="description"
-          content="A multi-chain explorer for the Hyperlane protocol and network"
+          content="An interchain explorer for the Hyperlane protocol and network"
         />
 
         <meta name="HandheldFriendly" content="true" />
@@ -29,10 +29,10 @@ export default function Document() {
         <meta property="og:url" content="https://explorer.hyperlane.xyz" />
         <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://explorer.hyperlane.xyz/logo-with-text.png" />
+        <meta property="og:image" content="https://explorer.hyperlane.xyz/icon.png" />
         <meta
           property="og:description"
-          content="A multi-chain explorer for the Hyperlane protocol and network"
+          content="An interchain explorer for the Hyperlane protocol and network"
         />
       </Head>
       <body className="text-black">
