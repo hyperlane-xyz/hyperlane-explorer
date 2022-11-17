@@ -1,11 +1,15 @@
+import { useEffect, useState } from 'react';
+
 import { utils } from '@hyperlane-xyz/utils';
 
 import { ChainToChain } from '../../../components/icons/ChainToChain';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
+import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
 import { Message } from '../../../types';
+import { tryUtf8DecodeBytes } from '../parseMessage';
 
-import { HexStringBlock } from './HexStringBlock';
+import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
@@ -22,11 +26,25 @@ export function ContentDetailsCard({
     sender,
     recipient,
     leafIndex,
-    body,
     hash,
+    body,
+    decodedBody,
   },
   shouldBlur,
 }: Props) {
+  const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
+  useEffect(() => {
+    if (decodedBody) setBodyDecodeType('utf8');
+  }, [decodedBody]);
+  const onChangeBodyDecode = (value: string) => {
+    setBodyDecodeType(value);
+  };
+
+  const bodyDisplay =
+    bodyDecodeType === 'hex'
+      ? body
+      : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode';
+
   const rawBytes = utils.formatMessage(
     originDomainId,
     sender,
@@ -34,6 +52,7 @@ export function ContentDetailsCard({
     recipient,
     body,
   );
+
   return (
     <Card classes="space-y-4" width="w-full">
       <div className="flex items-center justify-between">
@@ -71,9 +90,25 @@ export function ContentDetailsCard({
         displayWidth="w-60 sm:w-80"
         blurValue={shouldBlur}
       />
-      <HexStringBlock label="Message content:" value={body} />
-      <HexStringBlock label="Raw bytes:" value={rawBytes} />
-      <HexStringBlock label="Message hash:" value={hash} />
+      <div>
+        <div className="flex items-center">
+          <label className="text-sm text-gray-500">Message Content:</label>
+          <SelectField
+            classes="w-16 h-6 py-0.5 ml-3 mb-0.5"
+            options={decodeOptions}
+            value={bodyDecodeType}
+            onValueSelect={onChangeBodyDecode}
+          />
+        </div>
+        <CodeBlock value={bodyDisplay} />
+      </div>
+      <LabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
+      <LabelAndCodeBlock label="Message hash:" value={hash} />
     </Card>
   );
 }
+
+const decodeOptions = [
+  { value: 'hex', display: 'Hex' },
+  { value: 'utf8', display: 'Utf-8' },
+];

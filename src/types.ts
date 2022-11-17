@@ -29,6 +29,7 @@ export interface MessageStub {
 
 export interface Message extends MessageStub {
   body: string;
+  decodedBody?: string;
   leafIndex: number;
   hash: string; // message hash, not related to txs
   originTransaction: PartialTransactionReceipt;

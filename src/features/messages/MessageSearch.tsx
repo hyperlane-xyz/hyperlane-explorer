@@ -19,7 +19,7 @@ import { sanitizeString } from '../../utils/string';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageTable } from './MessageTable';
-import { parseMessageStubResult } from './query';
+import { parseMessageStubResult } from './parseMessage';
 import { MessagesStubQueryResult } from './types';
 import { isValidSearchQuery } from './utils';
 
