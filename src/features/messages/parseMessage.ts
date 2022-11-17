@@ -1,6 +1,7 @@
+import { TEST_RECIPIENT_ADDRESS } from '../../consts/addresses';
 import { domainToChain } from '../../consts/domains';
 import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../types';
-import { ensureLeading0x } from '../../utils/addresses';
+import { areAddressesEqual, ensureLeading0x, trimLeading0x } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 import {
@@ -54,9 +55,14 @@ function parseMessage(m: MessageEntry): Message | null {
       ? parseTransaction(m.delivered_message.transaction)
       : undefined;
 
+    const body = decodePostgresBinaryHex(m.msg_body ?? '');
+    const isTestRecipient = areAddressesEqual(stub.recipient, TEST_RECIPIENT_ADDRESS);
+    const decodedBody = isTestRecipient ? tryUtf8DecodeBytes(body) : undefined;
+
     return {
       ...stub,
-      body: decodeBinaryHex(m.msg_body ?? ''),
+      body,
+      decodedBody,
       leafIndex: m.leaf_index,
       hash: ensureLeading0x(m.hash),
       originTransaction: parseTransaction(m.transaction),
@@ -88,8 +94,20 @@ function parsePaddedAddress(a: string) {
   return ensureLeading0x(a.slice(-40));
 }
 
+export function tryUtf8DecodeBytes(body: string, fatal = true) {
+  if (!body) return undefined;
+  try {
+    const decoder = new TextDecoder('utf-8', { fatal });
+    const decodedBody = decoder.decode(Buffer.from(trimLeading0x(body), 'hex'));
+    return decodedBody;
+  } catch (error) {
+    logger.debug('Unable to parse message body', body);
+    return undefined;
+  }
+}
+
 // https://github.com/bendrucker/postgres-bytea/blob/master/decoder.js
-function decodeBinaryHex(b: string) {
+function decodePostgresBinaryHex(b: string) {
   const buffer = Buffer.from(b.substring(2), 'hex');
   return ensureLeading0x(buffer.toString('hex'));
 }

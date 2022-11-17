@@ -323,11 +323,8 @@ export const mainnetChains = [
 
 export const testnetChains = [
   chain.goerli,
-  chain.kovan,
   chain.arbitrumGoerli,
-  chain.arbitrumRinkeby,
   chain.optimismGoerli,
-  chain.optimismKovan,
   fujiTestnetChain,
   bscTestnetChain,
   alfajoresChain,

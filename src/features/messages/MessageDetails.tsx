@@ -19,8 +19,8 @@ import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard, TransactionCardDebugInfo } from './cards/TransactionCard';
 import { isIcaMessage } from './ica';
+import { parseMessageQueryResult } from './parseMessage';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { parseMessageQueryResult } from './query';
 import type { MessagesQueryResult } from './types';
 
 const AUTO_REFRESH_DELAY = 10000;

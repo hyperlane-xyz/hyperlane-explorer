@@ -40,11 +40,8 @@ const CHAIN_TO_ICON = {
 
   // Test chains
   [chain.goerli.id]: EthMainnet, // TODO
-  [chain.kovan.id]: EthMainnet, // TODO
   [chain.arbitrumGoerli.id]: Arbitrum,
-  [chain.arbitrumRinkeby.id]: Arbitrum,
   [chain.optimismGoerli.id]: Optimism,
-  [chain.optimismKovan.id]: Optimism,
   [chain.polygonMumbai.id]: Polygon,
   [fujiTestnetChain.id]: Avalanche,
   [bscTestnetChain.id]: Bsc,
