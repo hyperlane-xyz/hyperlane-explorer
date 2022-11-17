@@ -1,0 +1,37 @@
+.checkbox {
+  appearance: none;
+  background-color: #fff;
+  margin: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid #1F2937;
+  border-radius: 0.2rem;
+  transform: translateY(-0.075em);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: 200ms all ease-in-out;
+}
+
+.checkbox:hover {
+  opacity: 0.85;
+}
+
+.checkbox::before {
+  content: "";
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 0.2rem;
+  transform: scale(0);
+  transition: 200ms all ease-in-out;
+  background-color: #025AA1;
+}
+
+.checkbox:checked::before {
+  transform: scale(1);
+}
+
+.checkbox:disabled {
+  border-color: #BBB;
+  cursor: not-allowed;
+}

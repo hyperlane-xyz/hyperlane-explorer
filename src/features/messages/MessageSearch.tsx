@@ -118,20 +118,28 @@ export function MessageSearch() {
 
 function assembleQuery(searchInput: string, originFilter: string, destFilter: string) {
   const hasInput = !!searchInput;
+
+  const originChains = originFilter
+    ? originFilter.split(',').map((c) => chainToDomain[c])
+    : undefined;
+  const destinationChains = destFilter
+    ? destFilter.split(',').map((c) => chainToDomain[c])
+    : undefined;
   const variables = {
     search: hasInput ? trimLeading0x(searchInput) : undefined,
-    originChain: originFilter ? chainToDomain[originFilter] : undefined,
-    destinationChain: destFilter ? chainToDomain[destFilter] : undefined,
+    originChains,
+    destinationChains,
   };
+
   const limit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
 
   const query = `
-  query ($search: String, $originChain: Int, $destinationChain: Int) {
+  query ($search: String, $originChains: [Int!], $destinationChains: [Int!]) {
     message(
       where: {
         _and: [
-          ${originFilter ? '{origin: {_eq: $originChain}},' : ''}
-          ${destFilter ? '{destination: {_eq: $destinationChain}},' : ''}
+          ${originFilter ? '{origin: {_in: $originChains}},' : ''}
+          ${destFilter ? '{destination: {_in: $destinationChains}},' : ''}
           ${hasInput ? searchWhereClause : ''}
         ]
       },

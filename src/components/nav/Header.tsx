@@ -101,7 +101,7 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 const styles = {
   navLink:
     'pt-px flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
-  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50',
+  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50 shadow-md',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
   activeEnv: 'font-medium cursor-default hover:no-underline',
