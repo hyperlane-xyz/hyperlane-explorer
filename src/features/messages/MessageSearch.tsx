@@ -51,8 +51,6 @@ export function MessageSearch() {
 
   // Filter state and handlers
   const [originChainFilter, setOriginChainFilter] = useState<string | null>(null);
-  console.log('===originChainFilter');
-  console.log(originChainFilter);
   const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(null);
   const onChangeOriginFilter = (value: string | null) => {
     setOriginChainFilter(value);
