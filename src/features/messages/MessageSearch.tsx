@@ -50,12 +50,14 @@ export function MessageSearch() {
   }, [isValidInput, sanitizedInput]);
 
   // Filter state and handlers
-  const [originChainFilter, setOriginChainFilter] = useState('');
-  const [destinationChainFilter, setDestinationChainFilter] = useState('');
-  const onChangeOriginFilter = (value: string) => {
+  const [originChainFilter, setOriginChainFilter] = useState<string | null>(null);
+  console.log('===originChainFilter');
+  console.log(originChainFilter);
+  const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(null);
+  const onChangeOriginFilter = (value: string | null) => {
     setOriginChainFilter(value);
   };
-  const onChangeDestinationFilter = (value: string) => {
+  const onChangeDestinationFilter = (value: string | null) => {
     setDestinationChainFilter(value);
   };
 
@@ -116,7 +118,11 @@ export function MessageSearch() {
   );
 }
 
-function assembleQuery(searchInput: string, originFilter: string, destFilter: string) {
+function assembleQuery(
+  searchInput: string,
+  originFilter: string | null,
+  destFilter: string | null,
+) {
   const hasInput = !!searchInput;
 
   const originChains = originFilter

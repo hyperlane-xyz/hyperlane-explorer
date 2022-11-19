@@ -13,10 +13,6 @@
   transition: 200ms all ease-in-out;
 }
 
-.checkbox:hover {
-  opacity: 0.85;
-}
-
 .checkbox::before {
   content: "";
   width: 0.9rem;

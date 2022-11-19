@@ -27,8 +27,8 @@ export function Header({ pathName }: { pathName: string }) {
         <Link href="/">
           <a className="flex items-center">
             <div className="flex items-center scale-90 sm:scale-100">
-              <Image src={Logo} width={22} height={22} alt="" className="pb-1" />
-              <Image src={Name} width={110} height={22} alt="Hyperlane" className="ml-2" />
+              <Image src={Logo} width={22} height={22} alt="" />
+              <Image src={Name} width={110} height={22} alt="Hyperlane" className="mt-0.5 ml-2" />
               <h1 className="ml-2 font-serif text-[1.75rem] xs:text-[1.65rem] leading-[0.5rem] text-blue-500">
                 Explorer
               </h1>

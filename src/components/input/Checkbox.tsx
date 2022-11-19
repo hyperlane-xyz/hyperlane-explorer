@@ -4,17 +4,17 @@ import styles from './Checkbox.module.css';
 
 interface Props {
   checked: boolean;
-  onCheck: (c: boolean) => void;
+  onToggle: (c: boolean) => void;
   name?: string;
 }
 
-export function CheckBox({ checked, onCheck, name, children }: React.PropsWithChildren<Props>) {
+export function CheckBox({ checked, onToggle, name, children }: React.PropsWithChildren<Props>) {
   const onChange = () => {
-    onCheck(!checked);
+    onToggle(!checked);
   };
 
   return (
-    <label className="flex items-center cursor-pointer">
+    <label className="flex items-center cursor-pointer hover:opacity-80">
       <input
         type="checkbox"
         name={name}
