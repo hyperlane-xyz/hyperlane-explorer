@@ -4,7 +4,7 @@
   margin: 0;
   width: 0.9rem;
   height: 0.9rem;
-  border: 2px solid #1F2937;
+  border: 2px solid #1f2937;
   border-radius: 0.2rem;
   transform: translateY(-0.075em);
   display: grid;
@@ -14,13 +14,13 @@
 }
 
 .checkbox::before {
-  content: "";
+  content: '';
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 0.2rem;
   transform: scale(0);
   transition: 200ms all ease-in-out;
-  background-color: #025AA1;
+  background-color: #025aa1;
 }
 
 .checkbox:checked::before {
@@ -28,6 +28,6 @@
 }
 
 .checkbox:disabled {
-  border-color: #BBB;
+  border-color: #bbb;
   cursor: not-allowed;
 }
