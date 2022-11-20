@@ -49,15 +49,11 @@ export function MessageSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValidInput, sanitizedInput]);
 
-  // Filter state and handlers
+  // Filter state
   const [originChainFilter, setOriginChainFilter] = useState<string | null>(null);
   const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(null);
-  const onChangeOriginFilter = (value: string | null) => {
-    setOriginChainFilter(value);
-  };
-  const onChangeDestinationFilter = (value: string | null) => {
-    setDestinationChainFilter(value);
-  };
+  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(null);
+  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
   const { query, variables } = assembleQuery(
@@ -94,10 +90,14 @@ export function MessageSearch() {
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
           <SearchFilterBar
-            originChainFilter={originChainFilter}
-            onChangeOriginFilter={onChangeOriginFilter}
-            destinationChainFilter={destinationChainFilter}
-            onChangeDestinationFilter={onChangeDestinationFilter}
+            originChain={originChainFilter}
+            onChangeOrigin={setOriginChainFilter}
+            destinationChain={destinationChainFilter}
+            onChangeDestination={setDestinationChainFilter}
+            startTimestamp={startTimeFilter}
+            onChangeStartTimestamp={setStartTimeFilter}
+            endTimestamp={endTimeFilter}
+            onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
         <Fade show={!hasError && isValidInput && messageList.length > 0}>

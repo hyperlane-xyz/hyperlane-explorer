@@ -4,7 +4,6 @@ import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 import { Chain } from 'wagmi';
 
 import { mainnetAndTestChains, mainnetChains, testnetChains } from '../../consts/chains';
-import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
@@ -14,22 +13,31 @@ import { ChainIcon } from '../icons/ChainIcon';
 import { ChevronIcon } from '../icons/Chevron';
 import { XIcon } from '../icons/XIcon';
 import { CheckBox } from '../input/Checkbox';
+import { DatetimeField } from '../input/DatetimeField';
 
 interface Props {
-  originChainFilter: string | null;
-  onChangeOriginFilter: (value: string | null) => void;
-  destinationChainFilter: string | null;
-  onChangeDestinationFilter: (value: string | null) => void;
+  originChain: string | null;
+  onChangeOrigin: (value: string | null) => void;
+  destinationChain: string | null;
+  onChangeDestination: (value: string | null) => void;
+  startTimestamp: number | null;
+  onChangeStartTimestamp: (value: number | null) => void;
+  endTimestamp: number | null;
+  onChangeEndTimestamp: (value: number | null) => void;
 }
 
 export function SearchFilterBar({
-  originChainFilter,
-  onChangeOriginFilter,
-  destinationChainFilter,
-  onChangeDestinationFilter,
+  originChain,
+  onChangeOrigin,
+  destinationChain,
+  onChangeDestination,
+  startTimestamp,
+  onChangeStartTimestamp,
+  endTimestamp,
+  onChangeEndTimestamp,
 }: Props) {
   return (
-    <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
+    <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
       <div className="w-px h-8 bg-gray-200"></div>
       <Image
         src={FunnelIcon}
@@ -41,16 +49,22 @@ export function SearchFilterBar({
       <ChainMultiSelector
         text="Origin"
         header="Origin Chains"
-        value={originChainFilter}
-        onChangeValue={onChangeOriginFilter}
+        value={originChain}
+        onChangeValue={onChangeOrigin}
         position="-right-24"
       />
-      <Image src={ArrowRightIcon} width={30} height={30} className="opacity-30" alt="" />
       <ChainMultiSelector
         text="Destination"
         header="Destination Chains"
-        value={destinationChainFilter}
-        onChangeValue={onChangeDestinationFilter}
+        value={destinationChain}
+        onChangeValue={onChangeDestination}
+        position="-right-24"
+      />
+      <DatetimeSelector
+        startValue={startTimestamp}
+        onChangeStartValue={onChangeStartTimestamp}
+        endValue={endTimestamp}
+        onChangeEndValue={onChangeEndTimestamp}
       />
     </div>
   );
@@ -74,6 +88,7 @@ function ChainMultiSelector({
     setIsOpen(false);
   };
 
+  // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
     value ? arrayToObject(value.split(',')) : arrayToObject(mainnetAndTestChains.map((c) => c.id)),
   );
@@ -126,11 +141,11 @@ function ChainMultiSelector({
   return (
     <div className="relative">
       <button
-        className="text-sm min-w-[6rem] px-2.5 py-1 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+        className="text-sm sm:min-w-[5.8rem] px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
         {...buttonProps}
       >
-        <span>{text}</span>
-        <ChevronIcon direction="s" width={10} height={6} classes="ml-2" />
+        <span className="text-gray-700 py-px">{text}</span>
+        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
       </button>
 
       <div
@@ -208,11 +223,83 @@ function ChainMultiSelector({
               ))}
             </div>
           </div>
-          <div className="mt-2.5 flex">
-            <BorderedButton classes="text-sm px-2 py-1 w-full" onClick={onClickApply}>
-              Apply
-            </BorderedButton>
+          <BorderedButton classes="mt-2.5 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+            Apply
+          </BorderedButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DatetimeSelector({
+  startValue,
+  onChangeStartValue,
+  endValue,
+  onChangeEndValue,
+}: {
+  startValue: number | null;
+  onChangeStartValue: (value: number | null) => void;
+  endValue: number | null;
+  onChangeEndValue: (value: number | null) => void;
+}) {
+  const { buttonProps, isOpen, setIsOpen } = useDropdownMenu(1);
+  const closeDropdown = () => {
+    setIsOpen(false);
+  };
+
+  // Need local state as buffer before user hits apply
+  const [startTime, setStartTime] = useState<number | null>(startValue);
+  const [endTime, setEndTime] = useState<number | null>(endValue);
+
+  const onClickClear = () => {
+    setStartTime(null);
+    setEndTime(null);
+  };
+
+  const onClickApply = () => {
+    onChangeStartValue(startTime);
+    onChangeEndValue(endTime);
+    closeDropdown();
+  };
+
+  return (
+    <div className="relative">
+      <button
+        className="text-sm px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+        {...buttonProps}
+      >
+        <span className="text-gray-700 py-px">Time Range</span>
+        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+      </button>
+
+      <div
+        className={`dropdown-menu w-60 top-10 right-0 bg-white shadow-md drop-shadow-md xs:border-blue-50 ${
+          !isOpen && 'hidden'
+        }`}
+        role="menu"
+      >
+        <div className="absolute top-1.5 right-1.5">
+          <XIcon onClick={closeDropdown} />
+        </div>
+        <div className="py-0.5 px-1.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-gray-700 text-lg">Time Range</h3>
+            <div className="flex mr-6">
+              <TextButton classes="text-sm underline underline-offset-2" onClick={onClickClear}>
+                Clear
+              </TextButton>
+            </div>
           </div>
+          <div className="flex flex-col">
+            <h4 className="mt-3 mb-1 text-gray-700">Start Time</h4>
+            <DatetimeField timestamp={startTime} onChange={setStartTime} />
+            <h4 className="mt-3 mb-1 text-gray-700">End Time</h4>
+            <DatetimeField timestamp={endTime} onChange={setEndTime} />
+          </div>
+          <BorderedButton classes="mt-2.5 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+            Apply
+          </BorderedButton>
         </div>
       </div>
     </div>
