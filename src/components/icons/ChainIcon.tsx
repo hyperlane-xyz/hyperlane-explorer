@@ -88,7 +88,7 @@ interface Props {
   background?: boolean;
 }
 
-function _ChainIcon({ chainId, size = 36, color = true, background = false }: Props) {
+function _ChainIcon({ chainId, size = 32, color = true, background = false }: Props) {
   const iconSet = color ? CHAIN_TO_COLOR_ICON : CHAIN_TO_MONOCHROME_ICON;
   const imageSrc = (chainId && iconSet[chainId]) || QuestionMark;
 
