@@ -114,6 +114,12 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
+input[type='date'],
+input[type='datetime'],
+input[type='datetime-local'] {
+  font-size: 0.95em;
+}
+
 /*
 Responsiveness
 ==============

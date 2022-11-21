@@ -49,3 +49,11 @@ export function getDateTimeString(timestamp: number) {
   const date = new Date(timestamp);
   return `${date.toLocaleTimeString()} ${date.toLocaleDateString()}`;
 }
+
+// Adjusts a timestamp forward/backward based on
+// the local time's for the timezone offset
+export function adjustToUtcTime(timestamp: number) {
+  const offsetMs = new Date().getTimezoneOffset() * 60_000;
+  const adjusted = new Date(timestamp + offsetMs);
+  return adjusted.toISOString();
+}

@@ -16,6 +16,7 @@ import useDebounce from '../../utils/debounce';
 import { logger } from '../../utils/logger';
 import { getQueryParamString } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
+import { adjustToUtcTime } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageTable } from './MessageTable';
@@ -60,6 +61,8 @@ export function MessageSearch() {
     sanitizedInput,
     originChainFilter,
     destinationChainFilter,
+    startTimeFilter,
+    endTimeFilter,
   );
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
@@ -120,6 +123,8 @@ function assembleQuery(
   searchInput: string,
   originFilter: string | null,
   destFilter: string | null,
+  startTimeFilter: number | null,
+  endTimeFilter: number | null,
 ) {
   const hasInput = !!searchInput;
 
@@ -129,21 +134,27 @@ function assembleQuery(
   const destinationChains = destFilter
     ? destFilter.split(',').map((c) => chainToDomain[c])
     : undefined;
+  const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
+  const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
     search: hasInput ? trimLeading0x(searchInput) : undefined,
     originChains,
     destinationChains,
+    startTime,
+    endTime,
   };
 
   const limit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
 
   const query = `
-  query ($search: String, $originChains: [Int!], $destinationChains: [Int!]) {
+  query ($search: String, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) {
     message(
       where: {
         _and: [
           ${originFilter ? '{origin: {_in: $originChains}},' : ''}
           ${destFilter ? '{destination: {_in: $destinationChains}},' : ''}
+          ${startTimeFilter ? '{timestamp: {_gte: $startTime}},' : ''}
+          ${endTimeFilter ? '{timestamp: {_lte: $endTime}},' : ''}
           ${hasInput ? searchWhereClause : ''}
         ]
       },

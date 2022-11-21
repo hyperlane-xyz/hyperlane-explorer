@@ -37,7 +37,7 @@ export function SearchFilterBar({
   onChangeEndTimestamp,
 }: Props) {
   return (
-    <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+    <div className="flex items-center space-x-2 md:space-x-4">
       <div className="w-px h-8 bg-gray-200"></div>
       <Image
         src={FunnelIcon}
@@ -51,14 +51,14 @@ export function SearchFilterBar({
         header="Origin Chains"
         value={originChain}
         onChangeValue={onChangeOrigin}
-        position="-right-24"
+        position="-right-32"
       />
       <ChainMultiSelector
         text="Destination"
         header="Destination Chains"
         value={destinationChain}
         onChangeValue={onChangeDestination}
-        position="-right-24"
+        position="-right-28"
       />
       <DatetimeSelector
         startValue={startTimestamp}
@@ -141,7 +141,7 @@ function ChainMultiSelector({
   return (
     <div className="relative">
       <button
-        className="text-sm sm:min-w-[5.8rem] px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+        className="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
         {...buttonProps}
       >
         <span className="text-gray-700 py-px">{text}</span>
@@ -266,7 +266,7 @@ function DatetimeSelector({
   return (
     <div className="relative">
       <button
-        className="text-sm px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+        className="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
         {...buttonProps}
       >
         <span className="text-gray-700 py-px">Time Range</span>
@@ -285,7 +285,7 @@ function DatetimeSelector({
         <div className="py-0.5 px-1.5">
           <div className="flex items-center justify-between">
             <h3 className="text-gray-700 text-lg">Time Range</h3>
-            <div className="flex mr-6">
+            <div className="flex mr-6 pt-1">
               <TextButton classes="text-sm underline underline-offset-2" onClick={onClickClear}>
                 Clear
               </TextButton>
@@ -297,7 +297,7 @@ function DatetimeSelector({
             <h4 className="mt-3 mb-1 text-gray-700">End Time</h4>
             <DatetimeField timestamp={endTime} onChange={setEndTime} />
           </div>
-          <BorderedButton classes="mt-2.5 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+          <BorderedButton classes="mt-4 text-sm px-2 py-1 w-full" onClick={onClickApply}>
             Apply
           </BorderedButton>
         </div>

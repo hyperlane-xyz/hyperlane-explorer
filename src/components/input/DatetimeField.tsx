@@ -11,7 +11,7 @@ export function DatetimeField({ timestamp, onChange, name }: Props) {
     if (!e.target['validity'].valid) {
       onChange(null);
     } else {
-      const datetime = e.target['value']; //+ ':00Z';
+      const datetime = e.target['value'] + ':00Z';
       const newTimestamp = new Date(datetime).getTime();
       onChange(newTimestamp);
     }
@@ -20,14 +20,16 @@ export function DatetimeField({ timestamp, onChange, name }: Props) {
   return (
     <input
       type="datetime-local"
-      value={toIsoString(timestamp)}
+      value={toShortIsoString(timestamp)}
       onChange={handleChange}
       name={name}
+      className="-ml-px"
     />
   );
 }
 
-function toIsoString(timestamp: number | null) {
+function toShortIsoString(timestamp: number | null) {
   if (!timestamp) return '';
+  // Trim milliseconds and timezone to match input field format
   return new Date(timestamp).toISOString().split('.')[0];
 }
