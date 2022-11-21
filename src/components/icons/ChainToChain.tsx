@@ -9,7 +9,7 @@ import { ChainIcon } from './ChainIcon';
 function _ChainToChain({
   originChainId,
   destinationChainId,
-  size = 40,
+  size = 36,
   arrowSize = 32,
   isNarrow = false,
 }: {

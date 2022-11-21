@@ -191,8 +191,8 @@ function ChainMultiSelector({
                   name={c.network}
                 >
                   <div className="ml-2 text-sm flex items-center">
-                    <span className="mr-1">{getChainDisplayName(c.id, true)}</span>
-                    <ChainIcon chainId={c.id} size={22} />
+                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
+                    <ChainIcon chainId={c.id} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
@@ -216,8 +216,8 @@ function ChainMultiSelector({
                   name={c.network}
                 >
                   <div className="ml-2 text-sm flex items-center">
-                    <span className="mr-1">{getChainDisplayName(c.id, true)}</span>
-                    <ChainIcon chainId={c.id} size={22} />
+                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
+                    <ChainIcon chainId={c.id} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}

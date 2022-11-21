@@ -70,13 +70,13 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
     <>
       <td className="py-3.5">
         <div className="flex items-center pl-3 sm:pl-5">
-          <ChainIcon chainId={originChainId} size={26} />
+          <ChainIcon chainId={originChainId} size={22} />
           <div className={styles.valueChainName}>{getChainDisplayName(originChainId, true)}</div>
         </div>
       </td>
       <td>
         <div className="flex items-center">
-          <ChainIcon chainId={destinationChainId} size={26} />
+          <ChainIcon chainId={destinationChainId} size={22} />
           <div className={styles.valueChainName}>
             {getChainDisplayName(destinationChainId, true)}
           </div>
