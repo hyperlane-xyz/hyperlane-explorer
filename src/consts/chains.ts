@@ -311,32 +311,32 @@ export const chainIdToExplorerApi = {
 };
 
 export const mainnetChains = [
-  chain.mainnet,
-  chain.optimism,
-  chain.polygon,
   arbitrumChain,
   avalancheChain,
   bscChain,
   celoMainnetChain,
+  chain.mainnet,
   moonbeamChain,
+  chain.optimism,
+  chain.polygon,
 ];
 
 export const testnetChains = [
-  chain.goerli,
-  chain.arbitrumGoerli,
-  chain.optimismGoerli,
-  fujiTestnetChain,
-  bscTestnetChain,
   alfajoresChain,
+  chain.arbitrumGoerli,
   auroraTestnetChain,
+  bscTestnetChain,
+  fujiTestnetChain,
+  chain.goerli,
   moonbaseAlphaChain,
+  chain.optimismGoerli,
   polygonMumbaiChain,
-  zksync2testnetChain,
+  // zksync2testnetChain,
 ];
 
-export const prodAndTestChains = [...mainnetChains, ...testnetChains];
+export const mainnetAndTestChains = [...mainnetChains, ...testnetChains];
 
-export const allChains = [...allChainsWagmi, ...prodAndTestChains];
+export const allChains = [...allChainsWagmi, ...mainnetAndTestChains];
 
 export const chainIdToChain = allChains.reduce<Record<number, Chain>>((result, chain) => {
   result[chain.id] = chain;

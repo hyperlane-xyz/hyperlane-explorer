@@ -17,26 +17,30 @@ export function MessageTable({
 
   return (
     <table className="w-full mb-1">
-      <tr className="border-b border-gray-100">
-        <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
-        <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
-        <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
-        <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
-        <th className={styles.header}>Time sent</th>
-        <th className={`${styles.header} hidden lg:table-cell`}>Duration</th>
-        <th className={styles.header}>Status</th>
-      </tr>
-      {messageList.map((m) => (
-        <tr
-          key={`message-${m.id}`}
-          className={`cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
-            isFetching && 'blur-xs'
-          } transition-all duration-500`}
-          onClick={() => router.push(`/message/${m.id}`)}
-        >
-          <MessageSummaryRow message={m} />
+      <thead>
+        <tr className="border-b border-gray-100">
+          <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
+          <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
+          <th className={styles.header}>Time sent</th>
+          <th className={`${styles.header} hidden lg:table-cell`}>Duration</th>
+          <th className={styles.header}>Status</th>
         </tr>
-      ))}
+      </thead>
+      <tbody>
+        {messageList.map((m) => (
+          <tr
+            key={`message-${m.id}`}
+            className={`cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
+              isFetching && 'blur-xs'
+            } transition-all duration-500`}
+            onClick={() => router.push(`/message/${m.id}`)}
+          >
+            <MessageSummaryRow message={m} />
+          </tr>
+        ))}
+      </tbody>
     </table>
   );
 }
@@ -66,13 +70,13 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
     <>
       <td className="py-3.5">
         <div className="flex items-center pl-3 sm:pl-5">
-          <ChainIcon chainId={originChainId} size={26} />
+          <ChainIcon chainId={originChainId} size={22} />
           <div className={styles.valueChainName}>{getChainDisplayName(originChainId, true)}</div>
         </div>
       </td>
       <td>
         <div className="flex items-center">
-          <ChainIcon chainId={destinationChainId} size={26} />
+          <ChainIcon chainId={destinationChainId} size={22} />
           <div className={styles.valueChainName}>
             {getChainDisplayName(destinationChainId, true)}
           </div>

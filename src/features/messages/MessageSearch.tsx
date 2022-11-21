@@ -16,6 +16,7 @@ import useDebounce from '../../utils/debounce';
 import { logger } from '../../utils/logger';
 import { getQueryParamString } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
+import { adjustToUtcTime } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageTable } from './MessageTable';
@@ -49,21 +50,19 @@ export function MessageSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValidInput, sanitizedInput]);
 
-  // Filter state and handlers
-  const [originChainFilter, setOriginChainFilter] = useState('');
-  const [destinationChainFilter, setDestinationChainFilter] = useState('');
-  const onChangeOriginFilter = (value: string) => {
-    setOriginChainFilter(value);
-  };
-  const onChangeDestinationFilter = (value: string) => {
-    setDestinationChainFilter(value);
-  };
+  // Filter state
+  const [originChainFilter, setOriginChainFilter] = useState<string | null>(null);
+  const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(null);
+  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(null);
+  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
   const { query, variables } = assembleQuery(
     sanitizedInput,
     originChainFilter,
     destinationChainFilter,
+    startTimeFilter,
+    endTimeFilter,
   );
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
@@ -94,10 +93,14 @@ export function MessageSearch() {
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
           <SearchFilterBar
-            originChainFilter={originChainFilter}
-            onChangeOriginFilter={onChangeOriginFilter}
-            destinationChainFilter={destinationChainFilter}
-            onChangeDestinationFilter={onChangeDestinationFilter}
+            originChain={originChainFilter}
+            onChangeOrigin={setOriginChainFilter}
+            destinationChain={destinationChainFilter}
+            onChangeDestination={setDestinationChainFilter}
+            startTimestamp={startTimeFilter}
+            onChangeStartTimestamp={setStartTimeFilter}
+            endTimestamp={endTimeFilter}
+            onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
         <Fade show={!hasError && isValidInput && messageList.length > 0}>
@@ -116,22 +119,42 @@ export function MessageSearch() {
   );
 }
 
-function assembleQuery(searchInput: string, originFilter: string, destFilter: string) {
+function assembleQuery(
+  searchInput: string,
+  originFilter: string | null,
+  destFilter: string | null,
+  startTimeFilter: number | null,
+  endTimeFilter: number | null,
+) {
   const hasInput = !!searchInput;
+
+  const originChains = originFilter
+    ? originFilter.split(',').map((c) => chainToDomain[c])
+    : undefined;
+  const destinationChains = destFilter
+    ? destFilter.split(',').map((c) => chainToDomain[c])
+    : undefined;
+  const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
+  const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
     search: hasInput ? trimLeading0x(searchInput) : undefined,
-    originChain: originFilter ? chainToDomain[originFilter] : undefined,
-    destinationChain: destFilter ? chainToDomain[destFilter] : undefined,
+    originChains,
+    destinationChains,
+    startTime,
+    endTime,
   };
+
   const limit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
 
   const query = `
-  query ($search: String, $originChain: Int, $destinationChain: Int) {
+  query ($search: String, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) {
     message(
       where: {
         _and: [
-          ${originFilter ? '{origin: {_eq: $originChain}},' : ''}
-          ${destFilter ? '{destination: {_eq: $destinationChain}},' : ''}
+          ${originFilter ? '{origin: {_in: $originChains}},' : ''}
+          ${destFilter ? '{destination: {_in: $destinationChains}},' : ''}
+          ${startTimeFilter ? '{timestamp: {_gte: $startTime}},' : ''}
+          ${endTimeFilter ? '{timestamp: {_lte: $endTime}},' : ''}
           ${hasInput ? searchWhereClause : ''}
         ]
       },

@@ -27,8 +27,8 @@ export function Header({ pathName }: { pathName: string }) {
         <Link href="/">
           <a className="flex items-center">
             <div className="flex items-center scale-90 sm:scale-100">
-              <Image src={Logo} width={22} height={22} alt="" className="pb-1" />
-              <Image src={Name} width={110} height={22} alt="Hyperlane" className="ml-2" />
+              <Image src={Logo} width={22} height={22} alt="" />
+              <Image src={Name} width={110} height={22} alt="Hyperlane" className="mt-0.5 ml-2" />
               <h1 className="ml-2 font-serif text-[1.75rem] xs:text-[1.65rem] leading-[0.5rem] text-blue-500">
                 Explorer
               </h1>
@@ -101,7 +101,7 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 const styles = {
   navLink:
     'pt-px flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
-  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50',
+  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50 shadow-md',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
   activeEnv: 'font-medium cursor-default hover:no-underline',
