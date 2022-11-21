@@ -6,7 +6,7 @@ import Asterisk from '../../images/icons/asterisk.svg';
 import Key from '../../images/icons/key.svg';
 import { useIsMobile } from '../../styles/mediaQueries';
 
-function _InterchainAccount({ size = 44, arrowSize = 32 }: { size?: number; arrowSize?: number }) {
+function _InterchainAccount({ size = 34, arrowSize = 32 }: { size?: number; arrowSize?: number }) {
   const isMobile = useIsMobile();
   if (isMobile) {
     size = Math.floor(size * 0.8);
