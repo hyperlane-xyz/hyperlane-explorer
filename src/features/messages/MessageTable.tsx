@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { PropsWithChildren } from 'react';
 
 import { ChainIcon } from '../../components/icons/ChainIcon';
@@ -15,8 +14,6 @@ export function MessageTable({
   messageList: MessageStub[];
   isFetching: boolean;
 }) {
-  const router = useRouter();
-
   return (
     <table className="w-full mb-1">
       <thead>
@@ -37,7 +34,6 @@ export function MessageTable({
             className={`cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
-            // onClick={() => router.push(`/message/${m.id}`)}
           >
             <MessageSummaryRow message={m} />
           </tr>
