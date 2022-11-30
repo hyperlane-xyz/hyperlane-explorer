@@ -24,24 +24,22 @@ export function Header({ pathName }: { pathName: string }) {
   return (
     <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:px-6 lg:pr-14 w-full">
       <div className="flex items-center justify-between">
-        <Link href="/">
-          <a className="flex items-center">
-            <div className="flex items-center scale-90 sm:scale-100">
-              <Image src={Logo} width={22} height={22} alt="" />
-              <Image src={Name} width={110} height={22} alt="Hyperlane" className="mt-0.5 ml-2" />
-              <h1 className="ml-2 font-serif text-[1.75rem] xs:text-[1.65rem] leading-[0.5rem] text-blue-500">
-                Explorer
-              </h1>
-            </div>
-          </a>
+        <Link href="/" className="flex items-center">
+          <div className="flex items-center scale-90 sm:scale-100">
+            <Image src={Logo} width={22} height={22} alt="" />
+            <Image src={Name} width={110} height={22} alt="Hyperlane" className="mt-0.5 ml-2" />
+            <h1 className="ml-2 font-serif text-[1.75rem] xs:text-[1.65rem] leading-[0.5rem] text-blue-500">
+              Explorer
+            </h1>
+          </div>
         </Link>
         <nav
           className={`hidden sm:flex sm:space-x-8 sm:items-center ${
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
-          <Link href="/">
-            <a className={styles.navLink}>Home</a>
+          <Link href="/" className={styles.navLink}>
+            Home
           </Link>
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
@@ -59,10 +57,8 @@ export function Header({ pathName }: { pathName: string }) {
       </div>
       {/* Dropdown menu, used on mobile */}
       <nav className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
-        <Link href="/">
-          <a {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
-            <DropdownItemContent icon={HouseIcon} text="Home" />
-          </a>
+        <Link href="/" {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
+          <DropdownItemContent icon={HouseIcon} text="Home" />
         </Link>
         <a
           {...itemProps[1]}

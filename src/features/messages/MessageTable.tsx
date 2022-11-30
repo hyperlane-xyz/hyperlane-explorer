@@ -110,8 +110,8 @@ function LinkCell({
 }: PropsWithChildren<{ id: number; tdClasses?: string; aClasses?: string }>) {
   return (
     <td className={tdClasses}>
-      <Link href={`/message/${id}`}>
-        <a className={aClasses}>{children}</a>
+      <Link href={`/message/${id}`} className={aClasses}>
+        {children}
       </Link>
     </td>
   );
