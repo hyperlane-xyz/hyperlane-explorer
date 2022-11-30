@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useQuery } from 'urql';

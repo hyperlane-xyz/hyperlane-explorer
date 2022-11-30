@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { memo } from 'react';
 
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';

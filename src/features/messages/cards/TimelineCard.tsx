@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BigNumber } from 'ethers';
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
