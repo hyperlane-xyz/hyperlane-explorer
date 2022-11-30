@@ -7,6 +7,7 @@ import BookIcon from '../../images/icons/book.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
+import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 import { MiniSearchBar } from '../search/MiniSearchBar';
@@ -26,11 +27,9 @@ export function Header({ pathName }: { pathName: string }) {
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <div className="flex items-center scale-90 sm:scale-100">
-            <Image src={Logo} width={22} height={22} alt="" />
-            <Image src={Name} width={110} height={22} alt="Hyperlane" className="mt-0.5 ml-2" />
-            <h1 className="ml-2 font-serif text-[1.75rem] xs:text-[1.65rem] leading-[0.5rem] text-blue-500">
-              Explorer
-            </h1>
+            <Image src={Logo} width={22} alt="" />
+            <Image src={Name} width={110} alt="Hyperlane" className="mt-0.5 ml-2" />
+            <Image src={Explorer} width={108} alt="Explorer" className="mt-0.5 ml-2" />
           </div>
         </Link>
         <nav
