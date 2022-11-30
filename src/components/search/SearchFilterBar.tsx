@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { useState } from 'react';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 import { Chain } from 'wagmi';

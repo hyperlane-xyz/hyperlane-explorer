@@ -17,7 +17,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
-      <div className="h-full min-h-screen w-full min-w-screen bg-gray-100">
+      <div id="app-content" className="h-full min-h-screen w-full min-w-screen">
         <div className="max-w-5xl mx-auto flex flex-col justify-between min-h-screen">
           <Header pathName={pathName} />
           <main className="w-full flex-1">{children}</main>

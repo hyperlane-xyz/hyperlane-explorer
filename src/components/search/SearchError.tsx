@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 
 import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';

@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { links } from '../../consts/links';
@@ -51,8 +51,8 @@ function FooterLink({ href, text }: { href: string; text: string }) {
 
   if (href[0] === '/') {
     return (
-      <Link href={href}>
-        <a className={aClasses}>{text}</a>
+      <Link href={href} className={aClasses}>
+        {text}
       </Link>
     );
   } else {

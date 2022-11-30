@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 

@@ -1,4 +1,4 @@
-import Image from 'next/future/image';
+import Image from 'next/image';
 import { ChangeEvent } from 'react';
 
 import SearchIcon from '../../images/icons/search.svg';
