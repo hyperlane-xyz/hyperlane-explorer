@@ -17,7 +17,6 @@ const ICA_ADDRESS = Object.values(hyperlaneCoreAddresses)[0].interchainAccountRo
 export function isIcaMessage({
   sender,
   recipient,
-  hash,
 }: {
   sender: string;
   recipient: string;
@@ -27,10 +26,10 @@ export function isIcaMessage({
   const isRecipIca = isAddressIcaRouter(recipient);
   if (isSenderIca && isRecipIca) return true;
   if (isSenderIca && !isRecipIca) {
-    logger.warn('Msg sender is ICA router but not recip', sender, recipient, hash);
+    logger.warn('Msg sender is ICA router but not recip', sender, recipient);
   }
   if (!isSenderIca && isRecipIca) {
-    logger.warn('Msg recip is ICA router but not sender', recipient, sender, hash);
+    logger.warn('Msg recip is ICA router but not sender', recipient, sender);
   }
   return false;
 }

@@ -10,3 +10,5 @@ export const envDisplayValue = {
   [Environment.Mainnet]: 'Mainnet',
   [Environment.Testnet2]: 'Testnet',
 };
+
+export const MAILBOX_VERSION = 0;

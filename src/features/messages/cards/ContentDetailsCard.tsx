@@ -6,6 +6,7 @@ import { ChainToChain } from '../../../components/icons/ChainToChain';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
+import { MAILBOX_VERSION } from '../../../consts/environments';
 import { Message } from '../../../types';
 import { tryUtf8DecodeBytes } from '../parseMessage';
 
@@ -46,6 +47,8 @@ export function ContentDetailsCard({
       : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode';
 
   const rawBytes = utils.formatMessage(
+    MAILBOX_VERSION,
+    nonce,
     originDomainId,
     sender,
     destinationDomainId,

@@ -2,7 +2,7 @@
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, providers } from 'ethers';
 
-import { IMessageRecipient__factory, Inbox } from '@hyperlane-xyz/core';
+import { IMessageRecipient__factory, Mailbox } from '@hyperlane-xyz/core';
 import {
   ChainName,
   DispatchedMessage,
@@ -61,7 +61,7 @@ export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
-  leafIndex?: number, // TODO rename
+  nonce?: number,
   attemptGetProcessTx = true,
   multiProvider = new MultiProvider(chainConnectionConfigs),
 ): Promise<MessageDebugResult> {
@@ -85,8 +85,8 @@ export async function debugMessagesForTransaction(
   const messageDetails: MessageDebugDetails[] = [];
   for (let i = 0; i < dispatchedMessages.length; i++) {
     const msg = dispatchedMessages[i];
-    if (leafIndex && !BigNumber.from(msg.leafIndex).eq(leafIndex)) {
-      logger.debug(`Skipping message ${i + 1}, does not match leafIndex ${leafIndex}`);
+    if (nonce && !BigNumber.from(msg.parsed.nonce).eq(nonce)) {
+      logger.debug(`Skipping message ${i + 1}, does not match nonce ${nonce}`);
       continue;
     }
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
@@ -142,25 +142,27 @@ async function checkMessage(
   attemptGetProcessTx = true,
 ): Promise<MessageDebugDetails> {
   logger.debug(JSON.stringify(message));
-  const properties = new Map<string, string | LinkProperty>();
-
   const {
     sender: senderBytes,
     recipient: recipientBytes,
     body,
     destination,
     origin,
+    nonce,
   } = message.parsed;
+  const messageId = utils.messageId(message.message);
   const senderAddress = utils.bytes32ToAddress(senderBytes.toString());
   const recipientAddress = utils.bytes32ToAddress(recipientBytes.toString());
 
+  const properties = new Map<string, string | LinkProperty>();
+  properties.set('ID', messageId);
   properties.set('Sender', senderAddress);
   properties.set('Recipient', recipientAddress);
   properties.set('Origin Domain', origin.toString());
   properties.set('Origin Chain', DomainIdToChainName[origin] || 'Unknown');
   properties.set('Destination Domain', destination.toString());
   properties.set('Destination Chain', DomainIdToChainName[destination] || 'Unknown');
-  properties.set('Leaf index', message.leafIndex.toString());
+  properties.set('Nonce', nonce.toString());
   properties.set('Raw Bytes', message.message);
 
   const destinationChain = DomainIdToChainName[destination];
@@ -183,19 +185,13 @@ async function checkMessage(
     };
   }
 
-  const destinationInbox = core.getMailboxPair(
-    DomainIdToChainName[origin],
-    destinationChain,
-  ).destinationInbox;
+  const destinationMailbox = core.getContracts(destinationChain).mailbox.contract;
+  const isDelivered = await destinationMailbox.delivered(messageId);
 
-  const messageHash = utils.messageHash(message.message, message.leafIndex);
-  logger.debug(`Message hash: ${messageHash}`);
-
-  const processed = await destinationInbox.messages(messageHash);
-  if (processed === 1) {
+  if (isDelivered) {
     logger.info('Message has already been processed');
     if (attemptGetProcessTx) {
-      const processTxHash = await tryGetProcessTxHash(destinationInbox, messageHash);
+      const processTxHash = await tryGetProcessTxHash(destinationMailbox, messageId);
       if (processTxHash) {
         const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
         properties.set('Process TX', { url, text: processTxHash });
@@ -227,7 +223,7 @@ async function checkMessage(
   );
   try {
     await recipientContract.estimateGas.handle(origin, senderBytes, body, {
-      from: destinationInbox.address,
+      from: destinationMailbox.address,
     });
     logger.debug('Calling recipient `handle` function from the inbox does not revert');
     return {
@@ -251,7 +247,6 @@ async function checkMessage(
     const icaCallError = await checkIcaMessageError(
       senderAddress,
       recipientAddress,
-      messageHash,
       body,
       origin,
       destinationProvider,
@@ -293,10 +288,10 @@ function getTxExplorerLink(multiProvider: MultiProvider<any>, chain: ChainName, 
 
 // TODO use explorer for this instead of RPC to avoid block age limitations
 // In doing so, de-dupe with features/search/useMessageProcessTx.ts
-async function tryGetProcessTxHash(destinationInbox: Inbox, messageHash: string) {
+async function tryGetProcessTxHash(destinationMailbox: Mailbox, messageId: string) {
   try {
-    const filter = destinationInbox.filters.Process(messageHash);
-    const matchedEvents = await destinationInbox.queryFilter(filter);
+    const filter = destinationMailbox.filters.ProcessId(messageId);
+    const matchedEvents = await destinationMailbox.queryFilter(filter);
     if (matchedEvents?.length) {
       const event = matchedEvents[0];
       return event.transactionHash;
@@ -327,12 +322,11 @@ async function tryCheckBytecodeHandle(
 async function checkIcaMessageError(
   sender: string,
   recipient: string,
-  hash: string,
   body: string,
   originDomainId: number,
   destinationProvider: providers.Provider,
 ) {
-  if (!isIcaMessage({ sender, recipient, hash })) return null;
+  if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 
   const decodedBody = tryDecodeIcaBody(body);
