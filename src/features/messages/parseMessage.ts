@@ -1,5 +1,4 @@
 import { TEST_RECIPIENT_ADDRESS } from '../../consts/addresses';
-import { domainToChain } from '../../consts/domains';
 import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../types';
 import { areAddressesEqual, ensureLeading0x, trimLeading0x } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
@@ -30,13 +29,14 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       : undefined;
     return {
       id: m.id,
+      msgId: m.msg_id,
       status,
       sender: parsePaddedAddress(m.sender),
       recipient: parsePaddedAddress(m.recipient),
       originDomainId: m.origin,
       destinationDomainId: m.destination,
-      originChainId: domainToChain[m.origin],
-      destinationChainId: domainToChain[m.destination],
+      originChainId: m.origin,
+      destinationChainId: m.destination,
       originTimestamp: parseTimestampString(m.timestamp),
       destinationTimestamp,
     };
@@ -58,13 +58,14 @@ function parseMessage(m: MessageEntry): Message | null {
     const body = decodePostgresBinaryHex(m.msg_body ?? '');
     const isTestRecipient = areAddressesEqual(stub.recipient, TEST_RECIPIENT_ADDRESS);
     const decodedBody = isTestRecipient ? tryUtf8DecodeBytes(body) : undefined;
+    const leafIndex = 1; //TODO
 
     return {
       ...stub,
+      nonce: m.nonce,
+      leafIndex,
       body,
       decodedBody,
-      leafIndex: m.leaf_index,
-      hash: ensureLeading0x(m.hash),
       originTransaction: parseTransaction(m.transaction),
       destinationTransaction,
     };

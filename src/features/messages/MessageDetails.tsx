@@ -183,15 +183,19 @@ function StatusHeader({
 }
 
 const messageDetailsQuery = `
-query MessageDetails ($messageId: bigint!){
-  message(where: {id: {_eq: $messageId}}, limit: 1) {
+query MessageDetails ($messageId: String!){
+  message(where: {msg_id: {_eq: $messageId}}, limit: 1) {
     destination
     id
-    leaf_index
-    hash
+    msg_id
+    nonce
     msg_body
     origin
     origin_tx_id
+    origin_mailbox
+    recipient
+    sender
+    timestamp
     transaction {
       id
       block_id
@@ -206,14 +210,10 @@ query MessageDetails ($messageId: bigint!){
         timestamp
       }
     }
-    outbox_address
-    recipient
-    sender
-    timestamp
     delivered_message {
       id
       tx_id
-      inbox_address
+      destination_mailbox
       transaction {
         block_id
         gas_used

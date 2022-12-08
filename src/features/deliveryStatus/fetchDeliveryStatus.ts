@@ -4,7 +4,6 @@ import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { chainIdToName } from '../../consts/chains';
-import { chainToDomain, domainToChain } from '../../consts/domains';
 import { Message, MessageStatus } from '../../types';
 import { validateAddress } from '../../utils/addresses';
 import { getChainEnvironment } from '../../utils/chains';
@@ -147,14 +146,10 @@ function validateMessage(message: Message) {
     sender,
   } = message;
 
-  if (!originDomainId || !domainToChain[originDomainId])
-    throw new Error(`Invalid origin domain ${originDomainId}`);
-  if (!destinationDomainId || !domainToChain[destinationDomainId])
-    throw new Error(`Invalid dest domain ${destinationDomainId}`);
-  if (!originChainId || !chainToDomain[originChainId])
-    throw new Error(`Invalid origin chain ${originChainId}`);
-  if (!destinationChainId || !chainToDomain[destinationChainId])
-    throw new Error(`Invalid dest chain ${destinationChainId}`);
+  if (!originDomainId) throw new Error(`Invalid origin domain ${originDomainId}`);
+  if (!destinationDomainId) throw new Error(`Invalid dest domain ${destinationDomainId}`);
+  if (!originChainId) throw new Error(`Invalid origin chain ${originChainId}`);
+  if (!destinationChainId) throw new Error(`Invalid dest chain ${destinationChainId}`);
   if (!chainIdToName[originChainId]) throw new Error(`No name found for chain ${originChainId}`);
   if (!chainIdToName[destinationChainId])
     throw new Error(`No name found for chain ${destinationChainId}`);

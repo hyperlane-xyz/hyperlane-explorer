@@ -23,7 +23,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
   } = useIcaAddress(originDomainId, decodeResult?.sender);
 
   return (
-    <Card classes="space-y-4" width="w-full">
+    <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <InterchainAccount />

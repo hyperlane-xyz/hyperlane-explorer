@@ -36,19 +36,19 @@ interface Props {
 
 export function TimelineCard({ message, resolvedStatus: status, resolvedDestinationTx }: Props) {
   const {
+    leafIndex,
     originChainId,
     destinationChainId,
     originTimestamp,
     destinationTimestamp,
-    leafIndex,
     originTransaction,
   } = message;
 
   const { stage, timings } = useMessageStage(
     status,
+    leafIndex,
     originChainId,
     destinationChainId,
-    leafIndex,
     originTransaction.blockNumber,
     originTimestamp,
     destinationTimestamp || resolvedDestinationTx?.timestamp,
@@ -57,7 +57,7 @@ export function TimelineCard({ message, resolvedStatus: status, resolvedDestinat
   const timeSent = new Date(originTimestamp);
 
   return (
-    <Card width="w-full">
+    <Card classes="w-full">
       {/* <div className="flex items-center justify-end">
         <h3 className="text-gray-500 font-medium text-md mr-2">Delivery Timeline</h3>
         <HelpIcon size={16} text="A breakdown of the stages for delivering a message" />
@@ -203,9 +203,9 @@ function getStageClass(targetStage: Stage, currentStage: Stage, messageStatus: M
 
 function useMessageStage(
   status: MessageStatus,
+  leafIndex: number,
   originChainId: number,
   destChainId: number,
-  leafIndex: number,
   originBlockNumber: number,
   originTimestamp: number,
   destinationTimestamp?: number,
@@ -214,11 +214,11 @@ function useMessageStage(
     [
       'messageStage',
       status,
+      leafIndex,
       originChainId,
       destChainId,
       originTimestamp,
       destinationTimestamp,
-      leafIndex,
       originBlockNumber,
     ],
     async () => {

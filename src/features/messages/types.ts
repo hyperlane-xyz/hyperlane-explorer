@@ -24,8 +24,8 @@ export interface TransactionEntry {
 
 export interface DeliveredMessageStubEntry {
   id: number;
-  inbox_address: string; // binary e.g. \\x123
   tx_id: number;
+  destination_mailbox: string;
   transaction: {
     block: {
       timestamp: string; // e.g. "2022-08-28T17:30:15"
@@ -48,22 +48,22 @@ export interface MessageStateEntry {
 
 export interface MessageStubEntry {
   id: number;
+  msg_id: string;
   destination: number;
   origin: number;
   recipient: string; // binary e.g. \\x123
   sender: string; // binary e.g. \\x123
   timestamp: string; // e.g. "2022-08-28T17:30:15"
-  transaction: TransactionEntry; // origin transaction
   delivered_message: DeliveredMessageStubEntry | null | undefined;
   message_states: MessageStateEntry[];
 }
 
 export interface MessageEntry extends MessageStubEntry {
-  outbox_address: string; // binary e.g. \\x123
+  nonce: number;
   msg_body: string | null | undefined; // binary e.g. \\x123
-  hash: string; // message hash, not related to tx
-  leaf_index: number;
+  origin_mailbox: string;
   origin_tx_id: number;
+  transaction: TransactionEntry; // origin transaction
   delivered_message: DeliveredMessageEntry | null | undefined;
 }
 

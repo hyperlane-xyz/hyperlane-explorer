@@ -1,6 +1,6 @@
 # Hyperlane Explorer App
 
-A multi-chain explorer for the Hyperlane protocol and network.
+An interchain explorer for the Hyperlane protocol and network.
 
 ## Setup
 

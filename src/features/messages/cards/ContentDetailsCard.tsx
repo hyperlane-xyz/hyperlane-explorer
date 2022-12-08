@@ -19,14 +19,15 @@ interface Props {
 
 export function ContentDetailsCard({
   message: {
+    msgId,
+    nonce,
+    leafIndex,
     originDomainId,
     originChainId,
     destinationDomainId,
     destinationChainId,
     sender,
     recipient,
-    leafIndex,
-    hash,
     body,
     decodedBody,
   },
@@ -54,7 +55,7 @@ export function ContentDetailsCard({
   );
 
   return (
-    <Card classes="space-y-4" width="w-full">
+    <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
@@ -67,6 +68,14 @@ export function ContentDetailsCard({
           />
         </div>
       </div>
+      <KeyValueRow
+        label="Message Id:"
+        labelWidth="w-20"
+        display={msgId}
+        displayWidth="w-60 sm:w-80"
+        showCopy={true}
+        blurValue={shouldBlur}
+      />
       <KeyValueRow
         label="Sender:"
         labelWidth="w-20"
@@ -83,13 +92,20 @@ export function ContentDetailsCard({
         showCopy={true}
         blurValue={shouldBlur}
       />
-      <KeyValueRow
-        label="Leaf index:"
-        labelWidth="w-20"
-        display={leafIndex.toString()}
-        displayWidth="w-60 sm:w-80"
-        blurValue={shouldBlur}
-      />
+      <div className="flex space-x-20">
+        <KeyValueRow
+          label="Nonce:"
+          labelWidth="w-20"
+          display={nonce.toString()}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Leaf Index:"
+          labelWidth="w-20"
+          display={leafIndex.toString()}
+          blurValue={shouldBlur}
+        />
+      </div>
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>
@@ -103,7 +119,6 @@ export function ContentDetailsCard({
         <CodeBlock value={bodyDisplay} />
       </div>
       <LabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
-      <LabelAndCodeBlock label="Message hash:" value={hash} />
     </Card>
   );
 }

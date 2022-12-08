@@ -4,7 +4,7 @@ interface Props {
   label: string;
   labelWidth: string;
   display: string;
-  displayWidth: string;
+  displayWidth?: string;
   subDisplay?: string;
   showCopy?: boolean;
   blurValue?: boolean;
@@ -22,7 +22,7 @@ export function KeyValueRow({
   return (
     <div className="flex items-center pl-px">
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div className={`text-sm ml-2 truncate ${displayWidth} ${blurValue && 'blur-xs'}`}>
+      <div className={`text-sm ml-2 truncate ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
         <span>{display}</span>
         {subDisplay && <span className="text-xs ml-2">{subDisplay}</span>}
       </div>

@@ -1,6 +1,6 @@
 {
   "name": "@hyperlane-xyz/explorer",
-  "description": "A multi-chain explorer for the Hyperlane protocol and network.",
+  "description": "An interchain explorer for the Hyperlane protocol and network.",
   "version": "0.1.0",
   "author": "J M Rossy",
   "dependencies": {

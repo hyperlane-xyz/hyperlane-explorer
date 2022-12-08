@@ -10,7 +10,6 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchError';
 import { SearchFilterBar } from '../../components/search/SearchFilterBar';
-import { chainToDomain } from '../../consts/domains';
 import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
 import { logger } from '../../utils/logger';
@@ -128,12 +127,8 @@ function assembleQuery(
 ) {
   const hasInput = !!searchInput;
 
-  const originChains = originFilter
-    ? originFilter.split(',').map((c) => chainToDomain[c])
-    : undefined;
-  const destinationChains = destFilter
-    ? destFilter.split(',').map((c) => chainToDomain[c])
-    : undefined;
+  const originChains = originFilter ? originFilter.split(',') : undefined;
+  const destinationChains = destFilter ? destFilter.split(',') : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
@@ -181,6 +176,7 @@ const searchWhereClause = `
 
 const messageStubProps = `
   id
+  msg_id
   destination
   origin
   recipient
@@ -189,7 +185,7 @@ const messageStubProps = `
   delivered_message {
     id
     tx_id
-    inbox_address
+    destination_mailbox
     transaction {
       block {
         timestamp
