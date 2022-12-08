@@ -61,11 +61,13 @@ export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
-  leafIndex?: number,
+  leafIndex?: number, // TODO rename
   attemptGetProcessTx = true,
   multiProvider = new MultiProvider(chainConnectionConfigs),
 ): Promise<MessageDebugResult> {
   const explorerLink = getTxExplorerLink(multiProvider, chainName, txReceipt.transactionHash);
+  // TODO update for v2
+  // @ts-ignore
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
   const dispatchedMessages = core.getDispatchedMessages(txReceipt);
 

@@ -21,7 +21,6 @@ export function ContentDetailsCard({
   message: {
     msgId,
     nonce,
-    leafIndex,
     originDomainId,
     originChainId,
     destinationDomainId,
@@ -92,20 +91,12 @@ export function ContentDetailsCard({
         showCopy={true}
         blurValue={shouldBlur}
       />
-      <div className="flex space-x-20">
-        <KeyValueRow
-          label="Nonce:"
-          labelWidth="w-20"
-          display={nonce.toString()}
-          blurValue={shouldBlur}
-        />
-        <KeyValueRow
-          label="Leaf Index:"
-          labelWidth="w-20"
-          display={leafIndex.toString()}
-          blurValue={shouldBlur}
-        />
-      </div>
+      <KeyValueRow
+        label="Nonce:"
+        labelWidth="w-20"
+        display={nonce.toString()}
+        blurValue={shouldBlur}
+      />
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>

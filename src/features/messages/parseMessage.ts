@@ -58,12 +58,10 @@ function parseMessage(m: MessageEntry): Message | null {
     const body = decodePostgresBinaryHex(m.msg_body ?? '');
     const isTestRecipient = areAddressesEqual(stub.recipient, TEST_RECIPIENT_ADDRESS);
     const decodedBody = isTestRecipient ? tryUtf8DecodeBytes(body) : undefined;
-    const leafIndex = 1; //TODO
 
     return {
       ...stub,
       nonce: m.nonce,
-      leafIndex,
       body,
       decodedBody,
       originTransaction: parseTransaction(m.transaction),

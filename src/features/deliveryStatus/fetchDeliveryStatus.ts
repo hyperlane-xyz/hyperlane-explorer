@@ -55,7 +55,7 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const { originChainId, originTransaction, leafIndex } = message;
+    const { originChainId, originTransaction, nonce } = message;
     const originTxHash = originTransaction.transactionHash;
     const originName = chainIdToName[originChainId];
     const environment = getChainEnvironment(originName);
@@ -66,7 +66,7 @@ export async function fetchDeliveryStatus(
       originName,
       originTxReceipt,
       environment,
-      leafIndex,
+      nonce,
       false,
     );
 
@@ -101,7 +101,7 @@ async function fetchExplorerLogsForMessage(message: Message) {
     originChainId,
     originTransaction,
     destinationChainId,
-    leafIndex,
+    nonce,
     recipient,
     sender,
     body,
@@ -116,7 +116,7 @@ async function fetchExplorerLogsForMessage(message: Message) {
     throw new Error(`No inbox address found for dest ${destName} origin ${originName}`);
 
   const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
-  const messageHash = utils.messageHash(msgRawBytes, leafIndex);
+  const messageHash = utils.messageHash(msgRawBytes, nonce);
 
   const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${messageHash}&address=${destInboxAddr}`;
   return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
@@ -140,7 +140,7 @@ function validateMessage(message: Message) {
     destinationDomainId,
     originChainId,
     destinationChainId,
-    leafIndex,
+    nonce,
     originTransaction,
     recipient,
     sender,
@@ -153,7 +153,7 @@ function validateMessage(message: Message) {
   if (!chainIdToName[originChainId]) throw new Error(`No name found for chain ${originChainId}`);
   if (!chainIdToName[destinationChainId])
     throw new Error(`No name found for chain ${destinationChainId}`);
-  if (!leafIndex) throw new Error(`Invalid leaf index ${leafIndex}`);
+  if (!nonce) throw new Error(`Invalid nonce ${nonce}`);
   if (!originTransaction?.transactionHash) throw new Error(`Invalid or missing origin tx`);
   validateAddress(recipient, 'validateMessage recipient');
   validateAddress(sender, 'validateMessage sender');

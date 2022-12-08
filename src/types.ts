@@ -29,8 +29,7 @@ export interface MessageStub {
 }
 
 export interface Message extends MessageStub {
-  nonce: number;
-  leafIndex: number;
+  nonce: number; // formerly leafIndex
   body: string;
   decodedBody?: string;
   originTransaction: PartialTransactionReceipt;

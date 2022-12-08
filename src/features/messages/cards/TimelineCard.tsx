@@ -36,7 +36,7 @@ interface Props {
 
 export function TimelineCard({ message, resolvedStatus: status, resolvedDestinationTx }: Props) {
   const {
-    leafIndex,
+    nonce,
     originChainId,
     destinationChainId,
     originTimestamp,
@@ -46,7 +46,7 @@ export function TimelineCard({ message, resolvedStatus: status, resolvedDestinat
 
   const { stage, timings } = useMessageStage(
     status,
-    leafIndex,
+    nonce,
     originChainId,
     destinationChainId,
     originTransaction.blockNumber,
@@ -203,7 +203,7 @@ function getStageClass(targetStage: Stage, currentStage: Stage, messageStatus: M
 
 function useMessageStage(
   status: MessageStatus,
-  leafIndex: number,
+  nonce: number,
   originChainId: number,
   destChainId: number,
   originBlockNumber: number,
@@ -214,7 +214,7 @@ function useMessageStage(
     [
       'messageStage',
       status,
-      leafIndex,
+      nonce,
       originChainId,
       destChainId,
       originTimestamp,
@@ -222,7 +222,7 @@ function useMessageStage(
       originBlockNumber,
     ],
     async () => {
-      if (!originChainId || !destChainId || !leafIndex || !originTimestamp || !originBlockNumber) {
+      if (!originChainId || !destChainId || !nonce || !originTimestamp || !originBlockNumber) {
         return null;
       }
 
@@ -254,8 +254,9 @@ function useMessageStage(
         };
       }
 
-      const latestLeafIndex = await tryFetchLatestLeafIndex(originChainId);
-      if (latestLeafIndex && latestLeafIndex >= leafIndex) {
+      // TODO rename?
+      const latestNonce = await tryFetchLatestNonce(originChainId);
+      if (latestNonce && latestNonce >= nonce) {
         return {
           stage: Stage.Validated,
           timings: {
@@ -324,11 +325,11 @@ async function tryFetchChainLatestBlock(chainId: number) {
   }
 }
 
-async function tryFetchLatestLeafIndex(chainId: number) {
-  logger.debug(`Attempting to fetch leaf index for:`, chainId);
+async function tryFetchLatestNonce(chainId: number) {
+  logger.debug(`Attempting to fetch nonce for:`, chainId);
   try {
     const response = await fetchWithTimeout(
-      '/api/latest-leaf-index',
+      '/api/latest-nonce',
       {
         method: 'POST',
         headers: {
@@ -339,10 +340,10 @@ async function tryFetchLatestLeafIndex(chainId: number) {
       3000,
     );
     const result = await response.json();
-    logger.debug(`Found leaf index:`, result.leafIndex);
-    return result.leafIndex;
+    logger.debug(`Found nonce:`, result.nonce);
+    return result.nonce;
   } catch (error) {
-    logger.error('Error fetching leaf index', error);
+    logger.error('Error fetching nonce', error);
     return null;
   }
 }

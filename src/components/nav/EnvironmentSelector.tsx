@@ -45,4 +45,5 @@ export function EnvironmentSelector() {
 const envOptions = [
   { value: Environment.Mainnet, display: envDisplayValue[Environment.Mainnet] },
   { value: Environment.Testnet2, display: envDisplayValue[Environment.Testnet2] },
+  { value: Environment.Testnet3, display: envDisplayValue[Environment.Testnet3] },
 ];
