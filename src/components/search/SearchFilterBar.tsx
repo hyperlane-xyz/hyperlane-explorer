@@ -102,7 +102,12 @@ function ChainMultiSelector({
 
   const onToggle = (chainId: string | number) => {
     return (checked: boolean) => {
-      setCheckedChains({ ...checkedChains, [chainId]: checked });
+      if (!hasAnyUncheckedChain(mainnetAndTestChains)) {
+        // If none are unchecked, uncheck all except this one
+        setCheckedChains({ [chainId]: true });
+      } else {
+        setCheckedChains({ ...checkedChains, [chainId]: checked });
+      }
     };
   };
 
@@ -111,7 +116,7 @@ function ChainMultiSelector({
       const chainIds = chains.map((c) => c.id);
       if (hasAnyUncheckedChain(chains)) {
         // If some are unchecked, check all
-        setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds) });
+        setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, true) });
       } else {
         // If none are unchecked, uncheck all
         setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, false) });
@@ -173,7 +178,7 @@ function ChainMultiSelector({
             </div>
           </div>
           <div className="mt-2.5 flex space-x-6">
-            <div className="flex flex-col space-y-1">
+            <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(mainnetChains)}
@@ -190,7 +195,7 @@ function ChainMultiSelector({
                   onToggle={onToggle(c.id)}
                   name={c.network}
                 >
-                  <div className="ml-2 text-sm flex items-center">
+                  <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
                     <ChainIcon chainId={c.id} size={12} color={false} background={false} />
                   </div>
@@ -198,7 +203,7 @@ function ChainMultiSelector({
               ))}
             </div>
             <div className="self-stretch w-px my-1 bg-gray-100"></div>
-            <div className="flex flex-col space-y-1">
+            <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(testnetChains)}
@@ -215,7 +220,7 @@ function ChainMultiSelector({
                   onToggle={onToggle(c.id)}
                   name={c.network}
                 >
-                  <div className="ml-2 text-sm flex items-center">
+                  <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
                     <ChainIcon chainId={c.id} size={12} color={false} background={false} />
                   </div>
