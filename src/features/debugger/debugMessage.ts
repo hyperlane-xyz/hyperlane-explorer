@@ -236,6 +236,17 @@ async function checkMessage(
   } catch (err: any) {
     logger.info('Estimate gas call failed');
 
+    const errorReason = extractReasonString(err);
+    logger.debug(errorReason);
+
+    if (errorReason.includes(`execution reverted:`)) {
+      return {
+        status: MessageDebugStatus.HandleCallFailure,
+        properties,
+        details: errorReason,
+      };
+    }
+
     const bytecodeHasHandle = await tryCheckBytecodeHandle(destinationProvider, recipientAddress);
     if (!bytecodeHasHandle) {
       logger.info('Bytecode does not have function matching handle sig');
@@ -262,8 +273,6 @@ async function checkMessage(
       };
     }
 
-    const errorReason = extractReasonString(err);
-    logger.debug(errorReason);
     return {
       status: MessageDebugStatus.HandleCallFailure,
       properties,
