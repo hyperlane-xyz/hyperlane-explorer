@@ -239,21 +239,13 @@ async function checkMessage(
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    if (errorReason.includes(`execution reverted:`)) {
-      return {
-        status: MessageDebugStatus.HandleCallFailure,
-        properties,
-        details: errorReason,
-      };
-    }
-
     const bytecodeHasHandle = await tryCheckBytecodeHandle(destinationProvider, recipientAddress);
     if (!bytecodeHasHandle) {
       logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
         properties,
-        details: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy.`,
+        details: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
       };
     }
 
