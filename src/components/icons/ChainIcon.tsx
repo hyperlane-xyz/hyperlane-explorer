@@ -19,7 +19,7 @@ import AvalancheColor from '../../images/logos/chains-color/avalanche.svg';
 import BscColor from '../../images/logos/chains-color/bsc.svg';
 import CeloColor from '../../images/logos/chains-color/celo.svg';
 import EthereumColor from '../../images/logos/chains-color/ethereum.svg';
-import MoonbeamColor from '../../images/logos/chains-color/moonbeam.png';
+import MoonbeamColor from '../../images/logos/chains-color/moonbeam.svg';
 import OptimismColor from '../../images/logos/chains-color/optimism.svg';
 import PolygonColor from '../../images/logos/chains-color/polygon.svg';
 import ArbitrumMono from '../../images/logos/chains-mono/arbitrum.svg';
