@@ -1,9 +1,9 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
-import { Chain } from 'wagmi';
 
-import { mainnetAndTestChains, mainnetChains, testnetChains } from '../../consts/chains';
+import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+
 import FunnelIcon from '../../images/icons/funnel.svg';
 import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
@@ -14,6 +14,8 @@ import { ChevronIcon } from '../icons/Chevron';
 import { XIcon } from '../icons/XIcon';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
+
+const mainnetAndTestChains = [...mainnetChainsMetadata, ...testnetChainsMetadata];
 
 interface Props {
   originChain: string | null;
@@ -93,7 +95,7 @@ function ChainMultiSelector({
     value ? arrayToObject(value.split(',')) : arrayToObject(mainnetAndTestChains.map((c) => c.id)),
   );
 
-  const hasAnyUncheckedChain = (chains: Chain[]) => {
+  const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
     for (const c of chains) {
       if (!checkedChains[c.id]) return true;
     }
@@ -111,7 +113,7 @@ function ChainMultiSelector({
     };
   };
 
-  const onToggleSection = (chains: Chain[]) => {
+  const onToggleSection = (chains: ChainMetadata[]) => {
     return () => {
       const chainIds = chains.map((c) => c.id);
       if (hasAnyUncheckedChain(chains)) {
@@ -181,19 +183,19 @@ function ChainMultiSelector({
             <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
-                  checked={!hasAnyUncheckedChain(mainnetChains)}
-                  onToggle={onToggleSection(mainnetChains)}
+                  checked={!hasAnyUncheckedChain(mainnetChainsMetadata)}
+                  onToggle={onToggleSection(mainnetChainsMetadata)}
                   name="mainnet-chains"
                 >
                   <h4 className="ml-2 text-gray-700">Mainnet Chains</h4>
                 </CheckBox>
               </div>
-              {mainnetChains.map((c) => (
+              {mainnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
                   checked={!!checkedChains[c.id]}
                   onToggle={onToggle(c.id)}
-                  name={c.network}
+                  name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
@@ -206,19 +208,19 @@ function ChainMultiSelector({
             <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
-                  checked={!hasAnyUncheckedChain(testnetChains)}
-                  onToggle={onToggleSection(testnetChains)}
+                  checked={!hasAnyUncheckedChain(testnetChainsMetadata)}
+                  onToggle={onToggleSection(testnetChainsMetadata)}
                   name="testnet-chains"
                 >
                   <h4 className="ml-2 text-gray-700">Testnet Chains</h4>
                 </CheckBox>
               </div>
-              {testnetChains.map((c) => (
+              {testnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
                   checked={!!checkedChains[c.id]}
                   onToggle={onToggle(c.id)}
-                  name={c.network}
+                  name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>

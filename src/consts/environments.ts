@@ -9,6 +9,7 @@ export const environments = Object.values(Environment);
 export const envDisplayValue = {
   [Environment.Mainnet]: 'Mainnet',
   [Environment.Testnet2]: 'Testnet',
+  [Environment.Testnet3]: 'Testnet',
 };
 
 export const MAILBOX_VERSION = 0;

@@ -4,11 +4,10 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import { ChainName, chainMetadata } from '@hyperlane-xyz/sdk';
+import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
 import { WideChevronIcon } from '../../../components/icons/WideChevron';
 import { Card } from '../../../components/layout/Card';
-import { chainIdToBlockTime, chainIdToName } from '../../../consts/chains';
 import EnvelopeIcon from '../../../images/icons/envelope-check.svg';
 import LockIcon from '../../../images/icons/lock.svg';
 import AirplaneIcon from '../../../images/icons/paper-airplane.svg';
@@ -226,9 +225,12 @@ function useMessageStage(
         return null;
       }
 
-      const relayEstimate = Math.floor(chainIdToBlockTime[destChainId] * 1.5);
+      const relayEstimate = Math.floor(
+        chainIdToMetadata[destChainId].blocks.estimateBlockTime * 1.5,
+      );
       const finalityBlocks = getFinalityBlocks(originChainId);
-      const finalityEstimate = finalityBlocks * (chainIdToBlockTime[originChainId] || 3);
+      const finalityEstimate =
+        finalityBlocks * (chainIdToMetadata[originChainId].blocks.estimateBlockTime || 3);
 
       if (status === MessageStatus.Delivered && destinationTimestamp) {
         // For delivered messages, just to rough estimates for stages
@@ -307,9 +309,7 @@ function useMessageStage(
 }
 
 function getFinalityBlocks(chainId: number) {
-  const chainName = chainIdToName[chainId] as ChainName;
-  const metadata = chainMetadata[chainName];
-  const finalityBlocks = metadata?.finalityBlocks || 0;
+  const finalityBlocks = chainIdToMetadata[chainId]?.blocks.confirmations || 0;
   return Math.max(finalityBlocks, 1);
 }
 

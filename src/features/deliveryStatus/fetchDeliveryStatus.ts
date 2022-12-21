@@ -1,8 +1,7 @@
 import { constants } from 'ethers';
 
-import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
-import { chainIdToName } from '../../consts/chains';
 import { Message, MessageStatus } from '../../types';
 import { ensureLeading0x, validateAddress } from '../../utils/addresses';
 import { getChainEnvironment } from '../../utils/chains';
@@ -57,7 +56,7 @@ export async function fetchDeliveryStatus(
   } else {
     const { originChainId, originTransaction, nonce } = message;
     const originTxHash = originTransaction.transactionHash;
-    const originName = chainIdToName[originChainId];
+    const originName = chainIdToMetadata[originChainId].name;
     const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(originChainId, originTxHash);
     // TODO currently throwing this over the fence to the debugger script
@@ -98,8 +97,8 @@ async function fetchExplorerLogsForMessage(message: Message) {
   const { msgId, originChainId, originTransaction, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${originTransaction.transactionHash}`);
 
-  const originName = chainIdToName[originChainId];
-  const destName = chainIdToName[destinationChainId];
+  const originName = chainIdToMetadata[originChainId].name;
+  const destName = chainIdToMetadata[destinationChainId].name;
 
   const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
   if (!destMailboxAddr)
@@ -138,8 +137,9 @@ function validateMessage(message: Message) {
   if (!destinationDomainId) throw new Error(`Invalid dest domain ${destinationDomainId}`);
   if (!originChainId) throw new Error(`Invalid origin chain ${originChainId}`);
   if (!destinationChainId) throw new Error(`Invalid dest chain ${destinationChainId}`);
-  if (!chainIdToName[originChainId]) throw new Error(`No name found for chain ${originChainId}`);
-  if (!chainIdToName[destinationChainId])
+  if (!chainIdToMetadata[originChainId]?.name)
+    throw new Error(`No name found for chain ${originChainId}`);
+  if (!chainIdToMetadata[destinationChainId]?.name)
     throw new Error(`No name found for chain ${destinationChainId}`);
   if (!nonce) throw new Error(`Invalid nonce ${nonce}`);
   if (!originTransaction?.transactionHash) throw new Error(`Invalid or missing origin tx`);
