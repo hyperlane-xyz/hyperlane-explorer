@@ -276,7 +276,7 @@ function DatetimeSelector({
         className="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
         {...buttonProps}
       >
-        <span className="text-gray-700 py-px">Time Range</span>
+        <span className="text-gray-700 py-px px-2">Time</span>
         <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
       </button>
 

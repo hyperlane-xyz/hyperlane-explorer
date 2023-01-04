@@ -11,12 +11,12 @@ import Twitter from '../../images/logos/twitter.svg';
 export function Footer() {
   return (
     <footer className="px-4 pt-5 pb-7 sm:px-10 opacity-80">
-      <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-6 sm:gap-0">
+      <div className="flex justify-between items-center gap-6 sm:gap-0">
         <div className="flex items-center">
           <div className="flex scale-90 sm:scale-100">
             <Image src={Hyperlane} width={50} height={50} alt="" />
           </div>
-          <div className="flex flex-col ml-3">
+          <div className="hidden sm:flex flex-col ml-3">
             <p className="text-sm font-light leading-5">
               <span className="text-base font-medium">Hyperlane</span> is the platform
               <br />
@@ -33,7 +33,7 @@ export function Footer() {
             <FooterLink href={links.chains} text="Chains" />
             <FooterLink href={links.jobs} text="Jobs" />
           </div>
-          <div className="flex flex-col ml-24 sm:ml-16">
+          <div className="flex flex-col ml-16">
             <FooterIconLink href={links.twitter} imgSrc={Twitter} text="Twitter" />
             <FooterIconLink href={links.discord} imgSrc={Discord} text="Discord" />
             <FooterIconLink href={links.github} imgSrc={Github} text="Github" />
