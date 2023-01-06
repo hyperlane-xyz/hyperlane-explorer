@@ -1,9 +1,10 @@
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-import { Environment, envDisplayValue, environments } from '../../consts/environments';
+import { Environment, environments } from '../../consts/environments';
 import { useEnvironment } from '../../store';
 import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
+import { toTitleCase } from '../../utils/string';
 import { SelectField } from '../input/SelectField';
 
 export function EnvironmentSelector() {
@@ -15,10 +16,6 @@ export function EnvironmentSelector() {
     if (!queryEnv || queryEnv === environment) return;
     if (environments.includes(queryEnv as Environment)) {
       setEnvironment(queryEnv as Environment);
-    }
-    // special case to alias testnet as testnet2
-    if (queryEnv.toLowerCase() === 'testnet') {
-      setEnvironment(Environment.Testnet2);
     }
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,7 +40,6 @@ export function EnvironmentSelector() {
 }
 
 const envOptions = [
-  { value: Environment.Mainnet, display: envDisplayValue[Environment.Mainnet] },
-  { value: Environment.Testnet2, display: envDisplayValue[Environment.Testnet2] },
-  { value: Environment.Testnet3, display: envDisplayValue[Environment.Testnet3] },
+  { value: Environment.Mainnet, display: toTitleCase(Environment.Mainnet) },
+  { value: Environment.Testnet, display: toTitleCase(Environment.Testnet) },
 ];

@@ -21,5 +21,5 @@ export function getChainEnvironment(chain: number | string) {
     return Environment.Mainnet;
   }
 
-  return Mainnets.includes(chainName) ? Environment.Mainnet : Environment.Testnet3;
+  return Mainnets.includes(chainName) ? Environment.Mainnet : Environment.Testnet;
 }

@@ -35,7 +35,7 @@ export function isIcaMessage({
 }
 
 function isAddressIcaRouter(addr: string) {
-  return areAddressesEqual(addr, ICA_ADDRESS);
+  return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
 }
 
 export function tryDecodeIcaBody(body: string) {
@@ -75,6 +75,7 @@ export function tryDecodeIcaBody(body: string) {
 // TODO do this on backend and use private RPC
 export async function tryFetchIcaAddress(originDomainId: number, senderAddress: string) {
   try {
+    if (!ICA_ADDRESS) return null;
     logger.debug('Fetching Ica address', originDomainId, senderAddress);
     const chainName = DomainIdToChainName[originDomainId];
     const connection = chainConnectionConfigs[chainName];

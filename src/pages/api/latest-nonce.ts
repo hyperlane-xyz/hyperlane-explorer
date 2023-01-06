@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
+import { Environment } from '../../consts/environments';
 import { getChainEnvironment } from '../../utils/chains';
 import { logger } from '../../utils/logger';
 import { fetchWithTimeout } from '../../utils/timeout';
@@ -37,7 +38,8 @@ async function fetchLatestNonce(chainId: number) {
 // Partly copied from https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1fc65f3b7f31f86722204a9de08506f212720a52/typescript/infra/config/environments/mainnet/validators.ts#L12
 function getS3BucketUrl(chainId: number) {
   const chainName = chainIdToMetadata[chainId].name;
-  const environment = getChainEnvironment(chainId);
+  const environment =
+    getChainEnvironment(chainId) === Environment.Mainnet ? 'mainnet2' : 'testnet3';
   const bucketName = `hyperlane-${environment}-${chainName}-validator-0`;
   return `https://${bucketName}.s3.us-east-1.amazonaws.com/checkpoint_latest_index.json`;
 }

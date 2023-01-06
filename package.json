@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "J M Rossy",
   "dependencies": {
-    "@hyperlane-xyz/sdk": "^1.0.0-beta2",
+    "@hyperlane-xyz/sdk": "^1.0.0-beta6",
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6",
     "@rainbow-me/rainbowkit": "^0.8.0",
     "@tanstack/react-query": "^4.18.0",
