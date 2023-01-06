@@ -66,8 +66,6 @@ export async function debugMessagesForTransaction(
   multiProvider = new MultiProvider(chainConnectionConfigs),
 ): Promise<MessageDebugResult> {
   const explorerLink = getTxExplorerLink(multiProvider, chainName, txReceipt.transactionHash);
-  // TODO update for v2
-  // @ts-ignore
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
   const dispatchedMessages = core.getDispatchedMessages(txReceipt);
 
