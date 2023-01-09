@@ -1,9 +1,98 @@
-// Models for objects on the server db
-// Local models in src/types are simplified,
-// post-parse versions for use throughout UI
+/**
+ * =================
+ * MESSAGE GRAPHQL FRAGMENTS
+ * Not co-locating with UI code b.c. the backend also needs these for the API
+ * =================
+ */
+export const messageStubFragment = `
+  id
+  msg_id
+  destination
+  origin
+  recipient
+  sender
+  timestamp
+  delivered_message {
+    id
+    tx_id
+    destination_mailbox
+    transaction {
+      block {
+        timestamp
+      }
+    }
+  }
+  message_states {
+    block_height
+    block_timestamp
+    error_msg
+    estimated_gas_cost
+    id
+    processable
+  }
+`;
 
-// These should correspond to queries in MessageSearch and MessageDetails
-// Alternatively, could be auto-generated with https://www.graphql-code-generator.com/plugins/typescript/typescript-urql
+export const messageDetailsFragment = `
+  destination
+  id
+  msg_id
+  nonce
+  msg_body
+  origin
+  origin_tx_id
+  origin_mailbox
+  recipient
+  sender
+  timestamp
+  transaction {
+    id
+    block_id
+    gas_used
+    hash
+    sender
+    block {
+      hash
+      domain
+      height
+      id
+      timestamp
+    }
+  }
+  delivered_message {
+    id
+    tx_id
+    destination_mailbox
+    transaction {
+      block_id
+      gas_used
+      hash
+      id
+      sender
+      block {
+        domain
+        hash
+        height
+        id
+        timestamp
+      }
+    }
+  }
+  message_states {
+    block_height
+    block_timestamp
+    error_msg
+    estimated_gas_cost
+    id
+    processable
+  }
+`;
+
+/**
+ * ===================================
+ * FRAGMENT TYPES
+ * Must correspond with fragments above
+ * ====================================
+ */
 
 export interface BlockEntry {
   id: string;

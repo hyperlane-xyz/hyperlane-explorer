@@ -9,3 +9,13 @@ export type ApiMessage = Omit<
   | 'destinationTimestamp'
   | 'decodedBody'
 >;
+
+export function toApiMessage(message: Message): ApiMessage {
+  // prettier-ignore
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const {msgId, originChainId, destinationChainId, originTimestamp, destinationTimestamp, decodedBody, ...rest} = message
+  return {
+    ...rest,
+    id: msgId,
+  };
+}

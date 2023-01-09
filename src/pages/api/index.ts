@@ -1,5 +1,7 @@
+import { Client, createClient } from '@urql/core';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+import { config } from '../../consts/config';
 import { handler as getMessagesHandler } from '../../features/api/getMessages';
 import { handler as getStatusHandler } from '../../features/api/getStatus';
 import { handler as searchMessagesHandler } from '../../features/api/searchMessages';
@@ -11,7 +13,7 @@ enum API_ACTION {
   SearchMessages = 'search-messages',
 }
 
-const actionToHandler: Record<API_ACTION, (req: NextApiRequest) => any> = {
+const actionToHandler: Record<API_ACTION, (req: NextApiRequest, client: Client) => any> = {
   [API_ACTION.GetMessages]: getMessagesHandler,
   [API_ACTION.GetStatus]: getStatusHandler,
   [API_ACTION.SearchMessages]: searchMessagesHandler,
@@ -33,9 +35,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return;
     }
 
+    const client = createClient({
+      url: config.apiUrl,
+    });
+
     logger.debug('Invoking handler for api request of type:', apiAction);
     const actionHandler = actionToHandler[apiAction];
-    const result = await actionHandler(req);
+    const result = await actionHandler(req, client);
     if (!result) {
       const msg = 'Invalid request params';
       logger.debug(msg);

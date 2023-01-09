@@ -72,13 +72,14 @@ interface Props {
 function _ChainIcon({ chainId, size = 32, color = true, background = false }: Props) {
   const iconSet = color ? CHAIN_TO_COLOR_ICON : CHAIN_TO_MONOCHROME_ICON;
   const imageSrc = (chainId && iconSet[chainId]) || QuestionMark;
+  const title = getChainDisplayName(chainId);
 
   if (background) {
     return (
       <div
         style={{ width: `${size}px`, height: `${size}px` }}
         className="flex items-center justify-center rounded-full bg-gray-100 transition-all"
-        title={getChainDisplayName(chainId)}
+        title={title}
       >
         <Image
           src={imageSrc}
@@ -89,7 +90,7 @@ function _ChainIcon({ chainId, size = 32, color = true, background = false }: Pr
       </div>
     );
   } else {
-    return <Image src={imageSrc} alt="" width={size} height={size} />;
+    return <Image src={imageSrc} alt="" width={size} height={size} title={title} />;
   }
 }
 
