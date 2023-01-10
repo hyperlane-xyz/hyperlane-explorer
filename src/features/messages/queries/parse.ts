@@ -1,7 +1,8 @@
-import { TEST_RECIPIENT_ADDRESS } from '../../consts/addresses';
-import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../types';
-import { areAddressesEqual, ensureLeading0x, trimLeading0x } from '../../utils/addresses';
-import { logger } from '../../utils/logger';
+import { TEST_RECIPIENT_ADDRESS } from '../../../consts/addresses';
+import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../../types';
+import { areAddressesEqual, ensureLeading0x } from '../../../utils/addresses';
+import { logger } from '../../../utils/logger';
+import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import {
   MessageEntry,
@@ -9,7 +10,14 @@ import {
   MessagesQueryResult,
   MessagesStubQueryResult,
   TransactionEntry,
-} from './types';
+} from './fragments';
+
+/**
+ * ========================
+ * RESULT PARSING UTILITIES
+ * For parsing raw results
+ * ========================
+ */
 
 export function parseMessageStubResult(data: MessagesStubQueryResult | undefined): MessageStub[] {
   if (!data?.message?.length) return [];
@@ -28,7 +36,7 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       ? parseTimestampString(m.delivered_message.transaction.block.timestamp)
       : undefined;
     return {
-      id: m.id,
+      id: m.id.toString(),
       msgId: m.msg_id,
       status,
       sender: parsePaddedAddress(m.sender),
@@ -91,18 +99,6 @@ function parseTimestampString(t: string) {
 function parsePaddedAddress(a: string) {
   if (!a || a.length < 40) return '';
   return ensureLeading0x(a.slice(-40));
-}
-
-export function tryUtf8DecodeBytes(body: string, fatal = true) {
-  if (!body) return undefined;
-  try {
-    const decoder = new TextDecoder('utf-8', { fatal });
-    const decodedBody = decoder.decode(Buffer.from(trimLeading0x(body), 'hex'));
-    return decodedBody;
-  } catch (error) {
-    logger.debug('Unable to parse message body', body);
-    return undefined;
-  }
 }
 
 // https://github.com/bendrucker/postgres-bytea/blob/master/decoder.js

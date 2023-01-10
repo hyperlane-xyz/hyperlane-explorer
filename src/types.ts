@@ -15,7 +15,7 @@ export enum MessageStatus {
 }
 
 export interface MessageStub {
-  id: number; // Database id
+  id: string; // Database id
   msgId: string; // Message hash
   status: MessageStatus;
   sender: Address;

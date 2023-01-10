@@ -8,7 +8,7 @@ import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
 import { MAILBOX_VERSION } from '../../../consts/environments';
 import { Message } from '../../../types';
-import { tryUtf8DecodeBytes } from '../parseMessage';
+import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';

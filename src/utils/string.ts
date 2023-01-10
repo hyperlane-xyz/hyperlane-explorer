@@ -1,3 +1,6 @@
+import { trimLeading0x } from './addresses';
+import { logger } from './logger';
+
 export function toTitleCase(str: string) {
   return str.replace(/\w\S*/g, (txt) => {
     return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
@@ -29,4 +32,16 @@ export function chunk<T extends Sliceable>(str: T, size: number) {
     R.push(str.slice(i, i + size));
   }
   return R;
+}
+
+export function tryUtf8DecodeBytes(value: string, fatal = true) {
+  if (!value) return undefined;
+  try {
+    const decoder = new TextDecoder('utf-8', { fatal });
+    const decodedBody = decoder.decode(Buffer.from(trimLeading0x(value), 'hex'));
+    return decodedBody;
+  } catch (error) {
+    logger.debug('Unable to parse utf-8 bytes', value);
+    return undefined;
+  }
 }
