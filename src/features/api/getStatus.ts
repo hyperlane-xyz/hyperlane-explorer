@@ -30,5 +30,5 @@ export async function handler(
   );
   const result = await client.query<MessagesStubQueryResult>(query, variables).toPromise();
   const messages = parseMessageStubResult(result.data);
-  return messages.map((m) => ({ id: m.id, status: m.status }));
+  return messages.map((m) => ({ id: m.msgId, status: m.status }));
 }
