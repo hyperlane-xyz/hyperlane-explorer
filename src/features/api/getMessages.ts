@@ -15,7 +15,6 @@ export async function handler(req: NextApiRequest, client: Client): Promise<ApiM
   const identifierParam = parseQueryParams(req);
   if (!identifierParam) return null;
   logger.debug('Attempting to find messages matching:', identifierParam);
-
   const { query, variables } = buildMessageQuery(
     identifierParam.type,
     identifierParam.value,

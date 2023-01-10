@@ -62,6 +62,7 @@ export function MessageSearch() {
     startTimeFilter,
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
+    true,
   );
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,

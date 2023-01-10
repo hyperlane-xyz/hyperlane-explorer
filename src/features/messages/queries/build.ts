@@ -21,7 +21,12 @@ export enum MessageIdentifierType {
   DestinationTxSender = 'destination-tx-sender',
 }
 
-export function buildMessageQuery(idType: MessageIdentifierType, idValue: string, limit: number) {
+export function buildMessageQuery(
+  idType: MessageIdentifierType,
+  idValue: string,
+  limit: number,
+  useStub = false,
+) {
   let whereClause: string;
   if (idType === MessageIdentifierType.Id) {
     whereClause = 'msg_id: {_eq: $identifier}';
@@ -48,7 +53,7 @@ export function buildMessageQuery(idType: MessageIdentifierType, idValue: string
       where: {${whereClause}}, 
       limit: ${limit}
     ) {
-      ${messageDetailsFragment}
+      ${useStub ? messageStubFragment : messageDetailsFragment}
     }
   }
   `;
@@ -73,6 +78,7 @@ export function buildMessageSearchQuery(
   startTimeFilter: number | null,
   endTimeFilter: number | null,
   limit: number,
+  useStub = false,
 ) {
   const hasInput = !!searchInput;
 
@@ -103,7 +109,7 @@ export function buildMessageSearchQuery(
       order_by: {timestamp: desc},
       limit: ${limit}
       ) {
-        ${messageStubFragment}
+        ${useStub ? messageStubFragment : messageDetailsFragment}
       }
   }
   `;

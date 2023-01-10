@@ -13,7 +13,7 @@ enum API_ACTION {
   SearchMessages = 'search-messages',
 }
 
-const actionToHandler: Record<API_ACTION, (req: NextApiRequest, client: Client) => any> = {
+const actionToHandler: Record<API_ACTION, (req: NextApiRequest, client: Client) => Promise<any>> = {
   [API_ACTION.GetMessages]: getMessagesHandler,
   [API_ACTION.GetStatus]: getStatusHandler,
   [API_ACTION.SearchMessages]: searchMessagesHandler,
@@ -81,5 +81,5 @@ function successResult<R>(result: R): ApiResult<R> {
 }
 
 function failureResult(message: string): ApiResult<any> {
-  return { status: '0', message, result: {} };
+  return { status: '0', message, result: [] };
 }
