@@ -15,7 +15,8 @@ export enum MessageStatus {
 }
 
 export interface MessageStub {
-  id: number;
+  id: string; // Database id
+  msgId: string; // Message hash
   status: MessageStatus;
   sender: Address;
   recipient: Address;
@@ -28,10 +29,9 @@ export interface MessageStub {
 }
 
 export interface Message extends MessageStub {
+  nonce: number; // formerly leafIndex
   body: string;
   decodedBody?: string;
-  leafIndex: number;
-  hash: string; // message hash, not related to txs
   originTransaction: PartialTransactionReceipt;
   destinationTransaction?: PartialTransactionReceipt;
 }

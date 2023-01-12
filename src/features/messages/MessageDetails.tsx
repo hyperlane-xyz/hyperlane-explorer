@@ -19,17 +19,19 @@ import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard, TransactionCardDebugInfo } from './cards/TransactionCard';
 import { isIcaMessage } from './ica';
-import { parseMessageQueryResult } from './parseMessage';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import type { MessagesQueryResult } from './types';
+import { MessageIdentifierType, buildMessageQuery } from './queries/build';
+import { MessagesQueryResult } from './queries/fragments';
+import { parseMessageQueryResult } from './queries/parse';
 
 const AUTO_REFRESH_DELAY = 10000;
 
 export function MessageDetails({ messageId }: { messageId: string }) {
   // Message query
+  const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
   const [graphResult, reexecuteQuery] = useQuery<MessagesQueryResult>({
-    query: messageDetailsQuery,
-    variables: { messageId },
+    query,
+    variables,
   });
   const { data, fetching: isFetching, error } = graphResult;
   const messages = useMemo(() => parseMessageQueryResult(data), [data]);
@@ -181,64 +183,6 @@ function StatusHeader({
     </div>
   );
 }
-
-const messageDetailsQuery = `
-query MessageDetails ($messageId: bigint!){
-  message(where: {id: {_eq: $messageId}}, limit: 1) {
-    destination
-    id
-    leaf_index
-    hash
-    msg_body
-    origin
-    origin_tx_id
-    transaction {
-      id
-      block_id
-      gas_used
-      hash
-      sender
-      block {
-        hash
-        domain
-        height
-        id
-        timestamp
-      }
-    }
-    outbox_address
-    recipient
-    sender
-    timestamp
-    delivered_message {
-      id
-      tx_id
-      inbox_address
-      transaction {
-        block_id
-        gas_used
-        hash
-        id
-        sender
-        block {
-          domain
-          hash
-          height
-          id
-          timestamp
-        }
-      }
-    }
-    message_states {
-      block_height
-      block_timestamp
-      error_msg
-      estimated_gas_cost
-      id
-      processable
-    }
-  }
-}`;
 
 const helpText = {
   origin: 'Info about the transaction that initiated the message placement into the outbox.',

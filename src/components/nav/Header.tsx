@@ -4,6 +4,7 @@ import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
+import DatabaseIcon from '../../images/icons/database.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
@@ -15,7 +16,7 @@ import { MiniSearchBar } from '../search/MiniSearchBar';
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(3);
+  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
   const closeDropdown = () => {
     setIsOpen(false);
   };
@@ -23,7 +24,7 @@ export function Header({ pathName }: { pathName: string }) {
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   return (
-    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:pb-3 sm:px-6 lg:pr-14 w-full">
+    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:px-6 lg:pr-14 w-full">
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <div className="flex items-center scale-90 sm:scale-100">
@@ -39,6 +40,9 @@ export function Header({ pathName }: { pathName: string }) {
         >
           <Link href="/" className={styles.navLink}>
             Home
+          </Link>
+          <Link href="/api-docs" className={styles.navLink}>
+            API
           </Link>
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
             About
@@ -59,8 +63,16 @@ export function Header({ pathName }: { pathName: string }) {
         <Link href="/" {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
           <DropdownItemContent icon={HouseIcon} text="Home" />
         </Link>
-        <a
+        <Link
+          href="/api-docs"
           {...itemProps[1]}
+          className={styles.dropdownOption}
+          onClick={closeDropdown}
+        >
+          <DropdownItemContent icon={DatabaseIcon} text="API" />
+        </Link>
+        <a
+          {...itemProps[2]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"
@@ -70,7 +82,7 @@ export function Header({ pathName }: { pathName: string }) {
           <DropdownItemContent icon={BookIcon} text="Docs" />
         </a>
         <a
-          {...itemProps[2]}
+          {...itemProps[3]}
           onClick={closeDropdown}
           className={styles.dropdownOption}
           target="_blank"

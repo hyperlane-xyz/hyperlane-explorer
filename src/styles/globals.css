@@ -38,6 +38,10 @@ select:focus {
 Background 
 ==========
 */
+body {
+  background-color: #f3f4f6;
+}
+
 #app-content::before {
   content: '';
   position: fixed;

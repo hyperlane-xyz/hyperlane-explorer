@@ -6,8 +6,9 @@ import { ChainToChain } from '../../../components/icons/ChainToChain';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
+import { MAILBOX_VERSION } from '../../../consts/environments';
 import { Message } from '../../../types';
-import { tryUtf8DecodeBytes } from '../parseMessage';
+import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
@@ -19,14 +20,14 @@ interface Props {
 
 export function ContentDetailsCard({
   message: {
+    msgId,
+    nonce,
     originDomainId,
     originChainId,
     destinationDomainId,
     destinationChainId,
     sender,
     recipient,
-    leafIndex,
-    hash,
     body,
     decodedBody,
   },
@@ -46,6 +47,8 @@ export function ContentDetailsCard({
       : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode';
 
   const rawBytes = utils.formatMessage(
+    MAILBOX_VERSION,
+    nonce,
     originDomainId,
     sender,
     destinationDomainId,
@@ -54,7 +57,7 @@ export function ContentDetailsCard({
   );
 
   return (
-    <Card classes="space-y-4" width="w-full">
+    <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
@@ -67,6 +70,14 @@ export function ContentDetailsCard({
           />
         </div>
       </div>
+      <KeyValueRow
+        label="Message Id:"
+        labelWidth="w-20"
+        display={msgId}
+        displayWidth="w-60 sm:w-80"
+        showCopy={true}
+        blurValue={shouldBlur}
+      />
       <KeyValueRow
         label="Sender:"
         labelWidth="w-20"
@@ -84,10 +95,9 @@ export function ContentDetailsCard({
         blurValue={shouldBlur}
       />
       <KeyValueRow
-        label="Leaf index:"
+        label="Nonce:"
         labelWidth="w-20"
-        display={leafIndex.toString()}
-        displayWidth="w-60 sm:w-80"
+        display={nonce.toString()}
         blurValue={shouldBlur}
       />
       <div>
@@ -103,7 +113,6 @@ export function ContentDetailsCard({
         <CodeBlock value={bodyDisplay} />
       </div>
       <LabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
-      <LabelAndCodeBlock label="Message hash:" value={hash} />
     </Card>
   );
 }

@@ -10,18 +10,16 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchError';
 import { SearchFilterBar } from '../../components/search/SearchFilterBar';
-import { chainToDomain } from '../../consts/domains';
-import { trimLeading0x } from '../../utils/addresses';
 import useDebounce from '../../utils/debounce';
 import { logger } from '../../utils/logger';
 import { getQueryParamString } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
-import { adjustToUtcTime } from '../../utils/time';
 import { useInterval } from '../../utils/timeout';
 
 import { MessageTable } from './MessageTable';
-import { parseMessageStubResult } from './parseMessage';
-import { MessagesStubQueryResult } from './types';
+import { buildMessageSearchQuery } from './queries/build';
+import { MessagesStubQueryResult } from './queries/fragments';
+import { parseMessageStubResult } from './queries/parse';
 import { isValidSearchQuery } from './utils';
 
 const AUTO_REFRESH_DELAY = 10000;
@@ -57,12 +55,14 @@ export function MessageSearch() {
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
-  const { query, variables } = assembleQuery(
+  const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     originChainFilter,
     destinationChainFilter,
     startTimeFilter,
     endTimeFilter,
+    hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
+    true,
   );
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
@@ -118,90 +118,3 @@ export function MessageSearch() {
     </>
   );
 }
-
-function assembleQuery(
-  searchInput: string,
-  originFilter: string | null,
-  destFilter: string | null,
-  startTimeFilter: number | null,
-  endTimeFilter: number | null,
-) {
-  const hasInput = !!searchInput;
-
-  const originChains = originFilter
-    ? originFilter.split(',').map((c) => chainToDomain[c])
-    : undefined;
-  const destinationChains = destFilter
-    ? destFilter.split(',').map((c) => chainToDomain[c])
-    : undefined;
-  const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
-  const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
-  const variables = {
-    search: hasInput ? trimLeading0x(searchInput) : undefined,
-    originChains,
-    destinationChains,
-    startTime,
-    endTime,
-  };
-
-  const limit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
-
-  const query = `
-  query ($search: String, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) {
-    message(
-      where: {
-        _and: [
-          ${originFilter ? '{origin: {_in: $originChains}},' : ''}
-          ${destFilter ? '{destination: {_in: $destinationChains}},' : ''}
-          ${startTimeFilter ? '{timestamp: {_gte: $startTime}},' : ''}
-          ${endTimeFilter ? '{timestamp: {_lte: $endTime}},' : ''}
-          ${hasInput ? searchWhereClause : ''}
-        ]
-      },
-      order_by: {timestamp: desc},
-      limit: ${limit}
-      ) {
-        ${messageStubProps}
-      }
-  }
-  `;
-  return { query, variables };
-}
-
-const searchWhereClause = `
-  {_or: [
-    {sender: {_eq: $search}},
-    {recipient: {_eq: $search}},
-    {transaction: {hash: {_eq: $search}}},
-    {transaction: {sender: {_eq: $search}}},
-    {delivered_message: {transaction: {hash: {_eq: $search}}}},
-    {delivered_message: {transaction: {sender: {_eq: $search}}}}
-  ]}
-`;
-
-const messageStubProps = `
-  id
-  destination
-  origin
-  recipient
-  sender
-  timestamp
-  delivered_message {
-    id
-    tx_id
-    inbox_address
-    transaction {
-      block {
-        timestamp
-      }
-    }
-  }
-  message_states {
-    block_height
-    block_timestamp
-    error_msg
-    estimated_gas_cost
-    id
-    processable
-  }
-`;

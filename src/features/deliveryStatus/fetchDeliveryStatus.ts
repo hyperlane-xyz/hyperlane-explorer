@@ -1,12 +1,9 @@
 import { constants } from 'ethers';
 
-import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
-import { utils } from '@hyperlane-xyz/utils';
+import { chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
-import { chainIdToName } from '../../consts/chains';
-import { chainToDomain, domainToChain } from '../../consts/domains';
 import { Message, MessageStatus } from '../../types';
-import { validateAddress } from '../../utils/addresses';
+import { ensureLeading0x, validateAddress } from '../../utils/addresses';
 import { getChainEnvironment } from '../../utils/chains';
 import {
   queryExplorerForLogs,
@@ -24,10 +21,11 @@ import {
   MessageDeliverySuccessResult,
 } from './types';
 
-// The keccak hash of the Process event
-// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/core/contracts/Inbox.sol#L59
-// Alternatively could get this by creating the Inbox contract object via SDK
-const TOPIC_0 = '0x77465daf33ba3eb7f35b343a1acdaa7b7e6b3f8944dc7808dcb55dfa67eef4fb';
+// The keccak-256 hash of the ProcessId event: ProcessId(bytes32)
+// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1.0.0-beta0/solidity/contracts/Mailbox.sol#L84
+// https://emn178.github.io/online-tools/keccak_256.html
+// Alternatively could get this by creating the Mailbox contract object via SDK
+const TOPIC_0 = '0x1cae38cdd3d3919489272725a5ae62a4f48b2989b0dae843d3c279fee18073a9';
 
 export async function fetchDeliveryStatus(
   message: Message,
@@ -56,9 +54,9 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const { originChainId, originTransaction, leafIndex } = message;
+    const { originChainId, originTransaction, nonce } = message;
     const originTxHash = originTransaction.transactionHash;
-    const originName = chainIdToName[originChainId];
+    const originName = chainIdToMetadata[originChainId].name;
     const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(originChainId, originTxHash);
     // TODO currently throwing this over the fence to the debugger script
@@ -67,7 +65,7 @@ export async function fetchDeliveryStatus(
       originName,
       originTxReceipt,
       environment,
-      leafIndex,
+      nonce,
       false,
     );
 
@@ -96,30 +94,18 @@ export async function fetchDeliveryStatus(
 }
 
 async function fetchExplorerLogsForMessage(message: Message) {
-  const {
-    originDomainId,
-    destinationDomainId: destDomainId,
-    originChainId,
-    originTransaction,
-    destinationChainId,
-    leafIndex,
-    recipient,
-    sender,
-    body,
-  } = message;
+  const { msgId, originChainId, originTransaction, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${originTransaction.transactionHash}`);
 
-  const originName = chainIdToName[originChainId];
-  const destName = chainIdToName[destinationChainId];
+  const originName = chainIdToMetadata[originChainId].name;
+  const destName = chainIdToMetadata[destinationChainId].name;
 
-  const destInboxAddr = hyperlaneCoreAddresses[destName]?.inboxes[originName];
-  if (!destInboxAddr)
-    throw new Error(`No inbox address found for dest ${destName} origin ${originName}`);
+  const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
+  if (!destMailboxAddr)
+    throw new Error(`No mailbox address found for dest ${destName} origin ${originName}`);
 
-  const msgRawBytes = utils.formatMessage(originDomainId, sender, destDomainId, recipient, body);
-  const messageHash = utils.messageHash(msgRawBytes, leafIndex);
-
-  const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${messageHash}&address=${destInboxAddr}`;
+  const topic1 = ensureLeading0x(msgId);
+  const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
   return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
 }
 
@@ -141,24 +127,21 @@ function validateMessage(message: Message) {
     destinationDomainId,
     originChainId,
     destinationChainId,
-    leafIndex,
+    nonce,
     originTransaction,
     recipient,
     sender,
   } = message;
 
-  if (!originDomainId || !domainToChain[originDomainId])
-    throw new Error(`Invalid origin domain ${originDomainId}`);
-  if (!destinationDomainId || !domainToChain[destinationDomainId])
-    throw new Error(`Invalid dest domain ${destinationDomainId}`);
-  if (!originChainId || !chainToDomain[originChainId])
-    throw new Error(`Invalid origin chain ${originChainId}`);
-  if (!destinationChainId || !chainToDomain[destinationChainId])
-    throw new Error(`Invalid dest chain ${destinationChainId}`);
-  if (!chainIdToName[originChainId]) throw new Error(`No name found for chain ${originChainId}`);
-  if (!chainIdToName[destinationChainId])
+  if (!originDomainId) throw new Error(`Invalid origin domain ${originDomainId}`);
+  if (!destinationDomainId) throw new Error(`Invalid dest domain ${destinationDomainId}`);
+  if (!originChainId) throw new Error(`Invalid origin chain ${originChainId}`);
+  if (!destinationChainId) throw new Error(`Invalid dest chain ${destinationChainId}`);
+  if (!chainIdToMetadata[originChainId]?.name)
+    throw new Error(`No name found for chain ${originChainId}`);
+  if (!chainIdToMetadata[destinationChainId]?.name)
     throw new Error(`No name found for chain ${destinationChainId}`);
-  if (!leafIndex) throw new Error(`Invalid leaf index ${leafIndex}`);
+  if (!nonce) throw new Error(`Invalid nonce ${nonce}`);
   if (!originTransaction?.transactionHash) throw new Error(`Invalid or missing origin tx`);
   validateAddress(recipient, 'validateMessage recipient');
   validateAddress(sender, 'validateMessage sender');

@@ -2,7 +2,6 @@ import { Spinner } from '../../../components/animation/Spinner';
 import { ChainIcon } from '../../../components/icons/ChainIcon';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
-import { chainToDomain } from '../../../consts/domains';
 import { MessageStatus, PartialTransactionReceipt } from '../../../types';
 import { getChainDisplayName } from '../../../utils/chains';
 import { getTxExplorerUrl } from '../../../utils/explorers';
@@ -55,7 +54,7 @@ export function TransactionCard({
           <KeyValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainDisplayName(chainId)} (${chainId} / ${chainToDomain[chainId]})`}
+            display={`${getChainDisplayName(chainId)} (${chainId})`}
             displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />

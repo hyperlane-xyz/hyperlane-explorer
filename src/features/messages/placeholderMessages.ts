@@ -16,13 +16,13 @@ const BODY_ZERO =
   '0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 
 export const PLACEHOLDER_MESSAGE: Message = {
-  id: 1,
-  leafIndex: 1,
+  id: '1',
+  msgId: TX_HASH_ZERO.substring(2),
+  nonce: 1,
   status: MessageStatus.Pending,
   sender: constants.AddressZero,
   recipient: constants.AddressZero,
   body: BODY_ZERO,
-  hash: TX_HASH_ZERO,
   originDomainId: 0,
   destinationDomainId: 0,
   originChainId: 0,

@@ -17,7 +17,6 @@ const ICA_ADDRESS = Object.values(hyperlaneCoreAddresses)[0].interchainAccountRo
 export function isIcaMessage({
   sender,
   recipient,
-  hash,
 }: {
   sender: string;
   recipient: string;
@@ -27,16 +26,16 @@ export function isIcaMessage({
   const isRecipIca = isAddressIcaRouter(recipient);
   if (isSenderIca && isRecipIca) return true;
   if (isSenderIca && !isRecipIca) {
-    logger.warn('Msg sender is ICA router but not recip', sender, recipient, hash);
+    logger.warn('Msg sender is ICA router but not recip', sender, recipient);
   }
   if (!isSenderIca && isRecipIca) {
-    logger.warn('Msg recip is ICA router but not sender', recipient, sender, hash);
+    logger.warn('Msg recip is ICA router but not sender', recipient, sender);
   }
   return false;
 }
 
 function isAddressIcaRouter(addr: string) {
-  return areAddressesEqual(addr, ICA_ADDRESS);
+  return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
 }
 
 export function tryDecodeIcaBody(body: string) {
@@ -76,6 +75,7 @@ export function tryDecodeIcaBody(body: string) {
 // TODO do this on backend and use private RPC
 export async function tryFetchIcaAddress(originDomainId: number, senderAddress: string) {
   try {
+    if (!ICA_ADDRESS) return null;
     logger.debug('Fetching Ica address', originDomainId, senderAddress);
     const chainName = DomainIdToChainName[originDomainId];
     const connection = chainConnectionConfigs[chainName];
