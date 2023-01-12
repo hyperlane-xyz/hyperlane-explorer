@@ -14,6 +14,6 @@ export const config: Config = Object.freeze({
   debug: isDevMode,
   version,
   url: 'https://explorer.hyperlane.xyz',
-  apiUrl: 'https://api.hyperlane.xyz/v1/graphql',
+  apiUrl: 'https://api-v1.hyperlane.xyz/v1/graphql',
   explorerApiKeys,
 });
