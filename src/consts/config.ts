@@ -5,7 +5,6 @@ const explorerApiKeys = JSON.parse(process?.env?.EXPLORER_API_KEYS || '{}');
 interface Config {
   debug: boolean;
   version: string | null;
-  url: string;
   apiUrl: string;
   explorerApiKeys: Record<string, string>;
 }
@@ -13,7 +12,6 @@ interface Config {
 export const config: Config = Object.freeze({
   debug: isDevMode,
   version,
-  url: 'https://explorer.hyperlane.xyz',
   apiUrl: 'https://api-v1.hyperlane.xyz/v1/graphql',
   explorerApiKeys,
 });
