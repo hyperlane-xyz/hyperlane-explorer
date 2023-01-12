@@ -1,7 +1,7 @@
 export function InfoBanner() {
   return (
     <a
-      href="https://explorer-v2.hyperlane.xyz"
+      href="https://explorer.hyperlane.xyz"
       target="_blank"
       rel="noopener noreferrer"
       className="block py-1.5 w-full text-white text-center text-sm bg-blue-600 hover:bg-blue-700 active:bg-blue-800 ring-1 ring-inset ring-green-700 transition-all duration-300"
