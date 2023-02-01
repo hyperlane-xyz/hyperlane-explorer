@@ -256,7 +256,6 @@ function useMessageStage(
         };
       }
 
-      // TODO rename?
       const latestNonce = await tryFetchLatestNonce(originChainId);
       if (latestNonce && latestNonce >= nonce) {
         return {

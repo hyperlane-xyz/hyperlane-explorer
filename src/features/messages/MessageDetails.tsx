@@ -11,7 +11,7 @@ import { MessageStatus } from '../../types';
 import { getChainDisplayName } from '../../utils/chains';
 import { logger } from '../../utils/logger';
 import { toTitleCase } from '../../utils/string';
-import { useInterval } from '../../utils/timeout';
+import { useInterval } from '../../utils/useInterval';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
@@ -29,11 +29,10 @@ const AUTO_REFRESH_DELAY = 10000;
 export function MessageDetails({ messageId }: { messageId: string }) {
   // Message query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
-  const [graphResult, reexecuteQuery] = useQuery<MessagesQueryResult>({
+  const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query,
     variables,
   });
-  const { data, fetching: isFetching, error } = graphResult;
   const messages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   // Extracting message properties
