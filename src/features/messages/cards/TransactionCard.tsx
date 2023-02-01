@@ -1,5 +1,6 @@
+import { ChainLogo } from '@hyperlane-xyz/widgets';
+
 import { Spinner } from '../../../components/animation/Spinner';
-import { ChainIcon } from '../../../components/icons/ChainIcon';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { MessageStatus, PartialTransactionReceipt } from '../../../types';
@@ -42,7 +43,7 @@ export function TransactionCard({
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
-          <ChainIcon chainId={chainId} />
+          <ChainLogo chainId={chainId} />
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">{title}</h3>
