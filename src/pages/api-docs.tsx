@@ -74,7 +74,7 @@ function ParamItem({ name, desc }: { name: string; desc: string }) {
   );
 }
 
-const exampleRequest = `const baseUrl = 'https://explorer-v2.hyperlane.xyz/api'
+const exampleRequest = `const baseUrl = 'https://explorer.hyperlane.xyz/api'
 const action = 'module=message&action=get-messages'
 const messageId = '62d30bde22af368e43f981f65186ff2c2b895a09774a9397f815dcc366793875'
 const url =\`\${baseUrl}?\${action}&id=\${messageId}\`;

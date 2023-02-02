@@ -1,31 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-// https://usehooks-typescript.com/react-hook/use-interval
-export function useInterval(callback: () => void, delay: number | null) {
-  const savedCallback = useRef<() => void | null>();
-
-  // Remember the latest callback.
-  useEffect(() => {
-    savedCallback.current = callback;
-  });
-
-  // Set up the interval.
-  useEffect(() => {
-    const tick = () => {
-      if (typeof savedCallback?.current !== 'undefined') {
-        savedCallback?.current();
-      }
-    };
-
-    if (delay !== null) {
-      const id = setInterval(tick, delay);
-      return () => clearInterval(id);
-    }
-
-    return undefined;
-  }, [delay]);
-}
-
 // https://medium.com/javascript-in-plain-english/usetimeout-react-hook-3cc58b94af1f
 export const useTimeout = (
   callback: () => void,
