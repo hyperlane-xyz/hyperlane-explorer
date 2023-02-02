@@ -1,6 +1,7 @@
+import { WideChevron } from '@hyperlane-xyz/widgets';
+
 import { useStore } from '../../store';
 import { classNameToColor } from '../../styles/Color';
-import { WideChevronIcon } from '../icons/WideChevron';
 
 export function BackgroundBanner() {
   const bannerClassName = useStore((s) => s.bannerClassName);
@@ -19,7 +20,7 @@ export function BackgroundBanner() {
 function Chevron({ color, pos }: { color: string; pos: string }) {
   return (
     <div className={`absolute w-24 top-0 bottom-0 ${pos} overflow-visible`}>
-      <WideChevronIcon direction="e" color={color} height="100%" width="auto" rounded />
+      <WideChevron direction="e" color={color} height="100%" width="auto" rounded />
     </div>
   );
 }
