@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import NextCors from 'nextjs-cors';
 
 import { fetchDeliveryStatus } from '../../features/deliveryStatus/fetchDeliveryStatus';
 import type { MessageDeliveryStatusResponse } from '../../features/deliveryStatus/types';
@@ -9,6 +10,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MessageDeliveryStatusResponse | string>,
 ) {
+  await NextCors(req, res, {
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    origin: '*',
+    optionsSuccessStatus: 200,
+  });
+
   try {
     const message = req.body as Message;
     if (!message) throw new Error('No message in body');

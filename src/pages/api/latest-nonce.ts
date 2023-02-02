@@ -1,5 +1,6 @@
 import { BigNumber } from 'ethers';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import NextCors from 'nextjs-cors';
 
 import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
@@ -12,6 +13,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<{ nonce: number } | string>,
 ) {
+  await NextCors(req, res, {
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    origin: '*',
+    optionsSuccessStatus: 200,
+  });
   try {
     const body = req.body as { chainId: number };
     if (!body.chainId) throw new Error('No chainId in body');
