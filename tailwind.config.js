@@ -98,9 +98,6 @@ module.exports = {
       blur: {
         xs: '3px',
       },
-      animation: {
-        'pulse-slow': 'pulse 3s infinite cubic-bezier(.4,0,.6,1)',
-      }
     },
   },
   plugins: [],
