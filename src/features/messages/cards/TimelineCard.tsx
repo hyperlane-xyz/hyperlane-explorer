@@ -26,7 +26,7 @@ export function TimelineCard({ message, resolvedStatus, resolvedDestinationTx }:
         <h3 className="text-gray-500 font-medium text-md mr-2">Delivery Timeline</h3>
         <HelpIcon size={16} text="A breakdown of the stages for delivering a message" />
       </div> */}
-      <div className="">
+      <div className="sm:px-2">
         <MessageTimeline status={resolvedMessage.status} stage={stage} timings={timings} />
       </div>
     </Card>
