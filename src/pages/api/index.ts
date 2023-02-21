@@ -1,5 +1,6 @@
 import { Client, createClient } from '@urql/core';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import NextCors from 'nextjs-cors';
 
 import { config } from '../../consts/config';
 import { handler as getMessagesHandler } from '../../features/api/getMessages';
@@ -26,6 +27,12 @@ interface ApiResult<R> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResult<any>>) {
+  await NextCors(req, res, {
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    origin: '*',
+    optionsSuccessStatus: 200,
+  });
+
   try {
     const apiAction = parseQueryParams(req);
     if (!apiAction) {

@@ -14,7 +14,7 @@ import useDebounce from '../../utils/debounce';
 import { logger } from '../../utils/logger';
 import { getQueryParamString } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
-import { useInterval } from '../../utils/timeout';
+import { useInterval } from '../../utils/useInterval';
 
 import { MessageTable } from './MessageTable';
 import { buildMessageSearchQuery } from './queries/build';

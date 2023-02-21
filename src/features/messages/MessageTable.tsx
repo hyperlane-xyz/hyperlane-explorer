@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { ChainIcon } from '../../components/icons/ChainIcon';
+import { ChainLogo } from '@hyperlane-xyz/widgets';
+
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getChainDisplayName } from '../../utils/chains';
@@ -68,11 +69,11 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
   return (
     <>
       <LinkCell id={msgId} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
-        <ChainIcon chainId={originChainId} size={20} />
+        <ChainLogo chainId={originChainId} size={20} />
         <div className={styles.chainName}>{getChainDisplayName(originChainId, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} aClasses="flex items-center py-3.5 ">
-        <ChainIcon chainId={destinationChainId} size={20} />
+        <ChainLogo chainId={destinationChainId} size={20} />
         <div className={styles.chainName}>{getChainDisplayName(destinationChainId, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} tdClasses="hidden sm:table-cell" aClasses={styles.value}>

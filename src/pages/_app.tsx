@@ -11,6 +11,8 @@ import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
+import '@hyperlane-xyz/widgets/styles.css';
+
 // import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
 // import { publicProvider } from 'wagmi/providers/public';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';

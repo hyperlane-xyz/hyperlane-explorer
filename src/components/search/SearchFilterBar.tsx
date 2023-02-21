@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import GearIcon from '../../images/icons/gear.svg';
 import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';
-import { ChainIcon } from '../icons/ChainIcon';
 import { ChevronIcon } from '../icons/Chevron';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
@@ -187,7 +187,7 @@ function ChainMultiSelector({
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainIcon chainId={c.id} size={12} color={false} background={false} />
+                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
@@ -212,7 +212,7 @@ function ChainMultiSelector({
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
                     <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainIcon chainId={c.id} size={12} color={false} background={false} />
+                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
