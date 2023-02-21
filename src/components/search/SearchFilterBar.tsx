@@ -1,19 +1,19 @@
 import Image from 'next/image';
 import { useState } from 'react';
-import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 
-import FunnelIcon from '../../images/icons/funnel.svg';
+import CubeIcon from '../../images/icons/cube.svg';
+import GearIcon from '../../images/icons/gear.svg';
 import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';
 import { ChainIcon } from '../icons/ChainIcon';
 import { ChevronIcon } from '../icons/Chevron';
-import { XIcon } from '../icons/XIcon';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
+import { DropdownMenu, DropdownModal } from '../layout/Dropdown';
 
 const mainnetAndTestChains = [...mainnetChainsMetadata, ...testnetChainsMetadata];
 
@@ -40,14 +40,6 @@ export function SearchFilterBar({
 }: Props) {
   return (
     <div className="flex items-center space-x-2 md:space-x-4">
-      <div className="w-px h-8 bg-gray-200"></div>
-      <Image
-        src={FunnelIcon}
-        width={20}
-        height={20}
-        className="hidden sm:block opacity-20"
-        alt=""
-      />
       <ChainMultiSelector
         text="Origin"
         header="Origin Chains"
@@ -68,6 +60,8 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
+      <div className="w-px h-8 bg-gray-200"></div>
+      <OptionsDropdownMenu />
     </div>
   );
 }
@@ -85,11 +79,6 @@ function ChainMultiSelector({
   onChangeValue: (value: string | null) => void;
   position?: string;
 }) {
-  const { buttonProps, isOpen, setIsOpen } = useDropdownMenu(1);
-  const closeDropdown = () => {
-    setIsOpen(false);
-  };
-
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
     value ? arrayToObject(value.split(',')) : arrayToObject(mainnetAndTestChains.map((c) => c.id)),
@@ -134,7 +123,7 @@ function ChainMultiSelector({
     setCheckedChains({});
   };
 
-  const onClickApply = () => {
+  const onClickApply = (closeDropdown?: () => void) => {
     const checkedList = Object.keys(checkedChains).filter((c) => !!checkedChains[c]);
     if (checkedList.length === 0 || checkedList.length === mainnetAndTestChains.length) {
       // Use null value, indicating to filter needed
@@ -142,32 +131,23 @@ function ChainMultiSelector({
     } else {
       onChangeValue(checkedList.join(','));
     }
-    closeDropdown();
+    if (closeDropdown) closeDropdown();
   };
 
   return (
-    <div className="relative">
-      <button
-        className="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
-        {...buttonProps}
-      >
-        <span className="text-gray-700 py-px">{text}</span>
-        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
-      </button>
-
-      <div
-        className={`dropdown-menu w-88 ${
-          position || 'right-0'
-        } top-10 bg-white shadow-md drop-shadow-md xs:border-blue-50 ${!isOpen && 'hidden'}`}
-        role="menu"
-      >
-        <div className="absolute top-1.5 right-1.5">
-          <XIcon onClick={closeDropdown} />
-        </div>
-        <div className="py-0.5 px-1.5">
-          <div className="flex items-center">
+    <DropdownModal
+      buttonContent={
+        <>
+          <span className="text-gray-700 py-px">{text}</span>
+          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+        </>
+      }
+      buttonClasses="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      modalContent={(closeDropdown) => (
+        <div className="p-4">
+          <div className="flex items-center justify-between">
             <h3 className="text-gray-700 text-lg">{header}</h3>
-            <div className="flex ml-[4.7rem]">
+            <div className="flex mr-4">
               <TextButton classes="text-sm underline underline-offset-2" onClick={onToggleAll}>
                 All
               </TextButton>
@@ -230,12 +210,16 @@ function ChainMultiSelector({
               ))}
             </div>
           </div>
-          <BorderedButton classes="mt-2.5 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+          <BorderedButton
+            classes="mt-2.5 text-sm px-2 py-1 w-full"
+            onClick={() => onClickApply(closeDropdown)}
+          >
             Apply
           </BorderedButton>
         </div>
-      </div>
-    </div>
+      )}
+      modalClasses={`w-88 ${position || 'right-0'}`}
+    />
   );
 }
 
@@ -250,11 +234,6 @@ function DatetimeSelector({
   endValue: number | null;
   onChangeEndValue: (value: number | null) => void;
 }) {
-  const { buttonProps, isOpen, setIsOpen } = useDropdownMenu(1);
-  const closeDropdown = () => {
-    setIsOpen(false);
-  };
-
   // Need local state as buffer before user hits apply
   const [startTime, setStartTime] = useState<number | null>(startValue);
   const [endTime, setEndTime] = useState<number | null>(endValue);
@@ -264,35 +243,26 @@ function DatetimeSelector({
     setEndTime(null);
   };
 
-  const onClickApply = () => {
+  const onClickApply = (closeDropdown?: () => void) => {
     onChangeStartValue(startTime);
     onChangeEndValue(endTime);
-    closeDropdown();
+    if (closeDropdown) closeDropdown();
   };
 
   return (
-    <div className="relative">
-      <button
-        className="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
-        {...buttonProps}
-      >
-        <span className="text-gray-700 py-px px-2">Time</span>
-        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
-      </button>
-
-      <div
-        className={`dropdown-menu w-60 top-10 right-0 bg-white shadow-md drop-shadow-md xs:border-blue-50 ${
-          !isOpen && 'hidden'
-        }`}
-        role="menu"
-      >
-        <div className="absolute top-1.5 right-1.5">
-          <XIcon onClick={closeDropdown} />
-        </div>
-        <div className="py-0.5 px-1.5">
+    <DropdownModal
+      buttonContent={
+        <>
+          <span className="text-gray-700 py-px px-2">Time</span>
+          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+        </>
+      }
+      buttonClasses="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      modalContent={(closeDropdown) => (
+        <div className="p-4" key="date-time-selector">
           <div className="flex items-center justify-between">
             <h3 className="text-gray-700 text-lg">Time Range</h3>
-            <div className="flex mr-6 pt-1">
+            <div className="flex pt-1">
               <TextButton classes="text-sm underline underline-offset-2" onClick={onClickClear}>
                 Clear
               </TextButton>
@@ -304,11 +274,36 @@ function DatetimeSelector({
             <h4 className="mt-3 mb-1 text-gray-700">End Time</h4>
             <DatetimeField timestamp={endTime} onChange={setEndTime} />
           </div>
-          <BorderedButton classes="mt-4 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+          <BorderedButton
+            classes="mt-4 text-sm px-2 py-1 w-full"
+            onClick={() => onClickApply(closeDropdown)}
+          >
             Apply
           </BorderedButton>
         </div>
-      </div>
-    </div>
+      )}
+      modalClasses="w-60 -right-8"
+    />
+  );
+}
+
+function OptionsDropdownMenu() {
+  return (
+    <DropdownMenu
+      buttonContent={<Image src={GearIcon} width={24} height={24} className="opacity-40" alt="" />}
+      buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
+      buttonTitle="Options"
+      menuItems={[
+        <button
+          className="w-full flex items-center px-4 py-3 mt-1 text-sm hover:bg-gray-100 active:bg-gray-200 transition-all"
+          onClick={() => alert('hi')}
+          key="configure-custom-chain"
+        >
+          <Image src={CubeIcon} width={16} height={16} alt="" />
+          <div className="ml-2">Configure Chains</div>
+        </button>,
+      ]}
+      menuClasses="w-44 right-0"
+    />
   );
 }

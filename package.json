@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "author": "J M Rossy",
   "dependencies": {
+    "@headlessui/react": "^1.7.11",
     "@hyperlane-xyz/sdk": "^1.0.0-beta6",
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6",
     "@rainbow-me/rainbowkit": "^0.8.0",
@@ -14,7 +15,6 @@
     "graphql": "^16.6.0",
     "next": "^13.0.5",
     "react": "^18.2.0",
-    "react-accessible-dropdown-menu-hook": "^3.2.0",
     "react-dom": "^18.2.0",
     "react-toastify": "^9.1.1",
     "urql": "^3.0.3",

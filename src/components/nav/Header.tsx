@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
@@ -11,16 +10,12 @@ import InfoIcon from '../../images/icons/info-circle.svg';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
+import { DropdownMenu } from '../layout/Dropdown';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
-  const { buttonProps, itemProps, isOpen, setIsOpen } = useDropdownMenu(4);
-  const closeDropdown = () => {
-    setIsOpen(false);
-  };
-
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   return (
@@ -52,46 +47,42 @@ export function Header({ pathName }: { pathName: string }) {
           </a>
           {showSearch && <MiniSearchBar />}
         </nav>
+        {/* Dropdown menu, used on mobile */}
         <div className="relative flex item-center sm:hidden mr-2">
-          <button className="hover:opacity-70 transition-all" {...buttonProps}>
-            <Image src={HamburgerIcon} width={22} height={22} alt="..." />
-          </button>
+          <DropdownMenu
+            buttonContent={<Image src={HamburgerIcon} width={22} height={22} alt="..." />}
+            buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
+            buttonTitle="Options"
+            menuItems={[
+              <Link href="/" className={styles.dropdownOption} key="dropdown-item-home">
+                <DropdownItemContent icon={HouseIcon} text="Home" />
+              </Link>,
+              <Link href="/api-docs" className={styles.dropdownOption} key="dropdown-item-api">
+                <DropdownItemContent icon={DatabaseIcon} text="API" />
+              </Link>,
+              <a
+                className={styles.dropdownOption}
+                target="_blank"
+                href={links.docs}
+                rel="noopener noreferrer"
+                key="dropdown-item-docs"
+              >
+                <DropdownItemContent icon={BookIcon} text="Docs" />
+              </a>,
+              <a
+                className={styles.dropdownOption}
+                target="_blank"
+                href={links.home}
+                rel="noopener noreferrer"
+                key="dropdown-item-about"
+              >
+                <DropdownItemContent icon={InfoIcon} text="About" />
+              </a>,
+            ]}
+            menuClasses="p-2 w-[7.5rem] right-0"
+          />
         </div>
       </div>
-      {/* Dropdown menu, used on mobile */}
-      <nav className={`${styles.dropdownContainer} ${!isOpen && 'hidden'} right-0`} role="menu">
-        <Link href="/" {...itemProps[0]} className={styles.dropdownOption} onClick={closeDropdown}>
-          <DropdownItemContent icon={HouseIcon} text="Home" />
-        </Link>
-        <Link
-          href="/api-docs"
-          {...itemProps[1]}
-          className={styles.dropdownOption}
-          onClick={closeDropdown}
-        >
-          <DropdownItemContent icon={DatabaseIcon} text="API" />
-        </Link>
-        <a
-          {...itemProps[2]}
-          onClick={closeDropdown}
-          className={styles.dropdownOption}
-          target="_blank"
-          href={links.docs}
-          rel="noopener noreferrer"
-        >
-          <DropdownItemContent icon={BookIcon} text="Docs" />
-        </a>
-        <a
-          {...itemProps[3]}
-          onClick={closeDropdown}
-          className={styles.dropdownOption}
-          target="_blank"
-          href={links.home}
-          rel="noopener noreferrer"
-        >
-          <DropdownItemContent icon={InfoIcon} text="About" />
-        </a>
-      </nav>
     </header>
   );
 }
@@ -108,8 +99,6 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 const styles = {
   navLink:
     'pt-px flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
-  dropdownContainer: 'dropdown-menu w-[7.5rem] mt-1 mr-px bg-gray-50 shadow-md',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
-  activeEnv: 'font-medium cursor-default hover:no-underline',
 };

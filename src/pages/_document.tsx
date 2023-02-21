@@ -10,9 +10,9 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#025aa1" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2362C1" />
         <link rel="shortcut icon" href="/favicon.ico" />
-        <meta name="msapplication-TileColor" content="#025aa1" />
+        <meta name="msapplication-TileColor" content="#2362C1" />
         <meta name="theme-color" content="#ffffff" />
 
         <meta name="application-name" content="Hyperlane Explorer" />
