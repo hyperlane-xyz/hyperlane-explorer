@@ -1,7 +1,7 @@
 import { mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import { BorderedButton } from '../../components/buttons/BorderedButton';
-import { ChainIcon } from '../../components/icons/ChainIcon';
 import { Card } from '../../components/layout/Card';
 import { links } from '../../consts/links';
 import { getChainDisplayName } from '../../utils/chains';
@@ -28,7 +28,7 @@ export function ConfigureChains() {
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {mainnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainIcon chainId={c.id} size={15} color={true} background={false} />
+              <ChainLogo chainId={c.id} size={15} color={true} background={false} />
               <span className="ml-1.5">{getChainDisplayName(c.id, true)}</span>
             </div>
           ))}
@@ -39,7 +39,7 @@ export function ConfigureChains() {
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {testnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainIcon chainId={c.id} size={15} color={true} background={false} />
+              <ChainLogo chainId={c.id} size={15} color={true} background={false} />
               <span className="ml-1.5">{getChainDisplayName(c.id, true)}</span>
             </div>
           ))}
