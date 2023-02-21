@@ -1,9 +1,9 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 
-import CubeIcon from '../../images/icons/cube.svg';
 import GearIcon from '../../images/icons/gear.svg';
 import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
@@ -13,7 +13,7 @@ import { ChainIcon } from '../icons/ChainIcon';
 import { ChevronIcon } from '../icons/Chevron';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
-import { DropdownMenu, DropdownModal } from '../layout/Dropdown';
+import { DropdownModal } from '../layout/Dropdown';
 
 const mainnetAndTestChains = [...mainnetChainsMetadata, ...testnetChainsMetadata];
 
@@ -61,7 +61,15 @@ export function SearchFilterBar({
         onChangeEndValue={onChangeEndTimestamp}
       />
       <div className="w-px h-8 bg-gray-200"></div>
-      <OptionsDropdownMenu />
+      <Link href="/settings" title="View explorer settings">
+        <Image
+          src={GearIcon}
+          width={24}
+          height={24}
+          className="opacity-40 hover:opacity-30 active:opacity-20"
+          alt=""
+        />
+      </Link>
     </div>
   );
 }
@@ -283,27 +291,6 @@ function DatetimeSelector({
         </div>
       )}
       modalClasses="w-60 -right-8"
-    />
-  );
-}
-
-function OptionsDropdownMenu() {
-  return (
-    <DropdownMenu
-      buttonContent={<Image src={GearIcon} width={24} height={24} className="opacity-40" alt="" />}
-      buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
-      buttonTitle="Options"
-      menuItems={[
-        <button
-          className="w-full flex items-center px-4 py-3 mt-1 text-sm hover:bg-gray-100 active:bg-gray-200 transition-all"
-          onClick={() => alert('hi')}
-          key="configure-custom-chain"
-        >
-          <Image src={CubeIcon} width={16} height={16} alt="" />
-          <div className="ml-2">Configure Chains</div>
-        </button>,
-      ]}
-      menuClasses="w-44 right-0"
     />
   );
 }

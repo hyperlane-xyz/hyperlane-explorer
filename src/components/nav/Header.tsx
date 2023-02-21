@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { links } from '../../consts/links';
 import BookIcon from '../../images/icons/book.svg';
 import DatabaseIcon from '../../images/icons/database.svg';
+import GearIcon from '../../images/icons/gear.svg';
 import HamburgerIcon from '../../images/icons/hamburger.svg';
 import HouseIcon from '../../images/icons/house.svg';
 import InfoIcon from '../../images/icons/info-circle.svg';
@@ -17,6 +18,8 @@ const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
+
+  const blueHeaderText = (path: string) => (pathName === path ? ' text-blue-500' : '');
 
   return (
     <header className="px-2 pt-4 pb-3 sm:pt-5 sm:px-6 lg:pr-14 w-full">
@@ -33,10 +36,13 @@ export function Header({ pathName }: { pathName: string }) {
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
-          <Link href="/" className={styles.navLink}>
+          <Link href="/" className={styles.navLink + blueHeaderText('/')}>
             Home
           </Link>
-          <Link href="/api-docs" className={styles.navLink}>
+          <Link href="/settings" className={styles.navLink + blueHeaderText('/settings')}>
+            Settings
+          </Link>
+          <Link href="/api-docs" className={styles.navLink + blueHeaderText('/api-docs')}>
             API
           </Link>
           <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
@@ -56,6 +62,9 @@ export function Header({ pathName }: { pathName: string }) {
             menuItems={[
               <Link href="/" className={styles.dropdownOption} key="dropdown-item-home">
                 <DropdownItemContent icon={HouseIcon} text="Home" />
+              </Link>,
+              <Link href="/settings" className={styles.dropdownOption} key="dropdown-item-home">
+                <DropdownItemContent icon={GearIcon} text="Settings" />
               </Link>,
               <Link href="/api-docs" className={styles.dropdownOption} key="dropdown-item-api">
                 <DropdownItemContent icon={DatabaseIcon} text="API" />
@@ -79,7 +88,7 @@ export function Header({ pathName }: { pathName: string }) {
                 <DropdownItemContent icon={InfoIcon} text="About" />
               </a>,
             ]}
-            menuClasses="p-2 w-[7.5rem] right-0"
+            menuClasses="p-2 w-32 right-0"
           />
         </div>
       </div>

@@ -6,7 +6,7 @@ const ApiDocs: NextPage = () => {
   return (
     <div className="mt-4 mb-2 px-2 sm:px-6 lg:pr-14 w-full">
       <Card>
-        <h2 className="mt-1 text-xl text-blue-600">Explorer APIs - Overview and documentation</h2>
+        <h2 className="mt-1 text-xl text-blue-500">Explorer APIs - Overview and documentation</h2>
         <p className="mt-3">
           The Explorer REST API provides endpoints to retrieve data about messages.
         </p>
@@ -14,20 +14,20 @@ const ApiDocs: NextPage = () => {
           The APIs are currently available free of charge and without authentication required.
         </p>
 
-        <h3 className="mt-4 text-lg text-blue-600">Example Request</h3>
+        <h3 className="mt-4 text-lg text-blue-500">Example Request</h3>
         <div className="mt-2 bg-gray-50 rounded p-2.5 text-sm overflow-auto">
           <pre>
             <code>{exampleRequest}</code>
           </pre>
         </div>
-        <h3 className="mt-4 text-lg text-blue-600">Example Response</h3>
+        <h3 className="mt-4 text-lg text-blue-500">Example Response</h3>
         <div className="mt-2 bg-gray-50 rounded p-2.5 text-sm overflow-auto">
           <pre>
             <code>{exampleResponse}</code>
           </pre>
         </div>
 
-        <h3 className="mt-4 text-lg text-blue-600">API Reference</h3>
+        <h3 className="mt-4 text-lg text-blue-500">API Reference</h3>
         <h4 className="mt-2 text-gray-600">
           Module:<code className="ml-2">message</code>
         </h4>

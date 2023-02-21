@@ -87,7 +87,7 @@ export function MessageSearch() {
         isFetching={isFetching}
         placeholder="Search by address or transaction hash"
       />
-      <div className="w-full min-h-[38rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
+      <div className="w-full min-h-[38rem] mt-5 bg-white shadow-md border rounded overflow-auto relative">
         <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between">
           <h2 className="w-min sm:w-fit pl-0.5 text-gray-700">
             {!hasInput ? 'Latest Messages' : 'Search Results'}

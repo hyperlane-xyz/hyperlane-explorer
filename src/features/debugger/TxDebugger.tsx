@@ -63,7 +63,7 @@ export function TxDebugger() {
         isFetching={isFetching}
         placeholder="Search transaction hash to debug message"
       />
-      <div className="w-full h-[38.2rem] mt-5 bg-white shadow-md border border-blue-50 rounded overflow-auto relative">
+      <div className="w-full h-[38.2rem] mt-5 bg-white shadow-md border rounded overflow-auto relative">
         <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-gray-600">{`Transaction Debugger`}</h2>
           <EnvironmentSelector />
