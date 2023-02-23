@@ -14,10 +14,14 @@ jobs:
   install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+
+      - name: yarn-cache
+        uses: actions/cache@v3
         with:
-          path: .//node_modules
+          path: |
+            **/node_modules
+            .yarn/cache
           key: ${{ runner.os }}-yarn-cache-${{ hashFiles('./yarn.lock') }}
 
       - name: yarn-install
@@ -36,19 +40,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [install]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: yarn-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
-          path: .//node_modules
+          path: |
+            **/node_modules
+            .yarn/cache
           key: ${{ runner.os }}-yarn-cache-${{ hashFiles('./yarn.lock') }}
-
-      - name: build-cache
-        uses: actions/cache@v2
-        with:
-          path: ./*
-          key: ${{ github.sha }}
 
       - name: build
         run: yarn run build
@@ -57,10 +57,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [install]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+
+      - name: yarn-cache
+        uses: actions/cache@v3
         with:
-          path: .//node_modules
+          path: |
+            **/node_modules
+            .yarn/cache
           key: ${{ runner.os }}-yarn-cache-${{ hashFiles('./yarn.lock') }}
 
       - name: prettier
@@ -76,24 +80,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [install]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+
+      - name: yarn-cache
+        uses: actions/cache@v3
         with:
-          path: .//node_modules
+          path: |
+            **/node_modules
+            .yarn/cache
           key: ${{ runner.os }}-yarn-cache-${{ hashFiles('./yarn.lock') }}
 
       - name: lint 
         run: yarn run lint
-
-  # test:
-  #   runs-on: ubuntu-latest
-  #   needs: [build]
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/cache@v2
-  #       with:
-  #         path: ./*
-  #         key: ${{ github.sha }}
-
-  #     - name: test
-  #       run: yarn run test
