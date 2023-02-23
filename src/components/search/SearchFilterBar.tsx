@@ -66,7 +66,7 @@ export function SearchFilterBar({
           src={GearIcon}
           width={24}
           height={24}
-          className="opacity-40 hover:opacity-30 active:opacity-20"
+          className="opacity-40 hover:opacity-30 active:opacity-20 hover:rotate-90 transition-all"
           alt=""
         />
       </Link>
