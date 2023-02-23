@@ -89,12 +89,14 @@ function ChainMultiSelector({
 }) {
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
-    value ? arrayToObject(value.split(',')) : arrayToObject(mainnetAndTestChains.map((c) => c.id)),
+    value
+      ? arrayToObject(value.split(','))
+      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId)),
   );
 
   const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
     for (const c of chains) {
-      if (!checkedChains[c.id]) return true;
+      if (!checkedChains[c.chainId]) return true;
     }
     return false;
   };
@@ -112,7 +114,7 @@ function ChainMultiSelector({
 
   const onToggleSection = (chains: ChainMetadata[]) => {
     return () => {
-      const chainIds = chains.map((c) => c.id);
+      const chainIds = chains.map((c) => c.chainId);
       if (hasAnyUncheckedChain(chains)) {
         // If some are unchecked, check all
         setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, true) });
@@ -124,7 +126,7 @@ function ChainMultiSelector({
   };
 
   const onToggleAll = () => {
-    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.id)));
+    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.chainId)));
   };
 
   const onToggleNone = () => {
@@ -181,13 +183,13 @@ function ChainMultiSelector({
               {mainnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
-                  checked={!!checkedChains[c.id]}
-                  onToggle={onToggle(c.id)}
+                  checked={!!checkedChains[c.chainId]}
+                  onToggle={onToggle(c.chainId)}
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
+                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
@@ -206,13 +208,13 @@ function ChainMultiSelector({
               {testnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
-                  checked={!!checkedChains[c.id]}
-                  onToggle={onToggle(c.id)}
+                  checked={!!checkedChains[c.chainId]}
+                  onToggle={onToggle(c.chainId)}
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
+                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}

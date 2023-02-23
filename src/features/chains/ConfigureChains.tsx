@@ -28,8 +28,8 @@ export function ConfigureChains() {
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {mainnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.id} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(c.id, true)}</span>
+              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
+              <span className="ml-1.5">{getChainDisplayName(c.chainId, true)}</span>
             </div>
           ))}
         </div>
@@ -39,8 +39,8 @@ export function ConfigureChains() {
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {testnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.id} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(c.id, true)}</span>
+              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
+              <span className="ml-1.5">{getChainDisplayName(c.chainId, true)}</span>
             </div>
           ))}
         </div>

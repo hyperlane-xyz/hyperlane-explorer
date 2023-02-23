@@ -5,12 +5,13 @@ import { BigNumber, providers } from 'ethers';
 import { IMessageRecipient__factory, Mailbox } from '@hyperlane-xyz/core';
 import {
   ChainName,
+  CoreChainName,
   DispatchedMessage,
-  DomainIdToChainName,
   HyperlaneCore,
   MultiProvider,
-  chainConnectionConfigs,
 } from '@hyperlane-xyz/sdk';
+// TODO get exported from SDK properly
+import { TestChains } from '@hyperlane-xyz/sdk/dist/consts/chains';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
@@ -36,7 +37,7 @@ export async function debugMessagesForHash(
   attemptGetProcessTx = true,
 ): Promise<MessageDebugResult> {
   // TODO use RPC with api keys
-  const multiProvider = new MultiProvider(chainConnectionConfigs);
+  const multiProvider = new MultiProvider();
 
   const txDetails = await findTransactionDetails(txHash, multiProvider);
   if (!txDetails?.transactionReceipt) {
@@ -63,9 +64,11 @@ export async function debugMessagesForTransaction(
   environment: Environment,
   nonce?: number,
   attemptGetProcessTx = true,
-  multiProvider = new MultiProvider(chainConnectionConfigs),
+  multiProvider = new MultiProvider(),
 ): Promise<MessageDebugResult> {
-  const explorerLink = getTxExplorerLink(multiProvider, chainName, txReceipt.transactionHash);
+  const explorerLink = multiProvider.getExplorerTxUrl(chainName, {
+    hash: txReceipt.transactionHash,
+  });
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
   const dispatchedMessages = core.getDispatchedMessages(txReceipt);
 
@@ -100,7 +103,9 @@ export async function debugMessagesForTransaction(
 }
 
 async function findTransactionDetails(txHash: string, multiProvider: MultiProvider) {
-  const chains = multiProvider.chains().filter((n) => !n.startsWith('test'));
+  const chains = multiProvider
+    .getKnownChainNames()
+    .filter((n) => !TestChains.includes(n as CoreChainName));
   const chainChunks = chunk(chains, 10);
   for (const chunk of chainChunks) {
     try {
@@ -120,7 +125,7 @@ async function fetchTransactionDetails(
   multiProvider: MultiProvider,
   chainName: ChainName,
 ) {
-  const { provider } = multiProvider.getChainConnection(chainName);
+  const provider = multiProvider.getProvider(chainName);
   // TODO explorer may be faster, more robust way to get tx and its logs
   // Note: receipt is null if tx not found
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
@@ -134,8 +139,8 @@ async function fetchTransactionDetails(
 }
 
 async function checkMessage(
-  core: HyperlaneCore<any>,
-  multiProvider: MultiProvider<any>,
+  core: HyperlaneCore,
+  multiProvider: MultiProvider,
   message: DispatchedMessage,
   attemptGetProcessTx = true,
 ): Promise<MessageDebugDetails> {
@@ -157,13 +162,13 @@ async function checkMessage(
   properties.set('Sender', senderAddress);
   properties.set('Recipient', recipientAddress);
   properties.set('Origin Domain', origin.toString());
-  properties.set('Origin Chain', DomainIdToChainName[origin] || 'Unknown');
+  properties.set('Origin Chain', multiProvider.tryGetChainName(origin) || 'Unknown');
   properties.set('Destination Domain', destination.toString());
-  properties.set('Destination Chain', DomainIdToChainName[destination] || 'Unknown');
+  properties.set('Destination Chain', multiProvider.tryGetChainName(destination) || 'Unknown');
   properties.set('Nonce', nonce.toString());
   properties.set('Raw Bytes', message.message);
 
-  const destinationChain = DomainIdToChainName[destination];
+  const destinationChain = multiProvider.tryGetChainName(destination);
   logger.debug(`Destination chain: ${destinationChain}`);
   if (!destinationChain) {
     logger.info(`Unknown destination domain ${destination}`);
@@ -191,7 +196,7 @@ async function checkMessage(
     if (attemptGetProcessTx) {
       const processTxHash = await tryGetProcessTxHash(destinationMailbox, messageId);
       if (processTxHash) {
-        const url = getTxExplorerLink(multiProvider, destinationChain, processTxHash) || '';
+        const url = multiProvider.getExplorerTxUrl(destinationChain, { hash: processTxHash });
         properties.set('Process TX', { url, text: processTxHash });
       }
     }
@@ -214,7 +219,7 @@ async function checkMessage(
     };
   }
 
-  const destinationProvider = multiProvider.getChainProvider(destinationChain);
+  const destinationProvider = multiProvider.getProvider(destinationChain);
   const recipientContract = IMessageRecipient__factory.connect(
     recipientAddress,
     destinationProvider,
@@ -268,21 +273,11 @@ async function checkMessage(
   }
 }
 
-async function isContract(multiProvider: MultiProvider<any>, chain: ChainName, address: string) {
-  const provider = multiProvider.getChainProvider(chain);
+async function isContract(multiProvider: MultiProvider, chain: ChainName, address: string) {
+  const provider = multiProvider.getProvider(chain);
   const code = await provider.getCode(address);
   // "Empty" code
   return code && code !== '0x';
-}
-
-// TODO reconcile with function in utils/explorers.ts
-// must reconcile wagmi consts and sdk consts
-function getTxExplorerLink(multiProvider: MultiProvider<any>, chain: ChainName, hash: string) {
-  const url = multiProvider
-    .getChainConnection(chain)
-    // @ts-ignore
-    .getTxUrl({ hash });
-  return url || undefined;
 }
 
 // TODO use explorer for this instead of RPC to avoid block age limitations

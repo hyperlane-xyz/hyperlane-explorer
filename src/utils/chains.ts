@@ -1,4 +1,4 @@
-import { ChainName, Chains, Mainnets, chainIdToMetadata } from '@hyperlane-xyz/sdk';
+import { ChainName, Chains, CoreChainName, Mainnets, chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
 import { Environment } from '../consts/environments';
 
@@ -21,5 +21,6 @@ export function getChainEnvironment(chain: number | string) {
     return Environment.Mainnet;
   }
 
-  return Mainnets.includes(chainName) ? Environment.Mainnet : Environment.Testnet;
+  // TODO better PI support
+  return Mainnets.includes(chainName as CoreChainName) ? Environment.Mainnet : Environment.Testnet;
 }

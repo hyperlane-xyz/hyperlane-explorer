@@ -19,7 +19,10 @@ const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 export function Header({ pathName }: { pathName: string }) {
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
-  const blueHeaderText = (path: string) => (pathName === path ? ' text-blue-500' : '');
+  const navLinkClass = (path?: string) =>
+    path && pathName === path
+      ? styles.navLink + ' text-blue-500'
+      : styles.navLink + ' text-gray-600';
 
   return (
     <header className="px-2 pt-4 pb-3 sm:pt-5 sm:px-6 lg:pr-14 w-full">
@@ -36,19 +39,19 @@ export function Header({ pathName }: { pathName: string }) {
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
-          <Link href="/" className={styles.navLink + blueHeaderText('/')}>
+          <Link href="/" className={navLinkClass('/')}>
             Home
           </Link>
-          <Link href="/settings" className={styles.navLink + blueHeaderText('/settings')}>
+          <Link href="/settings" className={navLinkClass('/settings')}>
             Settings
           </Link>
-          <Link href="/api-docs" className={styles.navLink + blueHeaderText('/api-docs')}>
+          <Link href="/api-docs" className={navLinkClass('/api-docs')}>
             API
           </Link>
-          <a className={styles.navLink} target="_blank" href={links.home} rel="noopener noreferrer">
+          <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
-          <a className={styles.navLink} target="_blank" href={links.docs} rel="noopener noreferrer">
+          <a className={navLinkClass()} target="_blank" href={links.docs} rel="noopener noreferrer">
             Docs
           </a>
           {showSearch && <MiniSearchBar />}
@@ -107,7 +110,7 @@ function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
 
 const styles = {
   navLink:
-    'pt-px flex items-center tracking-wide text-gray-600 text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
+    'pt-px flex items-center tracking-wide text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
 };
