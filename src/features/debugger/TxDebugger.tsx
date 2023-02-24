@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
-import { useRouter } from 'next/router';
 import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
@@ -15,9 +14,9 @@ import {
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
-import { getQueryParamString, replacePathParam } from '../../utils/queryParams';
+import { replacePathParam, useQueryParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
-import { isValidSearchQuery } from '../messages/utils';
+import { isValidSearchQuery } from '../messages/queries/useMessageQuery';
 
 import { debugMessagesForHash } from './debugMessage';
 import { debugStatusToDesc } from './strings';
@@ -28,8 +27,7 @@ const QUERY_HASH_PARAM = 'txHash';
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);
 
-  const router = useRouter();
-  const txHash = getQueryParamString(router.query, QUERY_HASH_PARAM);
+  const txHash = useQueryParam(QUERY_HASH_PARAM);
 
   // Search text input
   const [searchInput, setSearchInput] = useState(txHash);
@@ -40,7 +38,7 @@ export function TxDebugger() {
 
   const {
     isLoading: isFetching,
-    isError: hasError,
+    isError,
     data,
   } = useQuery(
     ['debugMessage', isValidInput, sanitizedInput, environment],
@@ -69,19 +67,19 @@ export function TxDebugger() {
           <EnvironmentSelector />
         </div>
 
-        <Fade show={isValidInput && !hasError && !!data}>
+        <Fade show={isValidInput && !isError && !!data}>
           <div className="px-2 sm:px-4 md:px-5">
             <DebugResult result={data} />
           </div>
         </Fade>
         <SearchEmptyError
-          show={isValidInput && !hasError && !isFetching && !data}
+          show={isValidInput && !isError && !isFetching && !data}
           hasInput={hasInput}
           allowAddress={false}
         />
-        <NoSearchError show={!hasInput && !hasError} />
-        <SearchInvalidError show={hasInput && !hasError && !isValidInput} allowAddress={false} />
-        <SearchUnknownError show={hasInput && hasError} />
+        <NoSearchError show={!hasInput && !isError} />
+        <SearchInvalidError show={hasInput && !isError && !isValidInput} allowAddress={false} />
+        <SearchUnknownError show={hasInput && isError} />
       </div>
     </>
   );
