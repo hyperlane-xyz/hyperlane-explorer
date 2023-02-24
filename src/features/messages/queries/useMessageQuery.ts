@@ -7,16 +7,16 @@ import { buildMessageSearchQuery } from '../queries/build';
 import { MessagesStubQueryResult } from '../queries/fragments';
 import { parseMessageStubResult } from '../queries/parse';
 
+const AUTO_REFRESH_DELAY = 10000;
+const LATEST_QUERY_LIMIT = 12;
+const SEARCH_QUERY_LIMIT = 40;
+
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
   if (!input) return false;
   if (isValidTransactionHash(input)) return true;
   if (allowAddress && isValidAddressFast(input)) return true;
   return false;
 }
-
-const AUTO_REFRESH_DELAY = 10000;
-const LATEST_QUERY_LIMIT = 12;
-const SEARCH_QUERY_LIMIT = 40;
 
 export function useMessageQuery(
   sanitizedInput: string,

@@ -14,6 +14,7 @@ import { sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
 import { useMessageQuery } from './queries/useMessageQuery';
+import { usePiChainMessageQuery } from './queries/usePiChainMessageQuery';
 
 const QUERY_SEARCH_PARAM = 'search';
 
@@ -39,9 +40,18 @@ export function MessageSearch() {
     startTimeFilter,
     endTimeFilter,
   );
+  const isMessagesFound = messageList.length > 0;
+
+  // Permissionless Interop query and results
+  const {
+    isError: isPiError,
+    isFetching: isPiFetching,
+    messageList: piMessageList,
+  } = usePiChainMessageQuery(sanitizedInput, startTimeFilter, endTimeFilter, isMessagesFound);
+  console.log(isPiError, isPiFetching, piMessageList);
 
   // Keep url in sync
-  useSyncQueryParam(QUERY_SEARCH_PARAM, isValidInput ? sanitizedInput : undefined);
+  useSyncQueryParam(QUERY_SEARCH_PARAM, isValidInput ? sanitizedInput : '');
 
   return (
     <>
@@ -67,17 +77,16 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade show={!isError && isValidInput && messageList.length > 0}>
+        <Fade show={!isError && isValidInput && isMessagesFound}>
           <MessageTable messageList={messageList} isFetching={isFetching} />
         </Fade>
-
-        <SearchInvalidError show={!isValidInput} allowAddress={true} />
-        <SearchUnknownError show={isValidInput && isError} />
         <SearchEmptyError
-          show={isValidInput && !isError && !isFetching && messageList.length === 0}
+          show={!isError && isValidInput && !isFetching && !isMessagesFound}
           hasInput={hasInput}
           allowAddress={true}
         />
+        <SearchUnknownError show={isError && isValidInput} />
+        <SearchInvalidError show={!isValidInput} allowAddress={true} />
       </div>
     </>
   );
