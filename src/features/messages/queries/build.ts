@@ -62,6 +62,7 @@ export function buildMessageQuery(
 
 const searchWhereClause = `
   {_or: [
+    {msg_id: {_eq: $search}},
     {sender: {_eq: $search}},
     {recipient: {_eq: $search}},
     {transaction: {hash: {_eq: $search}}},

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, chainIdToMetadata as defaultChainIdToMetadata } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
 
@@ -62,8 +62,7 @@ export const chainContractsSchema = z.object({
 });
 
 export const chainConfigSchema = chainMetadataSchema.extend({ contracts: chainContractsSchema });
-
-export type ChainConfig = ChainMetadata & z.infer<typeof chainContractsSchema>;
+export type ChainConfig = ChainMetadata & { contracts: z.infer<typeof chainContractsSchema> };
 
 type ParseResult =
   | {
@@ -86,13 +85,10 @@ export function tryParseChainConfig(input: string): ParseResult {
       error: 'Input is not valid JSON',
     };
   }
+
   const result = chainConfigSchema.safeParse(data);
-  if (result.success) {
-    return {
-      success: true,
-      chainMetadata: result.data as ChainMetadata,
-    };
-  } else {
+
+  if (!result.success) {
     logger.error('Error validating chain config', result.error);
     const firstIssue = result.error.issues[0];
     return {
@@ -100,4 +96,17 @@ export function tryParseChainConfig(input: string): ParseResult {
       error: `${firstIssue.path} => ${firstIssue.message}`,
     };
   }
+
+  const chainMetadata = result.data as ChainConfig;
+  if (defaultChainIdToMetadata[chainMetadata.chainId]) {
+    return {
+      success: false,
+      error: 'Chain ID already included in explorer defaults',
+    };
+  }
+
+  return {
+    success: true,
+    chainMetadata: result.data as ChainConfig,
+  };
 }

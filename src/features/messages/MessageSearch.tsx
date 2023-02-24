@@ -85,7 +85,7 @@ export function MessageSearch() {
         value={searchInput}
         onChangeValue={setSearchInput}
         isFetching={isFetching}
-        placeholder="Search by address or transaction hash"
+        placeholder="Search by address, hash, or message id"
       />
       <div className="w-full min-h-[38rem] mt-5 bg-white shadow-md border rounded overflow-auto relative">
         <div className="px-2 py-3 sm:px-4 md:px-5 flex items-center justify-between">
