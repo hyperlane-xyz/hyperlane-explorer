@@ -6,7 +6,7 @@ import { logger } from '../../utils/logger';
 
 // TODO move to SDK?
 // Should match ChainMetadata from SDK
-const chainConfigSchema = z.object({
+export const chainMetadataSchema = z.object({
   chainId: z.number(),
   domainId: z.number().optional(),
   name: z.string(),
@@ -53,6 +53,17 @@ const chainConfigSchema = z.object({
   gnosisSafeTransactionServiceUrl: z.string().optional(),
   isTestnet: z.boolean().optional(),
 });
+
+export const chainContractsSchema = z.object({
+  mailbox: z.string(),
+  multisigIsm: z.string(),
+  interchainGasPaymaster: z.string().optional(),
+  interchainAccountRouter: z.string().optional(),
+});
+
+export const chainConfigSchema = chainMetadataSchema.extend({ contracts: chainContractsSchema });
+
+export type ChainConfig = ChainMetadata & z.infer<typeof chainContractsSchema>;
 
 type ParseResult =
   | {

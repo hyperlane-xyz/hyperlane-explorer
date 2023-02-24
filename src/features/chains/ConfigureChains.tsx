@@ -11,7 +11,7 @@ import { links } from '../../consts/links';
 import { useChainConfigs } from '../../store';
 import { getChainDisplayName } from '../../utils/chains';
 
-import { tryParseChainConfig } from './validation';
+import { tryParseChainConfig } from './chainConfig';
 
 export function ConfigureChains() {
   const { chainConfigs, setChainConfigs } = useChainConfigs();
