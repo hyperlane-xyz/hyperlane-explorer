@@ -47,7 +47,12 @@ export function MessageSearch() {
     isError: isPiError,
     isFetching: isPiFetching,
     messageList: piMessageList,
-  } = usePiChainMessageQuery(sanitizedInput, startTimeFilter, endTimeFilter, isMessagesFound);
+  } = usePiChainMessageQuery(
+    sanitizedInput,
+    startTimeFilter,
+    endTimeFilter,
+    isMessagesFound || isFetching,
+  );
   console.log(isPiError, isPiFetching, piMessageList);
 
   // Keep url in sync

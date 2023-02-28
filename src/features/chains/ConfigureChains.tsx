@@ -35,7 +35,7 @@ export function ConfigureChains() {
     if (result.success) {
       setChainConfigs({
         ...chainConfigs,
-        [result.chainMetadata.chainId]: result.chainMetadata,
+        [result.chainConfig.chainId]: result.chainConfig,
       });
       setCustomChainInput('');
       setShowAddChainModal(false);

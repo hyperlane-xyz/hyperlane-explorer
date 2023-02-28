@@ -56,9 +56,9 @@ export const chainMetadataSchema = z.object({
 
 export const chainContractsSchema = z.object({
   mailbox: z.string(),
-  multisigIsm: z.string(),
-  interchainGasPaymaster: z.string().optional(),
-  interchainAccountRouter: z.string().optional(),
+  multisigIsm: z.string().optional(),
+  // interchainGasPaymaster: z.string().optional(),
+  // interchainAccountRouter: z.string().optional(),
 });
 
 export const chainConfigSchema = chainMetadataSchema.extend({ contracts: chainContractsSchema });
@@ -67,7 +67,7 @@ export type ChainConfig = ChainMetadata & { contracts: z.infer<typeof chainContr
 type ParseResult =
   | {
       success: true;
-      chainMetadata: ChainMetadata;
+      chainConfig: ChainConfig;
     }
   | {
       success: false;
@@ -97,8 +97,8 @@ export function tryParseChainConfig(input: string): ParseResult {
     };
   }
 
-  const chainMetadata = result.data as ChainConfig;
-  if (defaultChainIdToMetadata[chainMetadata.chainId]) {
+  const chainConfig = result.data as ChainConfig;
+  if (defaultChainIdToMetadata[chainConfig.chainId]) {
     return {
       success: false,
       error: 'Chain ID already included in explorer defaults',
@@ -107,6 +107,6 @@ export function tryParseChainConfig(input: string): ParseResult {
 
   return {
     success: true,
-    chainMetadata: result.data as ChainConfig,
+    chainConfig,
   };
 }

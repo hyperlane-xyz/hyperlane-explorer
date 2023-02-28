@@ -102,6 +102,17 @@ export function validateExplorerLog(log: ExplorerLogEntry, topic0?: string) {
   if (!log.timeStamp) throw new Error('Log has no timestamp');
 }
 
+export function toProviderLog(log: ExplorerLogEntry): providers.Log {
+  return {
+    ...log,
+    blockHash: '',
+    removed: false,
+    blockNumber: parseInt(log.blockNumber, 10),
+    transactionIndex: parseInt(log.transactionIndex, 10),
+    logIndex: parseInt(log.logIndex, 10),
+  };
+}
+
 export async function queryExplorerForTx(chainId: number, txHash: string, useKey = true) {
   const path = `api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}`;
   const tx = await queryExplorer<providers.TransactionResponse>(chainId, path, useKey);

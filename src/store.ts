@@ -1,15 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
-
 import { Environment } from './consts/environments';
+import { ChainConfig } from './features/chains/chainConfig';
 
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
-  chainConfigs: Record<number, ChainMetadata>;
-  setChainConfigs: (configs: Record<number, ChainMetadata>) => void;
+  chainConfigs: Record<number, ChainConfig>;
+  setChainConfigs: (configs: Record<number, ChainConfig>) => void;
   environment: Environment;
   setEnvironment: (env: Environment) => void;
   bannerClassName: string;
@@ -20,7 +19,7 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       chainConfigs: {},
-      setChainConfigs: (configs: Record<number, ChainMetadata>) =>
+      setChainConfigs: (configs: Record<number, ChainConfig>) =>
         set(() => ({ chainConfigs: configs })),
       environment: Environment.Mainnet,
       setEnvironment: (env: Environment) => set(() => ({ environment: env })),
