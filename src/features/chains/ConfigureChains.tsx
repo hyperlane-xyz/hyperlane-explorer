@@ -177,10 +177,7 @@ const customChainTextareaPlaceholder = `{
   } ],
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
   "contracts": {
-    "mailbox": "0x123...",
-    "multisigIsm": "0x123...",
-    "interchainGasPaymaster": "0x123...",
-    "interchainAccountRouter": "0x123..."
+    "mailbox": "0x123..."
   }
 }
 `;

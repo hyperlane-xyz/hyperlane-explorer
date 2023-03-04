@@ -4,7 +4,9 @@ import { providers } from 'ethers';
 import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { utils } from '@hyperlane-xyz/utils';
 
+import { getMultiProvider, getProvider } from '../../../multiProvider';
 import { useStore } from '../../../store';
+import { Message, MessageStatus } from '../../../types';
 import {
   ensureLeading0x,
   isValidAddressFast,
@@ -37,15 +39,14 @@ export function usePiChainMessageQuery(
   const chainConfigs = useStore((s) => s.chainConfigs);
   const { isLoading, isError, data } = useQuery(
     ['usePiChainMessageQuery', chainConfigs, sanitizedInput, startTimeFilter, endTimeFilter, pause],
-    async () => {
+    () => {
       const hasInput = !!sanitizedInput;
       const isValidInput = isValidSearchQuery(sanitizedInput, true);
       if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return null;
       logger.debug('Starting PI Chain message query for:', sanitizedInput);
-      const messages = await Promise.any(
+      return Promise.any(
         Object.values(chainConfigs).map((c) => fetchMessagesFromPiChain(c, sanitizedInput)),
       );
-      return messages;
     },
     { retry: false },
   );
@@ -53,7 +54,7 @@ export function usePiChainMessageQuery(
   return {
     isFetching: isLoading,
     isError,
-    messageList: data,
+    messageList: data || [],
   };
 }
 
@@ -84,35 +85,38 @@ searchForMessages(input):
         GOTO hash search above
 */
 
-async function fetchMessagesFromPiChain(chainConfig: ChainConfig, input: string) {
-  const { chainId, blockExplorers, publicRpcUrls } = chainConfig;
-  // TODO get from multiprovider
-  const blockExplorerUrl = blockExplorers?.[0]?.apiUrl || blockExplorers?.[0]?.url;
-  const rpcUrl = publicRpcUrls[0].http;
+async function fetchMessagesFromPiChain(
+  chainConfig: ChainConfig,
+  input: string,
+): Promise<Message[]> {
+  const { chainId, blockExplorers } = chainConfig;
+  const useExplorer = !!blockExplorers?.[0]?.apiUrl;
 
   let logs: providers.Log[] | null = null;
   if (isValidAddressFast(input)) {
-    logs = await fetchLogsForAddress(chainConfig, input, rpcUrl, blockExplorerUrl);
+    logs = await fetchLogsForAddress(chainConfig, input, useExplorer);
   } else if (isValidTransactionHash(input)) {
-    logs = await fetchLogsForTxHash(chainConfig, input, rpcUrl, blockExplorerUrl);
+    logs = await fetchLogsForTxHash(chainConfig, input, useExplorer);
     if (!logs) {
       // Input may be a msg id
-      logs = await fetchLogsForMsgId(chainConfig, input, rpcUrl, blockExplorerUrl);
+      logs = await fetchLogsForMsgId(chainConfig, input, useExplorer);
     }
   } else {
     throw new Error('Invalid PI search input');
   }
-  const parsedMessages =
-    logs?.map((log) => utils.parseMessage(mailbox.parseLog(log).args['message'])) || [];
-  if (parsedMessages.length) logger.debug(`Parsed ${parsedMessages.length} for chain ${chainId}`);
-  return parsedMessages;
+
+  if (!logs?.length) {
+    // Throw so Promise.any caller doesn't trigger
+    throw new Error(`No messages found for chain ${chainId}`);
+  }
+
+  return logs.map(logToMessage);
 }
 
 async function fetchLogsForAddress(
   { chainId, contracts }: ChainConfig,
   address: Address,
-  rpcUrl: string,
-  blockExplorerUrl,
+  useExplorer?: boolean,
 ) {
   const mailboxAddr = contracts.mailbox;
   const dispatchTopic1 = ensureLeading0x(address);
@@ -120,50 +124,31 @@ async function fetchLogsForAddress(
   const processTopic1 = dispatchTopic3;
   const processTopic3 = dispatchTopic1;
 
-  if (blockExplorerUrl) {
-    const pathBase = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&address=${mailboxAddr}`;
-    const dispatchLogsPath = `${pathBase}&topic0=${dispatchTopic0}&topic0_1_opr=and&topic1=${dispatchTopic1}&topic1_3_opr=or&topic3=${dispatchTopic3}`;
-    const processLogsPath = `${pathBase}&topic0=${processTopic0}&topic0_1_opr=and&topic1=${processTopic1}&topic1_3_opr=or&topic3=${processTopic3}`;
-    // TODO these need to accept PI chain ids, currently won't work
-    const logs = (
-      await Promise.all([
-        queryExplorerForLogs(chainId, dispatchLogsPath, dispatchTopic0),
-        queryExplorerForLogs(chainId, processLogsPath, processTopic0),
-      ])
-    )
-      .flat()
-      .map(toProviderLog);
-    console.log(logs);
-    return logs;
+  if (useExplorer) {
+    return fetchLogsFromExplorer(
+      [
+        `&topic0=${dispatchTopic0}&topic0_1_opr=and&topic1=${dispatchTopic1}&topic1_3_opr=or&topic3=${dispatchTopic3}`,
+        `&topic0=${processTopic0}&topic0_1_opr=and&topic1=${processTopic1}&topic1_3_opr=or&topic3=${processTopic3}`,
+      ],
+      mailboxAddr,
+      chainId,
+    );
   } else {
-    // TODO get provider from multiProvider so it's cached
-    const provider = new providers.JsonRpcProvider(rpcUrl);
-    const queryProvider = (topics: Array<string | null>) =>
-      provider.getLogs({
-        address: mailboxAddr,
-        topics,
-      });
-    const logs = (
-      await Promise.all([
-        queryProvider([dispatchTopic0, dispatchTopic1]),
-        queryProvider([dispatchTopic0, null, null, dispatchTopic3]),
-        queryProvider([processTopic0, processTopic1]),
-        queryProvider([processTopic0, null, null, processTopic3]),
-      ])
-    ).flat();
-    console.log(logs);
-    return logs;
+    return fetchLogsFromProvider(
+      [
+        [dispatchTopic0, dispatchTopic1],
+        [dispatchTopic0, null, null, dispatchTopic3],
+        [processTopic0, processTopic1],
+        [processTopic0, null, null, processTopic3],
+      ],
+      mailboxAddr,
+      chainId,
+    );
   }
 }
 
-async function fetchLogsForTxHash(
-  { chainId }: ChainConfig,
-  txHash: string,
-  rpcUrl: string,
-  blockExplorerUrl,
-) {
-  if (blockExplorerUrl) {
-    // TODO these need to accept PI chain ids, currently won't work
+async function fetchLogsForTxHash({ chainId }: ChainConfig, txHash: string, useExplorer: boolean) {
+  if (useExplorer) {
     try {
       const txReceipt = await queryExplorerForTxReceipt(chainId, txHash);
       logger.debug(`Tx receipt found from explorer for chain ${chainId}`);
@@ -174,31 +159,110 @@ async function fetchLogsForTxHash(
       return null;
     }
   } else {
-    // TODO MP
-    const provider = new providers.JsonRpcProvider(rpcUrl);
+    const provider = getProvider(chainId);
     const txReceipt = await provider.getTransactionReceipt(txHash);
     console.log(txReceipt);
-    if (!txReceipt) {
-      logger.debug(`Tx hash not found from provider for chain ${chainId}`);
-      return null;
-    } else {
+    if (txReceipt) {
       logger.debug(`Tx receipt found from provider for chain ${chainId}`);
       return txReceipt.logs;
+    } else {
+      logger.debug(`Tx hash not found from provider for chain ${chainId}`);
+      return null;
     }
   }
 }
 
-async function fetchLogsForMsgId(
-  { chainId, contracts }: ChainConfig,
-  msgId: string,
-  rpcUrl: string,
-  blockExplorerUrl,
-) {
-  //   logs = dataSource.getLogs() where:
-  //   contract is mailbox
-  //   topic0 is DispatchId or ProcessId
-  //   topic1 is input
-  // hash = logs[0].txHash
-  // GOTO hash search above
+async function fetchLogsForMsgId(chainConfig: ChainConfig, msgId: string, useExplorer: boolean) {
+  const { contracts, chainId } = chainConfig;
+  const mailboxAddr = contracts.mailbox;
+  const topic1 = ensureLeading0x(msgId);
+  let logs: providers.Log[];
+  if (useExplorer) {
+    logs = await fetchLogsFromExplorer(
+      [
+        `&topic0=${dispatchIdTopic0}&topic0_1_opr=and&topic1=${topic1}`,
+        `&topic0=${processIdTopic0}&topic0_1_opr=and&topic1=${topic1}`,
+      ],
+      mailboxAddr,
+      chainId,
+    );
+  } else {
+    logs = await fetchLogsFromProvider(
+      [
+        [dispatchTopic0, topic1],
+        [processTopic0, topic1],
+      ],
+      mailboxAddr,
+      chainId,
+    );
+  }
+
+  if (logs.length) {
+    const txHash = logs[0].transactionHash;
+    logger.debug('Found tx hash with log of msg id', txHash);
+    return fetchLogsForTxHash(chainConfig, txHash, useExplorer) || [];
+  }
+
   return [];
+}
+
+async function fetchLogsFromExplorer(paths: Array<string>, contractAddr: Address, chainId: number) {
+  const pathBase = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&address=${contractAddr}`;
+  const logs = (
+    await Promise.all(paths.map((p) => queryExplorerForLogs(chainId, `${pathBase}${p}`)))
+  )
+    .flat()
+    .map(toProviderLog);
+  console.log(logs);
+  return logs;
+}
+
+async function fetchLogsFromProvider(
+  topics: Array<Array<string | null>>,
+  contractAddr: Address,
+  chainId: number,
+) {
+  const provider = getProvider(chainId);
+  // TODO may need chunking here to avoid RPC errors
+  const logs = (
+    await Promise.all(
+      topics.map((t) =>
+        provider.getLogs({
+          address: contractAddr,
+          topics: t,
+        }),
+      ),
+    )
+  ).flat();
+  console.log(logs);
+  return logs;
+}
+
+function logToMessage(log: providers.Log): Message {
+  const multiProvider = getMultiProvider();
+  const bytes = mailbox.parseLog(log).args['message'];
+  const parsed = utils.parseMessage(bytes);
+  return {
+    id: '', // No db id exists
+    msgId: utils.messageId(bytes),
+    status: MessageStatus.Pending, // TODO
+    sender: parsed.sender,
+    recipient: parsed.recipient,
+    originDomainId: parsed.origin,
+    destinationDomainId: parsed.destination,
+    originChainId: multiProvider.getChainId(parsed.origin),
+    destinationChainId: multiProvider.getChainId(parsed.destination),
+    originTimestamp: 0, // TODO
+    destinationTimestamp: undefined, // TODO
+    nonce: parsed.nonce,
+    body: parsed.body,
+    originTransaction: {
+      from: '0x', //TODO
+      transactionHash: log.transactionHash,
+      blockNumber: log.blockNumber,
+      gasUsed: 0,
+      timestamp: 0, //TODO
+    },
+    destinationTransaction: undefined, // TODO
+  };
 }

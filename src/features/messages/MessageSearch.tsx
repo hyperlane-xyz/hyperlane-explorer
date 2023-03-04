@@ -53,6 +53,9 @@ export function MessageSearch() {
     endTimeFilter,
     isMessagesFound || isFetching,
   );
+
+  const isAnyMessageFound = isMessagesFound || piMessageList.length > 0;
+  const messageListResult = isMessagesFound ? messageList : piMessageList;
   console.log(isPiError, isPiFetching, piMessageList);
 
   // Keep url in sync
@@ -82,11 +85,11 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade show={!isError && isValidInput && isMessagesFound}>
-          <MessageTable messageList={messageList} isFetching={isFetching} />
+        <Fade show={!isError && isValidInput && isAnyMessageFound}>
+          <MessageTable messageList={messageListResult} isFetching={isFetching} />
         </Fade>
         <SearchEmptyError
-          show={!isError && isValidInput && !isFetching && !isMessagesFound}
+          show={!isError && isValidInput && !isFetching && !isAnyMessageFound}
           hasInput={hasInput}
           allowAddress={true}
         />

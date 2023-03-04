@@ -1,12 +1,12 @@
 import { BigNumber, providers } from 'ethers';
 
-import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
-
 import { config } from '../consts/config';
+import { getMultiProvider } from '../multiProvider';
 
 import { logger } from './logger';
 import { retryAsync } from './retry';
 import { fetchWithTimeout } from './timeout';
+import { isValidHttpUrl } from './url';
 
 export interface ExplorerQueryResponse<R> {
   status: string;
@@ -15,15 +15,15 @@ export interface ExplorerQueryResponse<R> {
 }
 
 export function getExplorerUrl(chainId: number) {
-  const chain = chainIdToMetadata[chainId];
-  if (!chain?.blockExplorers?.length) return null;
-  return chain.blockExplorers[0].url;
+  const url = getMultiProvider().getExplorerUrl(chainId);
+  if (isValidHttpUrl(url)) return url;
+  else return null;
 }
 
 export function getExplorerApiUrl(chainId: number) {
-  const chain = chainIdToMetadata[chainId];
-  if (!chain?.blockExplorers?.length) return null;
-  return chain.blockExplorers[0].apiUrl || chain.blockExplorers[0].url;
+  const url = getMultiProvider().getExplorerApiUrl(chainId);
+  if (isValidHttpUrl(url)) return url;
+  else return null;
 }
 
 export function getTxExplorerUrl(chainId: number, hash?: string) {
@@ -34,7 +34,7 @@ export function getTxExplorerUrl(chainId: number, hash?: string) {
 
 export async function queryExplorer<P>(chainId: number, path: string, useKey = true) {
   const baseUrl = getExplorerApiUrl(chainId);
-  if (!baseUrl) throw new Error(`No URL found for explorer for chain ${chainId}`);
+  if (!baseUrl) throw new Error(`No valid URL found for explorer for chain ${chainId}`);
 
   let url = `${baseUrl}/${path}`;
   logger.debug('Querying explorer url:', url);
@@ -80,7 +80,7 @@ export interface ExplorerLogEntry {
 export async function queryExplorerForLogs(
   chainId: number,
   path: string,
-  topic0: string,
+  topic0?: string,
   useKey = true,
 ): Promise<ExplorerLogEntry[]> {
   const logs = await queryExplorer<ExplorerLogEntry[]>(chainId, path, useKey);

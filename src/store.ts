@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 import { Environment } from './consts/environments';
 import { ChainConfig } from './features/chains/chainConfig';
+import { setMultiProviderChains } from './multiProvider';
 
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
@@ -19,8 +20,10 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       chainConfigs: {},
-      setChainConfigs: (configs: Record<number, ChainConfig>) =>
-        set(() => ({ chainConfigs: configs })),
+      setChainConfigs: (configs: Record<number, ChainConfig>) => {
+        set(() => ({ chainConfigs: configs }));
+        setMultiProviderChains(configs);
+      },
       environment: Environment.Mainnet,
       setEnvironment: (env: Environment) => set(() => ({ environment: env })),
       bannerClassName: '',
