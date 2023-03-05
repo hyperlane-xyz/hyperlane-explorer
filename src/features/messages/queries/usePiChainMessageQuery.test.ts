@@ -4,6 +4,11 @@ import { ChainConfig } from '../../chains/chainConfig';
 
 import { fetchMessagesFromPiChain } from './usePiChainMessageQuery';
 
+// NOTE: THESE TESTS WILL NO LONGER WORK ONCE THE MESSAGE USED BELOW
+// IS OUT OF PROVIDER_LOGS_BLOCK_WINDOW USED TO QUERY
+// THESE WERE MOSTLY USED FOR TDD OF THE FETCHING CODE
+// TODO: MOCK THE PROVIDER + EXPLORER TO MAKE THESE NETWORK INDEPENDENT
+
 jest.setTimeout(15000);
 
 const goerliMailbox = hyperlaneCoreAddresses.goerli.mailbox;

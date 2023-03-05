@@ -123,14 +123,13 @@ async function fetchLogsForAddress(
 ) {
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
-  const dispatchTopic1 = utils.addressToBytes32(address);
-  const dispatchTopic3 = dispatchTopic1;
+  const dispatchTopic = utils.addressToBytes32(address);
 
   if (useExplorer) {
     return fetchLogsFromExplorer(
       [
-        `&topic0=${dispatchTopic0}&topic0_1_opr=and&topic1=${dispatchTopic1}&topic1_3_opr=or&topic3=${dispatchTopic3}`,
-        // `&topic0=${processTopic0}&topic0_1_opr=and&topic1=${dispatchTopic3}&topic1_3_opr=or&topic3=${dispatchTopic1}`,
+        `&topic0=${dispatchTopic0}&topic0_1_opr=and&topic1=${dispatchTopic}&topic1_3_opr=or&topic3=${dispatchTopic}`,
+        // `&topic0=${processTopic0}&topic0_1_opr=and&topic1=${dispatchTopic}&topic1_3_opr=or&topic3=${dispatchTopic}`,
       ],
       mailboxAddr,
       chainId,
@@ -138,10 +137,10 @@ async function fetchLogsForAddress(
   } else {
     return fetchLogsFromProvider(
       [
-        [dispatchTopic0, dispatchTopic1],
-        [dispatchTopic0, null, null, dispatchTopic3],
-        // [processTopic0, dispatchTopic3],
-        // [processTopic0, null, null, dispatchTopic1],
+        [dispatchTopic0, dispatchTopic],
+        [dispatchTopic0, null, null, dispatchTopic],
+        // [processTopic0, dispatchTopic],
+        // [processTopic0, null, null, dispatchTopic],
       ],
       mailboxAddr,
       chainId,
