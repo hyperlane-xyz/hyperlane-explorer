@@ -4,7 +4,6 @@ import { config } from '../consts/config';
 import { getMultiProvider } from '../multiProvider';
 
 import { logger } from './logger';
-import { retryAsync } from './retry';
 import { fetchWithTimeout } from './timeout';
 import { isValidHttpUrl } from './url';
 
@@ -27,9 +26,10 @@ export function getExplorerApiUrl(chainId: number) {
 }
 
 export function getTxExplorerUrl(chainId: number, hash?: string) {
-  const baseUrl = getExplorerUrl(chainId);
-  if (!hash || !baseUrl) return null;
-  return `${baseUrl}/tx/${hash}`;
+  if (!hash) return null;
+  const url = getMultiProvider().getExplorerTxUrl(chainId, { hash });
+  if (isValidHttpUrl(url)) return url;
+  else return null;
 }
 
 export async function queryExplorer<P>(chainId: number, path: string, useKey = true) {
@@ -45,7 +45,7 @@ export async function queryExplorer<P>(chainId: number, path: string, useKey = t
     url += `&apikey=${apiKey}`;
   }
 
-  const result = await retryAsync(() => executeQuery<P>(url), 2, 1000);
+  const result = await executeQuery<P>(url);
   return result;
 }
 
@@ -114,7 +114,7 @@ export function toProviderLog(log: ExplorerLogEntry): providers.Log {
 }
 
 export async function queryExplorerForTx(chainId: number, txHash: string, useKey = true) {
-  const path = `api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}`;
+  const path = `?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}`;
   const tx = await queryExplorer<providers.TransactionResponse>(chainId, path, useKey);
   if (!tx || tx.hash.toLowerCase() !== txHash.toLowerCase()) {
     const msg = 'Invalid tx result';
@@ -125,7 +125,7 @@ export async function queryExplorerForTx(chainId: number, txHash: string, useKey
 }
 
 export async function queryExplorerForTxReceipt(chainId: number, txHash: string, useKey = true) {
-  const path = `api?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash}`;
+  const path = `?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash}`;
   const tx = await queryExplorer<providers.TransactionReceipt>(chainId, path, useKey);
   if (!tx || tx.transactionHash.toLowerCase() !== txHash.toLowerCase()) {
     const msg = 'Invalid tx result';
@@ -140,7 +140,7 @@ export async function queryExplorerForBlock(
   blockNumber?: number | string,
   useKey = true,
 ) {
-  const path = `api?module=proxy&action=eth_getBlockByNumber&tag=${
+  const path = `?module=proxy&action=eth_getBlockByNumber&tag=${
     blockNumber || 'latest'
   }&boolean=false`;
   const block = await queryExplorer<providers.Block>(chainId, path, useKey);

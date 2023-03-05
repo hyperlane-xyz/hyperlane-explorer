@@ -9,6 +9,7 @@ export interface PartialTransactionReceipt {
 
 // TODO consider reconciling with SDK's MessageStatus
 export enum MessageStatus {
+  Unknown = 'unknown',
   Pending = 'pending',
   Delivered = 'delivered',
   Failing = 'failing',
