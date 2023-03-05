@@ -10,7 +10,7 @@ import {
   SearchEmptyError,
   SearchInvalidError,
   SearchUnknownError,
-} from '../../components/search/SearchError';
+} from '../../components/search/SearchStates';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';

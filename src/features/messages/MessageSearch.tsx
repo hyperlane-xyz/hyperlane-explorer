@@ -2,12 +2,13 @@ import { useState } from 'react';
 
 import { Fade } from '../../components/animation/Fade';
 import { SearchBar } from '../../components/search/SearchBar';
+import { SearchFilterBar } from '../../components/search/SearchFilterBar';
 import {
   SearchEmptyError,
+  SearchFetching,
   SearchInvalidError,
   SearchUnknownError,
-} from '../../components/search/SearchError';
-import { SearchFilterBar } from '../../components/search/SearchFilterBar';
+} from '../../components/search/SearchStates';
 import useDebounce from '../../utils/debounce';
 import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
@@ -54,6 +55,9 @@ export function MessageSearch() {
     isMessagesFound || isFetching,
   );
 
+  // Coalesce GraphQL + PI results
+  const isAnyFetching = isFetching || isPiFetching;
+  const isAnyError = isError || isPiError;
   const isAnyMessageFound = isMessagesFound || piMessageList.length > 0;
   const messageListResult = isMessagesFound ? messageList : piMessageList;
   console.log(isPiError, isPiFetching, piMessageList);
@@ -66,7 +70,7 @@ export function MessageSearch() {
       <SearchBar
         value={searchInput}
         onChangeValue={setSearchInput}
-        isFetching={isFetching}
+        isFetching={isAnyFetching}
         placeholder="Search by address, hash, or message id"
       />
       <div className="w-full min-h-[38rem] mt-5 bg-white shadow-md border rounded overflow-auto relative">
@@ -85,15 +89,19 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade show={!isError && isValidInput && isAnyMessageFound}>
-          <MessageTable messageList={messageListResult} isFetching={isFetching} />
+        <Fade show={!isAnyError && isValidInput && isAnyMessageFound}>
+          <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
+        <SearchFetching
+          show={!isAnyError && isValidInput && !isAnyMessageFound && isAnyFetching}
+          isPiFetching={isPiFetching}
+        />
         <SearchEmptyError
-          show={!isError && isValidInput && !isFetching && !isAnyMessageFound}
+          show={!isAnyError && isValidInput && !isAnyMessageFound && !isAnyFetching}
           hasInput={hasInput}
           allowAddress={true}
         />
-        <SearchUnknownError show={isError && isValidInput} />
+        <SearchUnknownError show={isAnyError && isValidInput} />
         <SearchInvalidError show={!isValidInput} allowAddress={true} />
       </div>
     </>

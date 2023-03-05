@@ -5,6 +5,27 @@ import ErrorIcon from '../../images/icons/error-circle.svg';
 import SearchOffIcon from '../../images/icons/search-off.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
 import { Fade } from '../animation/Fade';
+import { Spinner } from '../animation/Spinner';
+
+export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetching?: boolean }) {
+  return (
+    // Absolute position for overlaying cross-fade
+    <div className="absolute left-0 right-0 top-10">
+      <Fade show={show}>
+        <div className="flex justify-center my-10">
+          <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
+            <div className="flex items-center justify-center scale-90">
+              <Spinner />
+            </div>
+            <div className="mt-4 text-center leading-loose text-gray-700">
+              {isPiFetching ? 'Searching custom chains for messages' : 'Searching for messages'}
+            </div>
+          </div>
+        </div>
+      </Fade>
+    </div>
+  );
+}
 
 export function SearchError({
   show,
