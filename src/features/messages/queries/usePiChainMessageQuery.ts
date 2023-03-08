@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BigNumber, constants, ethers, providers } from 'ethers';
+import { BigNumber, constants, ethers } from 'ethers';
 
 import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { utils } from '@hyperlane-xyz/utils';
@@ -13,6 +13,7 @@ import {
   isValidTransactionHash,
 } from '../../../utils/addresses';
 import {
+  queryExplorerForBlock,
   queryExplorerForLogs,
   queryExplorerForTxReceipt,
   toProviderLog,
@@ -20,6 +21,7 @@ import {
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 
+import { LogWithTimestamp } from './types';
 import { isValidSearchQuery } from './useMessageQuery';
 
 const PROVIDER_LOGS_BLOCK_WINDOW = 150_000;
@@ -41,14 +43,20 @@ export function usePiChainMessageQuery(
   const chainConfigs = useStore((s) => s.chainConfigs);
   const { isLoading, isError, data } = useQuery(
     ['usePiChainMessageQuery', chainConfigs, sanitizedInput, startTimeFilter, endTimeFilter, pause],
-    () => {
+    async () => {
       const hasInput = !!sanitizedInput;
       const isValidInput = isValidSearchQuery(sanitizedInput, true);
       if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return null;
       logger.debug('Starting PI Chain message query for:', sanitizedInput);
-      return Promise.any(
-        Object.values(chainConfigs).map((c) => fetchMessagesFromPiChain(c, sanitizedInput)),
-      );
+      try {
+        const messages = await Promise.any(
+          Object.values(chainConfigs).map((c) => fetchMessagesFromPiChain(c, sanitizedInput)),
+        );
+        return messages;
+      } catch (e) {
+        logger.debug('Starting PI messages found for:', sanitizedInput);
+        return [];
+      }
     },
     { retry: false },
   );
@@ -56,6 +64,7 @@ export function usePiChainMessageQuery(
   return {
     isFetching: isLoading,
     isError,
+    hasRun: !!data,
     messageList: data || [],
   };
 }
@@ -95,13 +104,13 @@ export async function fetchMessagesFromPiChain(
   const useExplorer = !!blockExplorers?.[0]?.apiUrl;
   const formattedInput = ensureLeading0x(input);
 
-  let logs: providers.Log[];
+  let logs: LogWithTimestamp[];
   if (isValidAddressFast(formattedInput)) {
     logs = await fetchLogsForAddress(chainConfig, formattedInput, useExplorer);
   } else if (isValidTransactionHash(input)) {
     logs = await fetchLogsForTxHash(chainConfig, formattedInput, useExplorer);
+    // Input may be a msg id, check that next
     if (!logs.length) {
-      // Input may be a msg id
       logs = await fetchLogsForMsgId(chainConfig, formattedInput, useExplorer);
     }
   } else {
@@ -120,7 +129,7 @@ async function fetchLogsForAddress(
   { chainId, contracts }: ChainConfig,
   address: Address,
   useExplorer?: boolean,
-) {
+): Promise<LogWithTimestamp[]> {
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
   const dispatchTopic = utils.addressToBytes32(address);
@@ -148,13 +157,23 @@ async function fetchLogsForAddress(
   }
 }
 
-async function fetchLogsForTxHash({ chainId }: ChainConfig, txHash: string, useExplorer: boolean) {
+async function fetchLogsForTxHash(
+  { chainId }: ChainConfig,
+  txHash: string,
+  useExplorer: boolean,
+): Promise<LogWithTimestamp[]> {
   logger.debug(`Fetching logs for txHash ${txHash} on chain ${chainId}`);
   if (useExplorer) {
     try {
       const txReceipt = await queryExplorerForTxReceipt(chainId, txHash, false);
       logger.debug(`Tx receipt found from explorer for chain ${chainId}`);
-      return txReceipt.logs;
+      const block = await queryExplorerForBlock(chainId, txReceipt.blockNumber, false);
+      return txReceipt.logs.map((l) => ({
+        ...l,
+        timestamp: BigNumber.from(block.timestamp).toNumber() * 1000,
+        from: txReceipt.from,
+        to: txReceipt.to,
+      }));
     } catch (error) {
       logger.debug(`Tx hash not found in explorer for chain ${chainId}`);
     }
@@ -163,7 +182,13 @@ async function fetchLogsForTxHash({ chainId }: ChainConfig, txHash: string, useE
     const txReceipt = await provider.getTransactionReceipt(txHash);
     if (txReceipt) {
       logger.debug(`Tx receipt found from provider for chain ${chainId}`);
-      return txReceipt.logs;
+      const block = await provider.getBlock(txReceipt.blockNumber);
+      return txReceipt.logs.map((l) => ({
+        ...l,
+        timestamp: BigNumber.from(block.timestamp).toNumber() * 1000,
+        from: txReceipt.from,
+        to: txReceipt.to,
+      }));
     } else {
       logger.debug(`Tx hash not found from provider for chain ${chainId}`);
     }
@@ -171,12 +196,16 @@ async function fetchLogsForTxHash({ chainId }: ChainConfig, txHash: string, useE
   return [];
 }
 
-async function fetchLogsForMsgId(chainConfig: ChainConfig, msgId: string, useExplorer: boolean) {
+async function fetchLogsForMsgId(
+  chainConfig: ChainConfig,
+  msgId: string,
+  useExplorer: boolean,
+): Promise<LogWithTimestamp[]> {
   const { contracts, chainId } = chainConfig;
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
   const topic1 = msgId;
-  let logs: providers.Log[];
+  let logs: LogWithTimestamp[];
   if (useExplorer) {
     logs = await fetchLogsFromExplorer(
       [
@@ -208,9 +237,13 @@ async function fetchLogsForMsgId(chainConfig: ChainConfig, msgId: string, useExp
   return [];
 }
 
-async function fetchLogsFromExplorer(paths: Array<string>, contractAddr: Address, chainId: number) {
-  const base = `?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&address=${contractAddr}`;
-  let logs: providers.Log[] = [];
+async function fetchLogsFromExplorer(
+  paths: Array<string>,
+  contractAddr: Address,
+  chainId: number,
+): Promise<LogWithTimestamp[]> {
+  const base = `module=logs&action=getLogs&fromBlock=1&toBlock=latest&address=${contractAddr}`;
+  let logs: LogWithTimestamp[] = [];
   for (const path of paths) {
     // Originally use parallel requests here with Promise.all but immediately hit rate limit errors
     const result = await queryExplorerForLogs(chainId, `${base}${path}`, undefined, false);
@@ -223,7 +256,7 @@ async function fetchLogsFromProvider(
   topics: Array<Array<string | null>>,
   contractAddr: Address,
   chainId: number,
-) {
+): Promise<LogWithTimestamp[]> {
   const provider = getProvider(chainId);
   const latestBlock = await provider.getBlockNumber();
   // TODO may need chunking here to avoid RPC errors
@@ -239,10 +272,26 @@ async function fetchLogsFromProvider(
       ),
     )
   ).flat();
-  return logs;
+
+  const timestamps: Record<number, number> = {};
+  const logsWithTimestamp = await Promise.all<LogWithTimestamp>(
+    logs.map(async (l) => {
+      const blockNum = l.blockNumber;
+      if (!timestamps[blockNum]) {
+        const block = await provider.getBlock(blockNum);
+        const timestamp = BigNumber.from(block.timestamp).toNumber() * 1000;
+        timestamps[blockNum] = timestamp;
+      }
+      return {
+        ...l,
+        timestamp: timestamps[blockNum],
+      };
+    }),
+  );
+  return logsWithTimestamp;
 }
 
-function logToMessage(log: providers.Log): Message | null {
+function logToMessage(log: LogWithTimestamp): Message | null {
   let logDesc: ethers.utils.LogDescription;
   try {
     logDesc = mailbox.parseLog(log);
@@ -256,18 +305,11 @@ function logToMessage(log: providers.Log): Message | null {
   const message = utils.parseMessage(bytes);
 
   const tx: PartialTransactionReceipt = {
-    from: constants.AddressZero, //TODO
+    from: log.from || constants.AddressZero,
     transactionHash: log.transactionHash,
     blockNumber: BigNumber.from(log.blockNumber).toNumber(),
+    timestamp: log.timestamp,
     gasUsed: 0, //TODO
-    timestamp: 0, // TODO
-  };
-  const emptyTx = {
-    from: constants.AddressZero, //TODO
-    transactionHash: constants.HashZero,
-    blockNumber: 0,
-    gasUsed: 0,
-    timestamp: 0,
   };
 
   const multiProvider = getMultiProvider();
@@ -276,17 +318,16 @@ function logToMessage(log: providers.Log): Message | null {
     id: '', // No db id exists
     msgId: utils.messageId(bytes),
     status: MessageStatus.Unknown, // TODO
-    sender: message.sender,
-    recipient: message.recipient,
+    sender: utils.bytes32ToAddress(message.sender),
+    recipient: utils.bytes32ToAddress(message.recipient),
     originDomainId: message.origin,
     destinationDomainId: message.destination,
     originChainId: multiProvider.getChainId(message.origin),
     destinationChainId: multiProvider.getChainId(message.destination),
-    originTimestamp: tx.timestamp, // TODO
-    destinationTimestamp: 0, // TODO
+    originTimestamp: log.timestamp,
     nonce: message.nonce,
     body: message.body,
     originTransaction: tx,
-    destinationTransaction: emptyTx,
+    isPiMsg: true,
   };
 }

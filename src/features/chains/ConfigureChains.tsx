@@ -173,7 +173,8 @@ const customChainTextareaPlaceholder = `{
   "blockExplorers": [ {
       "name": "GoerliScan",
       "url": "https://goerli.etherscan.io",
-      "apiUrl": "https://api-goerli.etherscan.io"
+      "apiUrl": "https://api-goerli.etherscan.io/api",
+      "apiKey": "12345"
   } ],
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
   "contracts": {

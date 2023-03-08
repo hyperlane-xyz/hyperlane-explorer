@@ -27,6 +27,7 @@ export interface MessageStub {
   destinationChainId: number;
   originTimestamp: number; // Note, equivalent to timestamp in originTransaction
   destinationTimestamp?: number; // Note, equivalent to timestamp in destinationTransaction
+  isPiMsg?: boolean;
 }
 
 export interface Message extends MessageStub {

@@ -64,6 +64,9 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
   } else if (status === MessageStatus.Failing) {
     statusColor = 'bg-red-500 text-white';
     statusText = 'Failing';
+  } else if (status === MessageStatus.Unknown) {
+    statusColor = 'bg-gray-400 text-white';
+    statusText = 'Unknown';
   }
 
   return (

@@ -34,7 +34,7 @@ export function MessageSearch() {
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
-  const { isValidInput, isError, isFetching, messageList } = useMessageQuery(
+  const { isValidInput, isError, isFetching, hasRun, messageList } = useMessageQuery(
     sanitizedInput,
     originChainFilter,
     destinationChainFilter,
@@ -47,20 +47,21 @@ export function MessageSearch() {
   const {
     isError: isPiError,
     isFetching: isPiFetching,
+    hasRun: hasPiRun,
     messageList: piMessageList,
   } = usePiChainMessageQuery(
     sanitizedInput,
     startTimeFilter,
     endTimeFilter,
-    isMessagesFound || isFetching,
+    !hasRun || isMessagesFound,
   );
 
   // Coalesce GraphQL + PI results
   const isAnyFetching = isFetching || isPiFetching;
   const isAnyError = isError || isPiError;
+  const hasAllRun = hasRun && hasPiRun;
   const isAnyMessageFound = isMessagesFound || piMessageList.length > 0;
   const messageListResult = isMessagesFound ? messageList : piMessageList;
-  console.log(isPiError, isPiFetching, piMessageList);
 
   // Keep url in sync
   useSyncQueryParam(QUERY_SEARCH_PARAM, isValidInput ? sanitizedInput : '');
@@ -93,11 +94,11 @@ export function MessageSearch() {
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
-          show={!isAnyError && isValidInput && !isAnyMessageFound && isAnyFetching}
+          show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
           isPiFetching={isPiFetching}
         />
         <SearchEmptyError
-          show={!isAnyError && isValidInput && !isAnyMessageFound && !isAnyFetching}
+          show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
           hasInput={hasInput}
           allowAddress={true}
         />

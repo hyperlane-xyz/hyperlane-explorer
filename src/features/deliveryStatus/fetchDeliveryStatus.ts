@@ -105,7 +105,7 @@ async function fetchExplorerLogsForMessage(message: Message) {
     throw new Error(`No mailbox address found for dest ${destName} origin ${originName}`);
 
   const topic1 = ensureLeading0x(msgId);
-  const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
+  const logsQueryPath = `module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
   return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
 }
 

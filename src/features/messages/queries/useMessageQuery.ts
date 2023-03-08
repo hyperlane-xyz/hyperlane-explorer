@@ -62,6 +62,7 @@ export function useMessageQuery(
     isValidInput,
     isFetching,
     isError: !!error,
+    hasRun: !!data,
     messageList,
   };
 }
