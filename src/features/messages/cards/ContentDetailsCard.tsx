@@ -105,7 +105,7 @@ export function ContentDetailsCard({
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>
           <SelectField
-            classes="w-16 h-6 py-0.5 ml-3 mb-0.5"
+            classes="w-16 h-7 py-0.5 ml-3 mb-0.5"
             options={decodeOptions}
             value={bodyDecodeType}
             onValueSelect={onChangeBodyDecode}

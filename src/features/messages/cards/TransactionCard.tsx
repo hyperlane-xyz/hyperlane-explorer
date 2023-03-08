@@ -1,8 +1,11 @@
+import Image from 'next/image';
+
 import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import { Spinner } from '../../../components/animation/Spinner';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
+import MailUnknown from '../../../images/icons/mail-unknown.svg';
 import { MessageStatus, PartialTransactionReceipt } from '../../../types';
 import { getChainDisplayName } from '../../../utils/chains';
 import { getTxExplorerUrl } from '../../../utils/explorers';
@@ -121,8 +124,18 @@ export function TransactionCard({
       )}
       {!transaction && status === MessageStatus.Pending && (
         <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500">Destination chain delivery transaction not yet found</div>
+          <div className="text-gray-500 text-center max-w-xs">
+            Destination chain delivery transaction not yet found
+          </div>
           <Spinner classes="mt-4 scale-75" />
+        </div>
+      )}
+      {!transaction && status === MessageStatus.Unknown && (
+        <div className="flex flex-col items-center py-5">
+          <div className="text-gray-500 text-center max-w-xs">
+            Destination transaction tracking is unavailable for this message, sorry!{' '}
+          </div>
+          <Image src={MailUnknown} alt="" width={64} height={64} className="mt-6" />
         </div>
       )}
     </Card>

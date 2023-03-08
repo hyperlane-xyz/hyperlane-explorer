@@ -5,9 +5,8 @@ import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
-import ErrorCircleIcon from '../../images/icons/error-circle.svg';
 import { useStore } from '../../store';
-import { MessageStatus } from '../../types';
+import { Message, MessageStatus } from '../../types';
 import { getChainDisplayName } from '../../utils/chains';
 import { logger } from '../../utils/logger';
 import { toTitleCase } from '../../utils/string';
@@ -26,19 +25,25 @@ import { parseMessageQueryResult } from './queries/parse';
 
 const AUTO_REFRESH_DELAY = 10000;
 
-export function MessageDetails({ messageId }: { messageId: string }) {
+interface Props {
+  messageId: string; // Hex value for message id
+  message?: Message; // If provided, component will use this data instead of querying
+}
+
+export function MessageDetails({ messageId, message: propMessage }: Props) {
   // Message query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
   const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
     query,
     variables,
+    pause: !!propMessage,
   });
   const messages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   // Extracting message properties
-  const isMessageFound = messages.length > 0;
+  const message = propMessage || messages[0] || PLACEHOLDER_MESSAGE;
+  const isMessageFound = !!propMessage || messages.length > 0;
   const shouldBlur = !isMessageFound;
-  const message = isMessageFound ? messages[0] : PLACEHOLDER_MESSAGE;
   const {
     status,
     originChainId,
@@ -70,10 +75,9 @@ export function MessageDetails({ messageId }: { messageId: string }) {
 
   // Query re-executor
   const reExecutor = useCallback(() => {
-    if (!isMessageFound || resolvedMsgStatus !== MessageStatus.Delivered) {
-      reexecuteQuery({ requestPolicy: 'network-only' });
-    }
-  }, [isMessageFound, resolvedMsgStatus, reexecuteQuery]);
+    if (propMessage || (isMessageFound && resolvedMsgStatus !== MessageStatus.Delivered)) return;
+    reexecuteQuery({ requestPolicy: 'network-only' });
+  }, [propMessage, isMessageFound, resolvedMsgStatus, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   // Banner color setter
@@ -127,12 +131,14 @@ export function MessageDetails({ messageId }: { messageId: string }) {
           helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />
-        <TimelineCard
-          message={message}
-          resolvedStatus={resolvedMsgStatus}
-          resolvedDestinationTx={resolvedDestTx}
-          shouldBlur={shouldBlur}
-        />
+        {!message.isPiMsg && (
+          <TimelineCard
+            message={message}
+            resolvedStatus={resolvedMsgStatus}
+            resolvedDestinationTx={resolvedDestTx}
+            shouldBlur={shouldBlur}
+          />
+        )}
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
@@ -172,7 +178,8 @@ function StatusHeader({
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
     icon = <Image src={CheckmarkIcon} width={24} height={24} alt="" />;
   } else {
-    icon = <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
+    // icon = <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
+    icon = null;
   }
 
   return (

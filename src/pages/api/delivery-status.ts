@@ -6,6 +6,7 @@ import type { MessageDeliveryStatusResponse } from '../../features/deliveryStatu
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 
+// TODO: Deprecate this to simplify message details page
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MessageDeliveryStatusResponse | string>,
