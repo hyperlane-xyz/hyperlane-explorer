@@ -1294,14 +1294,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@hyperlane-xyz/core@npm:1.2.0"
+"@hyperlane-xyz/core@npm:1.2.1":
+  version: 1.2.1
+  resolution: "@hyperlane-xyz/core@npm:1.2.1"
   dependencies:
-    "@hyperlane-xyz/utils": 1.2.0
+    "@hyperlane-xyz/utils": 1.2.1
     "@openzeppelin/contracts": ^4.8.0
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-  checksum: be76b1dd90f8bf8b9f2c53a60f7a56ed6eead6e9a1336879795677fddb75e6fd1d092e6c24af0a7e972b35cfff3eb9056229c5df7a852bfbff9e84e6a8fcb9bc
+  checksum: e1b7e6c36364558663602107343d267453e8071400d5bab1ca71681a1cc13cef88e94ab830699740790d0abd3cad8d565ccd3f04fdc0ba30138809fd8a94ad42
   languageName: node
   linkType: hard
 
@@ -1310,8 +1310,8 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": ^1.7.11
-    "@hyperlane-xyz/sdk": 1.2.0
-    "@hyperlane-xyz/widgets": 1.2.0
+    "@hyperlane-xyz/sdk": 1.2.1
+    "@hyperlane-xyz/widgets": 1.2.1
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.11.0
     "@tanstack/react-query": ^4.24.10
@@ -1343,43 +1343,44 @@ __metadata:
     typescript: ^4.9.5
     urql: ^3.0.3
     wagmi: ^0.11.6
-    zod: ^3.20.6
+    zod: ^3.21.2
     zustand: ^4.3.3
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/sdk@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@hyperlane-xyz/sdk@npm:1.2.0"
+"@hyperlane-xyz/sdk@npm:1.2.1":
+  version: 1.2.1
+  resolution: "@hyperlane-xyz/sdk@npm:1.2.1"
   dependencies:
-    "@hyperlane-xyz/core": 1.2.0
-    "@hyperlane-xyz/utils": 1.2.0
+    "@hyperlane-xyz/core": 1.2.1
+    "@hyperlane-xyz/utils": 1.2.1
     "@wagmi/chains": ^0.2.6
     coingecko-api: ^1.0.10
     cross-fetch: ^3.1.5
     debug: ^4.3.4
     ethers: ^5.7.2
-  checksum: 16d0eeb2f48c656106f4e2fa9101b1ae1382cb04c31571fcc41f167c84bc5d9343d769fd1ce9fd27e7e9b41bc60b3ab4a72742664f129947932e6ef147d6ce72
+    zod: ^3.21.2
+  checksum: 6fd7a276f6aca00ee4e0df560c5bee70adeff4bcc1193b0e34c4edb06df89fdc979171fe6cc7fba37b4a8c24049e0d37e3208d6bc026cae649a68cb10853909c
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@hyperlane-xyz/utils@npm:1.2.0"
+"@hyperlane-xyz/utils@npm:1.2.1":
+  version: 1.2.1
+  resolution: "@hyperlane-xyz/utils@npm:1.2.1"
   dependencies:
     ethers: ^5.7.2
-  checksum: 320e59e36a9349a8fa57c3bbc85faadbe5b591cd345165e9571511a51a38bcb07dd85026fdaf997db7bcaf1eeae8cc1c12962cf3154c2efcb570cd7df5b9bb7c
+  checksum: ac8e88bd9492e2c5dd5daaa5e81afdef1aaca68f114abc3e5aa100e286f5e071734108da7ef23c161bd90e0561180a3ca202b630d68269fa5425e84b05cdd5ef
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@hyperlane-xyz/widgets@npm:1.2.0"
+"@hyperlane-xyz/widgets@npm:1.2.1":
+  version: 1.2.1
+  resolution: "@hyperlane-xyz/widgets@npm:1.2.1"
   peerDependencies:
     "@hyperlane-xyz/sdk": ^1.2
     react: ^18
     react-dom: ^18
-  checksum: cd2cfd093d367482e54604db01f3475ecab6e602276984cbad947ecc1c23a3980b2fd8bff885288266b369c1110083444b9b46b880a8746c4bd7fcbe431823f0
+  checksum: 102b21a4c2e25906e7097bd63bf87c6f4028abfb30b6c44b64ac7c91fdf594cfde4c4daf327d077bdedac3fc64a0fdec27a1caf365b0a444783539b808505aa5
   languageName: node
   linkType: hard
 
@@ -11112,10 +11113,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.20.6":
-  version: 3.20.6
-  resolution: "zod@npm:3.20.6"
-  checksum: 804b1934b8b5e2fa3750bec90043e8118b201f330b9957b8b768389a971acadf812d2060cf62921086512dab4af691d10490acb03333da58fc485c0791893c89
+"zod@npm:^3.21.2":
+  version: 3.21.4
+  resolution: "zod@npm:3.21.4"
+  checksum: f185ba87342ff16f7a06686767c2b2a7af41110c7edf7c1974095d8db7a73792696bcb4a00853de0d2edeb34a5b2ea6a55871bc864227dace682a0a28de33e1f
   languageName: node
   linkType: hard
 

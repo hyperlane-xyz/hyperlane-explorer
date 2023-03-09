@@ -18,7 +18,6 @@ export function TimelineCard({ message, resolvedStatus, resolvedDestinationTx }:
     [message, resolvedStatus, resolvedDestinationTx],
   );
 
-  // @ts-ignore allow Unknown status in message state
   const { stage, timings } = useMessageStage({ message });
 
   return (
@@ -28,7 +27,6 @@ export function TimelineCard({ message, resolvedStatus, resolvedDestinationTx }:
         <HelpIcon size={16} text="A breakdown of the stages for delivering a message" />
       </div> */}
       <div className="sm:px-2">
-        {/* @ts-ignore allow Unknown status in message state */}
         <MessageTimeline status={resolvedMessage.status} stage={stage} timings={timings} />
       </div>
     </Card>
