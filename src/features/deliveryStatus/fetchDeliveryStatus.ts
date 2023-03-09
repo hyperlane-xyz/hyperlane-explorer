@@ -4,7 +4,6 @@ import { chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
 import { ensureLeading0x, validateAddress } from '../../utils/addresses';
-import { getChainEnvironment } from '../../utils/chains';
 import {
   queryExplorerForLogs,
   queryExplorerForTx,
@@ -12,6 +11,7 @@ import {
 } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { hexToDecimal } from '../../utils/number';
+import { getChainEnvironment } from '../chains/utils';
 import { debugMessagesForTransaction } from '../debugger/debugMessage';
 import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
 
@@ -105,7 +105,7 @@ async function fetchExplorerLogsForMessage(message: Message) {
     throw new Error(`No mailbox address found for dest ${destName} origin ${originName}`);
 
   const topic1 = ensureLeading0x(msgId);
-  const logsQueryPath = `api?module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
+  const logsQueryPath = `module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
   return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
 }
 

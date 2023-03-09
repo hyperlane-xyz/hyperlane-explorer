@@ -1,19 +1,19 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
-import useDropdownMenu from 'react-accessible-dropdown-menu-hook';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
-import { ChainLogo } from '@hyperlane-xyz/widgets';
 
-import FunnelIcon from '../../images/icons/funnel.svg';
-import { getChainDisplayName } from '../../utils/chains';
+import { getChainDisplayName } from '../../features/chains/utils';
+import GearIcon from '../../images/icons/gear.svg';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';
+import { ChainLogo } from '../icons/ChainLogo';
 import { ChevronIcon } from '../icons/Chevron';
-import { XIcon } from '../icons/XIcon';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
+import { DropdownModal } from '../layout/Dropdown';
 
 const mainnetAndTestChains = [...mainnetChainsMetadata, ...testnetChainsMetadata];
 
@@ -40,14 +40,6 @@ export function SearchFilterBar({
 }: Props) {
   return (
     <div className="flex items-center space-x-2 md:space-x-4">
-      <div className="w-px h-8 bg-gray-200"></div>
-      <Image
-        src={FunnelIcon}
-        width={20}
-        height={20}
-        className="hidden sm:block opacity-20"
-        alt=""
-      />
       <ChainMultiSelector
         text="Origin"
         header="Origin Chains"
@@ -68,6 +60,16 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
+      <div className="w-px h-8 bg-gray-200"></div>
+      <Link href="/settings" title="View explorer settings">
+        <Image
+          src={GearIcon}
+          width={24}
+          height={24}
+          className="opacity-40 hover:opacity-30 active:opacity-20 hover:rotate-90 transition-all"
+          alt=""
+        />
+      </Link>
     </div>
   );
 }
@@ -85,19 +87,16 @@ function ChainMultiSelector({
   onChangeValue: (value: string | null) => void;
   position?: string;
 }) {
-  const { buttonProps, isOpen, setIsOpen } = useDropdownMenu(1);
-  const closeDropdown = () => {
-    setIsOpen(false);
-  };
-
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
-    value ? arrayToObject(value.split(',')) : arrayToObject(mainnetAndTestChains.map((c) => c.id)),
+    value
+      ? arrayToObject(value.split(','))
+      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId)),
   );
 
   const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
     for (const c of chains) {
-      if (!checkedChains[c.id]) return true;
+      if (!checkedChains[c.chainId]) return true;
     }
     return false;
   };
@@ -115,7 +114,7 @@ function ChainMultiSelector({
 
   const onToggleSection = (chains: ChainMetadata[]) => {
     return () => {
-      const chainIds = chains.map((c) => c.id);
+      const chainIds = chains.map((c) => c.chainId);
       if (hasAnyUncheckedChain(chains)) {
         // If some are unchecked, check all
         setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, true) });
@@ -127,14 +126,14 @@ function ChainMultiSelector({
   };
 
   const onToggleAll = () => {
-    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.id)));
+    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.chainId)));
   };
 
   const onToggleNone = () => {
     setCheckedChains({});
   };
 
-  const onClickApply = () => {
+  const onClickApply = (closeDropdown?: () => void) => {
     const checkedList = Object.keys(checkedChains).filter((c) => !!checkedChains[c]);
     if (checkedList.length === 0 || checkedList.length === mainnetAndTestChains.length) {
       // Use null value, indicating to filter needed
@@ -142,32 +141,23 @@ function ChainMultiSelector({
     } else {
       onChangeValue(checkedList.join(','));
     }
-    closeDropdown();
+    if (closeDropdown) closeDropdown();
   };
 
   return (
-    <div className="relative">
-      <button
-        className="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
-        {...buttonProps}
-      >
-        <span className="text-gray-700 py-px">{text}</span>
-        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
-      </button>
-
-      <div
-        className={`dropdown-menu w-88 ${
-          position || 'right-0'
-        } top-10 bg-white shadow-md drop-shadow-md xs:border-blue-50 ${!isOpen && 'hidden'}`}
-        role="menu"
-      >
-        <div className="absolute top-1.5 right-1.5">
-          <XIcon onClick={closeDropdown} />
-        </div>
-        <div className="py-0.5 px-1.5">
-          <div className="flex items-center">
+    <DropdownModal
+      buttonContent={
+        <>
+          <span className="text-gray-700 py-px">{text}</span>
+          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+        </>
+      }
+      buttonClasses="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      modalContent={(closeDropdown) => (
+        <div className="p-4">
+          <div className="flex items-center justify-between">
             <h3 className="text-gray-700 text-lg">{header}</h3>
-            <div className="flex ml-[4.7rem]">
+            <div className="flex mr-4">
               <TextButton classes="text-sm underline underline-offset-2" onClick={onToggleAll}>
                 All
               </TextButton>
@@ -193,13 +183,13 @@ function ChainMultiSelector({
               {mainnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
-                  checked={!!checkedChains[c.id]}
-                  onToggle={onToggle(c.id)}
+                  checked={!!checkedChains[c.chainId]}
+                  onToggle={onToggle(c.chainId)}
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
+                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
@@ -218,24 +208,28 @@ function ChainMultiSelector({
               {testnetChainsMetadata.map((c) => (
                 <CheckBox
                   key={c.name}
-                  checked={!!checkedChains[c.id]}
-                  onToggle={onToggle(c.id)}
+                  checked={!!checkedChains[c.chainId]}
+                  onToggle={onToggle(c.chainId)}
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.id, true)}</span>
-                    <ChainLogo chainId={c.id} size={12} color={false} background={false} />
+                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
               ))}
             </div>
           </div>
-          <BorderedButton classes="mt-2.5 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+          <BorderedButton
+            classes="mt-2.5 text-sm px-2 py-1 w-full"
+            onClick={() => onClickApply(closeDropdown)}
+          >
             Apply
           </BorderedButton>
         </div>
-      </div>
-    </div>
+      )}
+      modalClasses={`w-88 ${position || 'right-0'}`}
+    />
   );
 }
 
@@ -250,11 +244,6 @@ function DatetimeSelector({
   endValue: number | null;
   onChangeEndValue: (value: number | null) => void;
 }) {
-  const { buttonProps, isOpen, setIsOpen } = useDropdownMenu(1);
-  const closeDropdown = () => {
-    setIsOpen(false);
-  };
-
   // Need local state as buffer before user hits apply
   const [startTime, setStartTime] = useState<number | null>(startValue);
   const [endTime, setEndTime] = useState<number | null>(endValue);
@@ -264,35 +253,26 @@ function DatetimeSelector({
     setEndTime(null);
   };
 
-  const onClickApply = () => {
+  const onClickApply = (closeDropdown?: () => void) => {
     onChangeStartValue(startTime);
     onChangeEndValue(endTime);
-    closeDropdown();
+    if (closeDropdown) closeDropdown();
   };
 
   return (
-    <div className="relative">
-      <button
-        className="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
-        {...buttonProps}
-      >
-        <span className="text-gray-700 py-px px-2">Time</span>
-        <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
-      </button>
-
-      <div
-        className={`dropdown-menu w-60 top-10 right-0 bg-white shadow-md drop-shadow-md xs:border-blue-50 ${
-          !isOpen && 'hidden'
-        }`}
-        role="menu"
-      >
-        <div className="absolute top-1.5 right-1.5">
-          <XIcon onClick={closeDropdown} />
-        </div>
-        <div className="py-0.5 px-1.5">
+    <DropdownModal
+      buttonContent={
+        <>
+          <span className="text-gray-700 py-px px-2">Time</span>
+          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+        </>
+      }
+      buttonClasses="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      modalContent={(closeDropdown) => (
+        <div className="p-4" key="date-time-selector">
           <div className="flex items-center justify-between">
             <h3 className="text-gray-700 text-lg">Time Range</h3>
-            <div className="flex mr-6 pt-1">
+            <div className="flex pt-1">
               <TextButton classes="text-sm underline underline-offset-2" onClick={onClickClear}>
                 Clear
               </TextButton>
@@ -304,11 +284,15 @@ function DatetimeSelector({
             <h4 className="mt-3 mb-1 text-gray-700">End Time</h4>
             <DatetimeField timestamp={endTime} onChange={setEndTime} />
           </div>
-          <BorderedButton classes="mt-4 text-sm px-2 py-1 w-full" onClick={onClickApply}>
+          <BorderedButton
+            classes="mt-4 text-sm px-2 py-1 w-full"
+            onClick={() => onClickApply(closeDropdown)}
+          >
             Apply
           </BorderedButton>
         </div>
-      </div>
-    </div>
+      )}
+      modalClasses="w-60 -right-8"
+    />
   );
 }

@@ -9,6 +9,7 @@ export interface PartialTransactionReceipt {
 
 // TODO consider reconciling with SDK's MessageStatus
 export enum MessageStatus {
+  Unknown = 'unknown',
   Pending = 'pending',
   Delivered = 'delivered',
   Failing = 'failing',
@@ -26,6 +27,7 @@ export interface MessageStub {
   destinationChainId: number;
   originTimestamp: number; // Note, equivalent to timestamp in originTransaction
   destinationTimestamp?: number; // Note, equivalent to timestamp in destinationTransaction
+  isPiMsg?: boolean;
 }
 
 export interface Message extends MessageStub {

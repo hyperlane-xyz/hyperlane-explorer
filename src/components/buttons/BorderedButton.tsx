@@ -8,10 +8,11 @@ interface ButtonProps {
   disabled?: boolean;
   icon?: ReactElement;
   title?: string;
+  passThruProps?: any;
 }
 
 export function BorderedButton(props: PropsWithChildren<ButtonProps>) {
-  const { type, onClick, classes, bold, icon, disabled, title } = props;
+  const { type, onClick, classes, bold, icon, disabled, title, passThruProps } = props;
 
   const base = 'border border-black rounded transition-all';
   const onHover = 'hover:border-gray-500 hover:text-gray-500';
@@ -27,6 +28,7 @@ export function BorderedButton(props: PropsWithChildren<ButtonProps>) {
       disabled={disabled ?? false}
       title={title}
       className={allClasses}
+      {...passThruProps}
     >
       {icon ? (
         <div className="flex items-center">

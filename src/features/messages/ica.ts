@@ -2,11 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BigNumber, utils } from 'ethers';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
-import {
-  DomainIdToChainName,
-  chainConnectionConfigs,
-  hyperlaneCoreAddresses,
-} from '@hyperlane-xyz/sdk';
+import { MultiProvider, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
@@ -77,11 +73,14 @@ export async function tryFetchIcaAddress(originDomainId: number, senderAddress: 
   try {
     if (!ICA_ADDRESS) return null;
     logger.debug('Fetching Ica address', originDomainId, senderAddress);
-    const chainName = DomainIdToChainName[originDomainId];
-    const connection = chainConnectionConfigs[chainName];
-    if (!connection) throw new Error(`No connection info for ${chainName}`);
-    const icaContract = InterchainAccountRouter__factory.connect(ICA_ADDRESS, connection.provider);
-    const icaAddress = await icaContract.getInterchainAccount(originDomainId, senderAddress);
+    // TODO improved PI support
+    const multiProvider = new MultiProvider();
+    const provider = multiProvider.getProvider(originDomainId);
+    const icaContract = InterchainAccountRouter__factory.connect(ICA_ADDRESS, provider);
+    const icaAddress = await icaContract['getInterchainAccount(uint32,address)'](
+      originDomainId,
+      senderAddress,
+    );
     if (!isValidAddress(icaAddress)) throw new Error(`Invalid Ica addr ${icaAddress}`);
     logger.debug('Ica address found', icaAddress);
     return icaAddress;

@@ -7,12 +7,14 @@ import { logger } from '../../utils/logger';
 
 import type { MessageDeliveryStatusResponse } from './types';
 
+// TODO: Deprecate this to simplify message details page
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   const serializedMessage = JSON.stringify(message);
   const queryResult = useQuery(
     ['messageProcessTx', serializedMessage, isReady],
     async () => {
-      if (!isReady || !message || message.status === MessageStatus.Delivered) return null;
+      if (!isReady || !message || message.status === MessageStatus.Delivered || message.isPiMsg)
+        return null;
 
       const response = await fetch('/api/delivery-status', {
         method: 'POST',

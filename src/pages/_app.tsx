@@ -19,7 +19,7 @@ import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
 import { config } from '../consts/config';
 import '../styles/fonts.css';
-import '../styles/globals.css';
+import '../styles/global.css';
 import { useIsSsr } from '../utils/ssr';
 
 // const { chains, provider } = configureChains(prodAndTestChains, [publicProvider()]);

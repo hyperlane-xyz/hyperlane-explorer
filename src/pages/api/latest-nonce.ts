@@ -5,7 +5,7 @@ import NextCors from 'nextjs-cors';
 import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
 import { Environment } from '../../consts/environments';
-import { getChainEnvironment } from '../../utils/chains';
+import { getChainEnvironment } from '../../features/chains/utils';
 import { logger } from '../../utils/logger';
 import { fetchWithTimeout } from '../../utils/timeout';
 

@@ -26,7 +26,7 @@ export const useTimeout = (
 };
 
 export async function fetchWithTimeout(
-  resource: RequestInfo,
+  resource: RequestInfo | URL,
   options?: RequestInit,
   timeout = 10000,
 ) {

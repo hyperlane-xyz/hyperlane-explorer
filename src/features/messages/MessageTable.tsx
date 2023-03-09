@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { ChainLogo } from '@hyperlane-xyz/widgets';
-
+import { ChainLogo } from '../../components/icons/ChainLogo';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
-import { getChainDisplayName } from '../../utils/chains';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
+import { getChainDisplayName } from '../chains/utils';
+
+import { serializeMessage } from './utils';
 
 export function MessageTable({
   messageList,
@@ -64,29 +65,35 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
   } else if (status === MessageStatus.Failing) {
     statusColor = 'bg-red-500 text-white';
     statusText = 'Failing';
+  } else if (status === MessageStatus.Unknown) {
+    statusColor = 'bg-gray-400 text-white';
+    statusText = 'Unknown';
   }
+
+  const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
 
   return (
     <>
-      <LinkCell id={msgId} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
         <ChainLogo chainId={originChainId} size={20} />
         <div className={styles.chainName}>{getChainDisplayName(originChainId, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} aClasses="flex items-center py-3.5 ">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 ">
         <ChainLogo chainId={destinationChainId} size={20} />
         <div className={styles.chainName}>{getChainDisplayName(destinationChainId, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
+      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(sender) || 'Invalid Address'}
       </LinkCell>
-      <LinkCell id={msgId} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
+      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(recipient) || 'Invalid Address'}
       </LinkCell>
-      <LinkCell id={msgId} aClasses={styles.valueTruncated}>
+      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(originTimestamp)}
       </LinkCell>
       <LinkCell
         id={msgId}
+        base64={base64}
         tdClasses="hidden lg:table-cell text-center px-4"
         aClasses={styles.valueTruncated}
       >
@@ -94,7 +101,7 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
           ? getHumanReadableDuration(destinationTimestamp - originTimestamp, 3)
           : '-'}
       </LinkCell>
-      <LinkCell id={msgId} aClasses="flex items-center justify-center">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center justify-center">
         <div className={`text-center w-20 md:w-[5.25rem] py-1.5 text-sm rounded ${statusColor}`}>
           {statusText}
         </div>
@@ -105,13 +112,16 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
 
 function LinkCell({
   id,
+  base64,
   tdClasses,
   aClasses,
   children,
-}: PropsWithChildren<{ id: string; tdClasses?: string; aClasses?: string }>) {
+}: PropsWithChildren<{ id: string; base64?: string; tdClasses?: string; aClasses?: string }>) {
+  const path = `/message/${id}`;
+  const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
-      <Link href={`/message/${id}`} className={aClasses}>
+      <Link href={`${path}${params}`} className={aClasses}>
         {children}
       </Link>
     </td>

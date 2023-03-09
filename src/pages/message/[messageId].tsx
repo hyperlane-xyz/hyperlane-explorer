@@ -4,11 +4,12 @@ import { useEffect } from 'react';
 
 import { ContentFrame } from '../../components/layout/ContentFrame';
 import { MessageDetails } from '../../features/messages/MessageDetails';
+import { deSerializeMessage } from '../../features/messages/utils';
 import { logger } from '../../utils/logger';
 
 const Message: NextPage = () => {
   const router = useRouter();
-  const { messageId } = router.query;
+  const { messageId, data } = router.query;
 
   useEffect(() => {
     if (!messageId || typeof messageId !== 'string')
@@ -16,9 +17,11 @@ const Message: NextPage = () => {
   }, [router, messageId]);
   if (!messageId || typeof messageId !== 'string') return null;
 
+  const message = data ? deSerializeMessage(data) : undefined;
+
   return (
     <ContentFrame>
-      <MessageDetails messageId={messageId} />
+      <MessageDetails messageId={messageId} message={message} />
     </ContentFrame>
   );
 };

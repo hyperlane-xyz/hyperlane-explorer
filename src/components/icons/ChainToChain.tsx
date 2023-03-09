@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import { memo } from 'react';
 
-import { ChainLogo } from '@hyperlane-xyz/widgets';
-
 import ArrowRightIcon from '../../images/icons/arrow-right-short.svg';
 import { useIsMobile } from '../../styles/mediaQueries';
+
+import { ChainLogo } from './ChainLogo';
 
 function _ChainToChain({
   originChainId,
