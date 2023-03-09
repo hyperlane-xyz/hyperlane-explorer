@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { ChainLogo } from '@hyperlane-xyz/widgets';
-
+import { ChainLogo } from '../../components/icons/ChainLogo';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';

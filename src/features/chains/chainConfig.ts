@@ -1,11 +1,8 @@
 import { z } from 'zod';
 
-import {
-  ChainMetadata,
-  ChainMetadataSchema,
-  chainIdToMetadata as defaultChainIdToMetadata,
-} from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
 
+import { getMultiProvider } from '../../multiProvider';
 import { logger } from '../../utils/logger';
 
 export const chainContractsSchema = z.object({
@@ -54,10 +51,15 @@ export function tryParseChainConfig(input: string): ParseResult {
   }
 
   const chainConfig = result.data as ChainConfig;
-  if (defaultChainIdToMetadata[chainConfig.chainId]) {
+  const mp = getMultiProvider();
+  if (
+    mp.tryGetChainMetadata(chainConfig.name) ||
+    mp.tryGetChainMetadata(chainConfig.chainId) ||
+    (chainConfig.domainId && mp.tryGetChainMetadata(chainConfig.domainId))
+  ) {
     return {
       success: false,
-      error: 'Chain ID already included in explorer defaults',
+      error: 'chainId, name, or domainId is already in use',
     };
   }
 

@@ -1,8 +1,7 @@
 import Image from 'next/image';
 
-import { ChainLogo } from '@hyperlane-xyz/widgets';
-
 import { Spinner } from '../../../components/animation/Spinner';
+import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
@@ -135,7 +134,7 @@ export function TransactionCard({
           <div className="text-gray-500 text-center max-w-xs">
             Destination transaction tracking is unavailable for this message, sorry!{' '}
           </div>
-          <Image src={MailUnknown} alt="" width={64} height={64} className="mt-6" />
+          <Image src={MailUnknown} alt="" width={60} height={60} className="mt-7" />
         </div>
       )}
     </Card>

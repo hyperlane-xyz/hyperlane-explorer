@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
-import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';
+import { ChainLogo } from '../icons/ChainLogo';
 import { ChevronIcon } from '../icons/Chevron';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';

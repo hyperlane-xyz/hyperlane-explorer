@@ -2,9 +2,10 @@ import { MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from './features/chains/chainConfig';
 
-let multiProvider: MultiProvider = new MultiProvider();
+let multiProvider: MultiProvider;
 
 export function getMultiProvider() {
+  if (!multiProvider) multiProvider = new MultiProvider();
   return multiProvider;
 }
 
@@ -18,5 +19,5 @@ export function setMultiProviderChains(customChainConfigs: Record<number, ChainC
 }
 
 export function getProvider(chainId) {
-  return multiProvider.getProvider(chainId);
+  return getMultiProvider().getProvider(chainId);
 }

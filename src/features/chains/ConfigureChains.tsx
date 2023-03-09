@@ -1,10 +1,10 @@
 import { ChangeEventHandler, useState } from 'react';
 
 import { mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
-import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { XIconButton } from '../../components/buttons/XIconButton';
+import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';

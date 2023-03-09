@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import { Environment } from './consts/environments';
 import { ChainConfig } from './features/chains/chainConfig';
 import { setMultiProviderChains } from './multiProvider';
+import { logger } from './utils/logger';
 
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
@@ -32,6 +33,10 @@ export const useStore = create<AppState>()(
     {
       name: 'hyperlane', // name in storage
       partialize: (state) => ({ chainConfigs: state.chainConfigs }), // fields to persist
+      onRehydrateStorage: () => (state, error) => {
+        if (state?.chainConfigs) setMultiProviderChains(state.chainConfigs);
+        else if (error) logger.debug('Error rehydrating store', error);
+      },
     },
   ),
 );
