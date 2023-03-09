@@ -45,7 +45,7 @@ export function buildMessageQuery(
   } else {
     throw new Error(`Invalid id type: ${idType}`);
   }
-  const variables = { identifier: idValue };
+  const variables = { identifier: trimLeading0x(idValue) };
 
   const query = `
   query ($identifier: String!){

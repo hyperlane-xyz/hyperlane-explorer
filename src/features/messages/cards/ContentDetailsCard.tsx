@@ -8,7 +8,6 @@ import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
 import { MAILBOX_VERSION } from '../../../consts/environments';
 import { Message } from '../../../types';
-import { ensureLeading0x } from '../../../utils/addresses';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
@@ -74,7 +73,7 @@ export function ContentDetailsCard({
       <KeyValueRow
         label="Message Id:"
         labelWidth="w-20"
-        display={ensureLeading0x(msgId)}
+        display={msgId}
         displayWidth="w-60 sm:w-80"
         showCopy={true}
         blurValue={shouldBlur}

@@ -6,18 +6,25 @@ import { config } from '../../consts/config';
 import { handler as getMessagesHandler } from '../../features/api/getMessages';
 import { handler as getStatusHandler } from '../../features/api/getStatus';
 import { handler as searchMessagesHandler } from '../../features/api/searchMessages';
+import { handler as searchPiMessagesHandler } from '../../features/api/searchPiMessages';
+import { ApiHandlerResult } from '../../features/api/types';
 import { logger } from '../../utils/logger';
 
 enum API_ACTION {
   GetMessages = 'get-messages',
   GetStatus = 'get-status',
   SearchMessages = 'search-messages',
+  SearchPiMessages = 'search-pi-messages',
 }
 
-const actionToHandler: Record<API_ACTION, (req: NextApiRequest, client: Client) => Promise<any>> = {
+const actionToHandler: Record<
+  API_ACTION,
+  (req: NextApiRequest, client: Client) => Promise<ApiHandlerResult<any>>
+> = {
   [API_ACTION.GetMessages]: getMessagesHandler,
   [API_ACTION.GetStatus]: getStatusHandler,
   [API_ACTION.SearchMessages]: searchMessagesHandler,
+  [API_ACTION.SearchPiMessages]: searchPiMessagesHandler,
 };
 
 interface ApiResult<R> {
@@ -38,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (!apiAction) {
       const msg = 'Invalid module or action';
       logger.debug(msg);
-      res.status(400).send(failureResult(msg));
+      res.status(400).send(failureApiResult(msg));
       return;
     }
 
@@ -49,18 +56,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     logger.debug('Invoking handler for api request of type:', apiAction);
     const actionHandler = actionToHandler[apiAction];
     const result = await actionHandler(req, client);
-    if (!result) {
-      const msg = 'Invalid request params';
-      logger.debug(msg);
-      res.status(400).send(failureResult(msg));
+
+    if (!result.success) {
+      logger.debug('Handler failed:', result.error);
+      res.status(400).send(failureApiResult(result.error));
       return;
     }
 
-    res.status(200).json(successResult(result));
+    res.status(200).json(successApiResult(result.data));
   } catch (error) {
     const msg = 'Unable to retrieve data';
     logger.error(msg, error);
-    res.status(500).send(failureResult(msg));
+    res.status(500).send(failureApiResult(msg));
   }
 }
 
@@ -83,10 +90,10 @@ function parseQueryParams({ query }: NextApiRequest): API_ACTION | null {
   return apiAction.toLowerCase() as API_ACTION;
 }
 
-function successResult<R>(result: R): ApiResult<R> {
+function successApiResult<R>(result: R): ApiResult<R> {
   return { status: '1', message: 'OK', result };
 }
 
-function failureResult(message: string): ApiResult<any> {
+function failureApiResult(message: string): ApiResult<any> {
   return { status: '0', message, result: [] };
 }
