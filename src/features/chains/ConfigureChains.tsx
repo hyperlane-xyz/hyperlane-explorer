@@ -9,9 +9,9 @@ import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
 import { useChainConfigs } from '../../store';
-import { getChainDisplayName } from '../../utils/chains';
 
 import { tryParseChainConfig } from './chainConfig';
+import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
   const { chainConfigs, setChainConfigs } = useChainConfigs();

@@ -4,7 +4,6 @@ import { chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
 import { ensureLeading0x, validateAddress } from '../../utils/addresses';
-import { getChainEnvironment } from '../../utils/chains';
 import {
   queryExplorerForLogs,
   queryExplorerForTx,
@@ -12,6 +11,7 @@ import {
 } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { hexToDecimal } from '../../utils/number';
+import { getChainEnvironment } from '../chains/utils';
 import { debugMessagesForTransaction } from '../debugger/debugMessage';
 import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
 

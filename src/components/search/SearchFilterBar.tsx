@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 import { ChainLogo } from '@hyperlane-xyz/widgets';
 
+import { getChainDisplayName } from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
-import { getChainDisplayName } from '../../utils/chains';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';

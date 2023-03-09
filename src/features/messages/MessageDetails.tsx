@@ -7,10 +7,10 @@ import { Spinner } from '../../components/animation/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
-import { getChainDisplayName } from '../../utils/chains';
 import { logger } from '../../utils/logger';
 import { toTitleCase } from '../../utils/string';
 import { useInterval } from '../../utils/useInterval';
+import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';

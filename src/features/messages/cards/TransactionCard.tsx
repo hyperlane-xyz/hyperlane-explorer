@@ -7,9 +7,9 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
 import { MessageStatus, PartialTransactionReceipt } from '../../../types';
-import { getChainDisplayName } from '../../../utils/chains';
 import { getTxExplorerUrl } from '../../../utils/explorers';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
+import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugStatus } from '../../debugger/types';
 

@@ -5,8 +5,8 @@ import { ChainLogo } from '@hyperlane-xyz/widgets';
 
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
-import { getChainDisplayName } from '../../utils/chains';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
+import { getChainDisplayName } from '../chains/utils';
 
 import { serializeMessage } from './utils';
 
