@@ -1,16 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { BigNumber, constants, ethers } from 'ethers';
+import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { Mailbox__factory } from '@hyperlane-xyz/core';
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
-import { getMultiProvider, getProvider } from '../../../multiProvider';
+import { getMultiProvider } from '../../../multiProvider';
 import { useStore } from '../../../store';
 import { Message, MessageStatus, PartialTransactionReceipt } from '../../../types';
 import {
   ensureLeading0x,
-  isValidAddressFast,
+  isValidAddress,
   isValidTransactionHash,
+  normalizeAddress,
 } from '../../../utils/addresses';
 import {
   queryExplorerForBlock,
@@ -24,7 +26,8 @@ import { ChainConfig } from '../../chains/chainConfig';
 import { LogWithTimestamp } from './types';
 import { isValidSearchQuery } from './useMessageQuery';
 
-const PROVIDER_LOGS_BLOCK_WINDOW = 150_000;
+const PROVIDER_LOGS_BLOCK_WINDOW = 100_000;
+const PROVIDER_BLOCK_DETAILS_WINDOW = 5_000;
 
 const mailbox = Mailbox__factory.createInterface();
 const dispatchTopic0 = mailbox.getEventTopic('Dispatch');
@@ -48,9 +51,12 @@ export function usePiChainMessageQuery(
       const isValidInput = isValidSearchQuery(sanitizedInput, true);
       if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return null;
       logger.debug('Starting PI Chain message query for:', sanitizedInput);
+      // TODO convert timestamps to from/to blocks here
+      const query = { input: ensureLeading0x(sanitizedInput) };
+      const multiProvider = getMultiProvider();
       try {
         const messages = await Promise.any(
-          Object.values(chainConfigs).map((c) => fetchMessagesFromPiChain(c, sanitizedInput)),
+          Object.values(chainConfigs).map((c) => fetchMessagesOrThrow(c, query, multiProvider)),
         );
         return messages;
       } catch (e) {
@@ -96,30 +102,43 @@ searchForMessages(input):
         GOTO hash search above
 */
 
+export interface PiMessageQuery {
+  input: string;
+  fromBlock?: string | number;
+  toBlock?: string | number;
+}
+
+async function fetchMessagesOrThrow(
+  chainConfig: ChainConfig,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
+): Promise<Message[]> {
+  const messages = await fetchMessagesFromPiChain(chainConfig, query, multiProvider);
+  // Throw so Promise.any caller doesn't trigger
+  if (!messages.length) throw new Error(`No messages found for chain ${chainConfig.chainId}`);
+  return messages;
+}
+
 export async function fetchMessagesFromPiChain(
   chainConfig: ChainConfig,
-  input: string,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
 ): Promise<Message[]> {
-  const { chainId, blockExplorers } = chainConfig;
-  const useExplorer = !!blockExplorers?.[0]?.apiUrl;
-  const formattedInput = ensureLeading0x(input);
+  const useExplorer = !!chainConfig.blockExplorers?.[0]?.apiUrl;
+  const input = query.input;
 
   let logs: LogWithTimestamp[];
-  if (isValidAddressFast(formattedInput)) {
-    logs = await fetchLogsForAddress(chainConfig, formattedInput, useExplorer);
+  if (isValidAddress(input)) {
+    logs = await fetchLogsForAddress(chainConfig, query, multiProvider, useExplorer);
   } else if (isValidTransactionHash(input)) {
-    logs = await fetchLogsForTxHash(chainConfig, formattedInput, useExplorer);
+    logs = await fetchLogsForTxHash(chainConfig, query, multiProvider, useExplorer);
     // Input may be a msg id, check that next
     if (!logs.length) {
-      logs = await fetchLogsForMsgId(chainConfig, formattedInput, useExplorer);
+      logs = await fetchLogsForMsgId(chainConfig, query, multiProvider, useExplorer);
     }
   } else {
-    throw new Error('Invalid PI search input');
-  }
-
-  if (!logs.length) {
-    // Throw so Promise.any caller doesn't trigger
-    throw new Error(`No messages found for chain ${chainId}`);
+    logger.warn('Invalid PI search input', input);
+    return [];
   }
 
   return logs.map(logToMessage).filter((m): m is Message => !!m);
@@ -127,9 +146,11 @@ export async function fetchMessagesFromPiChain(
 
 async function fetchLogsForAddress(
   { chainId, contracts }: ChainConfig,
-  address: Address,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
   useExplorer?: boolean,
 ): Promise<LogWithTimestamp[]> {
+  const address = query.input;
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
   const dispatchTopic = utils.addressToBytes32(address);
@@ -142,6 +163,8 @@ async function fetchLogsForAddress(
       ],
       mailboxAddr,
       chainId,
+      query,
+      multiProvider,
     );
   } else {
     return fetchLogsFromProvider(
@@ -153,21 +176,30 @@ async function fetchLogsForAddress(
       ],
       mailboxAddr,
       chainId,
+      query,
+      multiProvider,
     );
   }
 }
 
 async function fetchLogsForTxHash(
   { chainId }: ChainConfig,
-  txHash: string,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
   useExplorer: boolean,
 ): Promise<LogWithTimestamp[]> {
+  const txHash = query.input;
   logger.debug(`Fetching logs for txHash ${txHash} on chain ${chainId}`);
   if (useExplorer) {
     try {
-      const txReceipt = await queryExplorerForTxReceipt(chainId, txHash, false);
+      const txReceipt = await queryExplorerForTxReceipt(multiProvider, chainId, txHash, false);
       logger.debug(`Tx receipt found from explorer for chain ${chainId}`);
-      const block = await queryExplorerForBlock(chainId, txReceipt.blockNumber, false);
+      const block = await queryExplorerForBlock(
+        multiProvider,
+        chainId,
+        txReceipt.blockNumber,
+        false,
+      );
       return txReceipt.logs.map((l) => ({
         ...l,
         timestamp: BigNumber.from(block.timestamp).toNumber() * 1000,
@@ -178,14 +210,16 @@ async function fetchLogsForTxHash(
       logger.debug(`Tx hash not found in explorer for chain ${chainId}`);
     }
   } else {
-    const provider = getProvider(chainId);
+    const provider = multiProvider.getProvider(chainId);
     const txReceipt = await provider.getTransactionReceipt(txHash);
     if (txReceipt) {
       logger.debug(`Tx receipt found from provider for chain ${chainId}`);
-      const block = await provider.getBlock(txReceipt.blockNumber);
+      const block = await tryFetchBlockFromProvider(provider, txReceipt.blockNumber);
+      // TODO make timestamp optional instead of using 0 fallback here
+      const timestamp = block ? BigNumber.from(block.timestamp).toNumber() * 1000 : 0;
       return txReceipt.logs.map((l) => ({
         ...l,
-        timestamp: BigNumber.from(block.timestamp).toNumber() * 1000,
+        timestamp,
         from: txReceipt.from,
         to: txReceipt.to,
       }));
@@ -198,10 +232,12 @@ async function fetchLogsForTxHash(
 
 async function fetchLogsForMsgId(
   chainConfig: ChainConfig,
-  msgId: string,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
   useExplorer: boolean,
 ): Promise<LogWithTimestamp[]> {
   const { contracts, chainId } = chainConfig;
+  const msgId = query.input;
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
   const topic1 = msgId;
@@ -214,6 +250,8 @@ async function fetchLogsForMsgId(
       ],
       mailboxAddr,
       chainId,
+      query,
+      multiProvider,
     );
   } else {
     logs = await fetchLogsFromProvider(
@@ -223,6 +261,8 @@ async function fetchLogsForMsgId(
       ],
       mailboxAddr,
       chainId,
+      query,
+      multiProvider,
     );
   }
 
@@ -231,7 +271,9 @@ async function fetchLogsForMsgId(
   if (logs.length) {
     const txHash = logs[0].transactionHash;
     logger.debug('Found tx hash with log of msg id', txHash);
-    return fetchLogsForTxHash(chainConfig, txHash, useExplorer) || [];
+    return (
+      fetchLogsForTxHash(chainConfig, { ...query, input: txHash }, multiProvider, useExplorer) || []
+    );
   }
 
   return [];
@@ -241,12 +283,16 @@ async function fetchLogsFromExplorer(
   paths: Array<string>,
   contractAddr: Address,
   chainId: number,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
 ): Promise<LogWithTimestamp[]> {
-  const base = `module=logs&action=getLogs&fromBlock=1&toBlock=latest&address=${contractAddr}`;
+  const fromBlock = query.fromBlock || '1';
+  const toBlock = query.toBlock || 'latest';
+  const base = `module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${contractAddr}`;
   let logs: LogWithTimestamp[] = [];
   for (const path of paths) {
     // Originally use parallel requests here with Promise.all but immediately hit rate limit errors
-    const result = await queryExplorerForLogs(chainId, `${base}${path}`, undefined, false);
+    const result = await queryExplorerForLogs(multiProvider, chainId, `${base}${path}`, false);
     logs = [...logs, ...result.map(toProviderLog)];
   }
   return logs;
@@ -256,16 +302,20 @@ async function fetchLogsFromProvider(
   topics: Array<Array<string | null>>,
   contractAddr: Address,
   chainId: number,
+  query: PiMessageQuery,
+  multiProvider: MultiProvider,
 ): Promise<LogWithTimestamp[]> {
-  const provider = getProvider(chainId);
+  const provider = multiProvider.getProvider(chainId);
   const latestBlock = await provider.getBlockNumber();
+  const fromBlock = query.fromBlock || latestBlock - PROVIDER_LOGS_BLOCK_WINDOW;
+  const toBlock = query.toBlock || 'latest';
   // TODO may need chunking here to avoid RPC errors
   const logs = (
     await Promise.all(
       topics.map((t) =>
         provider.getLogs({
-          fromBlock: latestBlock - PROVIDER_LOGS_BLOCK_WINDOW,
-          toBlock: 'latest',
+          fromBlock,
+          toBlock,
           address: contractAddr,
           topics: t,
         }),
@@ -278,8 +328,9 @@ async function fetchLogsFromProvider(
     logs.map(async (l) => {
       const blockNum = l.blockNumber;
       if (!timestamps[blockNum]) {
-        const block = await provider.getBlock(blockNum);
-        const timestamp = BigNumber.from(block.timestamp).toNumber() * 1000;
+        const block = await tryFetchBlockFromProvider(provider, blockNum, latestBlock);
+        // TODO make timestamps optional instead of using 0 fallback here
+        const timestamp = block ? BigNumber.from(block.timestamp).toNumber() * 1000 : 0;
         timestamps[blockNum] = timestamp;
       }
       return {
@@ -289,6 +340,22 @@ async function fetchLogsFromProvider(
     }),
   );
   return logsWithTimestamp;
+}
+
+async function tryFetchBlockFromProvider(
+  provider: providers.Provider,
+  blockNum: number,
+  latestBlock?: number,
+) {
+  try {
+    if (latestBlock && latestBlock - blockNum > PROVIDER_BLOCK_DETAILS_WINDOW) return null;
+    logger.debug('Fetching block details for blockNum:', blockNum);
+    const block = await provider.getBlock(blockNum);
+    return block;
+  } catch (error) {
+    logger.debug('Could not fetch block details for blockNum:', blockNum);
+    return null;
+  }
 }
 
 function logToMessage(log: LogWithTimestamp): Message | null {
@@ -305,7 +372,7 @@ function logToMessage(log: LogWithTimestamp): Message | null {
   const message = utils.parseMessage(bytes);
 
   const tx: PartialTransactionReceipt = {
-    from: log.from || constants.AddressZero,
+    from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
     transactionHash: log.transactionHash,
     blockNumber: BigNumber.from(log.blockNumber).toNumber(),
     timestamp: log.timestamp,
@@ -318,8 +385,8 @@ function logToMessage(log: LogWithTimestamp): Message | null {
     id: '', // No db id exists
     msgId: utils.messageId(bytes),
     status: MessageStatus.Unknown, // TODO
-    sender: utils.bytes32ToAddress(message.sender),
-    recipient: utils.bytes32ToAddress(message.recipient),
+    sender: normalizeAddress(utils.bytes32ToAddress(message.sender)),
+    recipient: normalizeAddress(utils.bytes32ToAddress(message.recipient)),
     originDomainId: message.origin,
     destinationDomainId: message.destination,
     originChainId: multiProvider.getChainId(message.origin),

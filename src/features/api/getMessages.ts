@@ -29,6 +29,7 @@ export async function handler(
   return successResult(messages.map(toApiMessage));
 }
 
+// TODO replace with Zod
 export function parseQueryParams({ query }: NextApiRequest) {
   for (const param of Object.values(MessageIdentifierType)) {
     const value = query[param];

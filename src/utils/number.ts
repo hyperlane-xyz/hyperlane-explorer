@@ -2,12 +2,17 @@ import { BigNumber } from 'ethers';
 
 import { logger } from './logger';
 
-export function hexToDecimal(value: string | number) {
+export function tryHexToDecimal(value: string | number) {
   try {
     return BigNumber.from(value).toNumber();
   } catch (error) {
-    const msg = `Error parsing hex number ${value}`;
-    logger.error(msg, error);
-    throw new Error(msg);
+    logger.debug(`Error parsing hex number ${value}`);
+    return null;
   }
+}
+
+export function hexToDecimal(value: string | number) {
+  const result = tryHexToDecimal(value);
+  if (!result) throw new Error(`Error parsing hex number ${value}`);
+  return result;
 }

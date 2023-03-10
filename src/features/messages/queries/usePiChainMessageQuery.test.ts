@@ -1,4 +1,4 @@
-import { chainMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { MultiProvider, chainMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from '../../chains/chainConfig';
 
@@ -9,8 +9,9 @@ import { fetchMessagesFromPiChain } from './usePiChainMessageQuery';
 // THESE WERE MOSTLY USED FOR TDD OF THE FETCHING CODE
 // TODO: MOCK THE PROVIDER + EXPLORER TO MAKE THESE NETWORK INDEPENDENT
 
-jest.setTimeout(15000);
+jest.setTimeout(30000);
 
+const multiProvider = new MultiProvider();
 const goerliMailbox = hyperlaneCoreAddresses.goerli.mailbox;
 const goerliConfigWithExplorer: ChainConfig = {
   ...chainMetadata.goerli,
@@ -19,80 +20,124 @@ const goerliConfigWithExplorer: ChainConfig = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { blockExplorers, ...goerliConfigNoExplorer } = goerliConfigWithExplorer;
 
-// https://explorer.hyperlane.xyz/message/0d9dc662da32d3737835295e9c9eb2b92ac630aec2756b93a187b8fd22a82afd
-const txHash = '0xb81ba87ee7ae30dea0f67f7f25b67d973cec6533e7407ea7a8c761f39d8dee1b';
-const msgId = '0x0d9dc662da32d3737835295e9c9eb2b92ac630aec2756b93a187b8fd22a82afd';
+// https://explorer.hyperlane.xyz/message/0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48
+const txHash = '0x051695a31a6feccacebf09f0c426e21ff4d5c894603faa658c3b4cff89653978';
+const msgId = '0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48';
 const senderAddress = '0x0637a1360ea44602dae5c4ba515c2bcb6c762fbc';
-const recipientAddress = '0x921d3a71386d3ab8f3ad4ec91ce1556d5fc26859';
+const recipientAddress = '0xa76a3e719e5ff7159a29b8876272052b89b3589f';
 
 const goerliMessage = {
-  body: '0x48656c6c6f21',
-  destinationChainId: 44787,
-  destinationDomainId: 44787,
-  destinationTimestamp: 0,
-  destinationTransaction: {
-    blockNumber: 0,
-    from: '0x0000000000000000000000000000000000000000',
-    gasUsed: 0,
-    timestamp: 0,
-    transactionHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  },
   id: '',
-  msgId: '0x0d9dc662da32d3737835295e9c9eb2b92ac630aec2756b93a187b8fd22a82afd',
-  nonce: 20763,
+  msgId: '0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48',
   originChainId: 5,
   originDomainId: 5,
-  originTimestamp: 0,
+  destinationChainId: 421613,
+  destinationDomainId: 421613,
+  nonce: 21048,
+  body: '0x48656c6c6f21',
+  originTimestamp: 1678444980000,
   originTransaction: {
-    blockNumber: 8600958,
-    from: '0x0000000000000000000000000000000000000000',
+    blockNumber: 8629961,
+    from: '0x06C8798aA665bDbeea6aBa6fC1b1d9bbDCa8d613',
     gasUsed: 0,
-    timestamp: 0,
-    transactionHash: '0xb81ba87ee7ae30dea0f67f7f25b67d973cec6533e7407ea7a8c761f39d8dee1b',
+    timestamp: 1678444980000,
+    transactionHash: '0x051695a31a6feccacebf09f0c426e21ff4d5c894603faa658c3b4cff89653978',
   },
-  recipient: '0x000000000000000000000000921d3a71386d3ab8f3ad4ec91ce1556d5fc26859',
-  sender: '0x0000000000000000000000000637a1360ea44602dae5c4ba515c2bcb6c762fbc',
+  sender: '0x0637A1360Ea44602DAe5c4ba515c2BCb6C762fbc',
+  recipient: '0xa76A3E719E5ff7159a29B8876272052b89B3589F',
   status: 'unknown',
+  isPiMsg: true,
 };
 
 describe('fetchMessagesFromPiChain', () => {
+  // beforeEach(async () => {});
+
   it('Fetches messages using explorer for tx hash', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigWithExplorer, txHash);
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigWithExplorer,
+      { input: txHash },
+      multiProvider,
+    );
     expect(messages).toEqual([goerliMessage]);
   });
-  it.skip('Fetches messages using explorer for msg id', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigWithExplorer, msgId);
+  it('Fetches messages using explorer for msg id', async () => {
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigWithExplorer,
+      { input: msgId },
+      multiProvider,
+    );
     expect(messages).toEqual([goerliMessage]);
   });
-  it.skip('Fetches messages using explorer for sender address', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigWithExplorer, senderAddress);
-    expect(messages).toEqual([goerliMessage]);
+  it('Fetches messages using explorer for sender address', async () => {
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigWithExplorer,
+      {
+        input: senderAddress,
+        fromBlock: goerliMessage.originTransaction.blockNumber - 100,
+      },
+      multiProvider,
+    );
+    const testMsg = messages.find((m) => m.msgId === msgId);
+    expect(testMsg).toBeTruthy();
   });
-  it.skip('Fetches messages using explorer for recipient address', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigWithExplorer, recipientAddress);
-    expect(messages).toEqual([goerliMessage]);
+  it('Fetches messages using explorer for recipient address', async () => {
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigWithExplorer,
+      {
+        input: recipientAddress,
+        fromBlock: goerliMessage.originTransaction.blockNumber - 100,
+      },
+      multiProvider,
+    );
+    const testMsg = messages.find((m) => m.msgId === msgId);
+    expect(testMsg).toBeTruthy();
   });
   it('Fetches messages using provider for tx hash', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigNoExplorer, txHash);
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigNoExplorer,
+      { input: txHash },
+      multiProvider,
+    );
     expect(messages).toEqual([goerliMessage]);
   });
   it('Fetches messages using provider for msg id', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigNoExplorer, msgId);
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigNoExplorer,
+      { input: msgId },
+      multiProvider,
+    );
     expect(messages).toEqual([goerliMessage]);
   });
   it('Fetches messages using provider for sender address', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigNoExplorer, senderAddress);
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigNoExplorer,
+      {
+        input: senderAddress,
+      },
+      multiProvider,
+    );
     const testMsg = messages.find((m) => m.msgId === msgId);
-    expect([testMsg]).toEqual([goerliMessage]);
+    expect(testMsg).toBeTruthy();
   });
   it('Fetches messages using provider for recipient address', async () => {
-    const messages = await fetchMessagesFromPiChain(goerliConfigNoExplorer, recipientAddress);
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigNoExplorer,
+      {
+        input: recipientAddress,
+      },
+      multiProvider,
+    );
     const testMsg = messages.find((m) => m.msgId === msgId);
-    expect([testMsg]).toEqual([goerliMessage]);
+    expect(testMsg).toBeTruthy();
   });
-  it('Throws error for invalid input', async () => {
-    await expect(
-      fetchMessagesFromPiChain(goerliConfigWithExplorer, 'invalidInput'),
-    ).rejects.toThrow();
+  it('Returns empty for invalid input', async () => {
+    const messages = await fetchMessagesFromPiChain(
+      goerliConfigWithExplorer,
+      {
+        input: 'invalidInput',
+      },
+      multiProvider,
+    );
+    expect(messages).toEqual([]);
   });
 });

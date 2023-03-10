@@ -11,7 +11,7 @@ import { parseMessageQueryResult } from '../messages/queries/parse';
 import { ApiHandlerResult, ApiMessage, toApiMessage } from './types';
 import { failureResult, successResult } from './utils';
 
-export const SEARCH_QUERY_PARAM_NAME = 'query';
+const SEARCH_QUERY_PARAM_NAME = 'query';
 
 export async function handler(
   req: NextApiRequest,
@@ -35,7 +35,8 @@ export async function handler(
   return successResult(messages.map(toApiMessage));
 }
 
-export function parseSearchQueryParam({ query }: NextApiRequest) {
+// TODO replace with Zod
+function parseSearchQueryParam({ query }: NextApiRequest) {
   const value = query[SEARCH_QUERY_PARAM_NAME];
   if (value && typeof value === 'string') {
     return sanitizeString(value);
