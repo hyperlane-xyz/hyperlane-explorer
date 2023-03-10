@@ -37,7 +37,7 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       : undefined;
     return {
       id: m.id.toString(),
-      msgId: m.msg_id,
+      msgId: ensureLeading0x(m.msg_id),
       status,
       sender: parsePaddedAddress(m.sender),
       recipient: parsePaddedAddress(m.recipient),

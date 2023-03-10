@@ -5,8 +5,8 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
+import { getMultiProvider } from '../../../multiProvider';
 import { MessageStatus, PartialTransactionReceipt } from '../../../types';
-import { getTxExplorerUrl } from '../../../utils/explorers';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
@@ -40,7 +40,8 @@ export function TransactionCard({
   helpText,
   shouldBlur,
 }: TransactionCardProps) {
-  const txExplorerLink = getTxExplorerUrl(chainId, transaction?.transactionHash);
+  const hash = transaction?.transactionHash;
+  const txExplorerLink = hash ? getMultiProvider().tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
       <div className="flex items-center justify-between">

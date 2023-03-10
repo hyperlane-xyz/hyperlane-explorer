@@ -9,6 +9,8 @@ import { MessagesStubQueryResult } from '../messages/queries/fragments';
 import { parseMessageStubResult } from '../messages/queries/parse';
 
 import { parseQueryParams } from './getMessages';
+import { ApiHandlerResult } from './types';
+import { failureResult, successResult } from './utils';
 
 interface MessageStatusResult {
   id: string;
@@ -18,9 +20,10 @@ interface MessageStatusResult {
 export async function handler(
   req: NextApiRequest,
   client: Client,
-): Promise<MessageStatusResult[] | null> {
+): Promise<ApiHandlerResult<MessageStatusResult[]>> {
   const identifierParam = parseQueryParams(req);
-  if (!identifierParam) return null;
+  if (!identifierParam) return failureResult('No message identifier param provided');
+
   logger.debug('Attempting to find message status matching:', identifierParam);
   const { query, variables } = buildMessageQuery(
     identifierParam.type,
@@ -30,5 +33,5 @@ export async function handler(
   );
   const result = await client.query<MessagesStubQueryResult>(query, variables).toPromise();
   const messages = parseMessageStubResult(result.data);
-  return messages.map((m) => ({ id: m.msgId, status: m.status }));
+  return successResult(messages.map((m) => ({ id: m.msgId, status: m.status })));
 }

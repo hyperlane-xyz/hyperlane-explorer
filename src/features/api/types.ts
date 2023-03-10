@@ -1,5 +1,15 @@
 import { Message } from '../../types';
 
+export type ApiHandlerResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
 export type ApiMessage = Omit<
   Message,
   | 'msgId' // use id field for msgId

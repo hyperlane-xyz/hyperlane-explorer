@@ -1,10 +1,12 @@
 import { BigNumber, providers } from 'ethers';
 
+import { MultiProvider } from '@hyperlane-xyz/sdk';
+
 import { config } from '../consts/config';
 import type { LogWithTimestamp } from '../features/messages/queries/types';
-import { getMultiProvider } from '../multiProvider';
 
 import { logger } from './logger';
+import { hexToDecimal, tryHexToDecimal } from './number';
 import { fetchWithTimeout, sleep } from './timeout';
 
 const BLOCK_EXPLORER_RATE_LIMIT = 5100; // once every 5.1 seconds
@@ -16,21 +18,13 @@ export interface ExplorerQueryResponse<R> {
   result: R;
 }
 
-export function getExplorerUrl(chainId: number) {
-  return getMultiProvider().tryGetExplorerUrl(chainId);
-}
-
-export function getExplorerApiUrl(chainId: number) {
-  return getMultiProvider().tryGetExplorerApiUrl(chainId);
-}
-
-export function getTxExplorerUrl(chainId: number, hash?: string) {
-  if (!hash) return null;
-  return getMultiProvider().tryGetExplorerTxUrl(chainId, { hash });
-}
-
-export async function queryExplorer<P>(chainId: number, params: URLSearchParams, useKey = true) {
-  const baseUrl = getExplorerApiUrl(chainId);
+async function queryExplorer<P>(
+  multiProvider: MultiProvider,
+  chainId: number,
+  params: URLSearchParams,
+  useKey = true,
+) {
+  const baseUrl = multiProvider.tryGetExplorerApiUrl(chainId);
   if (!baseUrl) throw new Error(`No valid URL found for explorer for chain ${chainId}`);
 
   const url = new URL(baseUrl);
@@ -44,31 +38,35 @@ export async function queryExplorer<P>(chainId: number, params: URLSearchParams,
     url.searchParams.set('apikey', apiKey);
   }
 
-  if (!url.searchParams.has('apikey')) {
-    // Without an API key, rate limits are strict so enforce a wait if necessary
-    const waitTime = BLOCK_EXPLORER_RATE_LIMIT - (Date.now() - lastExplorerQuery);
-    if (waitTime > 0) await sleep(waitTime);
-  }
-
-  logger.debug('Querying explorer url:', url);
+  logger.debug('Querying explorer url:', url.toString());
   const result = await executeQuery<P>(url);
   lastExplorerQuery = Date.now();
   return result;
 }
 
-async function executeQuery<P>(url: string | URL) {
-  const response = await fetchWithTimeout(url);
-  if (!response.ok) {
-    throw new Error(`Fetch response not okay: ${response.status}`);
-  }
-  const json = (await response.json()) as ExplorerQueryResponse<P>;
+async function executeQuery<P>(url: URL) {
+  try {
+    if (!url.searchParams.has('apikey')) {
+      // Without an API key, rate limits are strict so enforce a wait if necessary
+      const waitTime = BLOCK_EXPLORER_RATE_LIMIT - (Date.now() - lastExplorerQuery);
+      if (waitTime > 0) await sleep(waitTime);
+    }
 
-  if (!json.result) {
-    const responseText = await response.text();
-    throw new Error(`Invalid result format: ${responseText}`);
-  }
+    const response = await fetchWithTimeout(url);
+    if (!response.ok) {
+      throw new Error(`Fetch response not okay: ${response.status}`);
+    }
+    const json = (await response.json()) as ExplorerQueryResponse<P>;
 
-  return json.result;
+    if (!json.result) {
+      const responseText = await response.text();
+      throw new Error(`Invalid result format: ${responseText}`);
+    }
+
+    return json.result;
+  } finally {
+    lastExplorerQuery = Date.now();
+  }
 }
 
 export interface ExplorerLogEntry {
@@ -85,12 +83,13 @@ export interface ExplorerLogEntry {
 }
 
 export async function queryExplorerForLogs(
+  multiProvider: MultiProvider,
   chainId: number,
   params: string,
-  topic0?: string,
   useKey = true,
 ): Promise<ExplorerLogEntry[]> {
   const logs = await queryExplorer<ExplorerLogEntry[]>(
+    multiProvider,
     chainId,
     new URLSearchParams(params),
     useKey,
@@ -100,15 +99,14 @@ export async function queryExplorerForLogs(
     logger.error(msg, JSON.stringify(logs), params);
     throw new Error(msg);
   }
-  logs.forEach((l) => validateExplorerLog(l, topic0));
+  logs.forEach((l) => validateExplorerLog(l));
   return logs;
 }
 
-export function validateExplorerLog(log: ExplorerLogEntry, topic0?: string) {
+function validateExplorerLog(log: ExplorerLogEntry) {
   if (!log) throw new Error('Log is nullish');
   if (!log.transactionHash) throw new Error('Log has no tx hash');
   if (!log.topics || !log.topics.length) throw new Error('Log has no topics');
-  if (topic0 && log.topics[0]?.toLowerCase() !== topic0) throw new Error('Log topic is incorrect');
   if (!log.data) throw new Error('Log has no data to parse');
   if (!log.timeStamp) throw new Error('Log has no timestamp');
 }
@@ -118,20 +116,30 @@ export function toProviderLog(log: ExplorerLogEntry): LogWithTimestamp {
     ...log,
     blockHash: '',
     removed: false,
-    blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-    transactionIndex: BigNumber.from(log.transactionIndex).toNumber(),
-    logIndex: BigNumber.from(log.logIndex).toNumber(),
-    timestamp: BigNumber.from(log.timeStamp).toNumber() * 1000,
+    blockNumber: hexToDecimal(log.blockNumber),
+    timestamp: hexToDecimal(log.timeStamp) * 1000,
+    logIndex: tryHexToDecimal(log.logIndex) || 0,
+    transactionIndex: tryHexToDecimal(log.transactionIndex) || 0,
   };
 }
 
-export async function queryExplorerForTx(chainId: number, txHash: string, useKey = true) {
+export async function queryExplorerForTx(
+  multiProvider: MultiProvider,
+  chainId: number,
+  txHash: string,
+  useKey = true,
+) {
   const params = new URLSearchParams({
     module: 'proxy',
     action: 'eth_getTransactionByHash',
     txHash,
   });
-  const tx = await queryExplorer<providers.TransactionResponse>(chainId, params, useKey);
+  const tx = await queryExplorer<providers.TransactionResponse>(
+    multiProvider,
+    chainId,
+    params,
+    useKey,
+  );
   if (!tx || tx.hash.toLowerCase() !== txHash.toLowerCase()) {
     const msg = 'Invalid tx result';
     logger.error(msg, JSON.stringify(tx), params);
@@ -140,13 +148,23 @@ export async function queryExplorerForTx(chainId: number, txHash: string, useKey
   return tx;
 }
 
-export async function queryExplorerForTxReceipt(chainId: number, txHash: string, useKey = true) {
+export async function queryExplorerForTxReceipt(
+  multiProvider: MultiProvider,
+  chainId: number,
+  txHash: string,
+  useKey = true,
+) {
   const params = new URLSearchParams({
     module: 'proxy',
     action: 'eth_getTransactionReceipt',
     txHash,
   });
-  const tx = await queryExplorer<providers.TransactionReceipt>(chainId, params, useKey);
+  const tx = await queryExplorer<providers.TransactionReceipt>(
+    multiProvider,
+    chainId,
+    params,
+    useKey,
+  );
   if (!tx || tx.transactionHash.toLowerCase() !== txHash.toLowerCase()) {
     const msg = 'Invalid tx result';
     logger.error(msg, JSON.stringify(tx), params);
@@ -156,6 +174,7 @@ export async function queryExplorerForTxReceipt(chainId: number, txHash: string,
 }
 
 export async function queryExplorerForBlock(
+  multiProvider: MultiProvider,
   chainId: number,
   blockNumber?: number | string,
   useKey = true,
@@ -166,7 +185,7 @@ export async function queryExplorerForBlock(
     tag: blockNumber?.toString() || 'latest',
     boolean: 'false',
   });
-  const block = await queryExplorer<providers.Block>(chainId, params, useKey);
+  const block = await queryExplorer<providers.Block>(multiProvider, chainId, params, useKey);
   if (!block || BigNumber.from(block.number).lte(0)) {
     const msg = 'Invalid block result';
     logger.error(msg, JSON.stringify(block), params);

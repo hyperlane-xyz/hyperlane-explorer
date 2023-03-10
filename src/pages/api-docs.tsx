@@ -54,7 +54,7 @@ const ApiDocs: NextPage = () => {
             <div className="text-gray-500 italic">Same as get-messages above</div>
           </ul>
           <h5 className="mt-2 text-gray-600">
-            Action:<code className="ml-2">get-messages</code>, Parameter (1 required):
+            Action:<code className="ml-2">search-messages</code>, Parameter (1 required):
           </h5>
           <ul className="mt-1 pl-3">
             <ParamItem name="query" desc="address or hash to search (string)" />
@@ -76,7 +76,7 @@ function ParamItem({ name, desc }: { name: string; desc: string }) {
 
 const exampleRequest = `const baseUrl = 'https://explorer.hyperlane.xyz/api'
 const action = 'module=message&action=get-messages'
-const messageId = '62d30bde22af368e43f981f65186ff2c2b895a09774a9397f815dcc366793875'
+const messageId = '0x62d30bde22af368e43f981f65186ff2c2b895a09774a9397f815dcc366793875'
 const url =\`\${baseUrl}?\${action}&id=\${messageId}\`;
 const response = await fetch(url, {
   method: "GET", headers: {"Content-Type": "application/json"},
@@ -88,7 +88,7 @@ const exampleResponse = `{
   "message": "OK",
   "result": [
     {
-      "id": "62d30bde22af368e43f981f65186ff2c2b895a09774a9397f815dcc366793875",
+      "id": "0x62d30bde22af368e43f981f65186ff2c2b895a09774a9397f815dcc366793875",
       "status": "delivered",
       "sender": "0x854fd51c04408ad84da3838a4ff7282522f7866e",
       "recipient": "0x1c847335d123632fc7d662ab87ac7872acd920f2",

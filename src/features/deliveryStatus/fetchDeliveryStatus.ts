@@ -1,6 +1,6 @@
 import { constants } from 'ethers';
 
-import { chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { MultiProvider, chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
 import { ensureLeading0x, validateAddress } from '../../utils/addresses';
@@ -32,12 +32,14 @@ export async function fetchDeliveryStatus(
 ): Promise<MessageDeliveryStatusResponse> {
   validateMessage(message);
 
-  const logs = await fetchExplorerLogsForMessage(message);
+  const multiProvider = new MultiProvider();
+  const logs = await fetchExplorerLogsForMessage(multiProvider, message);
 
   if (logs?.length) {
     logger.debug(`Found delivery log for tx ${message.originTransaction.transactionHash}`);
     const log = logs[0]; // Should only be 1 log per message delivery
     const txDetails = await tryFetchTransactionDetails(
+      multiProvider,
       message.destinationChainId,
       log.transactionHash,
     );
@@ -58,7 +60,11 @@ export async function fetchDeliveryStatus(
     const originTxHash = originTransaction.transactionHash;
     const originName = chainIdToMetadata[originChainId].name;
     const environment = getChainEnvironment(originName);
-    const originTxReceipt = await queryExplorerForTxReceipt(originChainId, originTxHash);
+    const originTxReceipt = await queryExplorerForTxReceipt(
+      multiProvider,
+      originChainId,
+      originTxHash,
+    );
     // TODO currently throwing this over the fence to the debugger script
     // which isn't very robust and uses public RPCs. Could be improved
     const debugResult = await debugMessagesForTransaction(
@@ -93,7 +99,7 @@ export async function fetchDeliveryStatus(
   }
 }
 
-async function fetchExplorerLogsForMessage(message: Message) {
+async function fetchExplorerLogsForMessage(multiProvider: MultiProvider, message: Message) {
   const { msgId, originChainId, originTransaction, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${originTransaction.transactionHash}`);
 
@@ -106,12 +112,16 @@ async function fetchExplorerLogsForMessage(message: Message) {
 
   const topic1 = ensureLeading0x(msgId);
   const logsQueryPath = `module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
-  return queryExplorerForLogs(destinationChainId, logsQueryPath, TOPIC_0);
+  return queryExplorerForLogs(multiProvider, destinationChainId, logsQueryPath);
 }
 
-async function tryFetchTransactionDetails(chainId: number, txHash: string) {
+async function tryFetchTransactionDetails(
+  multiProvider: MultiProvider,
+  chainId: number,
+  txHash: string,
+) {
   try {
-    const tx = await queryExplorerForTx(chainId, txHash);
+    const tx = await queryExplorerForTx(multiProvider, chainId, txHash);
     return tx;
   } catch (error) {
     // Since we only need this for the from address, it's not critical.
