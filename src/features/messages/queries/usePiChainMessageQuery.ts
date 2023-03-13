@@ -60,7 +60,7 @@ export function usePiChainMessageQuery(
         );
         return messages;
       } catch (e) {
-        logger.debug('Starting PI messages found for:', sanitizedInput);
+        logger.debug('Error fetching PI messages found for:', sanitizedInput, e);
         return [];
       }
     },
@@ -270,7 +270,7 @@ async function fetchLogsForMsgId(
   // Necessary because DispatchId/ProcessId logs don't contain useful info
   if (logs.length) {
     const txHash = logs[0].transactionHash;
-    logger.debug('Found tx hash with log of msg id', txHash);
+    logger.debug('Found tx hash with log with msg id. Hash:', txHash);
     return (
       fetchLogsForTxHash(chainConfig, { ...query, input: txHash }, multiProvider, useExplorer) || []
     );
@@ -368,33 +368,42 @@ function logToMessage(log: LogWithTimestamp): Message | null {
     return null;
   }
 
-  const bytes = logDesc.args['message'];
-  const message = utils.parseMessage(bytes);
+  try {
+    const multiProvider = getMultiProvider();
+    const bytes = logDesc.args['message'];
+    const message = utils.parseMessage(bytes);
+    const msgId = utils.messageId(bytes);
+    const sender = normalizeAddress(utils.bytes32ToAddress(message.sender));
+    const recipient = normalizeAddress(utils.bytes32ToAddress(message.recipient));
+    const originChainId = multiProvider.getChainId(message.origin);
+    const destinationChainId = multiProvider.getChainId(message.destination);
 
-  const tx: PartialTransactionReceipt = {
-    from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
-    transactionHash: log.transactionHash,
-    blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-    timestamp: log.timestamp,
-    gasUsed: 0, //TODO
-  };
+    const tx: PartialTransactionReceipt = {
+      from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
+      transactionHash: log.transactionHash,
+      blockNumber: BigNumber.from(log.blockNumber).toNumber(),
+      timestamp: log.timestamp,
+      gasUsed: 0, //TODO
+    };
 
-  const multiProvider = getMultiProvider();
-
-  return {
-    id: '', // No db id exists
-    msgId: utils.messageId(bytes),
-    status: MessageStatus.Unknown, // TODO
-    sender: normalizeAddress(utils.bytes32ToAddress(message.sender)),
-    recipient: normalizeAddress(utils.bytes32ToAddress(message.recipient)),
-    originDomainId: message.origin,
-    destinationDomainId: message.destination,
-    originChainId: multiProvider.getChainId(message.origin),
-    destinationChainId: multiProvider.getChainId(message.destination),
-    originTimestamp: log.timestamp,
-    nonce: message.nonce,
-    body: message.body,
-    originTransaction: tx,
-    isPiMsg: true,
-  };
+    return {
+      id: '', // No db id exists
+      msgId,
+      sender,
+      recipient,
+      status: MessageStatus.Unknown, // TODO
+      originDomainId: message.origin,
+      destinationDomainId: message.destination,
+      originChainId,
+      destinationChainId,
+      originTimestamp: log.timestamp,
+      nonce: message.nonce,
+      body: message.body,
+      originTransaction: tx,
+      isPiMsg: true,
+    };
+  } catch (error) {
+    logger.error('Unable to parse log into message', error);
+    return null;
+  }
 }
