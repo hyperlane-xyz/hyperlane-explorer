@@ -142,7 +142,7 @@ export function ConfigureChains() {
           Input a chain metadata config including core contract addresses to enable exploration of
           that chain. See{' '}
           <a
-            href={`${links.docs}/docs/deploy/permissionless-interoperability`}
+            href={`${links.docs}/docs/build-with-hyperlane/guides/finding-my-messages/rest-api#apis-for-permissionless-interoperability-chains`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 text-blue-500 hover:text-blue-400"

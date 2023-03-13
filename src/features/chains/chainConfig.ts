@@ -51,6 +51,15 @@ export function tryParseChainConfig(input: string): ParseResult {
   }
 
   const chainConfig = result.data as ChainConfig;
+
+  // Reject blocksout explorers for now
+  if (chainConfig.blockExplorers?.[0]?.url.includes('blockscout')) {
+    return {
+      success: false,
+      error: 'only Etherscan-based explorers are supported',
+    };
+  }
+
   const mp = getMultiProvider();
   if (
     mp.tryGetChainMetadata(chainConfig.name) ||
