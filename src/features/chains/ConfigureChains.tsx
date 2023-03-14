@@ -107,7 +107,7 @@ export function ConfigureChains() {
           {Object.values(chainConfigs).map((chain) => (
             <tr key={`chain-${chain.chainId}`}>
               <td>
-                <ChainLogo chainId={chain.chainId} size={36} color={true} background={true} />
+                <ChainLogo chainId={chain.chainId} size={32} color={true} background={true} />
               </td>
               <td className={styles.value}>{chain.chainId}</td>
               <td className={styles.value}>{chain.domainId || chain.chainId}</td>
@@ -142,14 +142,14 @@ export function ConfigureChains() {
           Input a chain metadata config including core contract addresses to enable exploration of
           that chain. See{' '}
           <a
-            href={`${links.docs}/docs/build-with-hyperlane/guides/finding-my-messages/rest-api#apis-for-permissionless-interoperability-chains`}
+            href={`${links.docs}/docs/build-with-hyperlane/explorer/configuring-pi-chains`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 text-blue-500 hover:text-blue-400"
           >
             PI Explorer documentation
           </a>{' '}
-          for an example.
+          for examples.
         </p>
         <textarea
           className="mt-4 w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
