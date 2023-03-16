@@ -14,6 +14,7 @@ import { hexToDecimal } from '../../utils/number';
 import { getChainEnvironment } from '../chains/utils';
 import { debugMessagesForTransaction } from '../debugger/debugMessage';
 import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
+import { TX_HASH_ZERO } from '../messages/placeholderMessages';
 
 import {
   MessageDeliveryFailingResult,
@@ -36,7 +37,7 @@ export async function fetchDeliveryStatus(
   const logs = await fetchExplorerLogsForMessage(multiProvider, message);
 
   if (logs?.length) {
-    logger.debug(`Found delivery log for tx ${message.originTransaction.transactionHash}`);
+    logger.debug(`Found delivery log for tx ${message.origin.hash}`);
     const log = logs[0]; // Should only be 1 log per message delivery
     const txDetails = await tryFetchTransactionDetails(
       multiProvider,
@@ -47,23 +48,32 @@ export async function fetchDeliveryStatus(
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
       deliveryTransaction: {
-        from: txDetails?.from || constants.AddressZero,
-        transactionHash: log.transactionHash,
-        blockNumber: hexToDecimal(log.blockNumber),
-        gasUsed: hexToDecimal(log.gasUsed),
         timestamp: hexToDecimal(log.timeStamp) * 1000,
+        hash: log.transactionHash,
+        from: txDetails?.from || constants.AddressZero,
+        to: txDetails?.to || constants.AddressZero,
+        blockHash: txDetails?.blockHash || TX_HASH_ZERO,
+        blockNumber: hexToDecimal(log.blockNumber),
+        mailbox: constants.AddressZero,
+        nonce: txDetails?.nonce || 0,
+        gasLimit: hexToDecimal(txDetails?.gasLimit || 0),
+        gasPrice: hexToDecimal(txDetails?.gasPrice || 0),
+        effectiveGasPrice: hexToDecimal(txDetails?.gasPrice || 0),
+        gasUsed: hexToDecimal(log.gasUsed),
+        cumulativeGasUsed: hexToDecimal(log.gasUsed),
+        maxFeePerGas: hexToDecimal(txDetails?.maxFeePerGas || 0),
+        maxPriorityPerGas: hexToDecimal(txDetails?.maxPriorityFeePerGas || 0),
       },
     };
     return result;
   } else {
-    const { originChainId, originTransaction, nonce } = message;
-    const originTxHash = originTransaction.transactionHash;
+    const { originChainId, origin, nonce } = message;
     const originName = chainIdToMetadata[originChainId].name;
     const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(
       multiProvider,
       originChainId,
-      originTxHash,
+      origin.hash,
     );
     // TODO currently throwing this over the fence to the debugger script
     // which isn't very robust and uses public RPCs. Could be improved
@@ -100,8 +110,8 @@ export async function fetchDeliveryStatus(
 }
 
 async function fetchExplorerLogsForMessage(multiProvider: MultiProvider, message: Message) {
-  const { msgId, originChainId, originTransaction, destinationChainId } = message;
-  logger.debug(`Searching for delivery logs for tx ${originTransaction.transactionHash}`);
+  const { msgId, originChainId, origin, destinationChainId } = message;
+  logger.debug(`Searching for delivery logs for tx ${origin.hash}`);
 
   const originName = chainIdToMetadata[originChainId].name;
   const destName = chainIdToMetadata[destinationChainId].name;
@@ -131,6 +141,7 @@ async function tryFetchTransactionDetails(
   }
 }
 
+// TODO use zod here
 function validateMessage(message: Message) {
   const {
     originDomainId,
@@ -138,7 +149,7 @@ function validateMessage(message: Message) {
     originChainId,
     destinationChainId,
     nonce,
-    originTransaction,
+    origin,
     recipient,
     sender,
   } = message;
@@ -152,7 +163,7 @@ function validateMessage(message: Message) {
   if (!chainIdToMetadata[destinationChainId]?.name)
     throw new Error(`No name found for chain ${destinationChainId}`);
   if (!nonce) throw new Error(`Invalid nonce ${nonce}`);
-  if (!originTransaction?.transactionHash) throw new Error(`Invalid or missing origin tx`);
+  if (!origin?.hash) throw new Error(`Invalid or missing origin tx`);
   validateAddress(recipient, 'validateMessage recipient');
   validateAddress(sender, 'validateMessage sender');
 }

@@ -1,6 +1,6 @@
-import { trimLeading0x } from '../../../utils/addresses';
 import { adjustToUtcTime } from '../../../utils/time';
 
+import { stringToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
 
 /**
@@ -31,25 +31,25 @@ export function buildMessageQuery(
   if (idType === MessageIdentifierType.Id) {
     whereClause = 'msg_id: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.Sender) {
-    whereClause = 'sender: {_ilike: $identifier}';
+    whereClause = 'sender: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.Recipient) {
-    whereClause = 'recipient: {_ilike: $identifier}';
+    whereClause = 'recipient: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.OriginTxHash) {
-    whereClause = 'transaction: {hash: {_ilike: $identifier}}';
+    whereClause = 'origin_tx_hash: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.OriginTxSender) {
-    whereClause = 'transaction: {sender: {_ilike: $identifier}}';
+    whereClause = 'origin_tx_sender: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.DestinationTxHash) {
-    whereClause = 'delivered_message: {transaction: {hash: {_ilike: $identifier}}}';
+    whereClause = 'destination_tx_hash: {_eq: $identifier}';
   } else if (idType === MessageIdentifierType.DestinationTxSender) {
-    whereClause = 'delivered_message: {transaction: {sender: {_ilike: $identifier}}}';
+    whereClause = 'destination_tx_sender: {_eq: $identifier}';
   } else {
     throw new Error(`Invalid id type: ${idType}`);
   }
-  const variables = { identifier: trimLeading0x(idValue) };
+  const variables = { identifier: stringToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: String!){
-    message(
+  query ($identifier: bytea!){
+    message_view(
       where: {${whereClause}}, 
       limit: ${limit}
     ) {
@@ -65,10 +65,10 @@ const searchWhereClause = `
     {msg_id: {_eq: $search}},
     {sender: {_eq: $search}},
     {recipient: {_eq: $search}},
-    {transaction: {hash: {_eq: $search}}},
-    {transaction: {sender: {_eq: $search}}},
-    {delivered_message: {transaction: {hash: {_eq: $search}}}},
-    {delivered_message: {transaction: {sender: {_eq: $search}}}}
+    {origin_tx_hash: {_eq: $search}},
+    {origin_tx_sender: {_eq: $search}},
+    {destination_tx_hash: {_eq: $search}},
+    {destination_tx_sender: {_eq: $search}},
   ]}
 `;
 
@@ -88,7 +88,7 @@ export function buildMessageSearchQuery(
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
-    search: hasInput ? trimLeading0x(searchInput) : undefined,
+    search: hasInput ? stringToPostgresBytea(searchInput) : undefined,
     originChains,
     destinationChains,
     startTime,
@@ -96,18 +96,18 @@ export function buildMessageSearchQuery(
   };
 
   const query = `
-  query ($search: String, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) {
-    message(
+  query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) {
+    message_view(
       where: {
         _and: [
-          ${originFilter ? '{origin: {_in: $originChains}},' : ''}
-          ${destFilter ? '{destination: {_in: $destinationChains}},' : ''}
-          ${startTimeFilter ? '{timestamp: {_gte: $startTime}},' : ''}
-          ${endTimeFilter ? '{timestamp: {_lte: $endTime}},' : ''}
+          ${originFilter ? '{origin_chain_id: {_in: $originChains}},' : ''}
+          ${destFilter ? '{destination_chain_id: {_in: $destinationChains}},' : ''}
+          ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
+          ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
           ${hasInput ? searchWhereClause : ''}
         ]
       },
-      order_by: {timestamp: desc},
+      order_by: {send_occurred_at: desc},
       limit: ${limit}
       ) {
         ${useStub ? messageStubFragment : messageDetailsFragment}

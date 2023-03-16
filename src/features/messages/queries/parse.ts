@@ -1,15 +1,13 @@
-import { TEST_RECIPIENT_ADDRESS } from '../../../consts/addresses';
-import { Message, MessageStatus, MessageStub, PartialTransactionReceipt } from '../../../types';
-import { areAddressesEqual, ensureLeading0x } from '../../../utils/addresses';
+import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
+import { postgresByteaToString } from './encoding';
 import {
   MessageEntry,
   MessageStubEntry,
   MessagesQueryResult,
   MessagesStubQueryResult,
-  TransactionEntry,
 } from './fragments';
 
 /**
@@ -20,33 +18,40 @@ import {
  */
 
 export function parseMessageStubResult(data: MessagesStubQueryResult | undefined): MessageStub[] {
-  if (!data?.message?.length) return [];
-  return data.message.map(parseMessageStub).filter((m): m is MessageStub => !!m);
+  if (!data?.message_view?.length) return [];
+  return data.message_view.map(parseMessageStub).filter((m): m is MessageStub => !!m);
 }
 
 export function parseMessageQueryResult(data: MessagesQueryResult | undefined): Message[] {
-  if (!data?.message?.length) return [];
-  return data.message.map(parseMessage).filter((m): m is Message => !!m);
+  if (!data?.message_view?.length) return [];
+  return data.message_view.map(parseMessage).filter((m): m is Message => !!m);
 }
 
 function parseMessageStub(m: MessageStubEntry): MessageStub | null {
   try {
-    const status = getMessageStatus(m);
-    const destinationTimestamp = m.delivered_message?.transaction
-      ? parseTimestampString(m.delivered_message.transaction.block.timestamp)
-      : undefined;
     return {
+      status: getMessageStatus(m),
       id: m.id.toString(),
-      msgId: ensureLeading0x(m.msg_id),
-      status,
-      sender: parsePaddedAddress(m.sender),
-      recipient: parsePaddedAddress(m.recipient),
-      originDomainId: m.origin,
-      destinationDomainId: m.destination,
-      originChainId: m.origin,
-      destinationChainId: m.destination,
-      originTimestamp: parseTimestampString(m.timestamp),
-      destinationTimestamp,
+      msgId: postgresByteaToString(m.msg_id),
+      nonce: m.nonce,
+      sender: postgresByteaToString(m.sender),
+      recipient: postgresByteaToString(m.recipient),
+      originChainId: m.origin_chain_id,
+      originDomainId: m.origin_domain_id,
+      destinationChainId: m.destination_chain_id,
+      destinationDomainId: m.destination_domain_id,
+      origin: {
+        timestamp: parseTimestampString(m.send_occurred_at),
+        hash: postgresByteaToString(m.origin_tx_hash),
+        from: postgresByteaToString(m.origin_tx_sender),
+      },
+      destination: m.is_delivered
+        ? {
+            timestamp: parseTimestampString(m.delivery_occurred_at!),
+            hash: postgresByteaToString(m.destination_tx_hash!),
+            from: postgresByteaToString(m.destination_tx_sender!),
+          }
+        : undefined,
     };
   } catch (error) {
     logger.error('Error parsing message stub', error);
@@ -59,21 +64,47 @@ function parseMessage(m: MessageEntry): Message | null {
     const stub = parseMessageStub(m);
     if (!stub) throw new Error('Message stub required');
 
-    const destinationTransaction = m.delivered_message?.transaction
-      ? parseTransaction(m.delivered_message.transaction)
-      : undefined;
-
-    const body = decodePostgresBinaryHex(m.msg_body ?? '');
-    const isTestRecipient = areAddressesEqual(stub.recipient, TEST_RECIPIENT_ADDRESS);
-    const decodedBody = isTestRecipient ? tryUtf8DecodeBytes(body) : undefined;
+    const body = postgresByteaToString(m.message_body ?? '');
+    const decodedBody = tryUtf8DecodeBytes(body);
 
     return {
       ...stub,
-      nonce: m.nonce,
       body,
       decodedBody,
-      originTransaction: parseTransaction(m.transaction),
-      destinationTransaction,
+      origin: {
+        ...stub.origin,
+        blockHash: postgresByteaToString(m.origin_block_hash),
+        blockNumber: m.origin_block_height,
+        mailbox: postgresByteaToString(m.origin_mailbox),
+        nonce: m.origin_tx_nonce,
+        to: postgresByteaToString(m.origin_tx_recipient),
+        gasLimit: m.origin_tx_gas_limit,
+        gasPrice: m.origin_tx_gas_price,
+        effectiveGasPrice: m.origin_tx_effective_gas_price,
+        gasUsed: m.origin_tx_gas_used,
+        cumulativeGasUsed: m.origin_tx_cumulative_gas_used,
+        maxFeePerGas: m.origin_tx_max_fee_per_gas,
+        maxPriorityPerGas: m.origin_tx_max_priority_fee_per_gas,
+      },
+      destination: stub.destination
+        ? {
+            ...stub.destination,
+            blockHash: postgresByteaToString(m.destination_block_hash!),
+            blockNumber: m.destination_block_height!,
+            mailbox: postgresByteaToString(m.destination_mailbox!),
+            nonce: m.destination_tx_nonce!,
+            to: postgresByteaToString(m.destination_tx_recipient!),
+            gasLimit: m.destination_tx_gas_limit!,
+            gasPrice: m.destination_tx_gas_price!,
+            effectiveGasPrice: m.destination_tx_effective_gas_price!,
+            gasUsed: m.destination_tx_gas_used!,
+            cumulativeGasUsed: m.destination_tx_cumulative_gas_used!,
+            maxFeePerGas: m.destination_tx_max_fee_per_gas!,
+            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas!,
+          }
+        : undefined,
+      totalGasAmount: m.total_gas_amount,
+      totalPayment: m.total_payment,
     };
   } catch (error) {
     logger.error('Error parsing message', error);
@@ -81,41 +112,16 @@ function parseMessage(m: MessageEntry): Message | null {
   }
 }
 
-function parseTransaction(t: TransactionEntry): PartialTransactionReceipt {
-  return {
-    from: ensureLeading0x(t.sender),
-    transactionHash: ensureLeading0x(t.hash),
-    blockNumber: t.block.height,
-    gasUsed: t.gas_used,
-    timestamp: parseTimestampString(t.block.timestamp),
-  };
-}
-
 function parseTimestampString(t: string) {
   const asUtc = t.at(-1) === 'Z' ? t : t + 'Z';
   return new Date(asUtc).getTime();
 }
 
-function parsePaddedAddress(a: string) {
-  if (!a || a.length < 40) return '';
-  return ensureLeading0x(a.slice(-40));
-}
-
-// https://github.com/bendrucker/postgres-bytea/blob/master/decoder.js
-function decodePostgresBinaryHex(b: string) {
-  const buffer = Buffer.from(b.substring(2), 'hex');
-  return ensureLeading0x(buffer.toString('hex'));
-}
-
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
-  const { delivered_message, message_states } = m;
-  if (delivered_message) {
+  if (m.is_delivered) {
     return MessageStatus.Delivered;
-  } else if (message_states.length > 0) {
-    const latestState = message_states.at(-1);
-    if (latestState && !latestState.processable) {
-      return MessageStatus.Failing;
-    }
+  } else {
+    // TODO consider gas and failure conditions here
+    return MessageStatus.Pending;
   }
-  return MessageStatus.Pending;
 }

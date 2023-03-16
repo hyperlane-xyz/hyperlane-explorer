@@ -9,7 +9,7 @@ import { parseMessageStubResult } from '../queries/parse';
 
 const AUTO_REFRESH_DELAY = 10000;
 const LATEST_QUERY_LIMIT = 12;
-const SEARCH_QUERY_LIMIT = 40;
+const SEARCH_QUERY_LIMIT = 50;
 
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
   if (!input) return false;

@@ -7,7 +7,7 @@ import { utils } from '@hyperlane-xyz/utils';
 
 import { getMultiProvider } from '../../../multiProvider';
 import { useStore } from '../../../store';
-import { Message, MessageStatus, PartialTransactionReceipt } from '../../../types';
+import { LogWithTimestamp, Message, MessageStatus } from '../../../types';
 import {
   ensureLeading0x,
   isValidAddress,
@@ -23,7 +23,6 @@ import {
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 
-import { LogWithTimestamp } from './types';
 import { isValidSearchQuery } from './useMessageQuery';
 
 const PROVIDER_LOGS_BLOCK_WINDOW = 100_000;
@@ -49,7 +48,7 @@ export function usePiChainMessageQuery(
     async () => {
       const hasInput = !!sanitizedInput;
       const isValidInput = isValidSearchQuery(sanitizedInput, true);
-      if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return null;
+      if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return [];
       logger.debug('Starting PI Chain message query for:', sanitizedInput);
       // TODO convert timestamps to from/to blocks here
       const query = { input: ensureLeading0x(sanitizedInput) };
@@ -141,7 +140,7 @@ export async function fetchMessagesFromPiChain(
     return [];
   }
 
-  return logs.map(logToMessage).filter((m): m is Message => !!m);
+  return logs.map((l) => logToMessage(l, chainConfig)).filter((m): m is Message => !!m);
 }
 
 async function fetchLogsForAddress(
@@ -358,7 +357,7 @@ async function tryFetchBlockFromProvider(
   }
 }
 
-function logToMessage(log: LogWithTimestamp): Message | null {
+function logToMessage(log: LogWithTimestamp, chainConfig: ChainConfig): Message | null {
   let logDesc: ethers.utils.LogDescription;
   try {
     logDesc = mailbox.parseLog(log);
@@ -378,28 +377,36 @@ function logToMessage(log: LogWithTimestamp): Message | null {
     const originChainId = multiProvider.getChainId(message.origin);
     const destinationChainId = multiProvider.getChainId(message.destination);
 
-    const tx: PartialTransactionReceipt = {
-      from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
-      transactionHash: log.transactionHash,
-      blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-      timestamp: log.timestamp,
-      gasUsed: 0, //TODO
-    };
-
     return {
       id: '', // No db id exists
       msgId,
       sender,
       recipient,
       status: MessageStatus.Unknown, // TODO
-      originDomainId: message.origin,
-      destinationDomainId: message.destination,
+      nonce: message.nonce,
       originChainId,
       destinationChainId,
-      originTimestamp: log.timestamp,
-      nonce: message.nonce,
+      originDomainId: message.origin,
+      destinationDomainId: message.destination,
       body: message.body,
-      originTransaction: tx,
+      origin: {
+        timestamp: log.timestamp,
+        hash: log.transactionHash,
+        from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
+        to: log.to ? normalizeAddress(log.to) : constants.AddressZero,
+        blockHash: log.blockHash,
+        blockNumber: BigNumber.from(log.blockNumber).toNumber(),
+        mailbox: chainConfig.contracts.mailbox,
+        nonce: 0,
+        // TODO get more gas info from tx
+        gasLimit: 0,
+        gasPrice: 0,
+        effectiveGasPrice: 0,
+        gasUsed: 0,
+        cumulativeGasUsed: 0,
+        maxFeePerGas: 0,
+        maxPriorityPerGas: 0,
+      },
       isPiMsg: true,
     };
   } catch (error) {

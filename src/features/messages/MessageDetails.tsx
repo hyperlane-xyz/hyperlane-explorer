@@ -16,7 +16,7 @@ import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliverySt
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
-import { TransactionCard, TransactionCardDebugInfo } from './cards/TransactionCard';
+import { TransactionCard } from './cards/TransactionCard';
 import { isIcaMessage } from './ica';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { MessageIdentifierType, buildMessageQuery } from './queries/build';
@@ -38,46 +38,34 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
     variables,
     pause: !!propMessage,
   });
-  const messages = useMemo(() => parseMessageQueryResult(data), [data]);
+  const graphQueryMessages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   // Extracting message properties
-  const message = propMessage || messages[0] || PLACEHOLDER_MESSAGE;
-  const isMessageFound = !!propMessage || messages.length > 0;
+  const message = propMessage || graphQueryMessages[0] || PLACEHOLDER_MESSAGE;
+  const isMessageFound = !!propMessage || graphQueryMessages.length > 0;
   const shouldBlur = !isMessageFound;
+  const isIcaMsg = isIcaMessage(message);
+
+  // If message isn't delivered, query delivery-status api for
+  // more recent update and possibly debug info
+  const { messageWithDeliveryStatus, debugInfo } = useMessageDeliveryStatus(
+    message,
+    isMessageFound,
+  );
+
   const {
     status,
     originChainId,
     destinationChainId: destChainId,
-    originTransaction,
-    destinationTransaction: destTransaction,
-  } = message;
-  const isIcaMsg = isIcaMessage(message);
-
-  // Message status query + resolution
-  const { data: deliveryStatusResponse } = useMessageDeliveryStatus(message, isMessageFound);
-  let resolvedDestTx = destTransaction;
-  let resolvedMsgStatus = status;
-  let debugInfo: TransactionCardDebugInfo | undefined = undefined;
-  // If there's a delivery status response, use those values instead
-  if (deliveryStatusResponse) {
-    resolvedMsgStatus = deliveryStatusResponse.status;
-    if (deliveryStatusResponse.status === MessageStatus.Delivered) {
-      resolvedDestTx = deliveryStatusResponse.deliveryTransaction;
-    } else if (deliveryStatusResponse.status === MessageStatus.Failing) {
-      debugInfo = {
-        status: deliveryStatusResponse.debugStatus,
-        details: deliveryStatusResponse.debugDetails,
-        originChainId,
-        originTxHash: originTransaction.transactionHash,
-      };
-    }
-  }
+    origin,
+    destination,
+  } = messageWithDeliveryStatus;
 
   // Query re-executor
   const reExecutor = useCallback(() => {
-    if (propMessage || (isMessageFound && resolvedMsgStatus !== MessageStatus.Delivered)) return;
+    if (propMessage || (isMessageFound && status !== MessageStatus.Delivered)) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [propMessage, isMessageFound, resolvedMsgStatus, reexecuteQuery]);
+  }, [propMessage, isMessageFound, status, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   // Banner color setter
@@ -88,14 +76,14 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
       logger.error('Error fetching message details', error);
       toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
       setBanner('bg-red-500');
-    } else if (resolvedMsgStatus === MessageStatus.Failing) {
+    } else if (status === MessageStatus.Failing) {
       setBanner('bg-red-500');
     } else if (!isMessageFound) {
       setBanner('bg-gray-500');
     } else {
       setBanner('');
     }
-  }, [error, isFetching, resolvedMsgStatus, isMessageFound, setBanner]);
+  }, [error, isFetching, status, isMessageFound, setBanner]);
   useEffect(() => {
     return () => setBanner('');
   }, [setBanner]);
@@ -107,7 +95,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
           isIcaMsg ? 'ICA ' : ''
         } Message to ${getChainDisplayName(destChainId)}`}</h2>
         <StatusHeader
-          messageStatus={resolvedMsgStatus}
+          messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={!!error}
@@ -117,28 +105,21 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
         <TransactionCard
           title="Origin Transaction"
           chainId={originChainId}
-          status={resolvedMsgStatus}
-          transaction={originTransaction}
+          status={status}
+          transaction={origin}
           helpText={helpText.origin}
           shouldBlur={shouldBlur}
         />
         <TransactionCard
           title="Destination Transaction"
           chainId={destChainId}
-          status={resolvedMsgStatus}
-          transaction={resolvedDestTx}
+          status={status}
+          transaction={destination}
           debugInfo={debugInfo}
           helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />
-        {!message.isPiMsg && (
-          <TimelineCard
-            message={message}
-            resolvedStatus={resolvedMsgStatus}
-            resolvedDestinationTx={resolvedDestTx}
-            shouldBlur={shouldBlur}
-          />
-        )}
+        {!message.isPiMsg && <TimelineCard message={message} shouldBlur={shouldBlur} />}
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>

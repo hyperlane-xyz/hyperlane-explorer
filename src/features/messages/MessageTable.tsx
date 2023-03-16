@@ -53,8 +53,8 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
     recipient,
     originChainId,
     destinationChainId,
-    originTimestamp,
-    destinationTimestamp,
+    origin,
+    destination,
   } = message;
 
   let statusColor = 'bg-beige-500';
@@ -89,7 +89,7 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
         {shortenAddress(recipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
-        {getHumanReadableTimeString(originTimestamp)}
+        {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       <LinkCell
         id={msgId}
@@ -97,8 +97,8 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
         tdClasses="hidden lg:table-cell text-center px-4"
         aClasses={styles.valueTruncated}
       >
-        {destinationTimestamp
-          ? getHumanReadableDuration(destinationTimestamp - originTimestamp, 3)
+        {destination?.timestamp
+          ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
           : '-'}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center justify-center">

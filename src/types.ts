@@ -1,11 +1,4 @@
-// Modeled after ethers.providers.TransactionReceipt
-export interface PartialTransactionReceipt {
-  from: Address;
-  transactionHash: string;
-  blockNumber: number;
-  gasUsed: number;
-  timestamp: number;
-}
+import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
 export enum MessageStatus {
@@ -15,25 +8,54 @@ export enum MessageStatus {
   Failing = 'failing',
 }
 
+export interface MessageTxStub {
+  timestamp: number;
+  hash: string;
+  from: Address;
+}
+
+export interface MessageTx extends MessageTxStub {
+  to: Address;
+  blockHash: string;
+  blockNumber: number;
+  mailbox: Address;
+  nonce: number;
+  gasLimit: number;
+  gasPrice: number;
+  effectiveGasPrice;
+  gasUsed: number;
+  cumulativeGasUsed: number;
+  maxFeePerGas: number;
+  maxPriorityPerGas: number;
+}
+
 export interface MessageStub {
+  status: MessageStatus;
   id: string; // Database id
   msgId: string; // Message hash
-  status: MessageStatus;
+  nonce: number; // formerly leafIndex
   sender: Address;
   recipient: Address;
-  originDomainId: number;
-  destinationDomainId: number;
   originChainId: number;
+  originDomainId: number;
   destinationChainId: number;
-  originTimestamp: number; // Note, equivalent to timestamp in originTransaction
-  destinationTimestamp?: number; // Note, equivalent to timestamp in destinationTransaction
+  destinationDomainId: number;
+  origin: MessageTxStub;
+  destination?: MessageTxStub;
   isPiMsg?: boolean;
 }
 
 export interface Message extends MessageStub {
-  nonce: number; // formerly leafIndex
   body: string;
   decodedBody?: string;
-  originTransaction: PartialTransactionReceipt;
-  destinationTransaction?: PartialTransactionReceipt;
+  origin: MessageTx;
+  destination?: MessageTx;
+  totalGasAmount?: number;
+  totalPayment?: number;
+}
+
+export interface LogWithTimestamp extends providers.Log {
+  timestamp: number;
+  from?: Address;
+  to?: Address;
 }

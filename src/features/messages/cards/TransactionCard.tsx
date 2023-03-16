@@ -6,7 +6,7 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
 import { getMultiProvider } from '../../../multiProvider';
-import { MessageStatus, PartialTransactionReceipt } from '../../../types';
+import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
@@ -18,7 +18,7 @@ interface TransactionCardProps {
   title: string;
   chainId: number;
   status: MessageStatus;
-  transaction?: PartialTransactionReceipt;
+  transaction?: MessageTx;
   debugInfo?: TransactionCardDebugInfo;
   helpText: string;
   shouldBlur: boolean;
@@ -40,7 +40,7 @@ export function TransactionCard({
   helpText,
   shouldBlur,
 }: TransactionCardProps) {
-  const hash = transaction?.transactionHash;
+  const hash = transaction?.hash;
   const txExplorerLink = hash ? getMultiProvider().tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
     <Card classes="flex-1 min-w-fit space-y-4">
@@ -65,7 +65,7 @@ export function TransactionCard({
           <KeyValueRow
             label="Tx hash:"
             labelWidth="w-16"
-            display={transaction.transactionHash}
+            display={transaction.hash}
             displayWidth="w-60 sm:w-64"
             showCopy={true}
             blurValue={shouldBlur}

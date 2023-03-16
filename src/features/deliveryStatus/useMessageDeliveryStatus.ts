@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
 import { Message, MessageStatus } from '../../types';
@@ -7,10 +7,10 @@ import { logger } from '../../utils/logger';
 
 import type { MessageDeliveryStatusResponse } from './types';
 
-// TODO: Deprecate this to simplify message details page
+// TODO: Consider deprecating this to simplify message details page
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   const serializedMessage = JSON.stringify(message);
-  const queryResult = useQuery(
+  const { data, error } = useQuery(
     ['messageProcessTx', serializedMessage, isReady],
     async () => {
       if (!isReady || !message || message.status === MessageStatus.Delivered || message.isPiMsg)
@@ -35,12 +35,38 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   );
 
   // Show toast on error
-  const error = queryResult.error;
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);
       toast.error(`${error}`);
     }
   }, [error]);
-  return queryResult;
+
+  const [messageWithDeliveryStatus, debugInfo] = useMemo(() => {
+    if (data?.status === MessageStatus.Delivered) {
+      return [
+        {
+          ...message,
+          status: MessageStatus.Delivered,
+          destination: data.deliveryTransaction,
+        },
+      ];
+    } else if (data?.status === MessageStatus.Failing) {
+      return [
+        {
+          ...message,
+          status: MessageStatus.Failing,
+        },
+        {
+          status: data.debugStatus,
+          details: data.debugDetails,
+          originChainId: message.originChainId,
+          originTxHash: message.origin.hash,
+        },
+      ];
+    }
+    return [message];
+  }, [message, data]);
+
+  return { messageWithDeliveryStatus, debugInfo };
 }

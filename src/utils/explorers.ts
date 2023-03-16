@@ -3,7 +3,7 @@ import { BigNumber, providers } from 'ethers';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { config } from '../consts/config';
-import type { LogWithTimestamp } from '../features/messages/queries/types';
+import type { LogWithTimestamp } from '../types';
 
 import { logger } from './logger';
 import { hexToDecimal, tryHexToDecimal } from './number';
