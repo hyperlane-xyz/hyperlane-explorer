@@ -1294,14 +1294,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:1.2.1":
-  version: 1.2.1
-  resolution: "@hyperlane-xyz/core@npm:1.2.1"
+"@hyperlane-xyz/core@npm:1.2.2":
+  version: 1.2.2
+  resolution: "@hyperlane-xyz/core@npm:1.2.2"
   dependencies:
-    "@hyperlane-xyz/utils": 1.2.1
+    "@hyperlane-xyz/utils": 1.2.2
     "@openzeppelin/contracts": ^4.8.0
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-  checksum: e1b7e6c36364558663602107343d267453e8071400d5bab1ca71681a1cc13cef88e94ab830699740790d0abd3cad8d565ccd3f04fdc0ba30138809fd8a94ad42
+  checksum: f20bdb6aed949a5b4a16fbb5bbd232647c39f515cc68985d9445f76082c190856e99d80f9ff0565febdd55047e4b1e0b111345a08c68971574fb3a87e5c0cff5
   languageName: node
   linkType: hard
 
@@ -1310,7 +1310,7 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": ^1.7.11
-    "@hyperlane-xyz/sdk": 1.2.1
+    "@hyperlane-xyz/sdk": 1.2.2
     "@hyperlane-xyz/widgets": 1.2.2
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.11.0
@@ -1348,28 +1348,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/sdk@npm:1.2.1":
-  version: 1.2.1
-  resolution: "@hyperlane-xyz/sdk@npm:1.2.1"
+"@hyperlane-xyz/sdk@npm:1.2.2":
+  version: 1.2.2
+  resolution: "@hyperlane-xyz/sdk@npm:1.2.2"
   dependencies:
-    "@hyperlane-xyz/core": 1.2.1
-    "@hyperlane-xyz/utils": 1.2.1
+    "@hyperlane-xyz/core": 1.2.2
+    "@hyperlane-xyz/utils": 1.2.2
     "@wagmi/chains": ^0.2.6
     coingecko-api: ^1.0.10
     cross-fetch: ^3.1.5
     debug: ^4.3.4
     ethers: ^5.7.2
     zod: ^3.21.2
-  checksum: 6fd7a276f6aca00ee4e0df560c5bee70adeff4bcc1193b0e34c4edb06df89fdc979171fe6cc7fba37b4a8c24049e0d37e3208d6bc026cae649a68cb10853909c
+  checksum: 5e6e856e413474ab9a241ce8c507683db7ff6933649d58d17323deff7c13393ce2c7b973bbd404bdd99409ff883d934b386a1e7c1830fa7257c08a893c742ceb
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:1.2.1":
-  version: 1.2.1
-  resolution: "@hyperlane-xyz/utils@npm:1.2.1"
+"@hyperlane-xyz/utils@npm:1.2.2":
+  version: 1.2.2
+  resolution: "@hyperlane-xyz/utils@npm:1.2.2"
   dependencies:
     ethers: ^5.7.2
-  checksum: ac8e88bd9492e2c5dd5daaa5e81afdef1aaca68f114abc3e5aa100e286f5e071734108da7ef23c161bd90e0561180a3ca202b630d68269fa5425e84b05cdd5ef
+  checksum: ac118a1604eb3d14064ccfc6208735ea6fbf909cf178592a22570864fcbce4ba55833e0bb7ec0942240eec7db36412ec21ea4ce10f3c3dd0167213c6734b302b
   languageName: node
   linkType: hard
 
