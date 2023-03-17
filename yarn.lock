@@ -1311,7 +1311,7 @@ __metadata:
   dependencies:
     "@headlessui/react": ^1.7.11
     "@hyperlane-xyz/sdk": 1.2.1
-    "@hyperlane-xyz/widgets": 1.2.2-beta0
+    "@hyperlane-xyz/widgets": 1.2.2
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.11.0
     "@tanstack/react-query": ^4.24.10
@@ -1373,14 +1373,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:1.2.2-beta0":
-  version: 1.2.2-beta0
-  resolution: "@hyperlane-xyz/widgets@npm:1.2.2-beta0"
+"@hyperlane-xyz/widgets@npm:1.2.2":
+  version: 1.2.2
+  resolution: "@hyperlane-xyz/widgets@npm:1.2.2"
   peerDependencies:
     "@hyperlane-xyz/sdk": ^1.2
     react: ^18
     react-dom: ^18
-  checksum: ba4bc62e28f99576c0099b3e26dbd0b5ea974345da9aab55b1c7fc4c5eb321b35456a7952d730ebb74f40c824bcf88ce06cdaf4e08d9d8f4b0fbb0f4cd0628bf
+  checksum: bbe6a3180555f214aac5897e2837fa1d15f99d4fe931cd194ba83282be9606b348aa46d36a274f9226f36cf7b69bd0e30b73168e0593eaec6d642b9042a2dc11
   languageName: node
   linkType: hard
 
