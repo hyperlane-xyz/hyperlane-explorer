@@ -102,7 +102,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
           isError={!!error}
         />
       </div>
-      <div className="flex flex-wrap items-stretch justify-between mt-5 gap-4">
+      <div className="flex flex-wrap items-stretch justify-between mt-5 gap-3">
         <TransactionCard
           title="Origin Transaction"
           chainId={originChainId}

@@ -45,7 +45,7 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <div className="flex flex-wrap gap-x-12 gap-y-4">
+      <div className="flex flex-wrap gap-x-20 gap-y-4">
         <KeyValueRow
           label="Total payments:"
           labelWidth="w-28"

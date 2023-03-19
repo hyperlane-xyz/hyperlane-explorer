@@ -43,7 +43,7 @@ export function TransactionCard({
   const hash = transaction?.hash;
   const txExplorerLink = hash ? getMultiProvider().tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
-    <Card classes="flex-1 min-w-fit space-y-4">
+    <Card classes="flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainLogo chainId={chainId} />
