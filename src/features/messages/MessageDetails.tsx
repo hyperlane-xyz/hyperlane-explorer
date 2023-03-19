@@ -14,6 +14,7 @@ import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
+import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard } from './cards/TransactionCard';
@@ -121,6 +122,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
         />
         {!message.isPiMsg && <TimelineCard message={message} shouldBlur={shouldBlur} />}
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
+        {!message.isPiMsg && <GasDetailsCard message={message} shouldBlur={shouldBlur} />}
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
     </>
