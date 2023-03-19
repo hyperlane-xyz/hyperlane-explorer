@@ -70,36 +70,38 @@ export function ContentDetailsCard({
           />
         </div>
       </div>
-      <KeyValueRow
-        label="Message Id:"
-        labelWidth="w-20"
-        display={msgId}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Sender:"
-        labelWidth="w-20"
-        display={sender}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Recipient:"
-        labelWidth="w-20"
-        display={recipient}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Nonce:"
-        labelWidth="w-20"
-        display={nonce.toString()}
-        blurValue={shouldBlur}
-      />
+      <div className="flex flex-wrap gap-x-6 gap-y-4">
+        <KeyValueRow
+          label="Identifer:"
+          labelWidth="w-16"
+          display={msgId}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Nonce:"
+          labelWidth="w-16"
+          display={nonce.toString()}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Sender:"
+          labelWidth="w-16"
+          display={sender}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Recipient:"
+          labelWidth="w-16"
+          display={recipient}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+      </div>
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>

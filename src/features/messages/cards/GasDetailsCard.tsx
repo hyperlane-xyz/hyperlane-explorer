@@ -25,7 +25,7 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
   return (
     <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <Image src={FuelPump} width={24} height={24} alt="" />
+        <Image src={FuelPump} width={24} height={24} alt="" className="opacity-70" />
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">Interchain Gas Payments</h3>
           <HelpIcon
@@ -45,24 +45,26 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <KeyValueRow
-        label="Total gas amount:"
-        labelWidth="w-32"
-        display={totalGasAmount?.toString() || '0'}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Total gas payments:"
-        labelWidth="w-32"
-        display={totalPaymentWei ? `${totalPaymentWei} (${totalPaymentGwei} gwei)` : '0'}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Average gas price:"
-        labelWidth="w-32"
-        display={avgPrice ? `${avgPrice.wei} (${avgPrice.gwei} gwei)` : '-'}
-        blurValue={shouldBlur}
-      />
+      <div className="flex flex-wrap gap-x-12 gap-y-4">
+        <KeyValueRow
+          label="Total payments:"
+          labelWidth="w-28"
+          display={totalPaymentWei ? `${totalPaymentWei} (${totalPaymentGwei} gwei)` : '0'}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Average gas price:"
+          labelWidth="w-28"
+          display={avgPrice ? `${avgPrice.wei} (${avgPrice.gwei} gwei)` : '-'}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Total gas amount:"
+          labelWidth="w-28"
+          display={totalGasAmount?.toString() || '0'}
+          blurValue={shouldBlur}
+        />
+      </div>
     </Card>
   );
 }

@@ -64,7 +64,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
 
   // Query re-executor
   const reExecutor = useCallback(() => {
-    if (propMessage || (isMessageFound && status !== MessageStatus.Delivered)) return;
+    if (propMessage || (isMessageFound && status === MessageStatus.Delivered)) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [propMessage, isMessageFound, status, reexecuteQuery]);
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
