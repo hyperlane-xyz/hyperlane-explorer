@@ -28,14 +28,14 @@ const unitOptions = [
 export function GasDetailsCard({ message, shouldBlur }: Props) {
   const [unit, setUnit] = useState(unitOptions[0].value);
 
-  const { totalGasAmount, totalPayment: totalPaymentWei } = message;
+  const { totalGasAmount, totalPayment: totalPaymentWei, numPayments } = message;
   const paymentFormatted = fromWei(totalPaymentWei, unit).toString();
   const avgPrice = computeAvgGasPrice(unit, totalGasAmount, totalPaymentWei);
 
   return (
-    <Card classes="w-full space-y-4">
+    <Card classes="w-full space-y-4 relative">
       <div className="flex items-center justify-between">
-        <Image src={FuelPump} width={24} height={24} alt="" className="opacity-70" />
+        <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">Interchain Gas Payments</h3>
           <HelpIcon
@@ -55,24 +55,34 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <div className="flex flex-wrap gap-x-16 gap-y-4 mr-32">
+      <div className="flex flex-wrap gap-x-4 gap-y-4 mr-36">
         <KeyValueRow
-          label="Total payments:"
+          label="Payment count:"
           labelWidth="w-28"
-          display={totalPaymentWei ? paymentFormatted : '0'}
+          display={numPayments?.toString() || '0'}
           blurValue={shouldBlur}
+          classes="basis-5/12"
         />
         <KeyValueRow
           label="Total gas amount:"
           labelWidth="w-28"
           display={totalGasAmount?.toString() || '0'}
           blurValue={shouldBlur}
+          classes="basis-5/12"
+        />
+        <KeyValueRow
+          label="Total paid:"
+          labelWidth="w-28"
+          display={totalPaymentWei ? paymentFormatted : '0'}
+          blurValue={shouldBlur}
+          classes="basis-5/12"
         />
         <KeyValueRow
           label="Average price:"
           labelWidth="w-28"
           display={avgPrice ? avgPrice.formatted : '-'}
           blurValue={shouldBlur}
+          classes="basis-5/12"
         />
       </div>
       <div className="absolute right-2 bottom-2">

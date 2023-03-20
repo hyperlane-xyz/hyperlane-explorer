@@ -57,6 +57,7 @@ ${messageStubFragment}
   destination_tx_recipient
   total_gas_amount
   total_payment
+  num_payments
 `;
 
 /**
@@ -117,6 +118,7 @@ export interface MessageEntry extends MessageStubEntry {
   destination_tx_recipient: string; // binary e.g. \\x123
   total_gas_amount: number;
   total_payment: number;
+  num_payments: number;
 }
 
 export interface MessagesStubQueryResult {

@@ -105,6 +105,7 @@ function parseMessage(m: MessageEntry): Message | null {
         : undefined,
       totalGasAmount: m.total_gas_amount,
       totalPayment: m.total_payment,
+      numPayments: m.num_payments,
     };
   } catch (error) {
     logger.error('Error parsing message', error);

@@ -52,6 +52,7 @@ export interface Message extends MessageStub {
   destination?: MessageTx;
   totalGasAmount?: number;
   totalPayment?: number;
+  numPayments?: number;
 }
 
 export interface LogWithTimestamp extends providers.Log {

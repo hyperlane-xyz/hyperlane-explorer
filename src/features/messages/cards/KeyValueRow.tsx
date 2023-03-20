@@ -8,6 +8,7 @@ interface Props {
   subDisplay?: string;
   showCopy?: boolean;
   blurValue?: boolean;
+  classes?: string;
 }
 
 export function KeyValueRow({
@@ -18,9 +19,10 @@ export function KeyValueRow({
   subDisplay,
   showCopy,
   blurValue,
+  classes,
 }: Props) {
   return (
-    <div className="flex items-center pl-px">
+    <div className={`flex items-center pl-px ${classes}`}>
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <div className={`text-sm ml-1 truncate ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
         <span>{display}</span>
