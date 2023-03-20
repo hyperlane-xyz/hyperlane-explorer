@@ -1,13 +1,15 @@
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import Image from 'next/image';
+import { useState } from 'react';
 
+import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
-import { fromWeiRounded } from '../../../utils/amount';
+import { fromWei } from '../../../utils/amount';
 import { logger } from '../../../utils/logger';
 
 import { KeyValueRow } from './KeyValueRow';
@@ -17,10 +19,18 @@ interface Props {
   shouldBlur: boolean;
 }
 
+const unitOptions = [
+  { value: 'ether', display: 'Eth' },
+  { value: 'gwei', display: 'Gwei' },
+  { value: 'wei', display: 'Wei' },
+];
+
 export function GasDetailsCard({ message, shouldBlur }: Props) {
+  const [unit, setUnit] = useState(unitOptions[0].value);
+
   const { totalGasAmount, totalPayment: totalPaymentWei } = message;
-  const totalPaymentGwei = fromWeiRounded(totalPaymentWei, 'gwei', true, 0);
-  const avgPrice = computeAvgGasPrice(totalGasAmount, totalPaymentWei);
+  const paymentFormatted = fromWei(totalPaymentWei, unit).toString();
+  const avgPrice = computeAvgGasPrice(unit, totalGasAmount, totalPaymentWei);
 
   return (
     <Card classes="w-full space-y-4">
@@ -45,17 +55,11 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <div className="flex flex-wrap gap-x-20 gap-y-4">
+      <div className="flex flex-wrap gap-x-16 gap-y-4 mr-32">
         <KeyValueRow
           label="Total payments:"
           labelWidth="w-28"
-          display={totalPaymentWei ? `${totalPaymentWei} (${totalPaymentGwei} gwei)` : '0'}
-          blurValue={shouldBlur}
-        />
-        <KeyValueRow
-          label="Average gas price:"
-          labelWidth="w-28"
-          display={avgPrice ? `${avgPrice.wei} (${avgPrice.gwei} gwei)` : '-'}
+          display={totalPaymentWei ? paymentFormatted : '0'}
           blurValue={shouldBlur}
         />
         <KeyValueRow
@@ -64,18 +68,32 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           display={totalGasAmount?.toString() || '0'}
           blurValue={shouldBlur}
         />
+        <KeyValueRow
+          label="Average price:"
+          labelWidth="w-28"
+          display={avgPrice ? avgPrice.formatted : '-'}
+          blurValue={shouldBlur}
+        />
+      </div>
+      <div className="absolute right-2 bottom-2">
+        <RadioButtons
+          options={unitOptions}
+          selected={unit}
+          onChange={(value) => setUnit(value)}
+          label="Gas unit"
+        />
       </div>
     </Card>
   );
 }
 
-function computeAvgGasPrice(gasAmount?: number, payment?: number) {
+function computeAvgGasPrice(unit: string, gasAmount?: number, payment?: number) {
   try {
     if (!gasAmount || !payment) return null;
     const paymentBN = new BigNumber(payment);
     const wei = paymentBN.div(gasAmount).toFixed(0);
-    const gwei = utils.formatUnits(wei, 'gwei').toString();
-    return { wei, gwei };
+    const formatted = utils.formatUnits(wei, unit).toString();
+    return { wei, formatted };
   } catch (error) {
     logger.debug('Error computing avg gas price', error);
     return null;
