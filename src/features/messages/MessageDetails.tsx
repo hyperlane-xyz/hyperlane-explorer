@@ -70,24 +70,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
   useInterval(reExecutor, AUTO_REFRESH_DELAY);
 
   // Banner color setter
-  const setBanner = useStore((s) => s.setBanner);
-  useEffect(() => {
-    if (isFetching) return;
-    if (error) {
-      logger.error('Error fetching message details', error);
-      toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
-      setBanner('bg-red-500');
-    } else if (status === MessageStatus.Failing) {
-      setBanner('bg-red-500');
-    } else if (!isMessageFound) {
-      setBanner('bg-gray-500');
-    } else {
-      setBanner('');
-    }
-  }, [error, isFetching, status, isMessageFound, setBanner]);
-  useEffect(() => {
-    return () => setBanner('');
-  }, [setBanner]);
+  useDynamicBannerColor(isFetching, status, isMessageFound, error);
 
   return (
     <>
@@ -171,6 +154,32 @@ function StatusHeader({
       {icon}
     </div>
   );
+}
+
+function useDynamicBannerColor(
+  isFetching: boolean,
+  status: MessageStatus,
+  isMessageFound: boolean,
+  error?: Error,
+) {
+  const setBanner = useStore((s) => s.setBanner);
+  useEffect(() => {
+    if (isFetching) return;
+    if (error) {
+      logger.error('Error fetching message details', error);
+      toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
+      setBanner('bg-red-500');
+    } else if (status === MessageStatus.Failing) {
+      setBanner('bg-red-500');
+    } else if (!isMessageFound) {
+      setBanner('bg-gray-500');
+    } else {
+      setBanner('');
+    }
+  }, [error, isFetching, status, isMessageFound, setBanner]);
+  useEffect(() => {
+    return () => setBanner('');
+  }, [setBanner]);
 }
 
 const helpText = {

@@ -5,31 +5,21 @@ import { toast } from 'react-toastify';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 
-import type { MessageDeliveryStatusResponse } from './types';
+import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
-// TODO: Consider deprecating this to simplify message details page
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
-    ['messageProcessTx', serializedMessage, isReady],
+    ['messageDeliveryStatus', serializedMessage, isReady],
     async () => {
+      // TODO enable PI support here
       if (!isReady || !message || message.status === MessageStatus.Delivered || message.isPiMsg)
         return null;
 
-      const response = await fetch('/api/delivery-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: serializedMessage,
-      });
-      if (!response.ok) {
-        const errorMsg = await response.text();
-        throw new Error(errorMsg);
-      }
-      const result = (await response.json()) as MessageDeliveryStatusResponse;
-      logger.debug('Message delivery status result', result);
-      return result;
+      logger.debug('Fetching message delivery status for:', message.id);
+      const deliverStatus = await fetchDeliveryStatus(message);
+      logger.debug('Message delivery status result', deliverStatus);
+      return deliverStatus;
     },
     { retry: false },
   );

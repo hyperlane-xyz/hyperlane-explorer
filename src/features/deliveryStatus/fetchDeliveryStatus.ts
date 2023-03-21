@@ -1,9 +1,9 @@
 import { constants } from 'ethers';
 
-import { MultiProvider, chainIdToMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { MultiProvider, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
+import { getMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
-import { ensureLeading0x, validateAddress } from '../../utils/addresses';
 import {
   queryExplorerForLogs,
   queryExplorerForTx,
@@ -26,15 +26,20 @@ import {
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1.0.0-beta0/solidity/contracts/Mailbox.sol#L84
 // https://emn178.github.io/online-tools/keccak_256.html
 // Alternatively could get this by creating the Mailbox contract object via SDK
-const TOPIC_0 = '0x1cae38cdd3d3919489272725a5ae62a4f48b2989b0dae843d3c279fee18073a9';
+const PROCESS_TOPIC_0 = '0x1cae38cdd3d3919489272725a5ae62a4f48b2989b0dae843d3c279fee18073a9';
 
 export async function fetchDeliveryStatus(
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
-  validateMessage(message);
+  const multiProvider = getMultiProvider();
 
-  const multiProvider = new MultiProvider();
-  const logs = await fetchExplorerLogsForMessage(multiProvider, message);
+  const originName = multiProvider.getChainName(message.originChainId);
+  const destName = multiProvider.getChainName(message.destinationChainId);
+  // TODO PI support here
+  const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
+  if (!destMailboxAddr) throw new Error(`No mailbox address found for dest ${destName}`);
+
+  const logs = await fetchExplorerLogsForMessage(multiProvider, message, destMailboxAddr);
 
   if (logs?.length) {
     logger.debug(`Found delivery log for tx ${message.origin.hash}`);
@@ -68,15 +73,12 @@ export async function fetchDeliveryStatus(
     return result;
   } else {
     const { originChainId, origin, nonce } = message;
-    const originName = chainIdToMetadata[originChainId].name;
     const environment = getChainEnvironment(originName);
     const originTxReceipt = await queryExplorerForTxReceipt(
       multiProvider,
       originChainId,
       origin.hash,
     );
-    // TODO currently throwing this over the fence to the debugger script
-    // which isn't very robust and uses public RPCs. Could be improved
     const debugResult = await debugMessagesForTransaction(
       originName,
       originTxReceipt,
@@ -109,19 +111,14 @@ export async function fetchDeliveryStatus(
   }
 }
 
-async function fetchExplorerLogsForMessage(multiProvider: MultiProvider, message: Message) {
-  const { msgId, originChainId, origin, destinationChainId } = message;
+function fetchExplorerLogsForMessage(
+  multiProvider: MultiProvider,
+  message: Message,
+  mailboxAddr: Address,
+) {
+  const { msgId, origin, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${origin.hash}`);
-
-  const originName = chainIdToMetadata[originChainId].name;
-  const destName = chainIdToMetadata[destinationChainId].name;
-
-  const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
-  if (!destMailboxAddr)
-    throw new Error(`No mailbox address found for dest ${destName} origin ${originName}`);
-
-  const topic1 = ensureLeading0x(msgId);
-  const logsQueryPath = `module=logs&action=getLogs&fromBlock=0&toBlock=999999999&topic0=${TOPIC_0}&topic0_1_opr=and&topic1=${topic1}&address=${destMailboxAddr}`;
+  const logsQueryPath = `module=logs&action=getLogs&fromBlock=1&toBlock=latest&topic0=${PROCESS_TOPIC_0}&topic0_1_opr=and&topic1=${msgId}&address=${mailboxAddr}`;
   return queryExplorerForLogs(multiProvider, destinationChainId, logsQueryPath);
 }
 
@@ -134,36 +131,8 @@ async function tryFetchTransactionDetails(
     const tx = await queryExplorerForTx(multiProvider, chainId, txHash);
     return tx;
   } catch (error) {
-    // Since we only need this for the from address, it's not critical.
-    // Swallowing error if there's an issue.
+    // Swallowing error if there's an issue so we can still surface delivery confirmation
     logger.error('Failed to fetch tx details', txHash, chainId);
     return null;
   }
-}
-
-// TODO use zod here
-function validateMessage(message: Message) {
-  const {
-    originDomainId,
-    destinationDomainId,
-    originChainId,
-    destinationChainId,
-    nonce,
-    origin,
-    recipient,
-    sender,
-  } = message;
-
-  if (!originDomainId) throw new Error(`Invalid origin domain ${originDomainId}`);
-  if (!destinationDomainId) throw new Error(`Invalid dest domain ${destinationDomainId}`);
-  if (!originChainId) throw new Error(`Invalid origin chain ${originChainId}`);
-  if (!destinationChainId) throw new Error(`Invalid dest chain ${destinationChainId}`);
-  if (!chainIdToMetadata[originChainId]?.name)
-    throw new Error(`No name found for chain ${originChainId}`);
-  if (!chainIdToMetadata[destinationChainId]?.name)
-    throw new Error(`No name found for chain ${destinationChainId}`);
-  if (!nonce) throw new Error(`Invalid nonce ${nonce}`);
-  if (!origin?.hash) throw new Error(`Invalid or missing origin tx`);
-  validateAddress(recipient, 'validateMessage recipient');
-  validateAddress(sender, 'validateMessage sender');
 }

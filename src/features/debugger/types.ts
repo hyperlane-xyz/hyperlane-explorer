@@ -13,6 +13,7 @@ export enum MessageDebugStatus {
   RecipientNotHandler = 'recipientNotHandler',
   IcaCallFailure = 'icaCallFailure',
   HandleCallFailure = 'handleCallFailure',
+  GasUnderfunded = 'gasUnderfunded',
 }
 
 export interface DebugNotFoundResult {

@@ -1,4 +1,4 @@
-// Based on debug script in monorepo
+// Forked from debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, providers } from 'ethers';
 
@@ -9,12 +9,12 @@ import {
   DispatchedMessage,
   HyperlaneCore,
   MultiProvider,
+  TestChains,
 } from '@hyperlane-xyz/sdk';
-// TODO get exported from SDK properly
-import { TestChains } from '@hyperlane-xyz/sdk/dist/consts/chains';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
+import { getMultiProvider } from '../../multiProvider';
 import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
@@ -36,8 +36,7 @@ export async function debugMessagesForHash(
   environment: Environment,
   attemptGetProcessTx = true,
 ): Promise<MessageDebugResult> {
-  // TODO use RPC with api keys
-  const multiProvider = new MultiProvider();
+  const multiProvider = getMultiProvider();
 
   const txDetails = await findTransactionDetails(txHash, multiProvider);
   if (!txDetails?.transactionReceipt) {
@@ -64,13 +63,16 @@ export async function debugMessagesForTransaction(
   environment: Environment,
   nonce?: number,
   attemptGetProcessTx = true,
-  multiProvider = new MultiProvider(),
+  multiProvider = getMultiProvider(),
 ): Promise<MessageDebugResult> {
-  const explorerLink = multiProvider.getExplorerTxUrl(chainName, {
-    hash: txReceipt.transactionHash,
-  });
+  // TODO PI support here
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
   const dispatchedMessages = core.getDispatchedMessages(txReceipt);
+
+  const explorerLink =
+    multiProvider.tryGetExplorerTxUrl(chainName, {
+      hash: txReceipt.transactionHash,
+    }) || undefined;
 
   if (!dispatchedMessages?.length) {
     return {
@@ -91,7 +93,7 @@ export async function debugMessagesForTransaction(
       continue;
     }
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(await checkMessage(core, multiProvider, msg, attemptGetProcessTx));
+    messageDetails.push(await debugMessage(core, multiProvider, msg, attemptGetProcessTx));
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -138,13 +140,12 @@ async function fetchTransactionDetails(
   }
 }
 
-async function checkMessage(
+async function debugMessage(
   core: HyperlaneCore,
   multiProvider: MultiProvider,
   message: DispatchedMessage,
   attemptGetProcessTx = true,
 ): Promise<MessageDebugDetails> {
-  logger.debug(JSON.stringify(message));
   const {
     sender: senderBytes,
     recipient: recipientBytes,
@@ -154,13 +155,13 @@ async function checkMessage(
     nonce,
   } = message.parsed;
   const messageId = utils.messageId(message.message);
-  const senderAddress = utils.bytes32ToAddress(senderBytes.toString());
-  const recipientAddress = utils.bytes32ToAddress(recipientBytes.toString());
+  const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
+  const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
 
   const properties = new Map<string, string | LinkProperty>();
   properties.set('ID', messageId);
-  properties.set('Sender', senderAddress);
-  properties.set('Recipient', recipientAddress);
+  properties.set('Sender', senderAddr);
+  properties.set('Recipient', recipientAddr);
   properties.set('Origin Domain', origin.toString());
   properties.set('Origin Chain', multiProvider.tryGetChainName(origin) || 'Unknown');
   properties.set('Destination Domain', destination.toString());
@@ -196,8 +197,8 @@ async function checkMessage(
     if (attemptGetProcessTx) {
       const processTxHash = await tryGetProcessTxHash(destinationMailbox, messageId);
       if (processTxHash) {
-        const url = multiProvider.getExplorerTxUrl(destinationChain, { hash: processTxHash });
-        properties.set('Process TX', { url, text: processTxHash });
+        const url = multiProvider.tryGetExplorerTxUrl(destinationChain, { hash: processTxHash });
+        properties.set('Process TX', { url: url || 'UNKNOWN', text: processTxHash });
       }
     }
     return {
@@ -209,38 +210,29 @@ async function checkMessage(
     logger.debug('Message not yet processed');
   }
 
-  const recipientIsContract = await isContract(multiProvider, destinationChain, recipientAddress);
+  const recipientIsContract = await isContract(multiProvider, destinationChain, recipientAddr);
   if (!recipientIsContract) {
-    logger.info(`Recipient address ${recipientAddress} is not a contract`);
+    logger.info(`Recipient address ${recipientAddr} is not a contract`);
     return {
       status: MessageDebugStatus.RecipientNotContract,
       properties,
-      details: `Recipient address is ${recipientAddress}. Ensure that the bytes32 value is not malformed.`,
+      details: `Recipient address is ${recipientAddr}. Ensure that the bytes32 value is not malformed.`,
     };
   }
 
-  const destinationProvider = multiProvider.getProvider(destinationChain);
-  const recipientContract = IMessageRecipient__factory.connect(
-    recipientAddress,
-    destinationProvider,
-  );
+  const destProvider = multiProvider.getProvider(destinationChain);
+  const recipientContract = IMessageRecipient__factory.connect(recipientAddr, destProvider);
   try {
     await recipientContract.estimateGas.handle(origin, senderBytes, body, {
       from: destinationMailbox.address,
     });
     logger.debug('Calling recipient `handle` function from the inbox does not revert');
-    return {
-      status: MessageDebugStatus.NoErrorsFound,
-      properties,
-      details: 'Message may just need more time to be processed',
-    };
   } catch (err: any) {
     logger.info('Estimate gas call failed');
-
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    const bytecodeHasHandle = await tryCheckBytecodeHandle(destinationProvider, recipientAddress);
+    const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipientAddr);
     if (!bytecodeHasHandle) {
       logger.info('Bytecode does not have function matching handle sig');
       return {
@@ -250,18 +242,12 @@ async function checkMessage(
       };
     }
 
-    const icaCallError = await checkIcaMessageError(
-      senderAddress,
-      recipientAddress,
-      body,
-      origin,
-      destinationProvider,
-    );
-    if (icaCallError) {
+    const icaCallErr = await tryDebugIcaMsg(senderAddr, recipientAddr, body, origin, destProvider);
+    if (icaCallErr) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
         properties,
-        details: icaCallError,
+        details: icaCallErr,
       };
     }
 
@@ -271,6 +257,21 @@ async function checkMessage(
       details: errorReason,
     };
   }
+
+  const hasSufficientGas = tryCheckInterchainGas();
+  if (!hasSufficientGas) {
+    return {
+      status: MessageDebugStatus.GasUnderfunded,
+      properties,
+      details: '',
+    };
+  }
+
+  return {
+    status: MessageDebugStatus.NoErrorsFound,
+    properties,
+    details: 'Message may just need more time to be processed',
+  };
 }
 
 async function isContract(multiProvider: MultiProvider, chain: ChainName, address: string) {
@@ -280,8 +281,6 @@ async function isContract(multiProvider: MultiProvider, chain: ChainName, addres
   return code && code !== '0x';
 }
 
-// TODO use explorer for this instead of RPC to avoid block age limitations
-// In doing so, de-dupe with features/search/useMessageProcessTx.ts
 async function tryGetProcessTxHash(destinationMailbox: Mailbox, messageId: string) {
   try {
     const filter = destinationMailbox.filters.ProcessId(messageId);
@@ -313,9 +312,9 @@ async function tryCheckBytecodeHandle(
   }
 }
 
-async function checkIcaMessageError(
-  sender: string,
-  recipient: string,
+async function tryDebugIcaMsg(
+  sender: Address,
+  recipient: Address,
   body: string,
   originDomainId: number,
   destinationProvider: providers.Provider,
@@ -328,13 +327,13 @@ async function checkIcaMessageError(
 
   const { sender: originalSender, calls } = decodedBody;
 
-  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender);
+  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender, destinationProvider);
   if (!icaAddress) return null;
 
   for (let i = 0; i < calls.length; i++) {
     const call = calls[i];
     logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
-    const errorReason = await tryCheckIcaCallError(
+    const errorReason = await tryCheckIcaCall(
       icaAddress,
       call.destinationAddress,
       call.callBytes,
@@ -348,7 +347,7 @@ async function checkIcaMessageError(
   return null;
 }
 
-async function tryCheckIcaCallError(
+async function tryCheckIcaCall(
   icaAddress: string,
   destinationAddress: string,
   callBytes: string,
@@ -366,6 +365,16 @@ async function tryCheckIcaCallError(
     const errorReason = extractReasonString(err);
     logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, errorReason);
     return errorReason;
+  }
+}
+
+async function tryCheckInterchainGas() {
+  try {
+    //TODO
+    return true;
+  } catch (error) {
+    logger.debug(`Error estimating delivery gas cost for message `, error);
+    return true;
   }
 }
 
