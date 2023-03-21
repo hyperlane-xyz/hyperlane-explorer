@@ -6,7 +6,7 @@ import { config } from '../consts/config';
 import type { LogWithTimestamp } from '../types';
 
 import { logger } from './logger';
-import { hexToDecimal, tryHexToDecimal } from './number';
+import { toDecimalNumber, tryToDecimalNumber } from './number';
 import { fetchWithTimeout, sleep } from './timeout';
 
 const BLOCK_EXPLORER_RATE_LIMIT = 5100; // once every 5.1 seconds
@@ -118,10 +118,10 @@ export function toProviderLog(log: ExplorerLogEntry): LogWithTimestamp {
     ...log,
     blockHash: '',
     removed: false,
-    blockNumber: hexToDecimal(log.blockNumber),
-    timestamp: hexToDecimal(log.timeStamp) * 1000,
-    logIndex: tryHexToDecimal(log.logIndex) || 0,
-    transactionIndex: tryHexToDecimal(log.transactionIndex) || 0,
+    blockNumber: toDecimalNumber(log.blockNumber),
+    timestamp: toDecimalNumber(log.timeStamp) * 1000,
+    logIndex: tryToDecimalNumber(log.logIndex) || 0,
+    transactionIndex: tryToDecimalNumber(log.transactionIndex) || 0,
   };
 }
 

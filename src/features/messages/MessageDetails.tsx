@@ -42,25 +42,19 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
   const graphQueryMessages = useMemo(() => parseMessageQueryResult(data), [data]);
 
   // Extracting message properties
-  const message = propMessage || graphQueryMessages[0] || PLACEHOLDER_MESSAGE;
+  const _message = propMessage || graphQueryMessages[0] || PLACEHOLDER_MESSAGE;
   const isMessageFound = !!propMessage || graphQueryMessages.length > 0;
   const shouldBlur = !isMessageFound;
-  const isIcaMsg = isIcaMessage(message);
+  const isIcaMsg = isIcaMessage(_message);
 
   // If message isn't delivered, query delivery-status api for
   // more recent update and possibly debug info
-  const { messageWithDeliveryStatus, debugInfo } = useMessageDeliveryStatus(
-    message,
+  const { messageWithDeliveryStatus: message, debugInfo } = useMessageDeliveryStatus(
+    _message,
     isMessageFound,
   );
 
-  const {
-    status,
-    originChainId,
-    destinationChainId: destChainId,
-    origin,
-    destination,
-  } = messageWithDeliveryStatus;
+  const { status, originChainId, destinationChainId: destChainId, origin, destination } = message;
 
   // Query re-executor
   const reExecutor = useCallback(() => {

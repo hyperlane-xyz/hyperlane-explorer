@@ -154,39 +154,39 @@ async function debugMessage(
     sender: senderBytes,
     recipient: recipientBytes,
     body,
-    destination,
-    origin,
+    destination: destDomain,
+    origin: originDomain,
     nonce,
   } = message.parsed;
   const messageId = utils.messageId(message.message);
   const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
   const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
-  const originChain = multiProvider.getChainName(destination);
-  const destinationChain = multiProvider.tryGetChainName(destination);
+  const originName = multiProvider.getChainName(destDomain);
+  const destName = multiProvider.tryGetChainName(destDomain);
 
   const properties = new Map<string, string | LinkProperty>();
   properties.set('ID', messageId);
   properties.set('Sender', senderAddr);
   properties.set('Recipient', recipientAddr);
-  properties.set('Origin Domain', origin.toString());
-  properties.set('Origin Chain', originChain);
-  properties.set('Destination Domain', destination.toString());
-  properties.set('Destination Chain', destinationChain || 'Unknown');
+  properties.set('Origin Domain', originDomain.toString());
+  properties.set('Origin Chain', originName);
+  properties.set('Destination Domain', destDomain.toString());
+  properties.set('Destination Chain', destName || 'Unknown');
   properties.set('Nonce', nonce.toString());
   properties.set('Raw Bytes', message.message);
 
-  logger.debug(`Destination chain: ${destinationChain}`);
-  if (!destinationChain) {
-    logger.info(`Unknown destination domain ${destination}`);
+  logger.debug(`Destination chain: ${destName}`);
+  if (!destName) {
+    logger.info(`Unknown destination domain ${destDomain}`);
     return {
       status: MessageDebugStatus.InvalidDestDomain,
       properties,
-      details: `No chain found for domain ${destination}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `No chain found for domain ${destDomain}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
     };
   }
 
-  if (!core.knownChain(destinationChain)) {
-    logger.info(`Destination chain ${destinationChain} unknown for environment`);
+  if (!core.knownChain(destName)) {
+    logger.info(`Destination chain ${destName} unknown for environment`);
     return {
       status: MessageDebugStatus.UnknownDestChain,
       properties,
@@ -194,15 +194,15 @@ async function debugMessage(
     };
   }
 
-  const destinationMailbox = core.getContracts(destinationChain).mailbox.contract;
-  const isDelivered = await destinationMailbox.delivered(messageId);
+  const destMailbox = core.getContracts(destName).mailbox.contract;
+  const isDelivered = await destMailbox.delivered(messageId);
 
   if (isDelivered) {
     logger.info('Message has already been processed');
     if (attemptGetProcessTx) {
-      const processTxHash = await tryGetProcessTxHash(destinationMailbox, messageId);
+      const processTxHash = await tryGetProcessTxHash(destMailbox, messageId);
       if (processTxHash) {
-        const url = multiProvider.tryGetExplorerTxUrl(destinationChain, { hash: processTxHash });
+        const url = multiProvider.tryGetExplorerTxUrl(destName, { hash: processTxHash });
         properties.set('Process TX', { url: url || 'UNKNOWN', text: processTxHash });
       }
     }
@@ -215,7 +215,7 @@ async function debugMessage(
     logger.debug('Message not yet processed');
   }
 
-  const recipientIsContract = await isContract(multiProvider, destinationChain, recipientAddr);
+  const recipientIsContract = await isContract(multiProvider, destName, recipientAddr);
   if (!recipientIsContract) {
     logger.info(`Recipient address ${recipientAddr} is not a contract`);
     return {
@@ -225,12 +225,12 @@ async function debugMessage(
     };
   }
 
-  const destProvider = multiProvider.getProvider(destinationChain);
+  const destProvider = multiProvider.getProvider(destName);
   const recipientContract = IMessageRecipient__factory.connect(recipientAddr, destProvider);
   let deliveryGasEst: BigNumberish;
   try {
-    deliveryGasEst = await recipientContract.estimateGas.handle(origin, senderBytes, body, {
-      from: destinationMailbox.address,
+    deliveryGasEst = await recipientContract.estimateGas.handle(originDomain, senderBytes, body, {
+      from: destMailbox.address,
     });
     logger.debug('Calling recipient `handle` function from the inbox does not revert');
   } catch (err: any) {
@@ -248,7 +248,13 @@ async function debugMessage(
       };
     }
 
-    const icaCallErr = await tryDebugIcaMsg(senderAddr, recipientAddr, body, origin, destProvider);
+    const icaCallErr = await tryDebugIcaMsg(
+      senderAddr,
+      recipientAddr,
+      body,
+      originDomain,
+      destProvider,
+    );
     if (icaCallErr) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
@@ -264,8 +270,8 @@ async function debugMessage(
     };
   }
 
-  const IGP = core.getContracts(originChain).interchainGasPaymaster.contract;
-  const hasSufficientGas = tryCheckInterchainGas(IGP, deliveryGasEst);
+  const igp = core.getContracts(originName).interchainGasPaymaster.contract;
+  const hasSufficientGas = tryCheckIgpGasFunded(igp, messageId, destDomain, deliveryGasEst);
   if (!hasSufficientGas) {
     return {
       status: MessageDebugStatus.GasUnderfunded,
@@ -375,15 +381,37 @@ async function tryCheckIcaCall(
   }
 }
 
-async function tryCheckInterchainGas(IGP: InterchainGasPaymaster, deliveryGasEst: BigNumberish) {
+async function tryCheckIgpGasFunded(
+  igp: InterchainGasPaymaster,
+  messageId: string,
+  destDomain: number,
+  deliveryGasEst: BigNumberish,
+) {
   try {
+    const filter = igp.filters.GasPayment(messageId);
+    const matchedEvents = (await igp.queryFilter(filter)) || [];
+    let totalGas = BigNumber.from(0);
+    let totalPaid = BigNumber.from(0);
+    for (const payment of matchedEvents) {
+      totalGas = totalGas.add(payment.args.gasAmount);
+      totalPaid = totalPaid.add(payment.args.payment);
+    }
+
+    if (totalPaid.lte(0)) {
+      logger.debug('Amount paid to IGP is 0, delivery underfunded');
+      return false;
+    }
     // TODO this assumes default ISM for messages
-
-    // TODO query destinationGasAmount on the IGP on the origin chain with the estimateGas value
-
-    return true;
+    const paymentQuote = await igp.quoteGasPayment(destDomain, deliveryGasEst);
+    if (BigNumber.from(paymentQuote).gt(totalPaid)) {
+      logger.debug(`Payment to IGP is not sufficient. Paid ${totalPaid} requires ${paymentQuote}`);
+      return false;
+    } else {
+      logger.debug(`Payment to IGP is sufficient. Paid ${totalPaid} requires ${paymentQuote}`);
+      return true;
+    }
   } catch (error) {
-    logger.debug(`Error estimating delivery gas cost for message `, error);
+    logger.warn('Error estimating delivery gas cost for message', error);
     return true;
   }
 }

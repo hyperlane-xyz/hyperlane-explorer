@@ -10,7 +10,7 @@ import {
   queryExplorerForTxReceipt,
 } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
-import { hexToDecimal } from '../../utils/number';
+import { toDecimalNumber } from '../../utils/number';
 import { getChainEnvironment } from '../chains/utils';
 import { debugMessagesForTransaction } from '../debugger/debugMessage';
 import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
@@ -53,21 +53,21 @@ export async function fetchDeliveryStatus(
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
       deliveryTransaction: {
-        timestamp: hexToDecimal(log.timeStamp) * 1000,
+        timestamp: toDecimalNumber(log.timeStamp) * 1000,
         hash: log.transactionHash,
         from: txDetails?.from || constants.AddressZero,
         to: txDetails?.to || constants.AddressZero,
         blockHash: txDetails?.blockHash || TX_HASH_ZERO,
-        blockNumber: hexToDecimal(log.blockNumber),
+        blockNumber: toDecimalNumber(log.blockNumber),
         mailbox: constants.AddressZero,
         nonce: txDetails?.nonce || 0,
-        gasLimit: hexToDecimal(txDetails?.gasLimit || 0),
-        gasPrice: hexToDecimal(txDetails?.gasPrice || 0),
-        effectiveGasPrice: hexToDecimal(txDetails?.gasPrice || 0),
-        gasUsed: hexToDecimal(log.gasUsed),
-        cumulativeGasUsed: hexToDecimal(log.gasUsed),
-        maxFeePerGas: hexToDecimal(txDetails?.maxFeePerGas || 0),
-        maxPriorityPerGas: hexToDecimal(txDetails?.maxPriorityFeePerGas || 0),
+        gasLimit: toDecimalNumber(txDetails?.gasLimit || 0),
+        gasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
+        effectiveGasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
+        gasUsed: toDecimalNumber(log.gasUsed),
+        cumulativeGasUsed: toDecimalNumber(log.gasUsed),
+        maxFeePerGas: toDecimalNumber(txDetails?.maxFeePerGas || 0),
+        maxPriorityPerGas: toDecimalNumber(txDetails?.maxPriorityFeePerGas || 0),
       },
     };
     return result;
