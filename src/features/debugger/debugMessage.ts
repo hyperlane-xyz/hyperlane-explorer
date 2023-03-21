@@ -1,8 +1,12 @@
 // Forked from debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, providers } from 'ethers';
+import { BigNumber, BigNumberish, providers } from 'ethers';
 
-import { IMessageRecipient__factory, Mailbox } from '@hyperlane-xyz/core';
+import {
+  IMessageRecipient__factory,
+  type InterchainGasPaymaster,
+  type Mailbox,
+} from '@hyperlane-xyz/core';
 import {
   ChainName,
   CoreChainName,
@@ -157,19 +161,20 @@ async function debugMessage(
   const messageId = utils.messageId(message.message);
   const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
   const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
+  const originChain = multiProvider.getChainName(destination);
+  const destinationChain = multiProvider.tryGetChainName(destination);
 
   const properties = new Map<string, string | LinkProperty>();
   properties.set('ID', messageId);
   properties.set('Sender', senderAddr);
   properties.set('Recipient', recipientAddr);
   properties.set('Origin Domain', origin.toString());
-  properties.set('Origin Chain', multiProvider.tryGetChainName(origin) || 'Unknown');
+  properties.set('Origin Chain', originChain);
   properties.set('Destination Domain', destination.toString());
-  properties.set('Destination Chain', multiProvider.tryGetChainName(destination) || 'Unknown');
+  properties.set('Destination Chain', destinationChain || 'Unknown');
   properties.set('Nonce', nonce.toString());
   properties.set('Raw Bytes', message.message);
 
-  const destinationChain = multiProvider.tryGetChainName(destination);
   logger.debug(`Destination chain: ${destinationChain}`);
   if (!destinationChain) {
     logger.info(`Unknown destination domain ${destination}`);
@@ -222,8 +227,9 @@ async function debugMessage(
 
   const destProvider = multiProvider.getProvider(destinationChain);
   const recipientContract = IMessageRecipient__factory.connect(recipientAddr, destProvider);
+  let deliveryGasEst: BigNumberish;
   try {
-    await recipientContract.estimateGas.handle(origin, senderBytes, body, {
+    deliveryGasEst = await recipientContract.estimateGas.handle(origin, senderBytes, body, {
       from: destinationMailbox.address,
     });
     logger.debug('Calling recipient `handle` function from the inbox does not revert');
@@ -258,12 +264,13 @@ async function debugMessage(
     };
   }
 
-  const hasSufficientGas = tryCheckInterchainGas();
+  const IGP = core.getContracts(originChain).interchainGasPaymaster.contract;
+  const hasSufficientGas = tryCheckInterchainGas(IGP, deliveryGasEst);
   if (!hasSufficientGas) {
     return {
       status: MessageDebugStatus.GasUnderfunded,
       properties,
-      details: '',
+      details: 'Origin IGP reports insufficient gas paid for message delivery',
     };
   }
 
@@ -368,9 +375,12 @@ async function tryCheckIcaCall(
   }
 }
 
-async function tryCheckInterchainGas() {
+async function tryCheckInterchainGas(IGP: InterchainGasPaymaster, deliveryGasEst: BigNumberish) {
   try {
-    //TODO
+    // TODO this assumes default ISM for messages
+
+    // TODO query destinationGasAmount on the IGP on the origin chain with the estimateGas value
+
     return true;
   } catch (error) {
     logger.debug(`Error estimating delivery gas cost for message `, error);
