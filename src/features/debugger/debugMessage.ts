@@ -20,6 +20,7 @@ import { utils } from '@hyperlane-xyz/utils';
 import { Environment } from '../../consts/environments';
 import { getMultiProvider } from '../../multiProvider';
 import { trimLeading0x } from '../../utils/addresses';
+import { fromWei } from '../../utils/amount';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk, trimToLength } from '../../utils/string';
@@ -153,15 +154,15 @@ async function debugMessage(
   const {
     sender: senderBytes,
     recipient: recipientBytes,
-    body,
-    destination: destDomain,
     origin: originDomain,
+    destination: destDomain,
+    body,
     nonce,
   } = message.parsed;
   const messageId = utils.messageId(message.message);
   const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
   const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
-  const originName = multiProvider.getChainName(destDomain);
+  const originName = multiProvider.getChainName(originDomain);
   const destName = multiProvider.tryGetChainName(destDomain);
 
   const properties = new Map<string, string | LinkProperty>();
@@ -271,12 +272,17 @@ async function debugMessage(
   }
 
   const igp = core.getContracts(originName).interchainGasPaymaster.contract;
-  const hasSufficientGas = tryCheckIgpGasFunded(igp, messageId, destDomain, deliveryGasEst);
-  if (!hasSufficientGas) {
+  const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
+    igp,
+    messageId,
+    destDomain,
+    deliveryGasEst,
+  );
+  if (!isFunded) {
     return {
       status: MessageDebugStatus.GasUnderfunded,
       properties,
-      details: 'Origin IGP reports insufficient gas paid for message delivery',
+      details: igpDetails,
     };
   }
 
@@ -388,8 +394,11 @@ async function tryCheckIgpGasFunded(
   deliveryGasEst: BigNumberish,
 ) {
   try {
-    const filter = igp.filters.GasPayment(messageId);
+    const filter = igp.filters.GasPayment(messageId, null, null);
+    // TODO restrict blocks here to avoid rpc errors
     const matchedEvents = (await igp.queryFilter(filter)) || [];
+    logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
+    logger.debug(matchedEvents);
     let totalGas = BigNumber.from(0);
     let totalPaid = BigNumber.from(0);
     for (const payment of matchedEvents) {
@@ -399,20 +408,26 @@ async function tryCheckIgpGasFunded(
 
     if (totalPaid.lte(0)) {
       logger.debug('Amount paid to IGP is 0, delivery underfunded');
-      return false;
+      return { isFunded: false, igpDetails: 'Origin IGP has not received any payments' };
     }
     // TODO this assumes default ISM for messages
     const paymentQuote = await igp.quoteGasPayment(destDomain, deliveryGasEst);
+    logger.debug(`IGP paid: ${totalPaid}, payment quote: ${paymentQuote}`);
     if (BigNumber.from(paymentQuote).gt(totalPaid)) {
-      logger.debug(`Payment to IGP is not sufficient. Paid ${totalPaid} requires ${paymentQuote}`);
-      return false;
+      logger.debug('Payment to IGP is NOT sufficient');
+      const paidEth = fromWei(totalPaid.toString());
+      const quoteEth = fromWei(paymentQuote.toString());
+      return {
+        isFunded: false,
+        igpDetails: `Origin IGP has received ${paidEth} but requires ${quoteEth}`,
+      };
     } else {
-      logger.debug(`Payment to IGP is sufficient. Paid ${totalPaid} requires ${paymentQuote}`);
-      return true;
+      logger.debug('Payment to IGP is sufficient');
+      return { isFunded: true, igpDetails: '' };
     }
   } catch (error) {
     logger.warn('Error estimating delivery gas cost for message', error);
-    return true;
+    return { isFunded: true, igpDetails: '' };
   }
 }
 
