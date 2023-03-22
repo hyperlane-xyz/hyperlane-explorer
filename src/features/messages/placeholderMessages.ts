@@ -39,6 +39,6 @@ export const PLACEHOLDER_MESSAGE: Message = {
   destinationChainId: 0,
   origin: TX_ZERO,
   destination: TX_ZERO,
-  totalGasAmount: 100_000,
-  totalPayment: 100_000,
+  totalGasAmount: '100000',
+  totalPayment: '100000',
 };

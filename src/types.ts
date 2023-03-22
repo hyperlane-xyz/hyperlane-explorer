@@ -50,8 +50,8 @@ export interface Message extends MessageStub {
   decodedBody?: string;
   origin: MessageTx;
   destination?: MessageTx;
-  totalGasAmount?: number;
-  totalPayment?: number;
+  totalGasAmount?: string;
+  totalPayment?: string;
   numPayments?: number;
 }
 

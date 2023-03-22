@@ -103,8 +103,8 @@ function parseMessage(m: MessageEntry): Message | null {
             maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas!,
           }
         : undefined,
-      totalGasAmount: m.total_gas_amount,
-      totalPayment: m.total_payment,
+      totalGasAmount: m.total_gas_amount.toString(),
+      totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
     };
   } catch (error) {

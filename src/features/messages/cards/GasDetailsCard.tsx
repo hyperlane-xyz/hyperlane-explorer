@@ -97,7 +97,7 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
   );
 }
 
-function computeAvgGasPrice(unit: string, gasAmount?: number, payment?: number) {
+function computeAvgGasPrice(unit: string, gasAmount?: string, payment?: string) {
   try {
     if (!gasAmount || !payment) return null;
     const paymentBN = new BigNumber(payment);

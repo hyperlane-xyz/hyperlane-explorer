@@ -107,15 +107,15 @@ export function TransactionCard({
       )}
       {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500 text-center">
+          <div className="text-gray-700 text-center">
             Destination delivery transaction currently failing
           </div>
           {debugInfo && (
             <>
-              <div className="mt-4 text-gray-500 text-center">
+              <div className="mt-4 text-gray-700 text-center">
                 {debugStatusToDesc[debugInfo.status]}
               </div>
-              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center break-words">
+              <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
                 {debugInfo.details}
               </div>
             </>

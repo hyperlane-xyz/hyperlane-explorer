@@ -4,16 +4,11 @@ import { MultiProvider, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
 import { getMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
-import {
-  queryExplorerForLogs,
-  queryExplorerForTx,
-  queryExplorerForTxReceipt,
-} from '../../utils/explorers';
+import { queryExplorerForLogs, queryExplorerForTx } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
-import { getChainEnvironment } from '../chains/utils';
-import { debugMessagesForTransaction } from '../debugger/debugMessage';
-import { MessageDebugStatus, TxDebugStatus } from '../debugger/types';
+import { debugExplorerMessage } from '../debugger/debugMessage';
+import { MessageDebugStatus } from '../debugger/types';
 import { TX_HASH_ZERO } from '../messages/placeholderMessages';
 
 import {
@@ -30,10 +25,8 @@ const PROCESS_TOPIC_0 = '0x1cae38cdd3d3919489272725a5ae62a4f48b2989b0dae843d3c27
 
 export async function fetchDeliveryStatus(
   message: Message,
+  multiProvider = getMultiProvider(),
 ): Promise<MessageDeliveryStatusResponse> {
-  const multiProvider = getMultiProvider();
-
-  const originName = multiProvider.getChainName(message.originChainId);
   const destName = multiProvider.getChainName(message.destinationChainId);
   // TODO PI support here
   const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
@@ -72,39 +65,17 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const { originChainId, origin, nonce } = message;
-    const environment = getChainEnvironment(originName);
-    const originTxReceipt = await queryExplorerForTxReceipt(
-      multiProvider,
-      originChainId,
-      origin.hash,
-    );
-    const debugResult = await debugMessagesForTransaction(
-      originName,
-      originTxReceipt,
-      environment,
-      nonce,
-      false,
-    );
-
-    // These two cases should never happen
-    if (debugResult.status === TxDebugStatus.NotFound)
-      throw new Error('Transaction not found by debugger');
-    if (debugResult.status === TxDebugStatus.NoMessages)
-      throw new Error('No messages found for transaction');
-
-    const firstError = debugResult.messageDetails.find(
-      (m) =>
-        m.status !== MessageDebugStatus.NoErrorsFound &&
-        m.status !== MessageDebugStatus.AlreadyProcessed,
-    );
-    if (!firstError) {
+    const debugResult = await debugExplorerMessage(message, multiProvider);
+    if (
+      debugResult.status === MessageDebugStatus.NoErrorsFound ||
+      debugResult.status === MessageDebugStatus.AlreadyProcessed
+    ) {
       return { status: MessageStatus.Pending };
     } else {
       const result: MessageDeliveryFailingResult = {
         status: MessageStatus.Failing,
-        debugStatus: firstError.status,
-        debugDetails: firstError.details,
+        debugStatus: debugResult.status,
+        debugDetails: debugResult.details,
       };
       return result;
     }

@@ -1,6 +1,6 @@
 // Forked from debug script in monorepo
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, BigNumberish, providers } from 'ethers';
+import { BigNumber, providers } from 'ethers';
 
 import {
   IMessageRecipient__factory,
@@ -19,11 +19,13 @@ import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 import { getMultiProvider } from '../../multiProvider';
+import { Message } from '../../types';
 import { trimLeading0x } from '../../utils/addresses';
 import { fromWei } from '../../utils/amount';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk, trimToLength } from '../../utils/string';
+import { getChainEnvironment } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
 import {
@@ -39,10 +41,8 @@ const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 export async function debugMessagesForHash(
   txHash: string,
   environment: Environment,
-  attemptGetProcessTx = true,
+  multiProvider = getMultiProvider(),
 ): Promise<MessageDebugResult> {
-  const multiProvider = getMultiProvider();
-
   const txDetails = await findTransactionDetails(txHash, multiProvider);
   if (!txDetails?.transactionReceipt) {
     return {
@@ -52,23 +52,15 @@ export async function debugMessagesForHash(
   }
 
   const { chainName, transactionReceipt } = txDetails;
-  return debugMessagesForTransaction(
-    chainName,
-    transactionReceipt,
-    environment,
-    undefined,
-    attemptGetProcessTx,
-    multiProvider,
-  );
+  return debugMessagesForTransaction(chainName, transactionReceipt, environment, multiProvider);
 }
 
 export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
-  nonce?: number,
-  attemptGetProcessTx = true,
   multiProvider = getMultiProvider(),
+  nonce?: number,
 ): Promise<MessageDebugResult> {
   // TODO PI support here
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
@@ -98,7 +90,7 @@ export async function debugMessagesForTransaction(
       continue;
     }
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(await debugMessage(core, multiProvider, msg, attemptGetProcessTx));
+    messageDetails.push(await debugDispatchedMessage(core, multiProvider, msg));
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -107,6 +99,132 @@ export async function debugMessagesForTransaction(
     explorerLink,
     messageDetails,
   };
+}
+
+async function debugDispatchedMessage(
+  core: HyperlaneCore,
+  multiProvider: MultiProvider,
+  message: DispatchedMessage,
+): Promise<MessageDebugDetails> {
+  const {
+    sender: senderBytes,
+    recipient: recipientBytes,
+    origin: originDomain,
+    destination: destDomain,
+    body,
+    nonce,
+  } = message.parsed;
+  const messageId = utils.messageId(message.message);
+  const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
+  const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
+  const originName = multiProvider.getChainName(originDomain);
+  const destName = multiProvider.tryGetChainName(destDomain)!;
+
+  const properties = new Map<string, string | LinkProperty>();
+  properties.set('ID', messageId);
+  properties.set('Sender', senderAddr);
+  properties.set('Recipient', recipientAddr);
+  properties.set('Origin Domain', originDomain.toString());
+  properties.set('Origin Chain', originName);
+  properties.set('Destination Domain', destDomain.toString());
+  properties.set('Destination Chain', destName || 'Unknown');
+  properties.set('Nonce', nonce.toString());
+  properties.set('Raw Bytes', message.message);
+
+  const destInvalid = isInvalidDestDomain(core, destDomain, destName);
+  if (destInvalid) return { ...destInvalid, properties };
+
+  const messageDelivered = await isMessageAlreadyDelivered(
+    core,
+    multiProvider,
+    destName,
+    messageId,
+    properties,
+  );
+  if (messageDelivered) return { ...messageDelivered, properties };
+
+  const destProvider = multiProvider.getProvider(destName);
+  const recipInvalid = await isInvalidRecipient(destProvider, recipientAddr);
+  if (recipInvalid) return { ...recipInvalid, properties };
+
+  const deliveryResult = await debugMessageDelivery(
+    core,
+    originDomain,
+    destName,
+    senderAddr,
+    recipientAddr,
+    senderBytes,
+    body,
+    destProvider,
+  );
+  if (deliveryResult.status && deliveryResult.details) return { ...deliveryResult, properties };
+  const gasEstimate = deliveryResult.gasEstimate;
+
+  const insufficientGas = await isIgpUnderfunded(
+    core,
+    messageId,
+    originName,
+    destDomain,
+    gasEstimate,
+  );
+  if (insufficientGas) return { ...insufficientGas, properties };
+
+  return noErrorFound(properties);
+}
+
+export async function debugExplorerMessage(
+  message: Message,
+  multiProvider = getMultiProvider(),
+): Promise<Omit<MessageDebugDetails, 'properties'>> {
+  const {
+    msgId,
+    sender,
+    recipient,
+    originDomainId: originDomain,
+    destinationDomainId: destDomain,
+    body,
+    totalPayment,
+  } = message;
+  logger.debug(`Debugging message id: ${msgId}`);
+
+  const originName = multiProvider.getChainName(originDomain);
+  const destName = multiProvider.tryGetChainName(destDomain)!;
+  const environment = getChainEnvironment(originName);
+  // TODO PI support here
+  const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
+
+  const destInvalid = isInvalidDestDomain(core, destDomain, destName);
+  if (destInvalid) return destInvalid;
+
+  const destProvider = multiProvider.getProvider(destName);
+  const recipInvalid = await isInvalidRecipient(destProvider, recipient);
+  if (recipInvalid) return recipInvalid;
+
+  const senderBytes = utils.addressToBytes32(sender);
+  const deliveryResult = await debugMessageDelivery(
+    core,
+    originDomain,
+    destName,
+    sender,
+    recipient,
+    senderBytes,
+    body,
+    destProvider,
+  );
+  if (deliveryResult.status && deliveryResult.details) return deliveryResult;
+  const gasEstimate = deliveryResult.gasEstimate;
+
+  const insufficientGas = await isIgpUnderfunded(
+    core,
+    msgId,
+    originName,
+    destDomain,
+    gasEstimate,
+    totalPayment,
+  );
+  if (insufficientGas) return insufficientGas;
+
+  return noErrorFound();
 }
 
 async function findTransactionDetails(txHash: string, multiProvider: MultiProvider) {
@@ -145,165 +263,153 @@ async function fetchTransactionDetails(
   }
 }
 
-async function debugMessage(
-  core: HyperlaneCore,
-  multiProvider: MultiProvider,
-  message: DispatchedMessage,
-  attemptGetProcessTx = true,
-): Promise<MessageDebugDetails> {
-  const {
-    sender: senderBytes,
-    recipient: recipientBytes,
-    origin: originDomain,
-    destination: destDomain,
-    body,
-    nonce,
-  } = message.parsed;
-  const messageId = utils.messageId(message.message);
-  const senderAddr = utils.bytes32ToAddress(senderBytes.toString());
-  const recipientAddr = utils.bytes32ToAddress(recipientBytes.toString());
-  const originName = multiProvider.getChainName(originDomain);
-  const destName = multiProvider.tryGetChainName(destDomain);
-
-  const properties = new Map<string, string | LinkProperty>();
-  properties.set('ID', messageId);
-  properties.set('Sender', senderAddr);
-  properties.set('Recipient', recipientAddr);
-  properties.set('Origin Domain', originDomain.toString());
-  properties.set('Origin Chain', originName);
-  properties.set('Destination Domain', destDomain.toString());
-  properties.set('Destination Chain', destName || 'Unknown');
-  properties.set('Nonce', nonce.toString());
-  properties.set('Raw Bytes', message.message);
-
+function isInvalidDestDomain(core: HyperlaneCore, destDomain: number, destName: string | null) {
   logger.debug(`Destination chain: ${destName}`);
   if (!destName) {
     logger.info(`Unknown destination domain ${destDomain}`);
     return {
       status: MessageDebugStatus.InvalidDestDomain,
-      properties,
-      details: `No chain found for domain ${destDomain}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `No chain found for domain ${destDomain}. Some Domain IDs do not match Chain IDs. See https://docs.hyperlane.xyz/docs/resources/domains`,
     };
   }
-
   if (!core.knownChain(destName)) {
     logger.info(`Destination chain ${destName} unknown for environment`);
     return {
       status: MessageDebugStatus.UnknownDestChain,
-      properties,
-      details: `Hyperlane has multiple environments. See https://docs.hyperlane.xyz/hyperlane-docs/developers/domains`,
+      details: `Hyperlane has multiple environments. See https://docs.hyperlane.xyz/docs/resources/domains`,
     };
   }
+  return false;
+}
 
+async function isMessageAlreadyDelivered(
+  core: HyperlaneCore,
+  multiProvider: MultiProvider,
+  destName: string,
+  messageId: string,
+  properties: MessageDebugDetails['properties'],
+) {
   const destMailbox = core.getContracts(destName).mailbox.contract;
   const isDelivered = await destMailbox.delivered(messageId);
 
   if (isDelivered) {
     logger.info('Message has already been processed');
-    if (attemptGetProcessTx) {
-      const processTxHash = await tryGetProcessTxHash(destMailbox, messageId);
-      if (processTxHash) {
-        const url = multiProvider.tryGetExplorerTxUrl(destName, { hash: processTxHash });
-        properties.set('Process TX', { url: url || 'UNKNOWN', text: processTxHash });
-      }
+    const processTxHash = await tryGetProcessTxHash(destMailbox, messageId);
+    if (processTxHash) {
+      const url = multiProvider.tryGetExplorerTxUrl(destName, { hash: processTxHash });
+      properties.set('Process TX', { url: url || 'UNKNOWN', text: processTxHash });
     }
     return {
       status: MessageDebugStatus.AlreadyProcessed,
       properties,
       details: 'See delivery transaction for more details',
     };
-  } else {
-    logger.debug('Message not yet processed');
   }
 
-  const recipientIsContract = await isContract(multiProvider, destName, recipientAddr);
+  logger.debug('Message not yet processed');
+  return false;
+}
+
+async function isInvalidRecipient(provider: providers.Provider, recipient: Address) {
+  const recipientIsContract = await isContract(provider, recipient);
   if (!recipientIsContract) {
-    logger.info(`Recipient address ${recipientAddr} is not a contract`);
+    logger.info(`Recipient address ${recipient} is not a contract`);
     return {
       status: MessageDebugStatus.RecipientNotContract,
-      properties,
-      details: `Recipient address is ${recipientAddr}. Ensure that the bytes32 value is not malformed.`,
+      details: `Recipient address is ${recipient}. Ensure that the bytes32 value is not malformed.`,
     };
   }
+  return false;
+}
 
-  const destProvider = multiProvider.getProvider(destName);
-  const recipientContract = IMessageRecipient__factory.connect(recipientAddr, destProvider);
-  let deliveryGasEst: BigNumberish;
+async function isContract(provider: providers.Provider, address: Address) {
+  const code = await provider.getCode(address);
+  return code && code !== '0x'; // "Empty" code
+}
+
+async function debugMessageDelivery(
+  core: HyperlaneCore,
+  originDomain: number,
+  destName: string,
+  sender: Address,
+  recipient: Address,
+  senderBytes: string,
+  body: string,
+  destProvider: providers.Provider,
+) {
+  const destMailbox = core.getContracts(destName).mailbox.contract;
+  const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
   try {
-    deliveryGasEst = await recipientContract.estimateGas.handle(originDomain, senderBytes, body, {
-      from: destMailbox.address,
-    });
-    logger.debug('Calling recipient `handle` function from the inbox does not revert');
+    const deliveryGasEst = await recipientContract.estimateGas.handle(
+      originDomain,
+      senderBytes,
+      body,
+      {
+        from: destMailbox.address,
+      },
+    );
+    logger.debug(
+      `Calling recipient handle function from the inbox does not revert. Gas: ${deliveryGasEst.toString()}`,
+    );
+    return { gasEstimate: deliveryGasEst.toString() };
   } catch (err: any) {
     logger.info('Estimate gas call failed');
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipientAddr);
+    const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipient);
     if (!bytecodeHasHandle) {
       logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
-        properties,
         details: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
       };
     }
 
-    const icaCallErr = await tryDebugIcaMsg(
-      senderAddr,
-      recipientAddr,
-      body,
-      originDomain,
-      destProvider,
-    );
+    const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
     if (icaCallErr) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
-        properties,
         details: icaCallErr,
       };
     }
 
     return {
       status: MessageDebugStatus.HandleCallFailure,
-      properties,
       details: errorReason,
     };
   }
+}
 
+async function isIgpUnderfunded(
+  core: HyperlaneCore,
+  msgId: string,
+  originName: string,
+  destDomain: number,
+  deliveryGasEst?: string,
+  totalPayment?: string,
+) {
   const igp = core.getContracts(originName).interchainGasPaymaster.contract;
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
     igp,
-    messageId,
+    msgId,
     destDomain,
     deliveryGasEst,
+    totalPayment,
   );
   if (!isFunded) {
     return {
       status: MessageDebugStatus.GasUnderfunded,
-      properties,
       details: igpDetails,
     };
   }
-
-  return {
-    status: MessageDebugStatus.NoErrorsFound,
-    properties,
-    details: 'Message may just need more time to be processed',
-  };
+  return false;
 }
 
-async function isContract(multiProvider: MultiProvider, chain: ChainName, address: string) {
-  const provider = multiProvider.getProvider(chain);
-  const code = await provider.getCode(address);
-  // "Empty" code
-  return code && code !== '0x';
-}
-
-async function tryGetProcessTxHash(destinationMailbox: Mailbox, messageId: string) {
+async function tryGetProcessTxHash(mailbox: Mailbox, messageId: string) {
   try {
-    const filter = destinationMailbox.filters.ProcessId(messageId);
-    const matchedEvents = await destinationMailbox.queryFilter(filter);
+    const filter = mailbox.filters.ProcessId(messageId);
+    const matchedEvents = await mailbox.queryFilter(filter);
     if (matchedEvents?.length) {
       const event = matchedEvents[0];
       return event.transactionHash;
@@ -314,13 +420,10 @@ async function tryGetProcessTxHash(destinationMailbox: Mailbox, messageId: strin
   return null;
 }
 
-async function tryCheckBytecodeHandle(
-  destinationProvider: providers.Provider,
-  recipientAddress: string,
-) {
+async function tryCheckBytecodeHandle(provider: providers.Provider, recipientAddress: string) {
   try {
     // scan bytecode for handle function selector
-    const bytecode = await destinationProvider.getCode(recipientAddress);
+    const bytecode = await provider.getCode(recipientAddress);
     const msgRecipientInterface = IMessageRecipient__factory.createInterface();
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
@@ -391,19 +494,25 @@ async function tryCheckIgpGasFunded(
   igp: InterchainGasPaymaster,
   messageId: string,
   destDomain: number,
-  deliveryGasEst: BigNumberish,
+  deliveryGasEst?: string,
+  totalPayment?: string,
 ) {
   try {
-    const filter = igp.filters.GasPayment(messageId, null, null);
-    // TODO restrict blocks here to avoid rpc errors
-    const matchedEvents = (await igp.queryFilter(filter)) || [];
-    logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
-    logger.debug(matchedEvents);
-    let totalGas = BigNumber.from(0);
-    let totalPaid = BigNumber.from(0);
-    for (const payment of matchedEvents) {
-      totalGas = totalGas.add(payment.args.gasAmount);
-      totalPaid = totalPaid.add(payment.args.payment);
+    if (!deliveryGasEst) throw new Error('No gas estimate provided');
+
+    let totalPaid: BigNumber = BigNumber.from(0);
+    if (!totalPayment) {
+      const filter = igp.filters.GasPayment(messageId, null, null);
+      // TODO restrict blocks here to avoid rpc errors
+      const matchedEvents = (await igp.queryFilter(filter)) || [];
+      logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
+      logger.debug(matchedEvents);
+      for (const payment of matchedEvents) {
+        totalPaid = totalPaid.add(payment.args.payment);
+      }
+    } else {
+      logger.debug(`Using totalPayment info from message: ${totalPayment}`);
+      totalPaid = BigNumber.from(totalPayment);
     }
 
     if (totalPaid.lte(0)) {
@@ -442,4 +551,12 @@ function extractReasonString(rawError: any) {
     // TODO handle more cases here as needed
     return `Failure reason: ${trimToLength(errorString, 250)}`;
   }
+}
+
+function noErrorFound(properties?: MessageDebugDetails['properties']): MessageDebugDetails {
+  return {
+    status: MessageDebugStatus.NoErrorsFound,
+    details: 'Message may just need more time to be processed',
+    properties: properties || new Map(),
+  };
 }
