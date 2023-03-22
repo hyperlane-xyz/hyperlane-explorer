@@ -302,6 +302,20 @@ async function isMessageAlreadyDelivered(
   return false;
 }
 
+async function tryGetProcessTxHash(mailbox: Mailbox, messageId: string) {
+  try {
+    const filter = mailbox.filters.ProcessId(messageId);
+    const matchedEvents = await mailbox.queryFilter(filter);
+    if (matchedEvents?.length) {
+      const event = matchedEvents[0];
+      return event.transactionHash;
+    }
+  } catch (error) {
+    logger.error('Error finding process transaction', error);
+  }
+  return null;
+}
+
 async function isInvalidRecipient(provider: providers.Provider, recipient: Address) {
   const recipientIsContract = await isContract(provider, recipient);
   if (!recipientIsContract) {
@@ -332,6 +346,8 @@ async function debugMessageDelivery(
   const destMailbox = core.getContracts(destName).mailbox.contract;
   const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
   try {
+    // TODO add special case for Arbitrum:
+    // https://github.com/hyperlane-xyz/hyperlane-monorepo/pull/1949/files#diff-79ec1cf679507919c08a9a66e0407c16fff22aee98d79cf39a0c1baf086403ebR364
     const deliveryGasEst = await recipientContract.estimateGas.handle(
       originDomain,
       senderBytes,
@@ -396,18 +412,46 @@ async function isIgpUnderfunded(
   return false;
 }
 
-async function tryGetProcessTxHash(mailbox: Mailbox, messageId: string) {
+async function tryCheckIgpGasFunded(
+  igp: InterchainGasPaymaster,
+  messageId: string,
+  deliveryGasEst?: string,
+  totalGasAmount?: string,
+) {
   try {
-    const filter = mailbox.filters.ProcessId(messageId);
-    const matchedEvents = await mailbox.queryFilter(filter);
-    if (matchedEvents?.length) {
-      const event = matchedEvents[0];
-      return event.transactionHash;
+    if (!deliveryGasEst) throw new Error('No gas estimate provided');
+
+    let gasAlreadyFunded = BigNumber.from(0);
+    if (totalGasAmount) {
+      const filter = igp.filters.GasPayment(messageId, null, null);
+      // TODO restrict blocks here to avoid rpc errors
+      const matchedEvents = (await igp.queryFilter(filter)) || [];
+      logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
+      logger.debug(matchedEvents);
+      for (const payment of matchedEvents) {
+        gasAlreadyFunded = gasAlreadyFunded.add(payment.args.gasAmount);
+      }
+    } else {
+      logger.debug(`Using totalGasAmount info from message: ${totalGasAmount}`);
+      gasAlreadyFunded = BigNumber.from(totalGasAmount);
+    }
+
+    logger.debug('Amount of gas paid for to IGP:', gasAlreadyFunded.toString());
+    logger.debug('Amount of gas required:', deliveryGasEst);
+    if (gasAlreadyFunded.lte(0)) {
+      return { isFunded: false, igpDetails: 'Origin IGP has not received any gas payments' };
+    } else if (gasAlreadyFunded.lte(deliveryGasEst)) {
+      return {
+        isFunded: false,
+        igpDetails: `Origin IGP gas amount is ${gasAlreadyFunded.toString()} but requires ${deliveryGasEst}`,
+      };
+    } else {
+      return { isFunded: true, igpDetails: '' };
     }
   } catch (error) {
-    logger.error('Error finding process transaction', error);
+    logger.warn('Error estimating delivery gas cost for message', error);
+    return { isFunded: true, igpDetails: '' };
   }
-  return null;
 }
 
 async function tryCheckBytecodeHandle(provider: providers.Provider, recipientAddress: string) {
@@ -477,48 +521,6 @@ async function tryCheckIcaCall(
     const errorReason = extractReasonString(err);
     logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, errorReason);
     return errorReason;
-  }
-}
-
-async function tryCheckIgpGasFunded(
-  igp: InterchainGasPaymaster,
-  messageId: string,
-  deliveryGasEst?: string,
-  totalGasAmount?: string,
-) {
-  try {
-    if (!deliveryGasEst) throw new Error('No gas estimate provided');
-
-    let gasAlreadyFunded = BigNumber.from(0);
-    if (totalGasAmount) {
-      const filter = igp.filters.GasPayment(messageId, null, null);
-      // TODO restrict blocks here to avoid rpc errors
-      const matchedEvents = (await igp.queryFilter(filter)) || [];
-      logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
-      logger.debug(matchedEvents);
-      for (const payment of matchedEvents) {
-        gasAlreadyFunded = gasAlreadyFunded.add(payment.args.gasAmount);
-      }
-    } else {
-      logger.debug(`Using totalGasAmount info from message: ${totalGasAmount}`);
-      gasAlreadyFunded = BigNumber.from(totalGasAmount);
-    }
-
-    logger.debug('Amount of gas paid for to IGP:', gasAlreadyFunded.toString());
-    logger.debug('Amount of gas required:', deliveryGasEst);
-    if (gasAlreadyFunded.lte(0)) {
-      return { isFunded: false, igpDetails: 'Origin IGP has not received any gas payments' };
-    } else if (gasAlreadyFunded.lte(deliveryGasEst)) {
-      return {
-        isFunded: false,
-        igpDetails: `Origin IGP gas amount is ${gasAlreadyFunded.toString()} but requires ${deliveryGasEst}`,
-      };
-    } else {
-      return { isFunded: true, igpDetails: '' };
-    }
-  } catch (error) {
-    logger.warn('Error estimating delivery gas cost for message', error);
-    return { isFunded: true, igpDetails: '' };
   }
 }
 
