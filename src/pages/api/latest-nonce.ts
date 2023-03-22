@@ -21,6 +21,7 @@ export default async function handler(
   try {
     const body = req.body as { chainId: number };
     if (!body.chainId) throw new Error('No chainId in body');
+    if (!chainIdToMetadata[body.chainId]) throw new Error('ChainId is unsupported');
     const nonce = await fetchLatestNonce(body.chainId);
     res.status(200).json({ nonce });
   } catch (error) {

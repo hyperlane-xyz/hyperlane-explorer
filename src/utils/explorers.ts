@@ -3,14 +3,15 @@ import { BigNumber, providers } from 'ethers';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { config } from '../consts/config';
-import type { LogWithTimestamp } from '../features/messages/queries/types';
+import type { LogWithTimestamp } from '../types';
 
 import { logger } from './logger';
-import { hexToDecimal, tryHexToDecimal } from './number';
+import { toDecimalNumber, tryToDecimalNumber } from './number';
 import { fetchWithTimeout, sleep } from './timeout';
 
 const BLOCK_EXPLORER_RATE_LIMIT = 5100; // once every 5.1 seconds
-let lastExplorerQuery = 0;
+// Used for crude rate-limiting of explorer queries without API keys
+const hostToLastQueried: Record<string, number> = {};
 
 export interface ExplorerQueryResponse<R> {
   status: string;
@@ -22,7 +23,7 @@ async function queryExplorer<P>(
   multiProvider: MultiProvider,
   chainId: number,
   params: URLSearchParams,
-  useKey = true,
+  useKey = false,
 ) {
   const baseUrl = multiProvider.tryGetExplorerApiUrl(chainId);
   if (!baseUrl) throw new Error(`No valid URL found for explorer for chain ${chainId}`);
@@ -40,7 +41,6 @@ async function queryExplorer<P>(
 
   logger.debug('Querying explorer url:', url.toString());
   const result = await executeQuery<P>(url);
-  lastExplorerQuery = Date.now();
   return result;
 }
 
@@ -48,6 +48,7 @@ async function executeQuery<P>(url: URL) {
   try {
     if (!url.searchParams.has('apikey')) {
       // Without an API key, rate limits are strict so enforce a wait if necessary
+      const lastExplorerQuery = hostToLastQueried[url.hostname] || 0;
       const waitTime = BLOCK_EXPLORER_RATE_LIMIT - (Date.now() - lastExplorerQuery);
       if (waitTime > 0) await sleep(waitTime);
     }
@@ -65,7 +66,7 @@ async function executeQuery<P>(url: URL) {
 
     return json.result;
   } finally {
-    lastExplorerQuery = Date.now();
+    hostToLastQueried[url.hostname] = Date.now();
   }
 }
 
@@ -86,7 +87,7 @@ export async function queryExplorerForLogs(
   multiProvider: MultiProvider,
   chainId: number,
   params: string,
-  useKey = true,
+  useKey = false,
 ): Promise<ExplorerLogEntry[]> {
   const logs = await queryExplorer<ExplorerLogEntry[]>(
     multiProvider,
@@ -103,6 +104,7 @@ export async function queryExplorerForLogs(
   return logs;
 }
 
+// TODO use Zod
 function validateExplorerLog(log: ExplorerLogEntry) {
   if (!log) throw new Error('Log is nullish');
   if (!log.transactionHash) throw new Error('Log has no tx hash');
@@ -116,10 +118,10 @@ export function toProviderLog(log: ExplorerLogEntry): LogWithTimestamp {
     ...log,
     blockHash: '',
     removed: false,
-    blockNumber: hexToDecimal(log.blockNumber),
-    timestamp: hexToDecimal(log.timeStamp) * 1000,
-    logIndex: tryHexToDecimal(log.logIndex) || 0,
-    transactionIndex: tryHexToDecimal(log.transactionIndex) || 0,
+    blockNumber: toDecimalNumber(log.blockNumber),
+    timestamp: toDecimalNumber(log.timeStamp) * 1000,
+    logIndex: tryToDecimalNumber(log.logIndex) || 0,
+    transactionIndex: tryToDecimalNumber(log.transactionIndex) || 0,
   };
 }
 
@@ -127,7 +129,7 @@ export async function queryExplorerForTx(
   multiProvider: MultiProvider,
   chainId: number,
   txHash: string,
-  useKey = true,
+  useKey = false,
 ) {
   const params = new URLSearchParams({
     module: 'proxy',
@@ -152,7 +154,7 @@ export async function queryExplorerForTxReceipt(
   multiProvider: MultiProvider,
   chainId: number,
   txHash: string,
-  useKey = true,
+  useKey = false,
 ) {
   const params = new URLSearchParams({
     module: 'proxy',
@@ -177,7 +179,7 @@ export async function queryExplorerForBlock(
   multiProvider: MultiProvider,
   chainId: number,
   blockNumber?: number | string,
-  useKey = true,
+  useKey = false,
 ) {
   const params = new URLSearchParams({
     module: 'proxy',

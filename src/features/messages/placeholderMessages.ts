@@ -1,15 +1,25 @@
 import { constants } from 'ethers';
 
-import { Message, MessageStatus, PartialTransactionReceipt } from '../../types';
+import { Message, MessageStatus, MessageTx } from '../../types';
 
-const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';
+export const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-export const TX_ZERO: PartialTransactionReceipt = {
-  from: constants.AddressZero,
-  transactionHash: TX_HASH_ZERO,
-  blockNumber: 123456789,
-  gasUsed: 100_000,
+export const TX_ZERO: MessageTx = {
   timestamp: Date.now(),
+  hash: TX_HASH_ZERO,
+  from: constants.AddressZero,
+  to: constants.AddressZero,
+  blockHash: TX_HASH_ZERO,
+  blockNumber: 123456789,
+  mailbox: constants.AddressZero,
+  nonce: 0,
+  gasLimit: 100_000,
+  gasPrice: 100,
+  effectiveGasPrice: 100,
+  gasUsed: 100_000,
+  cumulativeGasUsed: 100_000,
+  maxFeePerGas: 100,
+  maxPriorityPerGas: 100,
 };
 
 const BODY_ZERO =
@@ -17,7 +27,7 @@ const BODY_ZERO =
 
 export const PLACEHOLDER_MESSAGE: Message = {
   id: '1',
-  msgId: TX_HASH_ZERO.substring(2),
+  msgId: TX_HASH_ZERO,
   nonce: 1,
   status: MessageStatus.Pending,
   sender: constants.AddressZero,
@@ -27,8 +37,8 @@ export const PLACEHOLDER_MESSAGE: Message = {
   destinationDomainId: 0,
   originChainId: 0,
   destinationChainId: 0,
-  originTimestamp: Date.now(),
-  destinationTimestamp: Date.now(),
-  originTransaction: TX_ZERO,
-  destinationTransaction: TX_ZERO,
+  origin: TX_ZERO,
+  destination: TX_ZERO,
+  totalGasAmount: '100000',
+  totalPayment: '100000',
 };

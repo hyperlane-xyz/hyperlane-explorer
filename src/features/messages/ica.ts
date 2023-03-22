@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { BigNumber, utils } from 'ethers';
+import { BigNumber, providers, utils } from 'ethers';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
-import { MultiProvider, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
 
+import { getMultiProvider } from '../../multiProvider';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
@@ -14,8 +15,8 @@ export function isIcaMessage({
   sender,
   recipient,
 }: {
-  sender: string;
-  recipient: string;
+  sender: Address;
+  recipient: Address;
   hash?: string;
 }) {
   const isSenderIca = isAddressIcaRouter(sender);
@@ -30,7 +31,8 @@ export function isIcaMessage({
   return false;
 }
 
-function isAddressIcaRouter(addr: string) {
+function isAddressIcaRouter(addr: Address) {
+  // TODO PI support
   return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
 }
 
@@ -68,18 +70,19 @@ export function tryDecodeIcaBody(body: string) {
   }
 }
 
-// TODO do this on backend and use private RPC
-export async function tryFetchIcaAddress(originDomainId: number, senderAddress: string) {
+export async function tryFetchIcaAddress(
+  originDomainId: number,
+  sender: Address,
+  provider: providers.Provider,
+) {
   try {
     if (!ICA_ADDRESS) return null;
-    logger.debug('Fetching Ica address', originDomainId, senderAddress);
-    // TODO improved PI support
-    const multiProvider = new MultiProvider();
-    const provider = multiProvider.getProvider(originDomainId);
+    logger.debug('Fetching Ica address', originDomainId, sender);
+
     const icaContract = InterchainAccountRouter__factory.connect(ICA_ADDRESS, provider);
     const icaAddress = await icaContract['getInterchainAccount(uint32,address)'](
       originDomainId,
-      senderAddress,
+      sender,
     );
     if (!isValidAddress(icaAddress)) throw new Error(`Invalid Ica addr ${icaAddress}`);
     logger.debug('Ica address found', icaAddress);
@@ -90,12 +93,13 @@ export async function tryFetchIcaAddress(originDomainId: number, senderAddress: 
   }
 }
 
-export function useIcaAddress(originDomainId: number, senderAddress?: string | null) {
+export function useIcaAddress(originDomainId: number, sender?: Address | null) {
   return useQuery(
-    ['messageIcaAddress', originDomainId, senderAddress],
+    ['messageIcaAddress', originDomainId, sender],
     () => {
-      if (!originDomainId || !senderAddress || BigNumber.from(senderAddress).isZero()) return null;
-      return tryFetchIcaAddress(originDomainId, senderAddress);
+      if (!originDomainId || !sender || BigNumber.from(sender).isZero()) return null;
+      const provider = getMultiProvider().getProvider(originDomainId);
+      return tryFetchIcaAddress(originDomainId, sender, provider);
     },
     { retry: false },
   );

@@ -1,12 +1,13 @@
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 import { utils } from '@hyperlane-xyz/utils';
 
-import { ChainToChain } from '../../../components/icons/ChainToChain';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
 import { MAILBOX_VERSION } from '../../../consts/environments';
+import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
@@ -23,9 +24,7 @@ export function ContentDetailsCard({
     msgId,
     nonce,
     originDomainId,
-    originChainId,
     destinationDomainId,
-    destinationChainId,
     sender,
     recipient,
     body,
@@ -59,9 +58,7 @@ export function ContentDetailsCard({
   return (
     <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <div className="relative -top-px -left-0.5">
-          <ChainToChain originChainId={originChainId} destinationChainId={destinationChainId} />
-        </div>
+        <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">Message Details</h3>
           <HelpIcon
@@ -70,36 +67,38 @@ export function ContentDetailsCard({
           />
         </div>
       </div>
-      <KeyValueRow
-        label="Message Id:"
-        labelWidth="w-20"
-        display={msgId}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Sender:"
-        labelWidth="w-20"
-        display={sender}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Recipient:"
-        labelWidth="w-20"
-        display={recipient}
-        displayWidth="w-60 sm:w-80"
-        showCopy={true}
-        blurValue={shouldBlur}
-      />
-      <KeyValueRow
-        label="Nonce:"
-        labelWidth="w-20"
-        display={nonce.toString()}
-        blurValue={shouldBlur}
-      />
+      <div className="flex flex-wrap gap-x-6 gap-y-4">
+        <KeyValueRow
+          label="Identifer:"
+          labelWidth="w-16"
+          display={msgId}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Nonce:"
+          labelWidth="w-16"
+          display={nonce.toString()}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Sender:"
+          labelWidth="w-16"
+          display={sender}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+        <KeyValueRow
+          label="Recipient:"
+          labelWidth="w-16"
+          display={recipient}
+          displayWidth="w-64 sm:w-80"
+          showCopy={true}
+          blurValue={shouldBlur}
+        />
+      </div>
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>

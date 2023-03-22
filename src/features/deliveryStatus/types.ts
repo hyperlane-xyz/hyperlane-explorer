@@ -1,4 +1,4 @@
-import type { MessageStatus, PartialTransactionReceipt } from '../../types';
+import type { MessageStatus, MessageTx } from '../../types';
 import type { MessageDebugStatus } from '../debugger/types';
 
 interface MessageDeliveryResult {
@@ -7,7 +7,7 @@ interface MessageDeliveryResult {
 
 export interface MessageDeliverySuccessResult extends MessageDeliveryResult {
   status: MessageStatus.Delivered;
-  deliveryTransaction: PartialTransactionReceipt;
+  deliveryTransaction: MessageTx;
 }
 
 export interface MessageDeliveryFailingResult extends MessageDeliveryResult {

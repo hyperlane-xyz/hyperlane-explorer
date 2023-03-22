@@ -1,8 +1,9 @@
+import Image from 'next/image';
 import { useMemo } from 'react';
 
 import { HelpIcon } from '../../../components/icons/HelpIcon';
-import { InterchainAccount } from '../../../components/icons/InterchainAccount';
 import { Card } from '../../../components/layout/Card';
+import AccountStar from '../../../images/icons/account-star.svg';
 import { Message } from '../../../types';
 import { tryDecodeIcaBody, useIcaAddress } from '../ica';
 
@@ -26,7 +27,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
     <Card classes="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
-          <InterchainAccount />
+          <Image src={AccountStar} width={28} height={28} alt="" className="opacity-80" />
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-gray-500 font-medium text-md mr-2">ICA Details</h3>

@@ -6,7 +6,7 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
 import { getMultiProvider } from '../../../multiProvider';
-import { MessageStatus, PartialTransactionReceipt } from '../../../types';
+import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
@@ -18,7 +18,7 @@ interface TransactionCardProps {
   title: string;
   chainId: number;
   status: MessageStatus;
-  transaction?: PartialTransactionReceipt;
+  transaction?: MessageTx;
   debugInfo?: TransactionCardDebugInfo;
   helpText: string;
   shouldBlur: boolean;
@@ -40,10 +40,10 @@ export function TransactionCard({
   helpText,
   shouldBlur,
 }: TransactionCardProps) {
-  const hash = transaction?.transactionHash;
+  const hash = transaction?.hash;
   const txExplorerLink = hash ? getMultiProvider().tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
-    <Card classes="flex-1 min-w-fit space-y-4">
+    <Card classes="flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainLogo chainId={chainId} />
@@ -65,7 +65,7 @@ export function TransactionCard({
           <KeyValueRow
             label="Tx hash:"
             labelWidth="w-16"
-            display={transaction.transactionHash}
+            display={transaction.hash}
             displayWidth="w-60 sm:w-64"
             showCopy={true}
             blurValue={shouldBlur}
@@ -107,15 +107,15 @@ export function TransactionCard({
       )}
       {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500 text-center">
+          <div className="text-gray-700 text-center">
             Destination delivery transaction currently failing
           </div>
           {debugInfo && (
             <>
-              <div className="mt-4 text-gray-500 text-center">
+              <div className="mt-4 text-gray-700 text-center">
                 {debugStatusToDesc[debugInfo.status]}
               </div>
-              <div className="mt-4 text-gray-500 text-sm max-w-sm text-center break-words">
+              <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
                 {debugInfo.details}
               </div>
             </>

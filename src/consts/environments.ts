@@ -1,3 +1,4 @@
+// Must match coreEnvironments in SDK
 export enum Environment {
   Mainnet = 'mainnet',
   Testnet = 'testnet',

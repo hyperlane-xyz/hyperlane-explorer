@@ -1,18 +1,18 @@
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 
 import { logger } from './logger';
 
-export function tryHexToDecimal(value: string | number) {
+export function tryToDecimalNumber(value: BigNumberish) {
   try {
-    return BigNumber.from(value).toNumber();
+    return BigNumber.from(value.toString()).toNumber();
   } catch (error) {
     logger.debug(`Error parsing hex number ${value}`);
     return null;
   }
 }
 
-export function hexToDecimal(value: string | number) {
-  const result = tryHexToDecimal(value);
-  if (!result) throw new Error(`Error parsing hex number ${value}`);
+export function toDecimalNumber(value: BigNumberish) {
+  const result = tryToDecimalNumber(value);
+  if (result === null || result === undefined) throw new Error(`Error parsing hex number ${value}`);
   return result;
 }

@@ -1,46 +1,62 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 
-import type { MessageDeliveryStatusResponse } from './types';
+import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
-// TODO: Deprecate this to simplify message details page
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
   const serializedMessage = JSON.stringify(message);
-  const queryResult = useQuery(
-    ['messageProcessTx', serializedMessage, isReady],
+  const { data, error } = useQuery(
+    ['messageDeliveryStatus', serializedMessage, isReady],
     async () => {
+      // TODO enable PI support here
       if (!isReady || !message || message.status === MessageStatus.Delivered || message.isPiMsg)
         return null;
 
-      const response = await fetch('/api/delivery-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: serializedMessage,
-      });
-      if (!response.ok) {
-        const errorMsg = await response.text();
-        throw new Error(errorMsg);
-      }
-      const result = (await response.json()) as MessageDeliveryStatusResponse;
-      logger.debug('Message delivery status result', result);
-      return result;
+      logger.debug('Fetching message delivery status for:', message.id);
+      const deliverStatus = await fetchDeliveryStatus(message);
+      logger.debug('Message delivery status result', deliverStatus);
+      return deliverStatus;
     },
     { retry: false },
   );
 
   // Show toast on error
-  const error = queryResult.error;
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);
       toast.error(`${error}`);
     }
   }, [error]);
-  return queryResult;
+
+  const [messageWithDeliveryStatus, debugInfo] = useMemo(() => {
+    if (data?.status === MessageStatus.Delivered) {
+      return [
+        {
+          ...message,
+          status: MessageStatus.Delivered,
+          destination: data.deliveryTransaction,
+        },
+      ];
+    } else if (data?.status === MessageStatus.Failing) {
+      return [
+        {
+          ...message,
+          status: MessageStatus.Failing,
+        },
+        {
+          status: data.debugStatus,
+          details: data.debugDetails,
+          originChainId: message.originChainId,
+          originTxHash: message.origin.hash,
+        },
+      ];
+    }
+    return [message];
+  }, [message, data]);
+
+  return { messageWithDeliveryStatus, debugInfo };
 }
