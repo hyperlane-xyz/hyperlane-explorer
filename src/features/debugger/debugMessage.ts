@@ -21,7 +21,6 @@ import { Environment } from '../../consts/environments';
 import { getMultiProvider } from '../../multiProvider';
 import { Message } from '../../types';
 import { trimLeading0x } from '../../utils/addresses';
-import { fromWei } from '../../utils/amount';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { chunk, trimToLength } from '../../utils/string';
@@ -160,13 +159,7 @@ async function debugDispatchedMessage(
   if (deliveryResult.status && deliveryResult.details) return { ...deliveryResult, properties };
   const gasEstimate = deliveryResult.gasEstimate;
 
-  const insufficientGas = await isIgpUnderfunded(
-    core,
-    messageId,
-    originName,
-    destDomain,
-    gasEstimate,
-  );
+  const insufficientGas = await isIgpUnderfunded(core, messageId, originName, gasEstimate);
   if (insufficientGas) return { ...insufficientGas, properties };
 
   return noErrorFound(properties);
@@ -183,7 +176,7 @@ export async function debugExplorerMessage(
     originDomainId: originDomain,
     destinationDomainId: destDomain,
     body,
-    totalPayment,
+    totalGasAmount,
   } = message;
   logger.debug(`Debugging message id: ${msgId}`);
 
@@ -218,9 +211,8 @@ export async function debugExplorerMessage(
     core,
     msgId,
     originName,
-    destDomain,
     gasEstimate,
-    totalPayment,
+    totalGasAmount,
   );
   if (insufficientGas) return insufficientGas;
 
@@ -385,17 +377,15 @@ async function isIgpUnderfunded(
   core: HyperlaneCore,
   msgId: string,
   originName: string,
-  destDomain: number,
   deliveryGasEst?: string,
-  totalPayment?: string,
+  totalGasAmount?: string,
 ) {
   const igp = core.getContracts(originName).interchainGasPaymaster.contract;
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
     igp,
     msgId,
-    destDomain,
     deliveryGasEst,
-    totalPayment,
+    totalGasAmount,
   );
   if (!isFunded) {
     return {
@@ -493,45 +483,37 @@ async function tryCheckIcaCall(
 async function tryCheckIgpGasFunded(
   igp: InterchainGasPaymaster,
   messageId: string,
-  destDomain: number,
   deliveryGasEst?: string,
-  totalPayment?: string,
+  totalGasAmount?: string,
 ) {
   try {
     if (!deliveryGasEst) throw new Error('No gas estimate provided');
 
-    let totalPaid: BigNumber = BigNumber.from(0);
-    if (!totalPayment) {
+    let gasAlreadyFunded = BigNumber.from(0);
+    if (totalGasAmount) {
       const filter = igp.filters.GasPayment(messageId, null, null);
       // TODO restrict blocks here to avoid rpc errors
       const matchedEvents = (await igp.queryFilter(filter)) || [];
       logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
       logger.debug(matchedEvents);
       for (const payment of matchedEvents) {
-        totalPaid = totalPaid.add(payment.args.payment);
+        gasAlreadyFunded = gasAlreadyFunded.add(payment.args.gasAmount);
       }
     } else {
-      logger.debug(`Using totalPayment info from message: ${totalPayment}`);
-      totalPaid = BigNumber.from(totalPayment);
+      logger.debug(`Using totalGasAmount info from message: ${totalGasAmount}`);
+      gasAlreadyFunded = BigNumber.from(totalGasAmount);
     }
 
-    if (totalPaid.lte(0)) {
-      logger.debug('Amount paid to IGP is 0, delivery underfunded');
-      return { isFunded: false, igpDetails: 'Origin IGP has not received any payments' };
-    }
-    // TODO this assumes default ISM for messages
-    const paymentQuote = await igp.quoteGasPayment(destDomain, deliveryGasEst);
-    logger.debug(`IGP paid: ${totalPaid}, payment quote: ${paymentQuote}`);
-    if (BigNumber.from(paymentQuote).gt(totalPaid)) {
-      logger.debug('Payment to IGP is NOT sufficient');
-      const paidEth = fromWei(totalPaid.toString());
-      const quoteEth = fromWei(paymentQuote.toString());
+    logger.debug('Amount of gas paid for to IGP:', gasAlreadyFunded.toString());
+    logger.debug('Amount of gas required:', deliveryGasEst);
+    if (gasAlreadyFunded.lte(0)) {
+      return { isFunded: false, igpDetails: 'Origin IGP has not received any gas payments' };
+    } else if (gasAlreadyFunded.lte(deliveryGasEst)) {
       return {
         isFunded: false,
-        igpDetails: `Origin IGP has received ${paidEth} but requires ${quoteEth}`,
+        igpDetails: `Origin IGP gas amount is ${gasAlreadyFunded.toString()} but requires ${deliveryGasEst}`,
       };
     } else {
-      logger.debug('Payment to IGP is sufficient');
       return { isFunded: true, igpDetails: '' };
     }
   } catch (error) {
