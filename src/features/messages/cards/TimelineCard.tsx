@@ -1,5 +1,3 @@
-import { useMemo } from 'react';
-
 import { MessageTimeline, useMessageStage } from '@hyperlane-xyz/widgets';
 
 import { Card } from '../../../components/layout/Card';
@@ -11,24 +9,7 @@ interface Props {
 }
 
 export function TimelineCard({ message }: Props) {
-  // TODO update Timeline widget schema to newer message shape so this x-form is not needed
-  const partialMessage = useMemo(
-    () => ({
-      ...message,
-      originTransaction: {
-        blockNumber: message.origin.blockNumber,
-        timestamp: message.origin.timestamp,
-      },
-      destinationTransaction: message.destination
-        ? {
-            blockNumber: message.destination.blockNumber,
-            timestamp: message.destination.timestamp,
-          }
-        : undefined,
-    }),
-    [message],
-  );
-  const { stage, timings } = useMessageStage({ message: partialMessage });
+  const { stage, timings } = useMessageStage({ message });
 
   return (
     <Card classes="w-full">
