@@ -2,7 +2,7 @@ import { MultiProvider, chainMetadata, hyperlaneCoreAddresses } from '@hyperlane
 
 import { ChainConfig } from '../../chains/chainConfig';
 
-import { fetchMessagesFromPiChain } from './usePiChainMessageQuery';
+import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 // NOTE: THESE TESTS WILL NO LONGER WORK ONCE THE MESSAGE USED BELOW
 // IS OUT OF PROVIDER_LOGS_BLOCK_WINDOW USED TO QUERY

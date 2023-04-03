@@ -3,7 +3,7 @@ import { BigNumber, providers } from 'ethers';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { config } from '../consts/config';
-import type { LogWithTimestamp } from '../types';
+import type { ExtendedLog } from '../types';
 
 import { logger } from './logger';
 import { toDecimalNumber, tryToDecimalNumber } from './number';
@@ -113,7 +113,7 @@ function validateExplorerLog(log: ExplorerLogEntry) {
   if (!log.timeStamp) throw new Error('Log has no timestamp');
 }
 
-export function toProviderLog(log: ExplorerLogEntry): LogWithTimestamp {
+export function toProviderLog(log: ExplorerLogEntry): ExtendedLog {
   return {
     ...log,
     blockHash: '',

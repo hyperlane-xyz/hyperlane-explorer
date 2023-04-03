@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
 export const chainContractsSchema = z.object({
   mailbox: z.string(),
   multisigIsm: z.string().optional(),
-  // interchainGasPaymaster: z.string().optional(),
+  interchainGasPaymaster: z.string().optional(),
   // interchainAccountRouter: z.string().optional(),
 });
 
@@ -52,7 +52,7 @@ export function tryParseChainConfig(input: string): ParseResult {
 
   const chainConfig = result.data as ChainConfig;
 
-  // Reject blocksout explorers for now
+  // Reject blockscout explorers for now
   if (chainConfig.blockExplorers?.[0]?.url.includes('blockscout')) {
     return {
       success: false,

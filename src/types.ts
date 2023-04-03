@@ -55,8 +55,8 @@ export interface Message extends MessageStub {
   numPayments?: number;
 }
 
-export interface LogWithTimestamp extends providers.Log {
-  timestamp: number;
+export interface ExtendedLog extends providers.Log {
+  timestamp?: number;
   from?: Address;
   to?: Address;
 }

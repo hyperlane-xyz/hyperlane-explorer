@@ -347,6 +347,7 @@ async function debugMessageDelivery(
   const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
   try {
     // TODO add special case for Arbitrum:
+    // TODO account for mailbox handling gas overhead
     // https://github.com/hyperlane-xyz/hyperlane-monorepo/pull/1949/files#diff-79ec1cf679507919c08a9a66e0407c16fff22aee98d79cf39a0c1baf086403ebR364
     const deliveryGasEst = await recipientContract.estimateGas.handle(
       originDomain,
