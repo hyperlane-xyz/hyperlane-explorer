@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 
 import { Environment, environments } from '../../consts/environments';
-import { useEnvironment } from '../../store';
+import { useStore } from '../../store';
 import { replacePathParam, useQueryParam } from '../../utils/queryParams';
 import { toTitleCase } from '../../utils/string';
 import { SelectField } from '../input/SelectField';
 
 export function EnvironmentSelector() {
-  const { environment, setEnvironment } = useEnvironment();
+  const { environment, setEnvironment } = useStore((s) => ({
+    environment: s.environment,
+    setEnvironment: s.setEnvironment,
+  }));
 
   const queryEnv = useQueryParam('env');
   useEffect(() => {

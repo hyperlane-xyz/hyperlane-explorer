@@ -36,9 +36,9 @@ export interface MessageStub {
   nonce: number; // formerly leafIndex
   sender: Address;
   recipient: Address;
-  originChainId: number;
+  originChainId: ChainId;
   originDomainId: number;
-  destinationChainId: number;
+  destinationChainId: ChainId;
   destinationDomainId: number;
   origin: MessageTxStub;
   destination?: MessageTxStub;

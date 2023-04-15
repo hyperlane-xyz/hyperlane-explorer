@@ -19,7 +19,7 @@ export default async function handler(
     optionsSuccessStatus: 200,
   });
   try {
-    const body = req.body as { chainId: number };
+    const body = req.body as { chainId: ChainId };
     if (!body.chainId) throw new Error('No chainId in body');
     if (!chainIdToMetadata[body.chainId]) throw new Error('ChainId is unsupported');
     const nonce = await fetchLatestNonce(body.chainId);
@@ -31,7 +31,7 @@ export default async function handler(
   }
 }
 
-async function fetchLatestNonce(chainId: number) {
+async function fetchLatestNonce(chainId: ChainId) {
   logger.debug(`Attempting to fetch nonce for:`, chainId);
   const url = getS3BucketUrl(chainId);
   logger.debug(`Querying bucket:`, url);
@@ -43,7 +43,7 @@ async function fetchLatestNonce(chainId: number) {
 }
 
 // Partly copied from https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1fc65f3b7f31f86722204a9de08506f212720a52/typescript/infra/config/environments/mainnet/validators.ts#L12
-function getS3BucketUrl(chainId: number) {
+function getS3BucketUrl(chainId: ChainId) {
   const chainName = chainIdToMetadata[chainId].name;
   const environment =
     getChainEnvironment(chainId) === Environment.Mainnet ? 'mainnet2' : 'testnet3';

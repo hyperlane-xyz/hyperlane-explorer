@@ -228,7 +228,7 @@ async function fetchLogsForMsgId(
 async function fetchLogsFromExplorer(
   paths: Array<string>,
   contractAddr: Address,
-  chainId: number,
+  chainId: ChainId,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {
@@ -247,7 +247,7 @@ async function fetchLogsFromExplorer(
 async function fetchLogsFromProvider(
   topics: Array<Array<string | null>>,
   contractAddr: Address,
-  chainId: number,
+  chainId: ChainId,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {

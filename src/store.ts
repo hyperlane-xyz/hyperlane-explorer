@@ -9,8 +9,8 @@ import { logger } from './utils/logger';
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
-  chainConfigs: Record<number, ChainConfig>;
-  setChainConfigs: (configs: Record<number, ChainConfig>) => void;
+  chainConfigs: Record<ChainId, ChainConfig>;
+  setChainConfigs: (configs: Record<ChainId, ChainConfig>) => void;
   environment: Environment;
   setEnvironment: (env: Environment) => void;
   bannerClassName: string;
@@ -21,7 +21,7 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       chainConfigs: {},
-      setChainConfigs: (configs: Record<number, ChainConfig>) => {
+      setChainConfigs: (configs: Record<ChainId, ChainConfig>) => {
         set(() => ({ chainConfigs: configs }));
         setMultiProviderChains(configs);
       },
@@ -40,17 +40,3 @@ export const useStore = create<AppState>()(
     },
   ),
 );
-
-export function useChainConfigs() {
-  return useStore((s) => ({
-    chainConfigs: s.chainConfigs,
-    setChainConfigs: s.setChainConfigs,
-  }));
-}
-
-export function useEnvironment() {
-  return useStore((s) => ({
-    environment: s.environment,
-    setEnvironment: s.setEnvironment,
-  }));
-}

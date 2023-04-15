@@ -16,7 +16,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface TransactionCardProps {
   title: string;
-  chainId: number;
+  chainId: ChainId;
   status: MessageStatus;
   transaction?: MessageTx;
   debugInfo?: TransactionCardDebugInfo;
@@ -27,7 +27,7 @@ interface TransactionCardProps {
 export interface TransactionCardDebugInfo {
   status: MessageDebugStatus;
   details: string;
-  originChainId: number;
+  originChainId: ChainId;
   originTxHash: string;
 }
 

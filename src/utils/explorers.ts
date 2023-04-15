@@ -21,7 +21,7 @@ export interface ExplorerQueryResponse<R> {
 
 async function queryExplorer<P>(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   params: URLSearchParams,
   useKey = false,
 ) {
@@ -85,7 +85,7 @@ export interface ExplorerLogEntry {
 
 export async function queryExplorerForLogs(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   params: string,
   useKey = false,
 ): Promise<ExplorerLogEntry[]> {
@@ -127,7 +127,7 @@ export function toProviderLog(log: ExplorerLogEntry): ExtendedLog {
 
 export async function queryExplorerForTx(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   txHash: string,
   useKey = false,
 ) {
@@ -152,7 +152,7 @@ export async function queryExplorerForTx(
 
 export async function queryExplorerForTxReceipt(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   txHash: string,
   useKey = false,
 ) {
@@ -177,7 +177,7 @@ export async function queryExplorerForTxReceipt(
 
 export async function queryExplorerForBlock(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   blockNumber?: number | string,
   useKey = false,
 ) {

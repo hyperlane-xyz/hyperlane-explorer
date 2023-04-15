@@ -8,9 +8,9 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
-import { useChainConfigs } from '../../store';
 
 import { tryParseChainConfig } from './chainConfig';
+import { useChainConfigs } from './useChainConfigs';
 import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
@@ -44,7 +44,7 @@ export function ConfigureChains() {
     }
   };
 
-  const onClickRemoveChain = (chainId: number) => {
+  const onClickRemoveChain = (chainId: ChainId) => {
     const newChainConfigs = { ...chainConfigs };
     delete newChainConfigs[chainId];
     setChainConfigs({

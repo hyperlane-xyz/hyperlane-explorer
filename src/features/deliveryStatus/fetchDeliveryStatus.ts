@@ -97,7 +97,7 @@ function fetchExplorerLogsForMessage(
 
 async function tryFetchTransactionDetails(
   multiProvider: MultiProvider,
-  chainId: number,
+  chainId: ChainId,
   txHash: string,
 ) {
   try {

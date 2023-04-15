@@ -71,7 +71,7 @@ export function tryDecodeIcaBody(body: string) {
 }
 
 export async function tryFetchIcaAddress(
-  originDomainId: number,
+  originDomainId: DomainId,
   sender: Address,
   provider: providers.Provider,
 ) {
@@ -93,7 +93,7 @@ export async function tryFetchIcaAddress(
   }
 }
 
-export function useIcaAddress(originDomainId: number, sender?: Address | null) {
+export function useIcaAddress(originDomainId: DomainId, sender?: Address | null) {
   return useQuery(
     ['messageIcaAddress', originDomainId, sender],
     () => {

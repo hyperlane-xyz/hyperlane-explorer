@@ -264,7 +264,7 @@ async function fetchTransactionDetails(
   }
 }
 
-function isInvalidDestDomain(core: HyperlaneCore, destDomain: number, destName: string | null) {
+function isInvalidDestDomain(core: HyperlaneCore, destDomain: DomainId, destName: string | null) {
   logger.debug(`Destination chain: ${destName}`);
   if (!destName) {
     logger.info(`Unknown destination domain ${destDomain}`);
@@ -344,7 +344,7 @@ async function isContract(provider: providers.Provider, address: Address) {
 
 async function debugMessageDelivery(
   core: HyperlaneCore,
-  originDomain: number,
+  originDomain: DomainId,
   destName: string,
   sender: Address,
   recipient: Address,
@@ -484,7 +484,7 @@ async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
-  originDomainId: number,
+  originDomainId: DomainId,
   destinationProvider: providers.Provider,
 ) {
   if (!isIcaMessage({ sender, recipient })) return null;

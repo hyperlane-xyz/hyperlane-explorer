@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { getMultiProvider } from '../../../multiProvider';
-import { useStore } from '../../../store';
 import { Message } from '../../../types';
 import { ensureLeading0x } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
+import { useChainConfigsWithQueryParams } from '../../chains/useChainConfigs';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
 import { PiMessageQuery, fetchMessagesFromPiChain } from './fetchPiChainMessages';
@@ -20,7 +20,7 @@ export function usePiChainMessageQuery(
   endTimeFilter: number | null,
   pause: boolean,
 ) {
-  const chainConfigs = useStore((s) => s.chainConfigs);
+  const chainConfigs = useChainConfigsWithQueryParams();
   const { isLoading, isError, data } = useQuery(
     ['usePiChainMessageQuery', chainConfigs, sanitizedInput, startTimeFilter, endTimeFilter, pause],
     async () => {
