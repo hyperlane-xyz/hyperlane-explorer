@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { BigNumber, providers, utils } from 'ethers';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
-import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { getMultiProvider } from '../../multiProvider';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 // This assumes all chains have the same ICA address
-const ICA_ADDRESS = Object.values(hyperlaneCoreAddresses)[0].interchainAccountRouter;
+const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
 
 export function isIcaMessage({
   sender,

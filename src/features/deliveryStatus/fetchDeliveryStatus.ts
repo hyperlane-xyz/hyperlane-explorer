@@ -1,12 +1,13 @@
 import { constants } from 'ethers';
 
-import { MultiProvider, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { MultiProvider, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { getMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
 import { queryExplorerForLogs, queryExplorerForTx } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
+import { getChainEnvironment } from '../chains/utils';
 import { debugExplorerMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 import { TX_HASH_ZERO } from '../messages/placeholderMessages';
@@ -28,8 +29,9 @@ export async function fetchDeliveryStatus(
   multiProvider = getMultiProvider(),
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.getChainName(message.destinationChainId);
+  const destEnv = getChainEnvironment(destName);
   // TODO PI support here
-  const destMailboxAddr = hyperlaneCoreAddresses[destName]?.mailbox;
+  const destMailboxAddr = hyperlaneEnvironments[destEnv][destName]?.mailbox;
   if (!destMailboxAddr) throw new Error(`No mailbox address found for dest ${destName}`);
 
   const logs = await fetchExplorerLogsForMessage(multiProvider, message, destMailboxAddr);
