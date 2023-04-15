@@ -18,6 +18,6 @@ export function setMultiProviderChains(customChainConfigs: Record<number, ChainC
   });
 }
 
-export function getProvider(chainId) {
+export function getProvider(chainId: number) {
   return getMultiProvider().getProvider(chainId);
 }
