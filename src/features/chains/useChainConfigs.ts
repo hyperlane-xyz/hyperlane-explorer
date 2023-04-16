@@ -5,6 +5,7 @@ import { ChainMap, ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk
 
 import { useStore } from '../../store';
 import { fromBase64 } from '../../utils/base64';
+import { logger } from '../../utils/logger';
 import { useQueryParam } from '../../utils/queryParams';
 
 import { ChainConfig } from './chainConfig';
@@ -29,9 +30,15 @@ export function useChainConfigsWithQueryParams() {
   return useMemo(() => {
     if (!queryVal) return storeConfigs;
     const decoded = fromBase64<ChainMetadata[]>(queryVal);
-    if (!decoded) return storeConfigs;
+    if (!decoded) {
+      logger.error('Unable to decode chain configs in query string');
+      return storeConfigs;
+    }
     const result = ChainMetadataArraySchema.safeParse(decoded);
-    if (!result.success) return storeConfigs;
+    if (!result.success) {
+      logger.error('Invalid chain configs in query string', result.error);
+      return storeConfigs;
+    }
     const chainMetadataList = result.data as ChainMetadata[];
     const nameToChainConfig = chainMetadataList.reduce<ChainMap<ChainConfig>>(
       (acc, chainMetadata) => {

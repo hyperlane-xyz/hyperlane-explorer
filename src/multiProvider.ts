@@ -12,7 +12,3 @@ export function useMultiProvider() {
   );
   return multiProvider;
 }
-
-export function useProvider(chainId: ChainId) {
-  return useMultiProvider().getProvider(chainId);
-}
