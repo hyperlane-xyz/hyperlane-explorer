@@ -19,7 +19,6 @@ import {
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
-import { getMultiProvider } from '../../multiProvider';
 import { Message } from '../../types';
 import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
@@ -41,7 +40,7 @@ const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 export async function debugMessagesForHash(
   txHash: string,
   environment: Environment,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
 ): Promise<MessageDebugResult> {
   const txDetails = await findTransactionDetails(txHash, multiProvider);
   if (!txDetails?.transactionReceipt) {
@@ -59,7 +58,7 @@ export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
   nonce?: number,
 ): Promise<MessageDebugResult> {
   // TODO PI support here
@@ -175,7 +174,7 @@ async function debugDispatchedMessage(
 
 export async function debugExplorerMessage(
   message: Message,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
 ): Promise<Omit<MessageDebugDetails, 'properties'>> {
   const {
     msgId,
@@ -190,7 +189,7 @@ export async function debugExplorerMessage(
 
   const originName = multiProvider.getChainName(originDomain);
   const destName = multiProvider.tryGetChainName(destDomain)!;
-  const environment = getChainEnvironment(originName);
+  const environment = getChainEnvironment(multiProvider, originName);
   // TODO PI support here
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
 

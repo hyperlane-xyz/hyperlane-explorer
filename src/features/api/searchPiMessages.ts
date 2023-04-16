@@ -25,9 +25,7 @@ export async function handler(req: NextApiRequest): Promise<ApiHandlerResult<Api
 
   const parseResult = tryParseChainConfig(req.body);
   if (!parseResult.success) return failureResult(`Invalid chain configs: ${parseResult.error}`);
-
   const chainConfig = parseResult.chainConfig;
-  if (!Object.values(chainConfig).length) return failureResult('No chain configs provided');
 
   try {
     logger.debug('Attempting to search for PI messages:', query);

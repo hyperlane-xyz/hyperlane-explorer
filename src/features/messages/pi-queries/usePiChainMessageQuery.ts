@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { getMultiProvider } from '../../../multiProvider';
+import { useMultiProvider } from '../../../multiProvider';
 import { Message } from '../../../types';
 import { ensureLeading0x } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
@@ -21,6 +21,7 @@ export function usePiChainMessageQuery(
   pause: boolean,
 ) {
   const chainConfigs = useChainConfigsWithQueryParams();
+  const multiProvider = useMultiProvider();
   const { isLoading, isError, data } = useQuery(
     ['usePiChainMessageQuery', chainConfigs, sanitizedInput, startTimeFilter, endTimeFilter, pause],
     async () => {
@@ -30,7 +31,6 @@ export function usePiChainMessageQuery(
       logger.debug('Starting PI Chain message query for:', sanitizedInput);
       // TODO convert timestamps to from/to blocks here
       const query = { input: ensureLeading0x(sanitizedInput) };
-      const multiProvider = getMultiProvider();
       try {
         const messages = await Promise.any(
           Object.values(chainConfigs).map((c) => fetchMessagesOrThrow(c, query, multiProvider)),

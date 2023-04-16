@@ -5,6 +5,7 @@ import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { useMultiProvider } from '../../multiProvider';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function MessageDetails({ messageId, message: propMessage }: Props) {
+  const multiProvider = useMultiProvider();
   // Message query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
   const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
@@ -71,7 +73,7 @@ export function MessageDetails({ messageId, message: propMessage }: Props) {
       <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">{`${
           isIcaMsg ? 'ICA ' : ''
-        } Message to ${getChainDisplayName(destChainId)}`}</h2>
+        } Message to ${getChainDisplayName(multiProvider, destChainId)}`}</h2>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}

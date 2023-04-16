@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
+import { MultiProvider } from '@hyperlane-xyz/sdk';
+
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import { useMultiProvider } from '../../multiProvider';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
@@ -16,6 +19,8 @@ export function MessageTable({
   messageList: MessageStub[];
   isFetching: boolean;
 }) {
+  const multiProvider = useMultiProvider();
+
   return (
     <table className="w-full mb-1">
       <thead>
@@ -37,7 +42,7 @@ export function MessageTable({
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
-            <MessageSummaryRow message={m} />
+            <MessageSummaryRow message={m} mp={multiProvider} />
           </tr>
         ))}
       </tbody>
@@ -45,7 +50,7 @@ export function MessageTable({
   );
 }
 
-export function MessageSummaryRow({ message }: { message: MessageStub }) {
+export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: MultiProvider }) {
   const {
     msgId,
     status,
@@ -76,11 +81,11 @@ export function MessageSummaryRow({ message }: { message: MessageStub }) {
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
         <ChainLogo chainId={originChainId} size={20} />
-        <div className={styles.chainName}>{getChainDisplayName(originChainId, true)}</div>
+        <div className={styles.chainName}>{getChainDisplayName(mp, originChainId, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 ">
         <ChainLogo chainId={destinationChainId} size={20} />
-        <div className={styles.chainName}>{getChainDisplayName(destinationChainId, true)}</div>
+        <div className={styles.chainName}>{getChainDisplayName(mp, destinationChainId, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(sender) || 'Invalid Address'}

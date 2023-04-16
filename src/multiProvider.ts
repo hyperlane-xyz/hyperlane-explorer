@@ -1,25 +1,18 @@
+import { useMemo } from 'react';
+
 import { MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
 
-import { ChainConfig } from './features/chains/chainConfig';
+import { useChainConfigsWithQueryParams } from './features/chains/useChainConfigs';
 
-let multiProvider: MultiProvider;
-
-// TODO need a useMultiProvider that takes into account query param chains
-// Replace all uses of getMultiProvider with useMultiProvider
-export function getMultiProvider() {
-  if (!multiProvider) multiProvider = new MultiProvider();
+export function useMultiProvider() {
+  const nameToConfig = useChainConfigsWithQueryParams();
+  const multiProvider = useMemo(
+    () => new MultiProvider({ ...chainMetadata, ...nameToConfig }),
+    [nameToConfig],
+  );
   return multiProvider;
 }
 
-export function setMultiProviderChains(customChainConfigs: Record<number, ChainConfig>) {
-  const nameToChainConfig = {};
-  Object.values(customChainConfigs).forEach((c) => (nameToChainConfig[c.name] = c));
-  multiProvider = new MultiProvider({
-    ...chainMetadata,
-    ...nameToChainConfig,
-  });
-}
-
-export function getProvider(chainId: ChainId) {
-  return getMultiProvider().getProvider(chainId);
+export function useProvider(chainId: ChainId) {
+  return useMultiProvider().getProvider(chainId);
 }

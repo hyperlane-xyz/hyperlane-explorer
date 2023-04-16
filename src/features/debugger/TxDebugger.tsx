@@ -12,6 +12,7 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import ShrugIcon from '../../images/icons/shrug.svg';
+import { useMultiProvider } from '../../multiProvider';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
 import { replacePathParam, useQueryParam } from '../../utils/queryParams';
@@ -26,6 +27,7 @@ const QUERY_HASH_PARAM = 'txHash';
 
 export function TxDebugger() {
   const environment = useStore((s) => s.environment);
+  const multiProvider = useMultiProvider();
 
   const txHash = useQueryParam(QUERY_HASH_PARAM);
 
@@ -48,7 +50,7 @@ export function TxDebugger() {
         return null;
       }
       replacePathParam(QUERY_HASH_PARAM, sanitizedInput);
-      return debugMessagesForHash(sanitizedInput, environment);
+      return debugMessagesForHash(sanitizedInput, environment, multiProvider);
     },
     { retry: false },
   );

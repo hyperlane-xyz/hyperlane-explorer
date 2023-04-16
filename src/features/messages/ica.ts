@@ -4,7 +4,7 @@ import { BigNumber, providers, utils } from 'ethers';
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
-import { getMultiProvider } from '../../multiProvider';
+import { useMultiProvider } from '../../multiProvider';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
@@ -94,11 +94,13 @@ export async function tryFetchIcaAddress(
 }
 
 export function useIcaAddress(originDomainId: DomainId, sender?: Address | null) {
+  const multiProvider = useMultiProvider();
   return useQuery(
-    ['messageIcaAddress', originDomainId, sender],
+    ['useIcaAddress', originDomainId, sender],
     () => {
       if (!originDomainId || !sender || BigNumber.from(sender).isZero()) return null;
-      const provider = getMultiProvider().getProvider(originDomainId);
+      const provider = multiProvider.tryGetProvider(originDomainId);
+      if (!provider) return null;
       return tryFetchIcaAddress(originDomainId, sender, provider);
     },
     { retry: false },

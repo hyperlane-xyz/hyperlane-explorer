@@ -1,6 +1,6 @@
 import { ChangeEventHandler, useState } from 'react';
 
-import { mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { XIconButton } from '../../components/buttons/XIconButton';
@@ -8,6 +8,7 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
+import { useMultiProvider } from '../../multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
 import { useChainConfigs } from './useChainConfigs';
@@ -15,6 +16,7 @@ import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
   const { chainConfigs, setChainConfigs } = useChainConfigs();
+  const multiProvider = useMultiProvider();
 
   const [showAddChainModal, setShowAddChainModal] = useState(false);
 
@@ -31,11 +33,11 @@ export function ConfigureChains() {
 
   const onClickAddChain = () => {
     setChainInputErr('');
-    const result = tryParseChainConfig(customChainInput);
+    const result = tryParseChainConfig(customChainInput, multiProvider);
     if (result.success) {
       setChainConfigs({
         ...chainConfigs,
-        [result.chainConfig.chainId]: result.chainConfig,
+        [result.chainConfig.name]: result.chainConfig,
       });
       setCustomChainInput('');
       setShowAddChainModal(false);
@@ -44,9 +46,9 @@ export function ConfigureChains() {
     }
   };
 
-  const onClickRemoveChain = (chainId: ChainId) => {
+  const onClickRemoveChain = (chainName: ChainName) => {
     const newChainConfigs = { ...chainConfigs };
-    delete newChainConfigs[chainId];
+    delete newChainConfigs[chainName];
     setChainConfigs({
       ...newChainConfigs,
     });
@@ -74,7 +76,7 @@ export function ConfigureChains() {
           {mainnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(c.chainId, true)}</span>
+              <span className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</span>
             </div>
           ))}
         </div>
@@ -85,7 +87,7 @@ export function ConfigureChains() {
           {testnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <div className="ml-1.5">{getChainDisplayName(c.chainId, true)}</div>
+              <div className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</div>
             </div>
           ))}
         </div>
@@ -120,7 +122,7 @@ export function ConfigureChains() {
               </td>
               <td>
                 <XIconButton
-                  onClick={() => onClickRemoveChain(chain.chainId)}
+                  onClick={() => onClickRemoveChain(chain.name)}
                   title="Remove"
                   size={22}
                 />

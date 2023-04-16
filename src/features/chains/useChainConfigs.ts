@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { z } from 'zod';
 
-import { ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
 
 import { useStore } from '../../store';
 import { fromBase64 } from '../../utils/base64';
@@ -16,7 +16,7 @@ const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
 // Use the chainConfigs from the store
 export function useChainConfigs() {
   return useStore((s) => ({
-    chainConfigs: s.chainConfigs,
+    chainConfigs: s.chainConfigsV2,
     setChainConfigs: s.setChainConfigs,
   }));
 }
@@ -33,16 +33,16 @@ export function useChainConfigsWithQueryParams() {
     const result = ChainMetadataArraySchema.safeParse(decoded);
     if (!result.success) return storeConfigs;
     const chainMetadataList = result.data as ChainMetadata[];
-    const idToChainConfig = chainMetadataList.reduce<Record<ChainId, ChainConfig>>(
+    const nameToChainConfig = chainMetadataList.reduce<ChainMap<ChainConfig>>(
       (acc, chainMetadata) => {
         // TODO would be great if we could get contract addrs here too
         // But would require apps like warp template to get that from devs
-        acc[chainMetadata.chainId] = { ...chainMetadata, contracts: { mailbox: '' } };
+        acc[chainMetadata.name] = { ...chainMetadata, contracts: { mailbox: '' } };
         return acc;
       },
       {},
     );
     // TODO consider persisting config from query into the store
-    return { ...storeConfigs, ...idToChainConfig };
+    return { ...storeConfigs, ...nameToChainConfig };
   }, [storeConfigs, queryVal]);
 }

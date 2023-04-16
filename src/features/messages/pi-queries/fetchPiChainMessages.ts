@@ -4,7 +4,6 @@ import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
-import { getMultiProvider } from '../../../multiProvider';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { isValidAddress, isValidTransactionHash, normalizeAddress } from '../../../utils/addresses';
 import {
@@ -80,7 +79,9 @@ export async function fetchMessagesFromPiChain(
     return [];
   }
 
-  const messages = logs.map((l) => logToMessage(l, chainConfig)).filter((m): m is Message => !!m);
+  const messages = logs
+    .map((l) => logToMessage(multiProvider, l, chainConfig))
+    .filter((m): m is Message => !!m);
 
   const messagesWithGasPayments: Message[] = [];
   // Avoiding parallelism here out of caution for RPC rate limits
@@ -307,7 +308,11 @@ function parseBlockTimestamp(block: providers.Block | null): number | undefined 
   return BigNumber.from(block.timestamp).toNumber() * 1000;
 }
 
-function logToMessage(log: ExtendedLog, chainConfig: ChainConfig): Message | null {
+function logToMessage(
+  multiProvider: MultiProvider,
+  log: ExtendedLog,
+  chainConfig: ChainConfig,
+): Message | null {
   let logDesc: ethers.utils.LogDescription;
   try {
     logDesc = mailbox.parseLog(log);
@@ -318,7 +323,6 @@ function logToMessage(log: ExtendedLog, chainConfig: ChainConfig): Message | nul
   }
 
   try {
-    const multiProvider = getMultiProvider();
     const bytes = logDesc.args['message'];
     const message = utils.parseMessage(bytes);
     const msgId = utils.messageId(bytes);

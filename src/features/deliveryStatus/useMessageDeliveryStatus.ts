@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
+import { useMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
 export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
+  const multiProvider = useMultiProvider();
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
     ['messageDeliveryStatus', serializedMessage, isReady],
@@ -17,7 +19,7 @@ export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
         return null;
 
       logger.debug('Fetching message delivery status for:', message.id);
-      const deliverStatus = await fetchDeliveryStatus(message);
+      const deliverStatus = await fetchDeliveryStatus(multiProvider, message);
       logger.debug('Message delivery status result', deliverStatus);
       return deliverStatus;
     },
