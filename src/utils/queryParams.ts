@@ -21,8 +21,16 @@ export function useQueryParam(key: string, defaultVal = '') {
 // Keep value in sync with query param in URL
 export function useSyncQueryParam(key: string, value = '') {
   const router = useRouter();
+  const { pathname, query } = router;
   useEffect(() => {
-    const path = value ? `/?${key}=${value}` : '/';
+    const newQuery = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(query).filter((kv): kv is [string, string] => typeof kv[0] === 'string'),
+      ),
+    );
+    if (value) newQuery.set(key, value);
+    else newQuery.delete(key);
+    const path = `${pathname}?${newQuery.toString()}`;
     router
       .replace(path, undefined, { shallow: true })
       .catch((e) => logger.error('Error shallow updating url', e));

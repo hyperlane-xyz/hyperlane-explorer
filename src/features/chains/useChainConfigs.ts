@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
-import { ChainMap, ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, ChainMetadataSchema, objMerge } from '@hyperlane-xyz/sdk';
 
 import { useStore } from '../../store';
 import { fromBase64 } from '../../utils/base64';
@@ -25,21 +25,26 @@ export function useChainConfigs() {
 // Use the chainConfigs from the store but with any
 // chainConfigs from the query string merged in
 export function useChainConfigsWithQueryParams() {
-  const { chainConfigs: storeConfigs } = useChainConfigs();
+  const { chainConfigs: storeConfigs, setChainConfigs } = useChainConfigs();
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
-  return useMemo(() => {
-    if (!queryVal) return storeConfigs;
+
+  useEffect(() => {
+    if (!queryVal) return;
     const decoded = fromBase64<ChainMetadata[]>(queryVal);
     if (!decoded) {
       logger.error('Unable to decode chain configs in query string');
-      return storeConfigs;
+      return;
     }
     const result = ChainMetadataArraySchema.safeParse(decoded);
     if (!result.success) {
       logger.error('Invalid chain configs in query string', result.error);
-      return storeConfigs;
+      return;
     }
     const chainMetadataList = result.data as ChainMetadata[];
+
+    // Stop here if there are no new configs to save, otherwise the effect will loop
+    if (!chainMetadataList.length || chainMetadataList.every((c) => !!storeConfigs[c.name])) return;
+
     const nameToChainConfig = chainMetadataList.reduce<ChainMap<ChainConfig>>(
       (acc, chainMetadata) => {
         // TODO would be great if we could get contract addrs here too
@@ -49,7 +54,10 @@ export function useChainConfigsWithQueryParams() {
       },
       {},
     );
-    // TODO consider persisting config from query into the store
-    return { ...storeConfigs, ...nameToChainConfig };
-  }, [storeConfigs, queryVal]);
+
+    const mergedConfig = objMerge(nameToChainConfig, storeConfigs) as ChainMap<ChainConfig>;
+    setChainConfigs(mergedConfig);
+  }, [storeConfigs, setChainConfigs, queryVal]);
+
+  return storeConfigs;
 }
