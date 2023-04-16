@@ -8,7 +8,7 @@ import { tryParseChainConfig } from '../chains/chainConfig';
 import {
   PiMessageQuery,
   fetchMessagesFromPiChain,
-} from '../messages/queries/usePiChainMessageQuery';
+} from '../messages/pi-queries/fetchPiChainMessages';
 
 import { ApiHandlerResult, ApiMessage } from './types';
 import { failureResult, successResult } from './utils';

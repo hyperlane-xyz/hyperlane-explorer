@@ -14,8 +14,8 @@ import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
+import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { useMessageQuery } from './queries/useMessageQuery';
-import { usePiChainMessageQuery } from './queries/usePiChainMessageQuery';
 
 const QUERY_SEARCH_PARAM = 'search';
 
