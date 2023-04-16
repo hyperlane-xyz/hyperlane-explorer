@@ -59,6 +59,13 @@ const ApiDocs: NextPage = () => {
           <ul className="mt-1 pl-3">
             <ParamItem name="query" desc="address or hash to search (string)" />
           </ul>
+          <h5 className="mt-2 text-gray-600">
+            Action:<code className="ml-2">search-pi-messages</code>, Parameter (2 required):
+          </h5>
+          <ul className="mt-1 pl-3">
+            <ParamItem name="query" desc="address or hash to search (string)" />
+            <ParamItem name="body" desc="the request body must contain a valid chain config" />
+          </ul>
         </div>
       </Card>
     </div>
