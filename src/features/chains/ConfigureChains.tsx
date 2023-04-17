@@ -2,6 +2,7 @@ import { ChangeEventHandler, useState } from 'react';
 
 import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 
+import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { XIconButton } from '../../components/buttons/XIconButton';
 import { ChainLogo } from '../../components/icons/ChainLogo';
@@ -153,12 +154,20 @@ export function ConfigureChains() {
           </a>{' '}
           for examples.
         </p>
-        <textarea
-          className="mt-4 w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
-          placeholder={customChainTextareaPlaceholder}
-          value={customChainInput}
-          onChange={onCustomChainInputChange}
-        ></textarea>
+        <div className="relative mt-4">
+          <textarea
+            className="w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
+            placeholder={customChainTextareaPlaceholder}
+            value={customChainInput}
+            onChange={onCustomChainInputChange}
+          ></textarea>
+          <CopyButton
+            copyValue={customChainInput || customChainTextareaPlaceholder}
+            width={16}
+            height={16}
+            classes="absolute top-2 right-2"
+          />
+        </div>
         {chainInputErr && <div className="mt-2 text-red-600 text-sm">{chainInputErr}</div>}
         <SolidButton classes="mt-2 mb-2 py-0.5 w-full" onClick={onClickAddChain}>
           Add
