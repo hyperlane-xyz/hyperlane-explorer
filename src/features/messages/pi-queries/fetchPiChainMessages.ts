@@ -382,16 +382,19 @@ function logToMessage(
 async function tryFetchIgpGasPayments(
   message: Message,
   chainConfig: ChainConfig,
-  multiProvider: MultiProvider,
-  useExplorer?: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _multiProvider: MultiProvider,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _useExplorer?: boolean,
 ): Promise<Message> {
   const { chainId, contracts } = chainConfig;
   const igpAddr = contracts.interchainGasPaymaster;
   if (!igpAddr || !isValidAddress(igpAddr)) {
-    logger.debug('No IGP address found for chain:', chainId);
+    logger.warn('No IGP address found for chain:', chainId);
     return message;
   }
 
+  // TODO implement gas payment fetching
   // Mimic logic in debugger's tryCheckIgpGasFunded
   // Either duplicate or refactor into shared util built on SmartProvider
 
