@@ -5,6 +5,6 @@ export function serializeMessage(msg: MessageStub | Message): string | undefined
   return toBase64(msg);
 }
 
-export function deSerializeMessage<M extends MessageStub>(data: string | string[]): M | undefined {
+export function deserializeMessage<M extends MessageStub>(data: string | string[]): M | undefined {
   return fromBase64<M>(data);
 }

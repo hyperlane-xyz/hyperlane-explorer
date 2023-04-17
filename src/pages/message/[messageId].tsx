@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import { ContentFrame } from '../../components/layout/ContentFrame';
 import { MessageDetails } from '../../features/messages/MessageDetails';
-import { deSerializeMessage } from '../../features/messages/utils';
+import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 
@@ -18,7 +18,7 @@ const Message: NextPage = () => {
   }, [router, messageId]);
   if (!messageId || typeof messageId !== 'string') return null;
 
-  const message = data ? deSerializeMessage<Message>(data) : undefined;
+  const message = data ? deserializeMessage<Message>(data) : undefined;
 
   return (
     <ContentFrame>

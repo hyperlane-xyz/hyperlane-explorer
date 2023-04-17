@@ -30,6 +30,12 @@ export interface PiMessageQuery {
   toBlock?: string | number;
 }
 
+export enum PiQueryType {
+  Address = 'address',
+  TxHash = 'txHash',
+  MsgId = 'msgId',
+}
+
 /* Pseudo-code for the fetch algo below: 
 ========================================
 searchForMessages(input):
@@ -61,21 +67,24 @@ export async function fetchMessagesFromPiChain(
   chainConfig: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
+  queryType?: PiQueryType, // optionally force search down to just one type
 ): Promise<Message[]> {
   const useExplorer = !!chainConfig.blockExplorers?.[0]?.apiUrl;
   const input = query.input;
 
-  let logs: ExtendedLog[];
-  if (isValidAddress(input)) {
+  let logs: ExtendedLog[] = [];
+  if (isValidAddress(input) && (!queryType || queryType === PiQueryType.Address)) {
     logs = await fetchLogsForAddress(chainConfig, query, multiProvider, useExplorer);
   } else if (isValidTransactionHash(input)) {
-    logs = await fetchLogsForTxHash(chainConfig, query, multiProvider, useExplorer);
+    if (!queryType || queryType === PiQueryType.TxHash) {
+      logs = await fetchLogsForTxHash(chainConfig, query, multiProvider, useExplorer);
+    }
     // Input may be a msg id, check that next
-    if (!logs.length) {
+    if ((!queryType || queryType === PiQueryType.MsgId) && !logs.length) {
       logs = await fetchLogsForMsgId(chainConfig, query, multiProvider, useExplorer);
     }
   } else {
-    logger.warn('Invalid PI search input', input);
+    logger.warn('Invalid PI search input', input, queryType);
     return [];
   }
 
