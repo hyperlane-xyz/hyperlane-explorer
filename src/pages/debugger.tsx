@@ -3,7 +3,7 @@ import type { NextPage } from 'next';
 import { ContentFrame } from '../components/layout/ContentFrame';
 import { TxDebugger } from '../features/debugger/TxDebugger';
 
-const Debugger: NextPage = () => {
+const DebuggerPage: NextPage = () => {
   return (
     <ContentFrame>
       <TxDebugger />
@@ -18,4 +18,4 @@ export function getServerSideProps() {
   };
 }
 
-export default Debugger;
+export default DebuggerPage;

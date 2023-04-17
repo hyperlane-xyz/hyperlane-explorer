@@ -3,7 +3,7 @@ import type { NextPage } from 'next';
 import { ContentFrame } from '../components/layout/ContentFrame';
 import { MessageSearch } from '../features/messages/MessageSearch';
 
-const Home: NextPage = () => {
+const HomePage: NextPage = () => {
   return (
     <ContentFrame>
       <MessageSearch />
@@ -18,4 +18,4 @@ export function getServerSideProps() {
   };
 }
 
-export default Home;
+export default HomePage;

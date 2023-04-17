@@ -8,7 +8,7 @@ import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 
-const Message: NextPage = () => {
+const MessagePage: NextPage = () => {
   const router = useRouter();
   const { messageId, data } = router.query;
 
@@ -34,4 +34,4 @@ export async function getServerSideProps() {
   };
 }
 
-export default Message;
+export default MessagePage;
