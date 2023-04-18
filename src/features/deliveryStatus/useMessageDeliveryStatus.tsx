@@ -7,6 +7,7 @@ import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 import { useMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
+import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
@@ -16,11 +17,16 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
   const { data, error } = useQuery(
     ['messageDeliveryStatus', serializedMessage, pause],
     async () => {
+      if (pause || !message || message.status === MessageStatus.Delivered) return null;
+
+      if (!multiProvider.tryGetChainMetadata(message.originChainId)) {
+        toast.error(<MissingChainConfigToast chainId={message.originChainId} />);
+      } else if (!multiProvider.tryGetChainMetadata(message.destinationChainId)) {
+        toast.error(<MissingChainConfigToast chainId={message.destinationChainId} />);
+      }
+
       // TODO enable PI support here
       if (
-        pause ||
-        !message ||
-        message.status === MessageStatus.Delivered ||
         message.isPiMsg ||
         !chainIdToMetadata[message.originChainId] ||
         !chainIdToMetadata[message.destinationChainId]
