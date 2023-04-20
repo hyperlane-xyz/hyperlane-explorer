@@ -2,22 +2,39 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
+import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
+
+import { useMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
+import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
-export function useMessageDeliveryStatus(message: Message, isReady: boolean) {
+export function useMessageDeliveryStatus({ message, pause }: { message: Message; pause: boolean }) {
+  const multiProvider = useMultiProvider();
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
-    ['messageDeliveryStatus', serializedMessage, isReady],
+    ['messageDeliveryStatus', serializedMessage, pause],
     async () => {
+      if (pause || !message || message.status === MessageStatus.Delivered) return null;
+
+      if (!multiProvider.tryGetChainMetadata(message.originChainId)) {
+        toast.error(<MissingChainConfigToast chainId={message.originChainId} />);
+      } else if (!multiProvider.tryGetChainMetadata(message.destinationChainId)) {
+        toast.error(<MissingChainConfigToast chainId={message.destinationChainId} />);
+      }
+
       // TODO enable PI support here
-      if (!isReady || !message || message.status === MessageStatus.Delivered || message.isPiMsg)
+      if (
+        message.isPiMsg ||
+        !chainIdToMetadata[message.originChainId] ||
+        !chainIdToMetadata[message.destinationChainId]
+      )
         return null;
 
       logger.debug('Fetching message delivery status for:', message.id);
-      const deliverStatus = await fetchDeliveryStatus(message);
+      const deliverStatus = await fetchDeliveryStatus(multiProvider, message);
       logger.debug('Message delivery status result', deliverStatus);
       return deliverStatus;
     },

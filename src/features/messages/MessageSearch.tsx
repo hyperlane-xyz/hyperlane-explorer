@@ -14,8 +14,8 @@ import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
-import { useMessageQuery } from './queries/useMessageQuery';
-import { usePiChainMessageQuery } from './queries/usePiChainMessageQuery';
+import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
+import { useMessageSearchQuery } from './queries/useMessageQuery';
 
 const QUERY_SEARCH_PARAM = 'search';
 
@@ -34,33 +34,34 @@ export function MessageSearch() {
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
-  const { isValidInput, isError, isFetching, hasRun, messageList } = useMessageQuery(
-    sanitizedInput,
-    originChainFilter,
-    destinationChainFilter,
-    startTimeFilter,
-    endTimeFilter,
-  );
-  const isMessagesFound = messageList.length > 0;
+  const { isValidInput, isError, isFetching, hasRun, messageList, isMessagesFound } =
+    useMessageSearchQuery(
+      sanitizedInput,
+      originChainFilter,
+      destinationChainFilter,
+      startTimeFilter,
+      endTimeFilter,
+    );
 
-  // Permissionless Interop query and results
+  // Run permissionless interop chains query if needed
   const {
     isError: isPiError,
     isFetching: isPiFetching,
     hasRun: hasPiRun,
     messageList: piMessageList,
-  } = usePiChainMessageQuery(
+    isMessagesFound: isPiMessagesFound,
+  } = usePiChainMessageSearchQuery({
     sanitizedInput,
     startTimeFilter,
     endTimeFilter,
-    !hasRun || isMessagesFound,
-  );
+    pause: !hasRun || isMessagesFound,
+  });
 
   // Coalesce GraphQL + PI results
   const isAnyFetching = isFetching || isPiFetching;
   const isAnyError = isError || isPiError;
   const hasAllRun = hasRun && hasPiRun;
-  const isAnyMessageFound = isMessagesFound || piMessageList.length > 0;
+  const isAnyMessageFound = isMessagesFound || isPiMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piMessageList;
 
   // Keep url in sync

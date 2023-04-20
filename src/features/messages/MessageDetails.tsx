@@ -1,15 +1,14 @@
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useQuery } from 'urql';
 
 import { Spinner } from '../../components/animation/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { useMultiProvider } from '../../multiProvider';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toTitleCase } from '../../utils/string';
-import { useInterval } from '../../utils/useInterval';
 import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
@@ -19,64 +18,79 @@ import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard } from './cards/TransactionCard';
 import { isIcaMessage } from './ica';
+import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { MessageIdentifierType, buildMessageQuery } from './queries/build';
-import { MessagesQueryResult } from './queries/fragments';
-import { parseMessageQueryResult } from './queries/parse';
-
-const AUTO_REFRESH_DELAY = 10000;
+import { useMessageQuery } from './queries/useMessageQuery';
 
 interface Props {
   messageId: string; // Hex value for message id
   message?: Message; // If provided, component will use this data instead of querying
 }
 
-export function MessageDetails({ messageId, message: propMessage }: Props) {
-  // Message query
-  const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
-  const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
-    query,
-    variables,
-    pause: !!propMessage,
-  });
-  const graphQueryMessages = useMemo(() => parseMessageQueryResult(data), [data]);
+export function MessageDetails({ messageId, message: messageFromUrlParams }: Props) {
+  const multiProvider = useMultiProvider();
 
-  // Extracting message properties
-  const _message = propMessage || graphQueryMessages[0] || PLACEHOLDER_MESSAGE;
-  const isMessageFound = !!propMessage || graphQueryMessages.length > 0;
+  // Needed to force pause of message query if the useMessageDeliveryStatus
+  // Hook finds a delivery record on it's own
+  const [deliveryFound, setDeliveryFound] = useState(false);
+
+  // GraphQL query and results
+  const {
+    isFetching: isGraphQlFetching,
+    isError: isGraphQlError,
+    hasRun: hasGraphQlRun,
+    isMessageFound: isGraphQlMessageFound,
+    message: messageFromGraphQl,
+  } = useMessageQuery({ messageId, pause: !!messageFromUrlParams || deliveryFound });
+
+  // Run permissionless interop chains query if needed
+  const {
+    isError: isPiError,
+    isFetching: isPiFetching,
+    message: messageFromPi,
+    isMessageFound: isPiMessageFound,
+  } = usePiChainMessageQuery({
+    messageId,
+    pause: !!messageFromUrlParams || !hasGraphQlRun || isGraphQlMessageFound,
+  });
+
+  // Coalesce GraphQL + PI results
+  const _message =
+    messageFromUrlParams || messageFromGraphQl || messageFromPi || PLACEHOLDER_MESSAGE;
+  const isMessageFound = !!messageFromUrlParams || isGraphQlMessageFound || isPiMessageFound;
+  const isFetching = isGraphQlFetching || isPiFetching;
+  const isError = isGraphQlError || isPiError;
   const shouldBlur = !isMessageFound;
   const isIcaMsg = isIcaMessage(_message);
 
-  // If message isn't delivered, query delivery-status api for
-  // more recent update and possibly debug info
-  const { messageWithDeliveryStatus: message, debugInfo } = useMessageDeliveryStatus(
-    _message,
-    isMessageFound,
-  );
+  // If message isn't delivered, attempt to check for
+  // more recent updates and possibly debug info
+  const { messageWithDeliveryStatus: message, debugInfo } = useMessageDeliveryStatus({
+    message: _message,
+    pause: !isMessageFound,
+  });
 
   const { status, originChainId, destinationChainId: destChainId, origin, destination } = message;
 
-  // Query re-executor
-  const reExecutor = useCallback(() => {
-    if (propMessage || (isMessageFound && status === MessageStatus.Delivered)) return;
-    reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [propMessage, isMessageFound, status, reexecuteQuery]);
-  useInterval(reExecutor, AUTO_REFRESH_DELAY);
+  // Mark delivery found to prevent pause queries
+  useEffect(() => {
+    if (status === MessageStatus.Delivered) setDeliveryFound(true);
+  }, [status]);
 
   // Banner color setter
-  useDynamicBannerColor(isFetching, status, isMessageFound, error);
+  useDynamicBannerColor(isFetching, status, isMessageFound, isError || isPiError);
 
   return (
     <>
       <div className="flex items-center justify-between px-1">
         <h2 className="text-white text-lg">{`${
           isIcaMsg ? 'ICA ' : ''
-        } Message to ${getChainDisplayName(destChainId)}`}</h2>
+        } Message to ${getChainDisplayName(multiProvider, destChainId)}`}</h2>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
-          isError={!!error}
+          isError={isError}
         />
       </div>
       <div className="flex flex-wrap items-stretch justify-between mt-5 gap-3">
@@ -154,14 +168,14 @@ function useDynamicBannerColor(
   isFetching: boolean,
   status: MessageStatus,
   isMessageFound: boolean,
-  error?: Error,
+  isError?: boolean,
 ) {
   const setBanner = useStore((s) => s.setBanner);
   useEffect(() => {
     if (isFetching) return;
-    if (error) {
-      logger.error('Error fetching message details', error);
-      toast.error(`Error fetching message: ${error.message?.substring(0, 30)}`);
+    if (isError) {
+      logger.error('Error fetching message details');
+      toast.error('Error fetching message. Please check the message id and try again.');
       setBanner('bg-red-500');
     } else if (status === MessageStatus.Failing) {
       setBanner('bg-red-500');
@@ -170,7 +184,7 @@ function useDynamicBannerColor(
     } else {
       setBanner('');
     }
-  }, [error, isFetching, status, isMessageFound, setBanner]);
+  }, [isError, isFetching, status, isMessageFound, setBanner]);
   useEffect(() => {
     return () => setBanner('');
   }, [setBanner]);

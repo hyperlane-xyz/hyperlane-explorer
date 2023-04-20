@@ -5,7 +5,7 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
-import { getMultiProvider } from '../../../multiProvider';
+import { useMultiProvider } from '../../../multiProvider';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
@@ -16,7 +16,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface TransactionCardProps {
   title: string;
-  chainId: number;
+  chainId: ChainId;
   status: MessageStatus;
   transaction?: MessageTx;
   debugInfo?: TransactionCardDebugInfo;
@@ -27,7 +27,7 @@ interface TransactionCardProps {
 export interface TransactionCardDebugInfo {
   status: MessageDebugStatus;
   details: string;
-  originChainId: number;
+  originChainId: ChainId;
   originTxHash: string;
 }
 
@@ -40,8 +40,9 @@ export function TransactionCard({
   helpText,
   shouldBlur,
 }: TransactionCardProps) {
+  const multiProvider = useMultiProvider();
   const hash = transaction?.hash;
-  const txExplorerLink = hash ? getMultiProvider().tryGetExplorerTxUrl(chainId, { hash }) : null;
+  const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
     <Card classes="flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
@@ -58,7 +59,7 @@ export function TransactionCard({
           <KeyValueRow
             label="Chain:"
             labelWidth="w-16"
-            display={`${getChainDisplayName(chainId)} (${chainId})`}
+            display={`${getChainDisplayName(multiProvider, chainId)} (${chainId})`}
             displayWidth="w-60 sm:w-64"
             blurValue={shouldBlur}
           />

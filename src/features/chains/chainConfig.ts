@@ -1,14 +1,13 @@
 import { z } from 'zod';
 
-import { ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ChainMetadataSchema, MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { getMultiProvider } from '../../multiProvider';
 import { logger } from '../../utils/logger';
 
 export const chainContractsSchema = z.object({
   mailbox: z.string(),
-  multisigIsm: z.string().optional(),
-  // interchainGasPaymaster: z.string().optional(),
+  interchainSecurityModule: z.string().optional(),
+  interchainGasPaymaster: z.string().optional(),
   // interchainAccountRouter: z.string().optional(),
 });
 
@@ -27,7 +26,7 @@ type ParseResult =
       error: string;
     };
 
-export function tryParseChainConfig(input: string): ParseResult {
+export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseResult {
   let data: any;
   try {
     data = JSON.parse(input);
@@ -52,7 +51,7 @@ export function tryParseChainConfig(input: string): ParseResult {
 
   const chainConfig = result.data as ChainConfig;
 
-  // Reject blocksout explorers for now
+  // Reject blockscout explorers for now
   if (chainConfig.blockExplorers?.[0]?.url.includes('blockscout')) {
     return {
       success: false,
@@ -60,11 +59,11 @@ export function tryParseChainConfig(input: string): ParseResult {
     };
   }
 
-  const mp = getMultiProvider();
   if (
-    mp.tryGetChainMetadata(chainConfig.name) ||
-    mp.tryGetChainMetadata(chainConfig.chainId) ||
-    (chainConfig.domainId && mp.tryGetChainMetadata(chainConfig.domainId))
+    mp &&
+    (mp.tryGetChainMetadata(chainConfig.name) ||
+      mp.tryGetChainMetadata(chainConfig.chainId) ||
+      (chainConfig.domainId && mp.tryGetChainMetadata(chainConfig.domainId)))
   ) {
     return {
       success: false,

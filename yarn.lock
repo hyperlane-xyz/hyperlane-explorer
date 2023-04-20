@@ -1294,14 +1294,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:1.2.3":
-  version: 1.2.3
-  resolution: "@hyperlane-xyz/core@npm:1.2.3"
+"@hyperlane-xyz/core@npm:1.3.2":
+  version: 1.3.2
+  resolution: "@hyperlane-xyz/core@npm:1.3.2"
   dependencies:
-    "@hyperlane-xyz/utils": 1.2.3
+    "@hyperlane-xyz/utils": 1.3.2
     "@openzeppelin/contracts": ^4.8.0
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-  checksum: c7e8f5c37d2e6874b6ca5f16024a4ea8b413393a2a4bb770a467ca7cc031b51a89fbe6989598c171de38acafcd2e990525be0274f793742faafc832a0db359fa
+  checksum: f195319c458c8d43d49e06790bb975c1940c06cab7e7c4d99ac9128c39b8c4c0c10b806c4bef1d5f2a97162fead998782a7e1292bc968751a824a89ad90c90ff
   languageName: node
   linkType: hard
 
@@ -1310,8 +1310,8 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": ^1.7.11
-    "@hyperlane-xyz/sdk": 1.2.3
-    "@hyperlane-xyz/widgets": 1.2.3
+    "@hyperlane-xyz/sdk": 1.3.2
+    "@hyperlane-xyz/widgets": 1.3.2
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.11.0
     "@tanstack/react-query": ^4.24.10
@@ -1349,39 +1349,41 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/sdk@npm:1.2.3":
-  version: 1.2.3
-  resolution: "@hyperlane-xyz/sdk@npm:1.2.3"
+"@hyperlane-xyz/sdk@npm:1.3.2":
+  version: 1.3.2
+  resolution: "@hyperlane-xyz/sdk@npm:1.3.2"
   dependencies:
-    "@hyperlane-xyz/core": 1.2.3
-    "@hyperlane-xyz/utils": 1.2.3
+    "@hyperlane-xyz/core": 1.3.2
+    "@hyperlane-xyz/utils": 1.3.2
+    "@types/coingecko-api": ^1.0.10
+    "@types/debug": ^4.1.7
     "@wagmi/chains": ^0.2.6
     coingecko-api: ^1.0.10
     cross-fetch: ^3.1.5
     debug: ^4.3.4
     ethers: ^5.7.2
     zod: ^3.21.2
-  checksum: a1afc8bdfe64916fdc6623c1df06bbe1393359fe6b29cefe3f25bb5ded16108e1bac037da9a29df7f0d61cc84940e571d148e41c7fd8539964a87e9a95c03c35
+  checksum: b2e54374eab564505454eaf51ea270758b1b7331c9e879bd0084c28d339e099ae68715b937001092689a526f4b2fa1eb448c2a836e9bfd9923a5fd4cf2564284
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:1.2.3":
-  version: 1.2.3
-  resolution: "@hyperlane-xyz/utils@npm:1.2.3"
+"@hyperlane-xyz/utils@npm:1.3.2":
+  version: 1.3.2
+  resolution: "@hyperlane-xyz/utils@npm:1.3.2"
   dependencies:
     ethers: ^5.7.2
-  checksum: 14222632d7ef2419f6b698afa0c4c466302dd0eb6f97d3c9031b7d42c033418547bf4092d480cc4346331f0233d4076caae75b86ffa2b7beed79741a146d3325
+  checksum: e7cdeb4b14ccabbd46f46d0329d81792c5483e98463a5080c884bc8bff833aa8160c2ab107cda843a3f6c23979d9ca7b6d314c2cfc393c786cbf5fc2f8680934
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:1.2.3":
-  version: 1.2.3
-  resolution: "@hyperlane-xyz/widgets@npm:1.2.3"
+"@hyperlane-xyz/widgets@npm:1.3.2":
+  version: 1.3.2
+  resolution: "@hyperlane-xyz/widgets@npm:1.3.2"
   peerDependencies:
-    "@hyperlane-xyz/sdk": ^1.2.3
+    "@hyperlane-xyz/sdk": ^1.3.2
     react: ^18
     react-dom: ^18
-  checksum: 7695de9b9a89d8ef7c6b3ddb2c6b5874fe27514972d2080d9eade05bf2ad68ce2389706090dd7498436ec719a4c64b2ebf6246c6527a0c8fc2f0daf3144b1b28
+  checksum: 990e68273a495b99a1cac6cae13998692775b11c62a5508591ff6836661e3f6de94bf1b4db1532c3d560cc7759e7266146178473bf8dc3b616aa974e36171c6a
   languageName: node
   linkType: hard
 
@@ -2572,12 +2574,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/coingecko-api@npm:^1.0.10":
+  version: 1.0.10
+  resolution: "@types/coingecko-api@npm:1.0.10"
+  checksum: e9683f9ea9ce2f855f6565089981dd3fceb6c4674365438f3fc3877d089a2fb82cdea011b59d59c7baa1635dc610860cd29a10a4b7a650ff96521ead46f22a50
+  languageName: node
+  linkType: hard
+
 "@types/connect@npm:^3.4.33":
   version: 3.4.35
   resolution: "@types/connect@npm:3.4.35"
   dependencies:
     "@types/node": "*"
   checksum: fe81351470f2d3165e8b12ce33542eef89ea893e36dd62e8f7d72566dfb7e448376ae962f9f3ea888547ce8b55a40020ca0e01d637fab5d99567673084542641
+  languageName: node
+  linkType: hard
+
+"@types/debug@npm:^4.1.7":
+  version: 4.1.7
+  resolution: "@types/debug@npm:4.1.7"
+  dependencies:
+    "@types/ms": "*"
+  checksum: 0a7b89d8ed72526858f0b61c6fd81f477853e8c4415bb97f48b1b5545248d2ae389931680b94b393b993a7cfe893537a200647d93defe6d87159b96812305adc
   languageName: node
   linkType: hard
 
@@ -2636,6 +2654,13 @@ __metadata:
   version: 0.0.29
   resolution: "@types/json5@npm:0.0.29"
   checksum: e60b153664572116dfea673c5bda7778dbff150498f44f998e34b5886d8afc47f16799280e4b6e241c0472aef1bc36add771c569c68fc5125fc2ae519a3eb9ac
+  languageName: node
+  linkType: hard
+
+"@types/ms@npm:*":
+  version: 0.7.31
+  resolution: "@types/ms@npm:0.7.31"
+  checksum: daadd354aedde024cce6f5aa873fefe7b71b22cd0e28632a69e8b677aeb48ae8caa1c60e5919bb781df040d116b01cb4316335167a3fc0ef6a63fa3614c0f6da
   languageName: node
   linkType: hard
 

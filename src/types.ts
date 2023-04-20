@@ -36,9 +36,9 @@ export interface MessageStub {
   nonce: number; // formerly leafIndex
   sender: Address;
   recipient: Address;
-  originChainId: number;
+  originChainId: ChainId;
   originDomainId: number;
-  destinationChainId: number;
+  destinationChainId: ChainId;
   destinationDomainId: number;
   origin: MessageTxStub;
   destination?: MessageTxStub;
@@ -55,8 +55,8 @@ export interface Message extends MessageStub {
   numPayments?: number;
 }
 
-export interface LogWithTimestamp extends providers.Log {
-  timestamp: number;
+export interface ExtendedLog extends providers.Log {
+  timestamp?: number;
   from?: Address;
   to?: Address;
 }

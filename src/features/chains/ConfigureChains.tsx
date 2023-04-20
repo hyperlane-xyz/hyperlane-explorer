@@ -1,20 +1,23 @@
 import { ChangeEventHandler, useState } from 'react';
 
-import { mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
 
+import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { XIconButton } from '../../components/buttons/XIconButton';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
-import { useChainConfigs } from '../../store';
+import { useMultiProvider } from '../../multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
+import { useChainConfigs } from './useChainConfigs';
 import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
   const { chainConfigs, setChainConfigs } = useChainConfigs();
+  const multiProvider = useMultiProvider();
 
   const [showAddChainModal, setShowAddChainModal] = useState(false);
 
@@ -31,11 +34,11 @@ export function ConfigureChains() {
 
   const onClickAddChain = () => {
     setChainInputErr('');
-    const result = tryParseChainConfig(customChainInput);
+    const result = tryParseChainConfig(customChainInput, multiProvider);
     if (result.success) {
       setChainConfigs({
         ...chainConfigs,
-        [result.chainConfig.chainId]: result.chainConfig,
+        [result.chainConfig.name]: result.chainConfig,
       });
       setCustomChainInput('');
       setShowAddChainModal(false);
@@ -44,9 +47,9 @@ export function ConfigureChains() {
     }
   };
 
-  const onClickRemoveChain = (chainId: number) => {
+  const onClickRemoveChain = (chainName: ChainName) => {
     const newChainConfigs = { ...chainConfigs };
-    delete newChainConfigs[chainId];
+    delete newChainConfigs[chainName];
     setChainConfigs({
       ...newChainConfigs,
     });
@@ -74,7 +77,7 @@ export function ConfigureChains() {
           {mainnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(c.chainId, true)}</span>
+              <span className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</span>
             </div>
           ))}
         </div>
@@ -85,7 +88,7 @@ export function ConfigureChains() {
           {testnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <div className="ml-1.5">{getChainDisplayName(c.chainId, true)}</div>
+              <div className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</div>
             </div>
           ))}
         </div>
@@ -120,7 +123,7 @@ export function ConfigureChains() {
               </td>
               <td>
                 <XIconButton
-                  onClick={() => onClickRemoveChain(chain.chainId)}
+                  onClick={() => onClickRemoveChain(chain.name)}
                   title="Remove"
                   size={22}
                 />
@@ -151,12 +154,20 @@ export function ConfigureChains() {
           </a>{' '}
           for examples.
         </p>
-        <textarea
-          className="mt-4 w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
-          placeholder={customChainTextareaPlaceholder}
-          value={customChainInput}
-          onChange={onCustomChainInputChange}
-        ></textarea>
+        <div className="relative mt-4">
+          <textarea
+            className="w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
+            placeholder={customChainTextareaPlaceholder}
+            value={customChainInput}
+            onChange={onCustomChainInputChange}
+          ></textarea>
+          <CopyButton
+            copyValue={customChainInput || customChainTextareaPlaceholder}
+            width={16}
+            height={16}
+            classes="absolute top-2 right-2"
+          />
+        </div>
         {chainInputErr && <div className="mt-2 text-red-600 text-sm">{chainInputErr}</div>}
         <SolidButton classes="mt-2 mb-2 py-0.5 w-full" onClick={onClickAddChain}>
           Add
@@ -178,7 +189,9 @@ const customChainTextareaPlaceholder = `{
   } ],
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
   "contracts": {
-    "mailbox": "0x123..."
+    "mailbox": "0x123...",
+    "interchainSecurityModule": "0x123...",
+    "interchainGasPaymaster": "0x123..."
   }
 }
 `;

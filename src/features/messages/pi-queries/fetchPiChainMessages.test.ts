@@ -1,8 +1,8 @@
-import { MultiProvider, chainMetadata, hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { MultiProvider, chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from '../../chains/chainConfig';
 
-import { fetchMessagesFromPiChain } from './usePiChainMessageQuery';
+import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 // NOTE: THESE TESTS WILL NO LONGER WORK ONCE THE MESSAGE USED BELOW
 // IS OUT OF PROVIDER_LOGS_BLOCK_WINDOW USED TO QUERY
@@ -12,7 +12,7 @@ import { fetchMessagesFromPiChain } from './usePiChainMessageQuery';
 jest.setTimeout(30000);
 
 const multiProvider = new MultiProvider();
-const goerliMailbox = hyperlaneCoreAddresses.goerli.mailbox;
+const goerliMailbox = hyperlaneEnvironments.testnet.goerli.mailbox;
 const goerliConfigWithExplorer: ChainConfig = {
   ...chainMetadata.goerli,
   contracts: { mailbox: goerliMailbox },

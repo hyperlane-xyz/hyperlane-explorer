@@ -13,8 +13,8 @@ function _ChainToChain({
   arrowSize = 32,
   isNarrow = false,
 }: {
-  originChainId: number;
-  destinationChainId: number;
+  originChainId: ChainId;
+  destinationChainId: ChainId;
   size?: number;
   arrowSize?: number;
   isNarrow?: boolean;

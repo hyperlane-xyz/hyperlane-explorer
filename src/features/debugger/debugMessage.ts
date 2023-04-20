@@ -3,8 +3,8 @@
 import { BigNumber, providers } from 'ethers';
 
 import {
+  type IInterchainGasPaymaster,
   IMessageRecipient__factory,
-  type InterchainGasPaymaster,
   type Mailbox,
 } from '@hyperlane-xyz/core';
 import {
@@ -12,13 +12,13 @@ import {
   CoreChainName,
   DispatchedMessage,
   HyperlaneCore,
+  HyperlaneIgp,
   MultiProvider,
   TestChains,
 } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
-import { getMultiProvider } from '../../multiProvider';
 import { Message } from '../../types';
 import { trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
@@ -40,7 +40,7 @@ const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 export async function debugMessagesForHash(
   txHash: string,
   environment: Environment,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
 ): Promise<MessageDebugResult> {
   const txDetails = await findTransactionDetails(txHash, multiProvider);
   if (!txDetails?.transactionReceipt) {
@@ -58,7 +58,7 @@ export async function debugMessagesForTransaction(
   chainName: ChainName,
   txReceipt: providers.TransactionReceipt,
   environment: Environment,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
   nonce?: number,
 ): Promise<MessageDebugResult> {
   // TODO PI support here
@@ -89,7 +89,7 @@ export async function debugMessagesForTransaction(
       continue;
     }
     logger.debug(`Checking message ${i + 1} of ${dispatchedMessages.length}`);
-    messageDetails.push(await debugDispatchedMessage(core, multiProvider, msg));
+    messageDetails.push(await debugDispatchedMessage(environment, core, multiProvider, msg));
     logger.debug(`Done checking message ${i + 1}`);
   }
   return {
@@ -101,6 +101,7 @@ export async function debugMessagesForTransaction(
 }
 
 async function debugDispatchedMessage(
+  environment: Environment,
   core: HyperlaneCore,
   multiProvider: MultiProvider,
   message: DispatchedMessage,
@@ -159,7 +160,13 @@ async function debugDispatchedMessage(
   if (deliveryResult.status && deliveryResult.details) return { ...deliveryResult, properties };
   const gasEstimate = deliveryResult.gasEstimate;
 
-  const insufficientGas = await isIgpUnderfunded(core, messageId, originName, gasEstimate);
+  const insufficientGas = await isIgpUnderfunded(
+    environment,
+    multiProvider,
+    messageId,
+    originName,
+    gasEstimate,
+  );
   if (insufficientGas) return { ...insufficientGas, properties };
 
   return noErrorFound(properties);
@@ -167,7 +174,7 @@ async function debugDispatchedMessage(
 
 export async function debugExplorerMessage(
   message: Message,
-  multiProvider = getMultiProvider(),
+  multiProvider: MultiProvider,
 ): Promise<Omit<MessageDebugDetails, 'properties'>> {
   const {
     msgId,
@@ -182,7 +189,7 @@ export async function debugExplorerMessage(
 
   const originName = multiProvider.getChainName(originDomain);
   const destName = multiProvider.tryGetChainName(destDomain)!;
-  const environment = getChainEnvironment(originName);
+  const environment = getChainEnvironment(multiProvider, originName);
   // TODO PI support here
   const core = HyperlaneCore.fromEnvironment(environment, multiProvider);
 
@@ -208,7 +215,8 @@ export async function debugExplorerMessage(
   const gasEstimate = deliveryResult.gasEstimate;
 
   const insufficientGas = await isIgpUnderfunded(
-    core,
+    environment,
+    multiProvider,
     msgId,
     originName,
     gasEstimate,
@@ -255,7 +263,7 @@ async function fetchTransactionDetails(
   }
 }
 
-function isInvalidDestDomain(core: HyperlaneCore, destDomain: number, destName: string | null) {
+function isInvalidDestDomain(core: HyperlaneCore, destDomain: DomainId, destName: string | null) {
   logger.debug(`Destination chain: ${destName}`);
   if (!destName) {
     logger.info(`Unknown destination domain ${destDomain}`);
@@ -281,7 +289,7 @@ async function isMessageAlreadyDelivered(
   messageId: string,
   properties: MessageDebugDetails['properties'],
 ) {
-  const destMailbox = core.getContracts(destName).mailbox.contract;
+  const destMailbox = core.getContracts(destName).mailbox;
   const isDelivered = await destMailbox.delivered(messageId);
 
   if (isDelivered) {
@@ -335,7 +343,7 @@ async function isContract(provider: providers.Provider, address: Address) {
 
 async function debugMessageDelivery(
   core: HyperlaneCore,
-  originDomain: number,
+  originDomain: DomainId,
   destName: string,
   sender: Address,
   recipient: Address,
@@ -343,10 +351,11 @@ async function debugMessageDelivery(
   body: string,
   destProvider: providers.Provider,
 ) {
-  const destMailbox = core.getContracts(destName).mailbox.contract;
+  const destMailbox = core.getContracts(destName).mailbox;
   const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
   try {
     // TODO add special case for Arbitrum:
+    // TODO account for mailbox handling gas overhead
     // https://github.com/hyperlane-xyz/hyperlane-monorepo/pull/1949/files#diff-79ec1cf679507919c08a9a66e0407c16fff22aee98d79cf39a0c1baf086403ebR364
     const deliveryGasEst = await recipientContract.estimateGas.handle(
       originDomain,
@@ -390,15 +399,17 @@ async function debugMessageDelivery(
 }
 
 async function isIgpUnderfunded(
-  core: HyperlaneCore,
+  env: Environment,
+  multiProvider: MultiProvider,
   msgId: string,
   originName: string,
   deliveryGasEst?: string,
   totalGasAmount?: string,
 ) {
-  const igp = core.getContracts(originName).interchainGasPaymaster.contract;
+  const igp = HyperlaneIgp.fromEnvironment(env, multiProvider);
+  const igpContract = igp.getContracts(originName).defaultIsmInterchainGasPaymaster;
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
-    igp,
+    igpContract,
     msgId,
     deliveryGasEst,
     totalGasAmount,
@@ -413,7 +424,7 @@ async function isIgpUnderfunded(
 }
 
 async function tryCheckIgpGasFunded(
-  igp: InterchainGasPaymaster,
+  igp: IInterchainGasPaymaster,
   messageId: string,
   deliveryGasEst?: string,
   totalGasAmount?: string,
@@ -472,7 +483,7 @@ async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
-  originDomainId: number,
+  originDomainId: DomainId,
   destinationProvider: providers.Provider,
 ) {
   if (!isIcaMessage({ sender, recipient })) return null;

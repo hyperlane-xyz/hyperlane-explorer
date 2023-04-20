@@ -6,6 +6,7 @@ import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hy
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
+import { useMultiProvider } from '../../multiProvider';
 import { arrayToObject } from '../../utils/objects';
 import { BorderedButton } from '../buttons/BorderedButton';
 import { TextButton } from '../buttons/TextButton';
@@ -87,6 +88,8 @@ function ChainMultiSelector({
   onChangeValue: (value: string | null) => void;
   position?: string;
 }) {
+  const multiProvider = useMultiProvider();
+
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
     value
@@ -188,7 +191,9 @@ function ChainMultiSelector({
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <span className="mr-2">
+                      {getChainDisplayName(multiProvider, c.chainId, true)}
+                    </span>
                     <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>
@@ -213,7 +218,9 @@ function ChainMultiSelector({
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">{getChainDisplayName(c.chainId, true)}</span>
+                    <span className="mr-2">
+                      {getChainDisplayName(multiProvider, c.chainId, true)}
+                    </span>
                     <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
                   </div>
                 </CheckBox>

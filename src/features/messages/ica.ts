@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { BigNumber, providers, utils } from 'ethers';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
-import { hyperlaneCoreAddresses } from '@hyperlane-xyz/sdk';
+import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
-import { getMultiProvider } from '../../multiProvider';
+import { useMultiProvider } from '../../multiProvider';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 // This assumes all chains have the same ICA address
-const ICA_ADDRESS = Object.values(hyperlaneCoreAddresses)[0].interchainAccountRouter;
+const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
 
 export function isIcaMessage({
   sender,
@@ -71,7 +71,7 @@ export function tryDecodeIcaBody(body: string) {
 }
 
 export async function tryFetchIcaAddress(
-  originDomainId: number,
+  originDomainId: DomainId,
   sender: Address,
   provider: providers.Provider,
 ) {
@@ -93,12 +93,14 @@ export async function tryFetchIcaAddress(
   }
 }
 
-export function useIcaAddress(originDomainId: number, sender?: Address | null) {
+export function useIcaAddress(originDomainId: DomainId, sender?: Address | null) {
+  const multiProvider = useMultiProvider();
   return useQuery(
-    ['messageIcaAddress', originDomainId, sender],
+    ['useIcaAddress', originDomainId, sender],
     () => {
       if (!originDomainId || !sender || BigNumber.from(sender).isZero()) return null;
-      const provider = getMultiProvider().getProvider(originDomainId);
+      const provider = multiProvider.tryGetProvider(originDomainId);
+      if (!provider) return null;
       return tryFetchIcaAddress(originDomainId, sender, provider);
     },
     { retry: false },

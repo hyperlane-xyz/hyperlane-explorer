@@ -1,19 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
 import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
-import { getMultiProvider } from '../../../multiProvider';
-import { useStore } from '../../../store';
-import { LogWithTimestamp, Message, MessageStatus } from '../../../types';
-import {
-  ensureLeading0x,
-  isValidAddress,
-  isValidTransactionHash,
-  normalizeAddress,
-} from '../../../utils/addresses';
+import { ExtendedLog, Message, MessageStatus } from '../../../types';
+import { isValidAddress, isValidTransactionHash, normalizeAddress } from '../../../utils/addresses';
 import {
   queryExplorerForBlock,
   queryExplorerForLogs,
@@ -22,8 +14,6 @@ import {
 } from '../../../utils/explorers';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
-
-import { isValidSearchQuery } from './useMessageQuery';
 
 const PROVIDER_LOGS_BLOCK_WINDOW = 100_000;
 const PROVIDER_BLOCK_DETAILS_WINDOW = 5_000;
@@ -34,44 +24,16 @@ const dispatchIdTopic0 = mailbox.getEventTopic('DispatchId');
 // const processTopic0 = mailbox.getEventTopic('Process');
 // const processIdTopic0 = mailbox.getEventTopic('ProcessId');
 
-// Query 'Permissionless Interoperability (PI)' chains using custom
-// chain configs in store state
-export function usePiChainMessageQuery(
-  sanitizedInput: string,
-  startTimeFilter: number | null,
-  endTimeFilter: number | null,
-  pause: boolean,
-) {
-  const chainConfigs = useStore((s) => s.chainConfigs);
-  const { isLoading, isError, data } = useQuery(
-    ['usePiChainMessageQuery', chainConfigs, sanitizedInput, startTimeFilter, endTimeFilter, pause],
-    async () => {
-      const hasInput = !!sanitizedInput;
-      const isValidInput = isValidSearchQuery(sanitizedInput, true);
-      if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return [];
-      logger.debug('Starting PI Chain message query for:', sanitizedInput);
-      // TODO convert timestamps to from/to blocks here
-      const query = { input: ensureLeading0x(sanitizedInput) };
-      const multiProvider = getMultiProvider();
-      try {
-        const messages = await Promise.any(
-          Object.values(chainConfigs).map((c) => fetchMessagesOrThrow(c, query, multiProvider)),
-        );
-        return messages;
-      } catch (e) {
-        logger.debug('Error fetching PI messages found for:', sanitizedInput, e);
-        return [];
-      }
-    },
-    { retry: false },
-  );
+export interface PiMessageQuery {
+  input: string;
+  fromBlock?: string | number;
+  toBlock?: string | number;
+}
 
-  return {
-    isFetching: isLoading,
-    isError,
-    hasRun: !!data,
-    messageList: data || [],
-  };
+export enum PiQueryType {
+  Address = 'address',
+  TxHash = 'txHash',
+  MsgId = 'msgId',
 }
 
 /* Pseudo-code for the fetch algo below: 
@@ -101,46 +63,43 @@ searchForMessages(input):
         GOTO hash search above
 */
 
-export interface PiMessageQuery {
-  input: string;
-  fromBlock?: string | number;
-  toBlock?: string | number;
-}
-
-async function fetchMessagesOrThrow(
-  chainConfig: ChainConfig,
-  query: PiMessageQuery,
-  multiProvider: MultiProvider,
-): Promise<Message[]> {
-  const messages = await fetchMessagesFromPiChain(chainConfig, query, multiProvider);
-  // Throw so Promise.any caller doesn't trigger
-  if (!messages.length) throw new Error(`No messages found for chain ${chainConfig.chainId}`);
-  return messages;
-}
-
 export async function fetchMessagesFromPiChain(
   chainConfig: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
+  queryType?: PiQueryType, // optionally force search down to just one type
 ): Promise<Message[]> {
   const useExplorer = !!chainConfig.blockExplorers?.[0]?.apiUrl;
   const input = query.input;
 
-  let logs: LogWithTimestamp[];
-  if (isValidAddress(input)) {
+  let logs: ExtendedLog[] = [];
+  if (isValidAddress(input) && (!queryType || queryType === PiQueryType.Address)) {
     logs = await fetchLogsForAddress(chainConfig, query, multiProvider, useExplorer);
   } else if (isValidTransactionHash(input)) {
-    logs = await fetchLogsForTxHash(chainConfig, query, multiProvider, useExplorer);
+    if (!queryType || queryType === PiQueryType.TxHash) {
+      logs = await fetchLogsForTxHash(chainConfig, query, multiProvider, useExplorer);
+    }
     // Input may be a msg id, check that next
-    if (!logs.length) {
+    if ((!queryType || queryType === PiQueryType.MsgId) && !logs.length) {
       logs = await fetchLogsForMsgId(chainConfig, query, multiProvider, useExplorer);
     }
   } else {
-    logger.warn('Invalid PI search input', input);
+    logger.warn('Invalid PI search input', input, queryType);
     return [];
   }
 
-  return logs.map((l) => logToMessage(l, chainConfig)).filter((m): m is Message => !!m);
+  const messages = logs
+    .map((l) => logToMessage(multiProvider, l, chainConfig))
+    .filter((m): m is Message => !!m);
+
+  const messagesWithGasPayments: Message[] = [];
+  // Avoiding parallelism here out of caution for RPC rate limits
+  for (const m of messages) {
+    messagesWithGasPayments.push(
+      await tryFetchIgpGasPayments(m, chainConfig, multiProvider, useExplorer),
+    );
+  }
+  return messagesWithGasPayments;
 }
 
 async function fetchLogsForAddress(
@@ -148,7 +107,7 @@ async function fetchLogsForAddress(
   query: PiMessageQuery,
   multiProvider: MultiProvider,
   useExplorer?: boolean,
-): Promise<LogWithTimestamp[]> {
+): Promise<ExtendedLog[]> {
   const address = query.input;
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
@@ -186,7 +145,7 @@ async function fetchLogsForTxHash(
   query: PiMessageQuery,
   multiProvider: MultiProvider,
   useExplorer: boolean,
-): Promise<LogWithTimestamp[]> {
+): Promise<ExtendedLog[]> {
   const txHash = query.input;
   logger.debug(`Fetching logs for txHash ${txHash} on chain ${chainId}`);
   if (useExplorer) {
@@ -201,7 +160,7 @@ async function fetchLogsForTxHash(
       );
       return txReceipt.logs.map((l) => ({
         ...l,
-        timestamp: BigNumber.from(block.timestamp).toNumber() * 1000,
+        timestamp: parseBlockTimestamp(block),
         from: txReceipt.from,
         to: txReceipt.to,
       }));
@@ -214,11 +173,9 @@ async function fetchLogsForTxHash(
     if (txReceipt) {
       logger.debug(`Tx receipt found from provider for chain ${chainId}`);
       const block = await tryFetchBlockFromProvider(provider, txReceipt.blockNumber);
-      // TODO make timestamp optional instead of using 0 fallback here
-      const timestamp = block ? BigNumber.from(block.timestamp).toNumber() * 1000 : 0;
       return txReceipt.logs.map((l) => ({
         ...l,
-        timestamp,
+        timestamp: parseBlockTimestamp(block),
         from: txReceipt.from,
         to: txReceipt.to,
       }));
@@ -234,13 +191,13 @@ async function fetchLogsForMsgId(
   query: PiMessageQuery,
   multiProvider: MultiProvider,
   useExplorer: boolean,
-): Promise<LogWithTimestamp[]> {
+): Promise<ExtendedLog[]> {
   const { contracts, chainId } = chainConfig;
   const msgId = query.input;
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
   const mailboxAddr = contracts.mailbox;
   const topic1 = msgId;
-  let logs: LogWithTimestamp[];
+  let logs: ExtendedLog[];
   if (useExplorer) {
     logs = await fetchLogsFromExplorer(
       [
@@ -281,14 +238,14 @@ async function fetchLogsForMsgId(
 async function fetchLogsFromExplorer(
   paths: Array<string>,
   contractAddr: Address,
-  chainId: number,
+  chainId: ChainId,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
-): Promise<LogWithTimestamp[]> {
+): Promise<ExtendedLog[]> {
   const fromBlock = query.fromBlock || '1';
   const toBlock = query.toBlock || 'latest';
   const base = `module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${contractAddr}`;
-  let logs: LogWithTimestamp[] = [];
+  let logs: ExtendedLog[] = [];
   for (const path of paths) {
     // Originally use parallel requests here with Promise.all but immediately hit rate limit errors
     const result = await queryExplorerForLogs(multiProvider, chainId, `${base}${path}`, false);
@@ -300,10 +257,10 @@ async function fetchLogsFromExplorer(
 async function fetchLogsFromProvider(
   topics: Array<Array<string | null>>,
   contractAddr: Address,
-  chainId: number,
+  chainId: ChainId,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
-): Promise<LogWithTimestamp[]> {
+): Promise<ExtendedLog[]> {
   const provider = multiProvider.getProvider(chainId);
   const latestBlock = await provider.getBlockNumber();
   const fromBlock = query.fromBlock || latestBlock - PROVIDER_LOGS_BLOCK_WINDOW;
@@ -322,15 +279,13 @@ async function fetchLogsFromProvider(
     )
   ).flat();
 
-  const timestamps: Record<number, number> = {};
-  const logsWithTimestamp = await Promise.all<LogWithTimestamp>(
+  const timestamps: Record<number, number | undefined> = {};
+  const logsWithTimestamp = await Promise.all<ExtendedLog>(
     logs.map(async (l) => {
       const blockNum = l.blockNumber;
       if (!timestamps[blockNum]) {
         const block = await tryFetchBlockFromProvider(provider, blockNum, latestBlock);
-        // TODO make timestamps optional instead of using 0 fallback here
-        const timestamp = block ? BigNumber.from(block.timestamp).toNumber() * 1000 : 0;
-        timestamps[blockNum] = timestamp;
+        timestamps[blockNum] = parseBlockTimestamp(block);
       }
       return {
         ...l,
@@ -357,7 +312,16 @@ async function tryFetchBlockFromProvider(
   }
 }
 
-function logToMessage(log: LogWithTimestamp, chainConfig: ChainConfig): Message | null {
+function parseBlockTimestamp(block: providers.Block | null): number | undefined {
+  if (!block) return undefined;
+  return BigNumber.from(block.timestamp).toNumber() * 1000;
+}
+
+function logToMessage(
+  multiProvider: MultiProvider,
+  log: ExtendedLog,
+  chainConfig: ChainConfig,
+): Message | null {
   let logDesc: ethers.utils.LogDescription;
   try {
     logDesc = mailbox.parseLog(log);
@@ -368,7 +332,6 @@ function logToMessage(log: LogWithTimestamp, chainConfig: ChainConfig): Message 
   }
 
   try {
-    const multiProvider = getMultiProvider();
     const bytes = logDesc.args['message'];
     const message = utils.parseMessage(bytes);
     const msgId = utils.messageId(bytes);
@@ -390,7 +353,7 @@ function logToMessage(log: LogWithTimestamp, chainConfig: ChainConfig): Message 
       destinationDomainId: message.destination,
       body: message.body,
       origin: {
-        timestamp: log.timestamp,
+        timestamp: log.timestamp || 0,
         hash: log.transactionHash,
         from: log.from ? normalizeAddress(log.from) : constants.AddressZero,
         to: log.to ? normalizeAddress(log.to) : constants.AddressZero,
@@ -413,4 +376,27 @@ function logToMessage(log: LogWithTimestamp, chainConfig: ChainConfig): Message 
     logger.error('Unable to parse log into message', error);
     return null;
   }
+}
+
+// Fetch and sum all IGP gas payments for a given message
+async function tryFetchIgpGasPayments(
+  message: Message,
+  chainConfig: ChainConfig,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _multiProvider: MultiProvider,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _useExplorer?: boolean,
+): Promise<Message> {
+  const { chainId, contracts } = chainConfig;
+  const igpAddr = contracts.interchainGasPaymaster;
+  if (!igpAddr || !isValidAddress(igpAddr)) {
+    logger.warn('No IGP address found for chain:', chainId);
+    return message;
+  }
+
+  // TODO implement gas payment fetching
+  // Mimic logic in debugger's tryCheckIgpGasFunded
+  // Either duplicate or refactor into shared util built on SmartProvider
+
+  return message;
 }
