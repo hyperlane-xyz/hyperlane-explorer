@@ -178,7 +178,8 @@ function useDynamicBannerColor(
       toast.error('Error fetching message. Please check the message id and try again.');
       setBanner('bg-red-500');
     } else if (status === MessageStatus.Failing) {
-      setBanner('bg-red-500');
+      // TODO disabling this for now due to loudness from premature gas-related errors
+      // setBanner('bg-red-500');
     } else if (!isMessageFound) {
       setBanner('bg-gray-500');
     } else {
