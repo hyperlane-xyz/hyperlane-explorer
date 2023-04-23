@@ -4,11 +4,11 @@ import { PropsWithChildren } from 'react';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
-import { useMultiProvider } from '../../multiProvider';
 import { MessageStatus, MessageStub } from '../../types';
 import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { serializeMessage } from './utils';
 

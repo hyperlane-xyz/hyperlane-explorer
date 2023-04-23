@@ -12,12 +12,12 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import ShrugIcon from '../../images/icons/shrug.svg';
-import { useMultiProvider } from '../../multiProvider';
 import { useStore } from '../../store';
 import useDebounce from '../../utils/debounce';
 import { replacePathParam, useQueryParam } from '../../utils/queryParams';
 import { sanitizeString, toTitleCase } from '../../utils/string';
 import { isValidSearchQuery } from '../messages/queries/useMessageQuery';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { debugMessagesForHash } from './debugMessage';
 import { debugStatusToDesc } from './strings';

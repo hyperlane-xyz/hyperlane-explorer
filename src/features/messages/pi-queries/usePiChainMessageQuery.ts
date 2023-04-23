@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { useMultiProvider } from '../../../multiProvider';
 import { Message } from '../../../types';
 import { ensureLeading0x } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 import { useChainConfigsWithQueryParams } from '../../chains/useChainConfigs';
+import { useMultiProvider } from '../../providers/multiProvider';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';

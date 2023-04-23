@@ -5,12 +5,12 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import MailUnknown from '../../../images/icons/mail-unknown.svg';
-import { useMultiProvider } from '../../../multiProvider';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugStatus } from '../../debugger/types';
+import { useMultiProvider } from '../../providers/multiProvider';
 
 import { KeyValueRow } from './KeyValueRow';
 

@@ -9,7 +9,7 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
-import { useMultiProvider } from '../../multiProvider';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
 import { useChainConfigs } from './useChainConfigs';

@@ -3,7 +3,7 @@ import { ComponentProps } from 'react';
 import { ChainLogo as ChainLogoInner } from '@hyperlane-xyz/widgets';
 
 import { getChainName } from '../../features/chains/utils';
-import { useMultiProvider } from '../../multiProvider';
+import { useMultiProvider } from '../../features/providers/multiProvider';
 
 export function ChainLogo(props: ComponentProps<typeof ChainLogoInner>) {
   const { chainName, ...rest } = props;

@@ -4,10 +4,10 @@ import { toast } from 'react-toastify';
 
 import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
 
-import { useMultiProvider } from '../../multiProvider';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 

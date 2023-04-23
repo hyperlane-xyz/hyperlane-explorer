@@ -4,9 +4,9 @@ import { BigNumber, providers, utils } from 'ethers';
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
-import { useMultiProvider } from '../../multiProvider';
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
+import { useMultiProvider } from '../providers/multiProvider';
 
 // This assumes all chains have the same ICA address
 const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
