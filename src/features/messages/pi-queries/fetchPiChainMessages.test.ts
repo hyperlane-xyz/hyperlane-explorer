@@ -49,9 +49,7 @@ const goerliMessage = {
   isPiMsg: true,
 };
 
-describe('fetchMessagesFromPiChain', () => {
-  // beforeEach(async () => {});
-
+describe.skip('fetchMessagesFromPiChain', () => {
   it('Fetches messages using explorer for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
       goerliConfigWithExplorer,

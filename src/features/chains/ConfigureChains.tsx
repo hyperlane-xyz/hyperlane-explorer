@@ -183,6 +183,7 @@ const customChainTextareaPlaceholder = `{
   "publicRpcUrls": [{ "http": "https://foobar.com" }],
   "blockExplorers": [ {
       "name": "GoerliScan",
+      "family": "etherscan",
       "url": "https://goerli.etherscan.io",
       "apiUrl": "https://api-goerli.etherscan.io/api",
       "apiKey": "12345"

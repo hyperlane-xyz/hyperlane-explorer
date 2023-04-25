@@ -1,10 +1,14 @@
 import { providers, utils } from 'ethers';
 
-import { ChainMetadata, ExplorerFamily } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ExplorerFamily, objFilter } from '@hyperlane-xyz/sdk';
+
+import { logger } from '../../utils/logger';
 
 type RpcConfigWithConnectionInfo = ChainMetadata['publicRpcUrls'][number] & {
   connection?: utils.ConnectionInfo;
 };
+
+type ExplorerConfig = Exclude<ChainMetadata['blockExplorers'], undefined>[number];
 
 interface ChainMetadataWithRpcConnectionInfo extends ChainMetadata {
   publicRpcUrls: RpcConfigWithConnectionInfo[];
@@ -25,7 +29,7 @@ export class HyperlaneSmartProvider extends providers.BaseProvider {
       this.explorerProviders = chainMetadata.blockExplorers
         .map((explorerConfig) => {
           if (!explorerConfig.family || explorerConfig.family === ExplorerFamily.Etherscan)
-            return new HyperlaneEtherscanProvider(network, explorerConfig);
+            return new HyperlaneEtherscanProvider(explorerConfig, network);
           // TODO also support blockscout here
           else return null;
         })
@@ -36,8 +40,7 @@ export class HyperlaneSmartProvider extends providers.BaseProvider {
 
     if (chainMetadata.publicRpcUrls?.length) {
       this.rpcProviders = chainMetadata.publicRpcUrls.map(
-        (rpcConfig) =>
-          new providers.StaticJsonRpcProvider(rpcConfig.connection ?? rpcConfig.http, network),
+        (rpcConfig) => new HyperlaneJsonRpcProvider(rpcConfig, network),
       );
     } else {
       this.rpcProviders = [];
@@ -45,31 +48,69 @@ export class HyperlaneSmartProvider extends providers.BaseProvider {
   }
 
   async detectNetwork(): Promise<providers.Network> {
-    // For simplicity, efficiency, and better compat with new network, this SmartProvider
-    // assumes the provided RPC urls are correct and returns static data here instead of
-    // querying each for network info
+    // For simplicity, efficiency, and better compat with new networks, this assumes
+    // the provided RPC urls are correct and returns static data here instead of
+    // querying each sub-provider for network info
     return chainMetadataToProviderNetwork(this.chainMetadata);
   }
 
   async perform(method: string, params: { [name: string]: any }): Promise<any> {
-    //TODO
+    const allProviders = [...this.explorerProviders, ...this.rpcProviders];
+    if (!allProviders.length) throw new Error('No providers available');
+
+    // TODO consider implementing quorum and/or retry logic here similar to FallbackProvider/RetryProvider
+    for (const provider of allProviders) {
+      const providerUrl =
+        provider instanceof providers.JsonRpcProvider ? provider.connection.url : provider.baseUrl;
+      try {
+        const result = await provider.perform(method, params);
+        if (result === null || result === undefined) {
+          logger.error('Nullish result from provider using url:', providerUrl);
+        }
+        return result;
+      } catch (error) {
+        logger.error('Error from provider using url:', providerUrl, error);
+      }
+    }
+
+    throw new Error(`All providers failed for method ${method}`);
   }
 }
 
-type ExplorerConfig = Exclude<ChainMetadata['blockExplorers'], undefined>[number];
-
 export class HyperlaneEtherscanProvider extends providers.EtherscanProvider {
-  public readonly explorerConfig: ExplorerConfig;
-
-  constructor(network: providers.Network, explorerConfig: ExplorerConfig) {
-    super(network);
-    this.explorerConfig = explorerConfig;
-    utils.defineReadOnly(this, 'baseUrl', this.getBaseUrl());
+  constructor(public readonly explorerConfig: ExplorerConfig, network: providers.Network) {
+    super(network, explorerConfig.apiKey);
   }
 
   getBaseUrl(): string {
-    if (!this.explorerConfig?.apiUrl) return '';
-    return this.explorerConfig.apiUrl;
+    if (!this.explorerConfig) return ''; // Constructor net yet finished
+    const apiUrl = this.explorerConfig?.apiUrl;
+    if (!apiUrl) throw new Error('Explorer config missing apiUrl');
+    if (apiUrl.endsWith('/api')) return apiUrl.slice(0, -4);
+    return apiUrl;
+  }
+
+  getUrl(module: string, params: Record<string, string>): string {
+    const combinedParams = objFilter(params, (k, v): v is string => !!k && !!v);
+    combinedParams['module'] = module;
+    if (this.apiKey) combinedParams['apikey'] = this.apiKey;
+    const parsedParams = new URLSearchParams(combinedParams);
+    return `${this.getBaseUrl()}/api?${parsedParams.toString()}`;
+  }
+
+  getPostUrl(): string {
+    return `${this.getBaseUrl()}/api`;
+  }
+}
+
+export class HyperlaneJsonRpcProvider extends providers.StaticJsonRpcProvider {
+  constructor(rpcConfig: RpcConfigWithConnectionInfo, network: providers.Network) {
+    super(rpcConfig.connection ?? rpcConfig.http, network);
+  }
+
+  send(method: string, params: Array<any>): Promise<any> {
+    // TODO implement smart chunking here based on rpcConfig values
+    return super.send(method, params);
   }
 }
 
