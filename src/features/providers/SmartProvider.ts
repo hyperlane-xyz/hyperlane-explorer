@@ -3,6 +3,7 @@ import { providers, utils } from 'ethers';
 import { ChainMetadata, ExplorerFamily, objFilter } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
+import { sleep } from '../../utils/timeout';
 
 type RpcConfigWithConnectionInfo = ChainMetadata['publicRpcUrls'][number] & {
   connection?: utils.ConnectionInfo;
@@ -95,13 +96,15 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
     );
 
     // TODO consider implementing quorum and/or retry logic here similar to FallbackProvider/RetryProvider
+    // TODO trigger next provider if current one takes too long
+    // This will help spread load across providers and ease rate limiting
     for (const provider of supportedProviders) {
       const providerUrl =
         provider instanceof providers.JsonRpcProvider ? provider.connection.url : provider.baseUrl;
       try {
         const result = await provider.perform(method, params);
         if (result === null || result === undefined) {
-          logger.error('Nullish result from provider using url:', providerUrl);
+          throw new Error(`Nullish result from provider using url: ${providerUrl}`);
         }
         return result;
       } catch (error) {
@@ -113,16 +116,23 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
   }
 }
 
+// Used for crude rate-limiting of explorer queries without API keys
+const hostToLastQueried: Record<string, number> = {};
+const ETHERSCAN_THROTTLE_TIME = 5100; // 5.1 seconds
+
 export class HyperlaneEtherscanProvider
   extends providers.EtherscanProvider
   implements IProviderMethods
 {
-  public readonly supportedMethods: ProviderMethod[];
+  // Seeing problems with these two methods even though etherscan api claims to support them
+  public readonly supportedMethods = excludeMethods([
+    ProviderMethod.Call,
+    ProviderMethod.EstimateGas,
+    ProviderMethod.SendTransaction,
+  ]);
 
   constructor(public readonly explorerConfig: ExplorerConfig, network: providers.Network) {
     super(network, explorerConfig.apiKey);
-    const unsupportedMethods: ProviderMethod[] = [ProviderMethod.SendTransaction];
-    this.supportedMethods = AllProviderMethods.filter((m) => !unsupportedMethods.includes(m));
   }
 
   getBaseUrl(): string {
@@ -145,11 +155,29 @@ export class HyperlaneEtherscanProvider
     return `${this.getBaseUrl()}/api`;
   }
 
-  async fetch(module: string, params: Record<string, any>, post?: boolean): Promise<any> {
-    // TODO wrap this in intelligent rate limiting based on this.isCommunityResource
-    return super.fetch(module, params, post);
+  getHostname(): string {
+    return new URL(this.getBaseUrl()).hostname;
   }
-  //TODO fix bug with getTxCount method
+
+  async fetch(module: string, params: Record<string, any>, post?: boolean): Promise<any> {
+    if (!this.isCommunityResource()) return super.fetch(module, params, post);
+    const hostname = this.getHostname();
+    try {
+      const lastExplorerQuery = hostToLastQueried[hostname] || 0;
+      const waitTime = ETHERSCAN_THROTTLE_TIME - (Date.now() - lastExplorerQuery);
+      if (waitTime > 0) await sleep(waitTime);
+      const result = await super.fetch(module, params, post);
+      return result;
+    } finally {
+      hostToLastQueried[hostname] = Date.now();
+    }
+  }
+
+  async perform(method: string, params: any): Promise<any> {
+    if (!this.supportedMethods.includes(method as ProviderMethod))
+      throw new Error(`Unsupported method ${method}`);
+    return super.perform(method, params);
+  }
 }
 
 export class HyperlaneJsonRpcProvider
@@ -175,4 +203,8 @@ function chainMetadataToProviderNetwork(chainMetadata: ChainMetadata): providers
     // @ts-ignore TODO remove when SDK updated
     ensAddress: chainMetadata.ensAddress,
   };
+}
+
+function excludeMethods(exclude: ProviderMethod[]): ProviderMethod[] {
+  return AllProviderMethods.filter((m) => !exclude.includes(m));
 }
