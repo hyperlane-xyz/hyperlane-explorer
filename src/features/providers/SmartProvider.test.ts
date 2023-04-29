@@ -5,7 +5,8 @@ import { ChainMetadata, chainMetadata } from '@hyperlane-xyz/sdk';
 import { areAddressesEqual } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
-import { HyperlaneSmartProvider, ProviderMethod } from './SmartProvider';
+import { ProviderMethod } from './ProviderMethods';
+import { HyperlaneSmartProvider } from './SmartProvider';
 
 jest.setTimeout(40000);
 
