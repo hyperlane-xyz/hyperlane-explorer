@@ -7,17 +7,28 @@ import { logger } from '../../utils/logger';
 
 import { HyperlaneSmartProvider, ProviderMethod } from './SmartProvider';
 
-jest.setTimeout(30000);
+jest.setTimeout(40000);
 
-const MIN_BLOCK_NUM = 8000000;
+const MIN_BLOCK_NUM = 8900000;
 const DEFAULT_ACCOUNT = '0x9d525E28Fe5830eE92d7Aa799c4D21590567B595';
 const WETH_CONTRACT = '0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6';
 const WETH_TRANSFER_TOPIC0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const TRANSFER_TX_HASH = '0x45a586f90ffd5d0f8e618f0f3703b14c2c9e4611af6231d6fed32c62776b6c1b';
 
+const goerliRpcConfig = {
+  ...chainMetadata.goerli.publicRpcUrls[0],
+  pagination: {
+    blocks: 1000,
+    from: MIN_BLOCK_NUM,
+  },
+};
 const justExplorersConfig: ChainMetadata = { ...chainMetadata.goerli, publicRpcUrls: [] };
-const justRpcsConfig: ChainMetadata = { ...chainMetadata.goerli, blockExplorers: [] };
-const combinedConfig: ChainMetadata = { ...chainMetadata.goerli };
+const justRpcsConfig: ChainMetadata = {
+  ...chainMetadata.goerli,
+  publicRpcUrls: [goerliRpcConfig],
+  blockExplorers: [],
+};
+const combinedConfig: ChainMetadata = { ...chainMetadata.goerli, publicRpcUrls: [goerliRpcConfig] };
 const configs: [string, ChainMetadata][] = [
   ['Just Explorers', justExplorersConfig],
   ['Just RPCs', justRpcsConfig],
@@ -99,15 +110,42 @@ describe('SmartProvider', () => {
       });
 
       itDoesIfSupported(ProviderMethod.GetLogs, async () => {
-        const result = await provider.getLogs({
+        logger.debug('Testing logs with no from/to range');
+        const result1 = await provider.getLogs({
           address: WETH_CONTRACT,
           topics: [WETH_TRANSFER_TOPIC0],
         });
-        // console.log(result);
-        console.log(JSON.stringify(result.slice(0, 20)));
-        logger.debug('Logs found', result.length);
-        expect(result.length).toBeGreaterThan(100);
-        expect(areAddressesEqual(result[0].address, WETH_CONTRACT)).toBeTruthy();
+        logger.debug('Logs found', result1.length);
+        expect(result1.length).toBeGreaterThan(100);
+        expect(areAddressesEqual(result1[0].address, WETH_CONTRACT)).toBeTruthy();
+
+        logger.debug('Testing logs with small from/to range');
+        const result2 = await provider.getLogs({
+          address: WETH_CONTRACT,
+          topics: [WETH_TRANSFER_TOPIC0],
+          fromBlock: MIN_BLOCK_NUM,
+          toBlock: MIN_BLOCK_NUM + 100,
+        });
+        expect(result2.length).toBeGreaterThan(10);
+        expect(areAddressesEqual(result2[0].address, WETH_CONTRACT)).toBeTruthy();
+
+        try {
+          logger.debug('Testing logs with too large from/to range');
+          const result3 = await provider.getLogs({
+            address: WETH_CONTRACT,
+            topics: [WETH_TRANSFER_TOPIC0],
+            fromBlock: MIN_BLOCK_NUM,
+            toBlock: 'latest',
+          });
+          if (config === justRpcsConfig) {
+            expect(false).toBe('Should throw error about minQueryable');
+          } else {
+            expect(result3.length).toBeGreaterThan(10);
+            expect(areAddressesEqual(result3[0].address, WETH_CONTRACT)).toBeTruthy();
+          }
+        } catch (error: any) {
+          expect(error.message).toMatch(/(.*)too many queries(.*)/);
+        }
       });
 
       itDoesIfSupported(ProviderMethod.EstimateGas, async () => {
