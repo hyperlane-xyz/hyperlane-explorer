@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { trimToLength } from './string';
 
 export function errorToString(error: any, maxLength = 300) {
@@ -7,4 +8,9 @@ export function errorToString(error: any, maxLength = 300) {
   const details = error.message || error.reason || error;
   if (typeof details === 'string') return trimToLength(details, maxLength);
   return trimToLength(JSON.stringify(details), maxLength);
+}
+
+export function logAndThrow(message: string, error?: any) {
+  logger.error(message, error);
+  throw new Error(message);
 }

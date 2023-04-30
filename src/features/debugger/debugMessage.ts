@@ -435,7 +435,6 @@ async function tryCheckIgpGasFunded(
     let gasAlreadyFunded = BigNumber.from(0);
     if (totalGasAmount) {
       const filter = igp.filters.GasPayment(messageId, null, null);
-      // TODO restrict blocks here to avoid rpc errors
       const matchedEvents = (await igp.queryFilter(filter)) || [];
       logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
       logger.debug(matchedEvents);

@@ -113,7 +113,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
         {!message.isPiMsg && <TimelineCard message={message} shouldBlur={shouldBlur} />}
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
-        {!message.isPiMsg && <GasDetailsCard message={message} shouldBlur={shouldBlur} />}
+        <GasDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
     </>

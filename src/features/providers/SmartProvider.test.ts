@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
 import { ProviderMethod } from './ProviderMethods';
 import { HyperlaneSmartProvider } from './SmartProvider';
 
-jest.setTimeout(40000);
+jest.setTimeout(60_000);
 
 const MIN_BLOCK_NUM = 8900000;
 const DEFAULT_ACCOUNT = '0x9d525E28Fe5830eE92d7Aa799c4D21590567B595';
@@ -130,23 +130,15 @@ describe('SmartProvider', () => {
         expect(result2.length).toBeGreaterThan(10);
         expect(areAddressesEqual(result2[0].address, WETH_CONTRACT)).toBeTruthy();
 
-        try {
-          logger.debug('Testing logs with too large from/to range');
-          const result3 = await provider.getLogs({
-            address: WETH_CONTRACT,
-            topics: [WETH_TRANSFER_TOPIC0],
-            fromBlock: MIN_BLOCK_NUM,
-            toBlock: 'latest',
-          });
-          if (config === justRpcsConfig) {
-            expect(false).toBe('Should throw error about minQueryable');
-          } else {
-            expect(result3.length).toBeGreaterThan(10);
-            expect(areAddressesEqual(result3[0].address, WETH_CONTRACT)).toBeTruthy();
-          }
-        } catch (error: any) {
-          expect(error.message).toMatch(/(.*)too many queries(.*)/);
-        }
+        logger.debug('Testing logs with large from/to range');
+        const result3 = await provider.getLogs({
+          address: WETH_CONTRACT,
+          topics: [WETH_TRANSFER_TOPIC0],
+          fromBlock: MIN_BLOCK_NUM,
+          toBlock: 'latest',
+        });
+        expect(result3.length).toBeGreaterThan(10);
+        expect(areAddressesEqual(result3[0].address, WETH_CONTRACT)).toBeTruthy();
       });
 
       itDoesIfSupported(ProviderMethod.EstimateGas, async () => {
@@ -165,6 +157,25 @@ describe('SmartProvider', () => {
           data: '0x70a082310000000000000000000000004f7a67464b5976d7547c860109e4432d50afb38e',
         });
         expect(result).toBe('0x0000000000000000000000000000000000000000000000000000000000000000');
+      });
+
+      it('Handles parallel requests', async () => {
+        const result1Promise = provider.getLogs({
+          address: WETH_CONTRACT,
+          topics: [WETH_TRANSFER_TOPIC0],
+          fromBlock: MIN_BLOCK_NUM,
+          toBlock: MIN_BLOCK_NUM + 100,
+        });
+        const result2Promise = provider.getBlockNumber();
+        const result3Promise = provider.getTransaction(TRANSFER_TX_HASH);
+        const [result1, result2, result3] = await Promise.all([
+          result1Promise,
+          result2Promise,
+          result3Promise,
+        ]);
+        expect(result1).toBeTruthy();
+        expect(result2).toBeTruthy();
+        expect(result3).toBeTruthy();
       });
 
       //TODO

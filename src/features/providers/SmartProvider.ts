@@ -2,9 +2,9 @@ import { providers } from 'ethers';
 
 import { ChainMetadata, ExplorerFamily } from '@hyperlane-xyz/sdk';
 
+import { logAndThrow } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { sleep } from '../../utils/timeout';
-import { isNullish } from '../../utils/typeof';
 
 import { HyperlaneEtherscanProvider } from './HyperlaneEtherscanProvider';
 import { HyperlaneJsonRpcProvider } from './HyperlaneJsonRpcProvider';
@@ -14,12 +14,15 @@ import { ChainMetadataWithRpcConnectionInfo } from './types';
 const PROVIDER_STAGGER_DELAY_MS = 1000; // 1 seconds
 const PROVIDER_TIMEOUT_MARKER = '__PROVIDER_TIMEOUT__';
 
+type HyperlaneProvider = HyperlaneEtherscanProvider | HyperlaneJsonRpcProvider;
+
 export class HyperlaneSmartProvider extends providers.BaseProvider implements IProviderMethods {
   public readonly chainMetadata: ChainMetadataWithRpcConnectionInfo;
   // TODO also support blockscout here
   public readonly explorerProviders: HyperlaneEtherscanProvider[];
   public readonly rpcProviders: HyperlaneJsonRpcProvider[];
   public readonly supportedMethods: ProviderMethod[];
+  public requestCount = 0;
 
   constructor(chainMetadata: ChainMetadataWithRpcConnectionInfo) {
     const network = chainMetadataToProviderNetwork(chainMetadata);
@@ -75,47 +78,78 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
     );
     if (!supportedProviders.length) throw new Error(`No providers available for method ${method}`);
 
-    let index = 0;
-    const maxIndex = supportedProviders.length - 1;
+    this.requestCount += 1;
+    const reqId = this.requestCount;
+
+    let pIndex = 0;
+    const maxPIndex = supportedProviders.length - 1;
     const providerResultPromises: Promise<any>[] = [];
     // TODO consider implementing quorum and/or retry logic here similar to FallbackProvider/RetryProvider
     while (true) {
-      if (index <= maxIndex) {
+      if (pIndex <= maxPIndex) {
         // Trigger the next provider in line
-        const provider = supportedProviders[index];
+        const provider = supportedProviders[pIndex];
         const providerUrl = provider.getBaseUrl();
-        const resultPromise = provider.perform(method, params);
+
+        // Skip the explorer provider if it's currently in a cooldown period
+        if (
+          this.isExplorerProvider(provider) &&
+          provider.getQueryWaitTime() > 0 &&
+          pIndex < maxPIndex &&
+          method !== ProviderMethod.GetLogs // never skip GetLogs
+        ) {
+          pIndex += 1;
+          continue;
+        }
+
+        const resultPromise = performWithLogging(provider, providerUrl, method, params, reqId);
         providerResultPromises.push(resultPromise);
         const timeoutPromise = sleep(PROVIDER_STAGGER_DELAY_MS, PROVIDER_TIMEOUT_MARKER);
-        const result = await Promise.race([resultPromise, timeoutPromise]);
+        const result = await Promise.any([resultPromise, timeoutPromise]);
 
-        if (isNullish(result)) {
-          logger.error(
-            `Nullish result from provider using ${providerUrl}. Triggering next available provider`,
-          );
-          index += 1;
-        } else if (result === PROVIDER_TIMEOUT_MARKER) {
+        if (result === PROVIDER_TIMEOUT_MARKER) {
           logger.warn(
-            `Slow response from provider using ${providerUrl}. Triggering next available provider`,
+            `Slow response from provider using ${providerUrl}. Triggering next provider if available`,
           );
-          index += 1;
+          pIndex += 1;
         } else {
           // Result looks good
           return result;
         }
       } else {
         // All providers already triggered, wait for one to complete
-        const timeoutPromise = sleep(PROVIDER_STAGGER_DELAY_MS * 12, PROVIDER_TIMEOUT_MARKER);
-        const result = await Promise.race([...providerResultPromises, timeoutPromise]);
-        if (isNullish(result) || result === PROVIDER_TIMEOUT_MARKER) {
-          throw new Error(`All providers failed or timed out for method ${method}`);
+        const timeoutPromise = sleep(PROVIDER_STAGGER_DELAY_MS * 20, PROVIDER_TIMEOUT_MARKER);
+        const result = await Promise.any([...providerResultPromises, timeoutPromise]);
+        if (result === PROVIDER_TIMEOUT_MARKER) {
+          logAndThrow(`All providers failed or timed out for method ${method}`, result);
         } else {
           return result;
         }
       }
     }
   }
+
+  isExplorerProvider(p: HyperlaneProvider): p is HyperlaneEtherscanProvider {
+    return this.explorerProviders.includes(p as any);
+  }
 }
+
+function performWithLogging(
+  provider: HyperlaneProvider,
+  providerUrl: string,
+  method: string,
+  params: any,
+  reqId: number,
+): Promise<any> {
+  try {
+    logger.debug(`Provider using ${providerUrl} performing method ${method} for reqId ${reqId}`);
+    return provider.perform(method, params, reqId);
+  } catch (error) {
+    logger.error(`Error performing ${method} on provider ${providerUrl} for reqId ${reqId}`, error);
+    throw new Error(`Error performing ${method} with ${providerUrl} for reqId ${reqId}`);
+  }
+}
+
 function chainMetadataToProviderNetwork(chainMetadata: ChainMetadata): providers.Network {
   return {
     name: chainMetadata.name,

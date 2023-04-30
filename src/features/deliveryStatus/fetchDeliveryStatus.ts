@@ -3,7 +3,6 @@ import { constants } from 'ethers';
 import { MultiProvider, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
-import { queryExplorerForLogs, queryExplorerForTx } from '../../utils/explorers';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getChainEnvironment } from '../chains/utils';
@@ -33,12 +32,12 @@ export async function fetchDeliveryStatus(
   const destMailboxAddr = hyperlaneEnvironments[destEnv][destName]?.mailbox;
   if (!destMailboxAddr) throw new Error(`No mailbox address found for dest ${destName}`);
 
-  const logs = await fetchExplorerLogsForMessage(multiProvider, message, destMailboxAddr);
+  const logs = await fetchMessageLogs(multiProvider, message, destMailboxAddr);
 
   if (logs?.length) {
     logger.debug(`Found delivery log for tx ${message.origin.hash}`);
     const log = logs[0]; // Should only be 1 log per message delivery
-    const txDetails = await tryFetchTransactionDetails(
+    const txDetails = await fetchTransactionDetails(
       multiProvider,
       message.destinationChainId,
       log.transactionHash,
@@ -47,21 +46,21 @@ export async function fetchDeliveryStatus(
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
       deliveryTransaction: {
-        timestamp: toDecimalNumber(log.timeStamp) * 1000,
+        timestamp: toDecimalNumber(txDetails.timestamp || 0) * 1000,
         hash: log.transactionHash,
-        from: txDetails?.from || constants.AddressZero,
-        to: txDetails?.to || constants.AddressZero,
-        blockHash: txDetails?.blockHash || TX_HASH_ZERO,
+        from: txDetails.from || constants.AddressZero,
+        to: txDetails.to || constants.AddressZero,
+        blockHash: txDetails.blockHash || TX_HASH_ZERO,
         blockNumber: toDecimalNumber(log.blockNumber),
         mailbox: constants.AddressZero,
-        nonce: txDetails?.nonce || 0,
-        gasLimit: toDecimalNumber(txDetails?.gasLimit || 0),
-        gasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
-        effectiveGasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
-        gasUsed: toDecimalNumber(log.gasUsed),
-        cumulativeGasUsed: toDecimalNumber(log.gasUsed),
-        maxFeePerGas: toDecimalNumber(txDetails?.maxFeePerGas || 0),
-        maxPriorityPerGas: toDecimalNumber(txDetails?.maxPriorityFeePerGas || 0),
+        nonce: txDetails.nonce || 0,
+        gasLimit: toDecimalNumber(txDetails.gasLimit || 0),
+        gasPrice: toDecimalNumber(txDetails.gasPrice || 0),
+        effectiveGasPrice: toDecimalNumber(txDetails.gasPrice || 0),
+        gasUsed: toDecimalNumber(txDetails.gasLimit || 0),
+        cumulativeGasUsed: toDecimalNumber(txDetails.gasLimit || 0),
+        maxFeePerGas: toDecimalNumber(txDetails.maxFeePerGas || 0),
+        maxPriorityPerGas: toDecimalNumber(txDetails.maxPriorityFeePerGas || 0),
       },
     };
     return result;
@@ -83,28 +82,22 @@ export async function fetchDeliveryStatus(
   }
 }
 
-function fetchExplorerLogsForMessage(
-  multiProvider: MultiProvider,
-  message: Message,
-  mailboxAddr: Address,
-) {
+function fetchMessageLogs(multiProvider: MultiProvider, message: Message, mailboxAddr: Address) {
   const { msgId, origin, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${origin.hash}`);
-  const logsQueryPath = `module=logs&action=getLogs&fromBlock=1&toBlock=latest&topic0=${PROCESS_TOPIC_0}&topic0_1_opr=and&topic1=${msgId}&address=${mailboxAddr}`;
-  return queryExplorerForLogs(multiProvider, destinationChainId, logsQueryPath);
+  const provider = multiProvider.getProvider(destinationChainId);
+  return provider.getLogs({
+    topics: [PROCESS_TOPIC_0, msgId],
+    address: mailboxAddr,
+  });
 }
 
-async function tryFetchTransactionDetails(
+async function fetchTransactionDetails(
   multiProvider: MultiProvider,
   chainId: ChainId,
   txHash: string,
 ) {
-  try {
-    const tx = await queryExplorerForTx(multiProvider, chainId, txHash);
-    return tx;
-  } catch (error) {
-    // Swallowing error if there's an issue so we can still surface delivery confirmation
-    logger.error('Failed to fetch tx details', txHash, chainId);
-    return null;
-  }
+  logger.debug(`Searching for transaction details for ${txHash}`);
+  const provider = multiProvider.getProvider(chainId);
+  return provider.getTransaction(txHash);
 }

@@ -21,8 +21,8 @@ export class HyperlaneJsonRpcProvider
     super(rpcConfig.connection ?? rpcConfig.http, network);
   }
 
-  async perform(method: string, params: any): Promise<any> {
-    logger.debug('HyperlaneJsonRpcProvider performing method:', method);
+  async perform(method: string, params: any, reqId?: number): Promise<any> {
+    logger.debug(`HyperlaneJsonRpcProvider performing method ${method} for reqId ${reqId}`);
     if (method === ProviderMethod.GetLogs) {
       return this.performGetLogs(params);
     } else {
@@ -31,16 +31,16 @@ export class HyperlaneJsonRpcProvider
   }
 
   async performGetLogs(params: { filter: providers.Filter }) {
-    const deferToSuper = () => super.perform(ProviderMethod.GetLogs, params);
+    const superPerform = () => super.perform(ProviderMethod.GetLogs, params);
 
     const paginationOptions = this.rpcConfig.pagination;
-    if (!paginationOptions || !params.filter) return deferToSuper();
+    if (!paginationOptions || !params.filter) return superPerform();
 
     const { fromBlock, toBlock, address, topics } = params.filter;
     // TODO update when sdk is updated
     const { blocks: maxBlockRange, from: minBlockNumber } = paginationOptions;
 
-    if (!maxBlockRange && isNullish(minBlockNumber)) return deferToSuper();
+    if (!maxBlockRange && isNullish(minBlockNumber)) return superPerform();
 
     const currentBlockNumber = await super.perform(ProviderMethod.GetBlockNumber, null);
 
@@ -50,30 +50,32 @@ export class HyperlaneJsonRpcProvider
     } else if (isBigNumberish(toBlock)) {
       endBlock = BigNumber.from(toBlock).toNumber();
     } else {
-      return deferToSuper();
+      return superPerform();
     }
 
-    const minQueryable = maxBlockRange
-      ? endBlock - maxBlockRange * NUM_LOG_BLOCK_RANGES_TO_QUERY + 1
-      : 0;
-
     let startBlock: number;
-    if (fromBlock === 'earliest') {
+    if (isNullish(fromBlock) || fromBlock === 'earliest') {
       startBlock = 0;
     } else if (isBigNumberish(fromBlock)) {
       startBlock = BigNumber.from(fromBlock).toNumber();
-    } else if (isNullish(fromBlock)) {
-      startBlock = Math.max(minQueryable, minBlockNumber ?? 0);
     } else {
-      return deferToSuper();
+      return superPerform();
     }
 
-    if (startBlock >= endBlock)
-      throw new Error(`Invalid range ${startBlock} - ${endBlock}: start >= end`);
-    if (minBlockNumber && startBlock < minBlockNumber)
-      throw new Error(`Invalid start ${startBlock}: below rpc minBlockNumber ${minBlockNumber}`);
+    if (startBlock > endBlock) {
+      logger.warn(`Start block ${startBlock} greater than end block. Using ${endBlock} instead`);
+      startBlock = endBlock;
+    }
+    const minQueryable = maxBlockRange
+      ? endBlock - maxBlockRange * NUM_LOG_BLOCK_RANGES_TO_QUERY + 1
+      : 0;
     if (startBlock < minQueryable) {
-      throw new Error(`Invalid range ${startBlock} - ${endBlock}: requires too many queries`);
+      logger.warn(`Start block ${startBlock} requires too many queries, using ${minQueryable}.`);
+      startBlock = minQueryable;
+    }
+    if (startBlock < minBlockNumber) {
+      logger.warn(`Start block ${startBlock} below config min, increasing to ${minBlockNumber}`);
+      startBlock = minBlockNumber;
     }
 
     const blockChunkRange = maxBlockRange || endBlock - startBlock;
