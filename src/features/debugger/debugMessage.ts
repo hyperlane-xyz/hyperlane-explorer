@@ -407,7 +407,7 @@ async function isIgpUnderfunded(
   totalGasAmount?: string,
 ) {
   const igp = HyperlaneIgp.fromEnvironment(env, multiProvider);
-  const igpContract = igp.getContracts(originName).defaultIsmInterchainGasPaymaster;
+  const igpContract = igp.getContracts(originName).interchainGasPaymaster;
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
     igpContract,
     msgId,
