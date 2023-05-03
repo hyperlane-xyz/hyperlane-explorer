@@ -154,7 +154,6 @@ function chainMetadataToProviderNetwork(chainMetadata: ChainMetadata): providers
   return {
     name: chainMetadata.name,
     chainId: chainMetadata.chainId,
-    // @ts-ignore TODO remove when SDK updated
     ensAddress: chainMetadata.ensAddress,
   };
 }

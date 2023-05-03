@@ -1294,14 +1294,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:1.3.3":
-  version: 1.3.3
-  resolution: "@hyperlane-xyz/core@npm:1.3.3"
+"@hyperlane-xyz/core@npm:1.3.4":
+  version: 1.3.4
+  resolution: "@hyperlane-xyz/core@npm:1.3.4"
   dependencies:
-    "@hyperlane-xyz/utils": 1.3.3
+    "@hyperlane-xyz/utils": 1.3.4
     "@openzeppelin/contracts": ^4.8.0
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-  checksum: d21ede2e49e1152c518c7c89ff1c19811ae3eb78aaacf02dd7db028cbcc436b25bc39c77e2c93d7a08790dd32f5f9f921de4e0e0fccf0a1c8b8a7285cab18e01
+  checksum: aaea49039a37dc093fb785ba79480be28a41b62936dd2910ac25fbe07e8275ea6a1f8f477e0872c8d5880dede24e2fb5bce5f0153626a36113de18578e4032f7
   languageName: node
   linkType: hard
 
@@ -1310,7 +1310,7 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": ^1.7.11
-    "@hyperlane-xyz/sdk": 1.3.3
+    "@hyperlane-xyz/sdk": 1.3.4
     "@hyperlane-xyz/widgets": 1.3.3
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": ^0.11.0
@@ -1349,12 +1349,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/sdk@npm:1.3.3":
-  version: 1.3.3
-  resolution: "@hyperlane-xyz/sdk@npm:1.3.3"
+"@hyperlane-xyz/sdk@npm:1.3.4":
+  version: 1.3.4
+  resolution: "@hyperlane-xyz/sdk@npm:1.3.4"
   dependencies:
-    "@hyperlane-xyz/core": 1.3.3
-    "@hyperlane-xyz/utils": 1.3.3
+    "@hyperlane-xyz/core": 1.3.4
+    "@hyperlane-xyz/utils": 1.3.4
     "@types/coingecko-api": ^1.0.10
     "@types/debug": ^4.1.7
     "@wagmi/chains": ^0.2.6
@@ -1363,16 +1363,16 @@ __metadata:
     debug: ^4.3.4
     ethers: ^5.7.2
     zod: ^3.21.2
-  checksum: c54f9fc6b6ae93f00651d345591cf2945b8a3516b15b6f7a649b210abc1ed3c0725bbc80a0d2d5240cbe988bb21b10f7bb1f0c13348d3d3e2c4c1e2fe856c093
+  checksum: c881b51ea1e0aada4cf12a485a0b614ee0fbb6095941c63ec0ba7bc41a59b29e7a05498ab8ac3e89a50430b2973218dece6f2cbd09fd8697bead49be99b3663a
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:1.3.3":
-  version: 1.3.3
-  resolution: "@hyperlane-xyz/utils@npm:1.3.3"
+"@hyperlane-xyz/utils@npm:1.3.4":
+  version: 1.3.4
+  resolution: "@hyperlane-xyz/utils@npm:1.3.4"
   dependencies:
     ethers: ^5.7.2
-  checksum: 1141ff5f8c7559f8727c63782b37cf0f9444942e3f48059fad7dde533b160137a15bcfcc9f590ae3ee56faf33b1da4f7c99f8d32134792acd94c41fc235f19c1
+  checksum: 7bed3465604dd3e20d31ebc2b4d101cfe6a934df9d0625a11e9fb5dfa39dbd009c1fc4ad269a32662d4c4a3abadacf5195f53462be021494ba15896036a53f7a
   languageName: node
   linkType: hard
 

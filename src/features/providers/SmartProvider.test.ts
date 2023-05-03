@@ -19,8 +19,8 @@ const TRANSFER_TX_HASH = '0x45a586f90ffd5d0f8e618f0f3703b14c2c9e4611af6231d6fed3
 const goerliRpcConfig = {
   ...chainMetadata.goerli.publicRpcUrls[0],
   pagination: {
-    blocks: 1000,
-    from: MIN_BLOCK_NUM,
+    maxBlockRange: 1000,
+    minBlockNumber: MIN_BLOCK_NUM,
   },
 };
 const justExplorersConfig: ChainMetadata = { ...chainMetadata.goerli, publicRpcUrls: [] };

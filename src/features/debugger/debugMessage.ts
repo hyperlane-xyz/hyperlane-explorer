@@ -251,7 +251,6 @@ async function fetchTransactionDetails(
   chainName: ChainName,
 ) {
   const provider = multiProvider.getProvider(chainName);
-  // TODO explorer may be faster, more robust way to get tx and its logs
   // Note: receipt is null if tx not found
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
   if (transactionReceipt) {

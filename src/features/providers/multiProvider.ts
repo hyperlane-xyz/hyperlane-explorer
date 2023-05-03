@@ -1,12 +1,6 @@
 import { useMemo } from 'react';
 
-import {
-  ChainName,
-  CoreChainName,
-  MultiProvider,
-  TestChains,
-  chainMetadata,
-} from '@hyperlane-xyz/sdk';
+import { ChainName, MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
 
 import { useChainConfigsWithQueryParams } from '../chains/useChainConfigs';
 
@@ -19,19 +13,11 @@ export class SmartMultiProvider extends MultiProvider {
     if (!metadata) return null;
     const { name, publicRpcUrls, blockExplorers } = metadata;
 
-    // TODO fix when sdk is updated
-    const providers = this['providers'];
-    if (providers[name]) return providers[name];
-
-    if (TestChains.includes(name as CoreChainName)) {
-      providers[name] = new providers.JsonRpcProvider('http://localhost:8545', 31337);
-    } else if (publicRpcUrls?.length || blockExplorers?.length) {
-      providers[name] = new HyperlaneSmartProvider(metadata);
-    } else {
-      return null;
+    if (!this.providers[name] && (publicRpcUrls?.length || blockExplorers?.length)) {
+      this.providers[name] = new HyperlaneSmartProvider(metadata);
     }
 
-    return providers[name];
+    return (this.providers[name] as HyperlaneSmartProvider) || null;
   }
 }
 

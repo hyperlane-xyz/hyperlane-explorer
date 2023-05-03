@@ -13,9 +13,10 @@ import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 jest.setTimeout(30000);
 
 const goerliMailbox = hyperlaneEnvironments.testnet.goerli.mailbox;
+const goerliIgp = hyperlaneEnvironments.testnet.goerli.interchainGasPaymaster;
 const goerliConfigWithExplorer: ChainConfig = {
   ...chainMetadata.goerli,
-  contracts: { mailbox: goerliMailbox },
+  contracts: { mailbox: goerliMailbox, interchainGasPaymaster: goerliIgp },
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { blockExplorers, ...goerliConfigNoExplorer } = goerliConfigWithExplorer;

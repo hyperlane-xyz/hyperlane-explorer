@@ -37,10 +37,9 @@ export class HyperlaneJsonRpcProvider
     if (!paginationOptions || !params.filter) return superPerform();
 
     const { fromBlock, toBlock, address, topics } = params.filter;
-    // TODO update when sdk is updated
-    const { blocks: maxBlockRange, from: minBlockNumber } = paginationOptions;
+    const { maxBlockRange, minBlockNumber, maxBlockAge } = paginationOptions;
 
-    if (!maxBlockRange && isNullish(minBlockNumber)) return superPerform();
+    if (!maxBlockRange && !maxBlockAge && isNullish(minBlockNumber)) return superPerform();
 
     const currentBlockNumber = await super.perform(ProviderMethod.GetBlockNumber, null);
 
@@ -66,14 +65,21 @@ export class HyperlaneJsonRpcProvider
       logger.warn(`Start block ${startBlock} greater than end block. Using ${endBlock} instead`);
       startBlock = endBlock;
     }
-    const minQueryable = maxBlockRange
+    const minForBlockRange = maxBlockRange
       ? endBlock - maxBlockRange * NUM_LOG_BLOCK_RANGES_TO_QUERY + 1
       : 0;
-    if (startBlock < minQueryable) {
-      logger.warn(`Start block ${startBlock} requires too many queries, using ${minQueryable}.`);
-      startBlock = minQueryable;
+    if (startBlock < minForBlockRange) {
+      logger.warn(
+        `Start block ${startBlock} requires too many queries, using ${minForBlockRange}.`,
+      );
+      startBlock = minForBlockRange;
     }
-    if (startBlock < minBlockNumber) {
+    const minForBlockAge = maxBlockAge ? currentBlockNumber - maxBlockAge : 0;
+    if (startBlock < minForBlockAge) {
+      logger.warn(`Start block ${startBlock} below max block age, increasing to ${minForBlockAge}`);
+      startBlock = minForBlockAge;
+    }
+    if (minBlockNumber && startBlock < minBlockNumber) {
       logger.warn(`Start block ${startBlock} below config min, increasing to ${minBlockNumber}`);
       startBlock = minBlockNumber;
     }
