@@ -9,7 +9,7 @@ import { logger } from './logger';
 import { toDecimalNumber, tryToDecimalNumber } from './number';
 import { fetchWithTimeout, sleep } from './timeout';
 
-const BLOCK_EXPLORER_RATE_LIMIT = 5100; // once every 5.1 seconds
+const BLOCK_EXPLORER_RATE_LIMIT = 6000; // once every 6 seconds
 // Used for crude rate-limiting of explorer queries without API keys
 const hostToLastQueried: Record<string, number> = {};
 

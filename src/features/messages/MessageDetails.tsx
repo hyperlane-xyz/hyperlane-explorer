@@ -4,13 +4,13 @@ import { toast } from 'react-toastify';
 
 import { Spinner } from '../../components/animation/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
-import { useMultiProvider } from '../../multiProvider';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toTitleCase } from '../../utils/string';
 import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
@@ -113,7 +113,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
         {!message.isPiMsg && <TimelineCard message={message} shouldBlur={shouldBlur} />}
         <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
-        {!message.isPiMsg && <GasDetailsCard message={message} shouldBlur={shouldBlur} />}
+        <GasDetailsCard message={message} shouldBlur={shouldBlur} />
         {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
       </div>
     </>

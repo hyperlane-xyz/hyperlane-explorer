@@ -9,7 +9,7 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { links } from '../../consts/links';
-import { useMultiProvider } from '../../multiProvider';
+import { useMultiProvider } from '../providers/multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
 import { useChainConfigs } from './useChainConfigs';
@@ -183,6 +183,7 @@ const customChainTextareaPlaceholder = `{
   "publicRpcUrls": [{ "http": "https://foobar.com" }],
   "blockExplorers": [ {
       "name": "GoerliScan",
+      "family": "etherscan",
       "url": "https://goerli.etherscan.io",
       "apiUrl": "https://api-goerli.etherscan.io/api",
       "apiKey": "12345"

@@ -251,7 +251,6 @@ async function fetchTransactionDetails(
   chainName: ChainName,
 ) {
   const provider = multiProvider.getProvider(chainName);
-  // TODO explorer may be faster, more robust way to get tx and its logs
   // Note: receipt is null if tx not found
   const transactionReceipt = await provider.getTransactionReceipt(txHash);
   if (transactionReceipt) {
@@ -407,7 +406,7 @@ async function isIgpUnderfunded(
   totalGasAmount?: string,
 ) {
   const igp = HyperlaneIgp.fromEnvironment(env, multiProvider);
-  const igpContract = igp.getContracts(originName).defaultIsmInterchainGasPaymaster;
+  const igpContract = igp.getContracts(originName).interchainGasPaymaster;
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
     igpContract,
     msgId,
@@ -435,7 +434,6 @@ async function tryCheckIgpGasFunded(
     let gasAlreadyFunded = BigNumber.from(0);
     if (totalGasAmount) {
       const filter = igp.filters.GasPayment(messageId, null, null);
-      // TODO restrict blocks here to avoid rpc errors
       const matchedEvents = (await igp.queryFilter(filter)) || [];
       logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
       logger.debug(matchedEvents);

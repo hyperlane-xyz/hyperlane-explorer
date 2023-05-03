@@ -100,7 +100,9 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
 function computeAvgGasPrice(unit: string, gasAmount?: string, payment?: string) {
   try {
     if (!gasAmount || !payment) return null;
+    const gasBN = new BigNumber(gasAmount);
     const paymentBN = new BigNumber(payment);
+    if (gasBN.isZero() || paymentBN.isZero()) return null;
     const wei = paymentBN.div(gasAmount).toFixed(0);
     const formatted = utils.formatUnits(wei, unit).toString();
     return { wei, formatted };

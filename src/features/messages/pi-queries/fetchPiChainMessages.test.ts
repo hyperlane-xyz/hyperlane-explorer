@@ -1,62 +1,70 @@
-import { MultiProvider, chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
+import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
+import { SmartMultiProvider } from '../../providers/multiProvider';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
-// NOTE: THESE TESTS WILL NO LONGER WORK ONCE THE MESSAGE USED BELOW
-// IS OUT OF PROVIDER_LOGS_BLOCK_WINDOW USED TO QUERY
-// THESE WERE MOSTLY USED FOR TDD OF THE FETCHING CODE
-// TODO: MOCK THE PROVIDER + EXPLORER TO MAKE THESE NETWORK INDEPENDENT
+// NOTE: THE GOERLI MESSAGE MAY NEED TO BE UPDATED ON OCCASION AS IT GETS TOO OLD
+// THIS IS DUE TO LIMITATIONS OF THE RPC PROVIDER
+// TODO: MOCK THE PROVIDER TO MAKE THESE NETWORK INDEPENDENT
 
 jest.setTimeout(30000);
 
-const multiProvider = new MultiProvider();
 const goerliMailbox = hyperlaneEnvironments.testnet.goerli.mailbox;
+const goerliIgp = hyperlaneEnvironments.testnet.goerli.interchainGasPaymaster;
 const goerliConfigWithExplorer: ChainConfig = {
   ...chainMetadata.goerli,
-  contracts: { mailbox: goerliMailbox },
+  contracts: { mailbox: goerliMailbox, interchainGasPaymaster: goerliIgp },
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { blockExplorers, ...goerliConfigNoExplorer } = goerliConfigWithExplorer;
 
-// https://explorer.hyperlane.xyz/message/0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48
-const txHash = '0x051695a31a6feccacebf09f0c426e21ff4d5c894603faa658c3b4cff89653978';
-const msgId = '0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48';
-const senderAddress = '0x0637a1360ea44602dae5c4ba515c2bcb6c762fbc';
-const recipientAddress = '0xa76a3e719e5ff7159a29b8876272052b89b3589f';
+// https://explorer.hyperlane.xyz/message/0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459e
+const txHash = '0xea0ba6b69ca70147d7cfdc2a806fe6b6ca5bce143408ebcf348fdec30cdd7daf';
+const msgId = '0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459e';
+const senderAddress = '0x405bfdecb33230b4ad93c29ba4499b776cfba189';
+const recipientAddress = '0x5da3b8d6f73df6003a490072106730218c475aad';
 
-const goerliMessage = {
+const goerliMessage: Message = {
   id: '',
-  msgId: '0x328b582541b896dbb2258750bb26ac9d3b6d24424cf5b62ba466f949e80f0f48',
+  msgId: '0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459e',
   originChainId: 5,
   originDomainId: 5,
-  destinationChainId: 421613,
-  destinationDomainId: 421613,
-  nonce: 21048,
+  destinationChainId: 43113,
+  destinationDomainId: 43113,
+  nonce: 25459,
   body: '0x48656c6c6f21',
-  originTimestamp: 1678444980000,
-  originTransaction: {
-    blockNumber: 8629961,
+  sender: '0x405BFdEcB33230b4Ad93C29ba4499b776CfBa189',
+  recipient: '0x5da3b8d6F73dF6003A490072106730218c475AAd',
+  status: MessageStatus.Unknown,
+  origin: {
+    timestamp: 1682842440000,
+    hash: '0xea0ba6b69ca70147d7cfdc2a806fe6b6ca5bce143408ebcf348fdec30cdd7daf',
     from: '0x06C8798aA665bDbeea6aBa6fC1b1d9bbDCa8d613',
+    to: '0x405BFdEcB33230b4Ad93C29ba4499b776CfBa189',
+    blockHash: '0x62ac4553144fedd8582bc8d5c4e5186d8885f92d85aafd48a6bb4f3cf077e0e9',
+    blockNumber: 8916552,
+    mailbox: '0xCC737a94FecaeC165AbCf12dED095BB13F037685',
+    nonce: 0,
+    gasLimit: 0,
+    gasPrice: 0,
+    effectiveGasPrice: 0,
     gasUsed: 0,
-    timestamp: 1678444980000,
-    transactionHash: '0x051695a31a6feccacebf09f0c426e21ff4d5c894603faa658c3b4cff89653978',
+    cumulativeGasUsed: 0,
+    maxFeePerGas: 0,
+    maxPriorityPerGas: 0,
   },
-  sender: '0x0637A1360Ea44602DAe5c4ba515c2BCb6C762fbc',
-  recipient: '0xa76A3E719E5ff7159a29B8876272052b89B3589F',
-  status: 'unknown',
   isPiMsg: true,
 };
 
 describe('fetchMessagesFromPiChain', () => {
-  // beforeEach(async () => {});
-
   it('Fetches messages using explorer for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
       goerliConfigWithExplorer,
       { input: txHash },
-      multiProvider,
+      createMP(goerliConfigWithExplorer),
     );
     expect(messages).toEqual([goerliMessage]);
   });
@@ -64,7 +72,7 @@ describe('fetchMessagesFromPiChain', () => {
     const messages = await fetchMessagesFromPiChain(
       goerliConfigWithExplorer,
       { input: msgId },
-      multiProvider,
+      createMP(goerliConfigWithExplorer),
     );
     expect(messages).toEqual([goerliMessage]);
   });
@@ -73,9 +81,9 @@ describe('fetchMessagesFromPiChain', () => {
       goerliConfigWithExplorer,
       {
         input: senderAddress,
-        fromBlock: goerliMessage.originTransaction.blockNumber - 100,
+        fromBlock: goerliMessage.origin.blockNumber - 100,
       },
-      multiProvider,
+      createMP(goerliConfigWithExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -85,9 +93,9 @@ describe('fetchMessagesFromPiChain', () => {
       goerliConfigWithExplorer,
       {
         input: recipientAddress,
-        fromBlock: goerliMessage.originTransaction.blockNumber - 100,
+        fromBlock: goerliMessage.origin.blockNumber - 100,
       },
-      multiProvider,
+      createMP(goerliConfigWithExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -96,7 +104,7 @@ describe('fetchMessagesFromPiChain', () => {
     const messages = await fetchMessagesFromPiChain(
       goerliConfigNoExplorer,
       { input: txHash },
-      multiProvider,
+      createMP(goerliConfigNoExplorer),
     );
     expect(messages).toEqual([goerliMessage]);
   });
@@ -104,7 +112,7 @@ describe('fetchMessagesFromPiChain', () => {
     const messages = await fetchMessagesFromPiChain(
       goerliConfigNoExplorer,
       { input: msgId },
-      multiProvider,
+      createMP(goerliConfigNoExplorer),
     );
     expect(messages).toEqual([goerliMessage]);
   });
@@ -114,7 +122,7 @@ describe('fetchMessagesFromPiChain', () => {
       {
         input: senderAddress,
       },
-      multiProvider,
+      createMP(goerliConfigNoExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -125,7 +133,7 @@ describe('fetchMessagesFromPiChain', () => {
       {
         input: recipientAddress,
       },
-      multiProvider,
+      createMP(goerliConfigNoExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -136,8 +144,12 @@ describe('fetchMessagesFromPiChain', () => {
       {
         input: 'invalidInput',
       },
-      multiProvider,
+      createMP(goerliConfigNoExplorer),
     );
     expect(messages).toEqual([]);
   });
 });
+
+function createMP(config: ChainConfig) {
+  return new SmartMultiProvider({ ...chainMetadata, goerli: config });
+}
