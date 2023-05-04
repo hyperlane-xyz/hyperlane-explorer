@@ -20,9 +20,19 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
       if (pause || !message || message.status === MessageStatus.Delivered) return null;
 
       if (!multiProvider.tryGetChainMetadata(message.originChainId)) {
-        toast.error(<MissingChainConfigToast chainId={message.originChainId} />);
+        toast.error(
+          <MissingChainConfigToast
+            chainId={message.originChainId}
+            domainId={message.originDomainId}
+          />,
+        );
       } else if (!multiProvider.tryGetChainMetadata(message.destinationChainId)) {
-        toast.error(<MissingChainConfigToast chainId={message.destinationChainId} />);
+        toast.error(
+          <MissingChainConfigToast
+            chainId={message.destinationChainId}
+            domainId={message.destinationDomainId}
+          />,
+        );
       }
 
       // TODO enable PI support here

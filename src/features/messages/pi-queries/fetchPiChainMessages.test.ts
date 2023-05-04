@@ -2,7 +2,7 @@ import { chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
-import { SmartMultiProvider } from '../../providers/multiProvider';
+import { SmartMultiProvider } from '../../providers/SmartMultiProvider';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
