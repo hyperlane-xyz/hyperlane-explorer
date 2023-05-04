@@ -22,9 +22,9 @@ export function useChainConfigs() {
   }));
 }
 
-// Use the chainConfigs from the store but with any
-// chainConfigs from the query string merged in
-export function useChainConfigsWithQueryParams() {
+// Look for chainConfigs in the query string and merge them into the store
+// Not to be used directly, should only require a single use in ChainConfigSyncer
+export function useQueryParamChainConfigSync() {
   const { chainConfigs: storeConfigs, setChainConfigs } = useChainConfigs();
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
 

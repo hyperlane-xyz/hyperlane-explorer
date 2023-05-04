@@ -18,6 +18,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { AppLayout } from '../components/layout/AppLayout';
 import { config } from '../consts/config';
+import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
 import '../styles/fonts.css';
 import '../styles/global.css';
 import { useIsSsr } from '../utils/ssr';
@@ -75,9 +76,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
         > */}
       <QueryClientProvider client={reactQueryClient}>
         <UrqlProvider value={urqlClient}>
-          <AppLayout pathName={router.pathname}>
-            <Component {...pageProps} />
-          </AppLayout>
+          <ChainConfigSyncer>
+            <AppLayout pathName={router.pathname}>
+              <Component {...pageProps} />
+            </AppLayout>
+          </ChainConfigSyncer>
         </UrqlProvider>
       </QueryClientProvider>
       <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />

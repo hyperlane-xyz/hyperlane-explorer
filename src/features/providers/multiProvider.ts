@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { ChainName, MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
 
-import { useChainConfigsWithQueryParams } from '../chains/useChainConfigs';
+import { useChainConfigs } from '../chains/useChainConfigs';
 
 import { HyperlaneSmartProvider } from './SmartProvider';
 
@@ -22,10 +22,10 @@ export class SmartMultiProvider extends MultiProvider {
 }
 
 export function useMultiProvider() {
-  const nameToConfig = useChainConfigsWithQueryParams();
+  const { chainConfigs } = useChainConfigs();
   const multiProvider = useMemo(
-    () => new SmartMultiProvider({ ...chainMetadata, ...nameToConfig }),
-    [nameToConfig],
+    () => new SmartMultiProvider({ ...chainMetadata, ...chainConfigs }),
+    [chainConfigs],
   );
   return multiProvider;
 }
