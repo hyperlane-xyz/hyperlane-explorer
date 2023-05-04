@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BigNumber, providers, utils } from 'ethers';
+import { useMemo } from 'react';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
@@ -11,14 +12,11 @@ import { useMultiProvider } from '../providers/multiProvider';
 // This assumes all chains have the same ICA address
 const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
 
-export function isIcaMessage({
-  sender,
-  recipient,
-}: {
-  sender: Address;
-  recipient: Address;
-  hash?: string;
-}) {
+export function useIsIcaMessage({ sender, recipient }: { sender: Address; recipient: Address }) {
+  return useMemo(() => isIcaMessage({ sender, recipient }), [sender, recipient]);
+}
+
+export function isIcaMessage({ sender, recipient }: { sender: Address; recipient: Address }) {
   const isSenderIca = isAddressIcaRouter(sender);
   const isRecipIca = isAddressIcaRouter(recipient);
   if (isSenderIca && isRecipIca) return true;
@@ -32,8 +30,13 @@ export function isIcaMessage({
 }
 
 function isAddressIcaRouter(addr: Address) {
-  // TODO PI support
-  return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
+  try {
+    // TODO PI support
+    return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
+  } catch (error) {
+    logger.warn('Error checking if address is ICA router', error, addr);
+    return false;
+  }
 }
 
 export function tryDecodeIcaBody(body: string) {

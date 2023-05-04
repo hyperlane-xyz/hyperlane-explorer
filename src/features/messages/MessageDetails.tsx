@@ -17,7 +17,7 @@ import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { TransactionCard } from './cards/TransactionCard';
-import { isIcaMessage } from './ica';
+import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
@@ -61,7 +61,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
   const shouldBlur = !isMessageFound;
-  const isIcaMsg = isIcaMessage(_message);
+  const isIcaMsg = useIsIcaMessage(_message);
 
   // If message isn't delivered, attempt to check for
   // more recent updates and possibly debug info
