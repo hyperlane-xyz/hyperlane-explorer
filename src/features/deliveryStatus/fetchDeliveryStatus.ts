@@ -1,11 +1,12 @@
 import { constants } from 'ethers';
 
-import { MultiProvider, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
-import { getChainEnvironment } from '../chains/utils';
+import type { ChainConfig } from '../chains/chainConfig';
+import { getContractAddress } from '../chains/utils';
 import { debugExplorerMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 import { TX_HASH_ZERO } from '../messages/placeholderMessages';
@@ -24,13 +25,11 @@ const PROCESS_TOPIC_0 = '0x1cae38cdd3d3919489272725a5ae62a4f48b2989b0dae843d3c27
 
 export async function fetchDeliveryStatus(
   multiProvider: MultiProvider,
+  customChainConfigs: ChainMap<ChainConfig>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.getChainName(message.destinationChainId);
-  const destEnv = getChainEnvironment(multiProvider, destName);
-  // TODO PI support here
-  const destMailboxAddr = hyperlaneEnvironments[destEnv][destName]?.mailbox;
-  if (!destMailboxAddr) throw new Error(`No mailbox address found for dest ${destName}`);
+  const destMailboxAddr = getContractAddress(customChainConfigs, destName, 'mailbox');
 
   const logs = await fetchMessageLogs(multiProvider, message, destMailboxAddr);
 
@@ -42,7 +41,7 @@ export async function fetchDeliveryStatus(
       message.destinationChainId,
       log.transactionHash,
     );
-    // If a delivery (aka process) tx is found, assume success
+    // If a delivery (aka process) tx is found, mark as success
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
       deliveryTransaction: {
@@ -65,7 +64,7 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const debugResult = await debugExplorerMessage(message, multiProvider);
+    const debugResult = await debugExplorerMessage(multiProvider, customChainConfigs, message);
     if (
       debugResult.status === MessageDebugStatus.NoErrorsFound ||
       debugResult.status === MessageDebugStatus.AlreadyProcessed
@@ -92,11 +91,7 @@ function fetchMessageLogs(multiProvider: MultiProvider, message: Message, mailbo
   });
 }
 
-async function fetchTransactionDetails(
-  multiProvider: MultiProvider,
-  chainId: ChainId,
-  txHash: string,
-) {
+function fetchTransactionDetails(multiProvider: MultiProvider, chainId: ChainId, txHash: string) {
   logger.debug(`Searching for transaction details for ${txHash}`);
   const provider = multiProvider.getProvider(chainId);
   return provider.getTransaction(txHash);

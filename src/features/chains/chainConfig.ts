@@ -6,7 +6,6 @@ import { logger } from '../../utils/logger';
 
 export const chainContractsSchema = z.object({
   mailbox: z.string(),
-  interchainSecurityModule: z.string().optional(),
   interchainGasPaymaster: z.string().optional(),
   // interchainAccountRouter: z.string().optional(),
 });

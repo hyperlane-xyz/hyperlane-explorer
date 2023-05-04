@@ -20,6 +20,7 @@ interface TransactionCardProps {
   status: MessageStatus;
   transaction?: MessageTx;
   debugInfo?: TransactionCardDebugInfo;
+  isPiMsg?: boolean;
   helpText: string;
   shouldBlur: boolean;
 }
@@ -27,8 +28,6 @@ interface TransactionCardProps {
 export interface TransactionCardDebugInfo {
   status: MessageDebugStatus;
   details: string;
-  originChainId: ChainId;
-  originTxHash: string;
 }
 
 export function TransactionCard({
@@ -37,6 +36,7 @@ export function TransactionCard({
   status,
   transaction,
   debugInfo,
+  isPiMsg,
   helpText,
   shouldBlur,
 }: TransactionCardProps) {
@@ -109,7 +109,7 @@ export function TransactionCard({
       {!transaction && status === MessageStatus.Failing && (
         <div className="flex flex-col items-center py-5">
           <div className="text-gray-700 text-center">
-            Destination delivery transaction currently failing
+            Delivery to destination chain is currently failing
           </div>
           {debugInfo && (
             <>
@@ -126,8 +126,13 @@ export function TransactionCard({
       {!transaction && status === MessageStatus.Pending && (
         <div className="flex flex-col items-center py-5">
           <div className="text-gray-500 text-center max-w-xs">
-            Destination chain delivery transaction not yet found
+            Delivery to destination chain still in progress.
           </div>
+          {isPiMsg && (
+            <div className="mt-2 text-gray-500 text-center text-sm max-w-xs">
+              Please ensure a relayer is running for this chain.
+            </div>
+          )}
           <Spinner classes="mt-4 scale-75" />
         </div>
       )}

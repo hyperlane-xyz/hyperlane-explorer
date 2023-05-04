@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { Environment } from './consts/environments';
 import { ChainConfig } from './features/chains/chainConfig';
 import { buildSmartProvider } from './features/providers/SmartMultiProvider';
 import { logger } from './utils/logger';
@@ -13,8 +12,6 @@ import { logger } from './utils/logger';
 interface AppState {
   chainConfigsV2: ChainMap<ChainConfig>; // v2 because schema changed
   setChainConfigs: (configs: ChainMap<ChainConfig>) => void;
-  environment: Environment;
-  setEnvironment: (env: Environment) => void;
   multiProvider: MultiProvider;
   setMultiProvider: (mp: MultiProvider) => void;
   bannerClassName: string;
@@ -28,8 +25,6 @@ export const useStore = create<AppState>()(
       setChainConfigs: (configs: ChainMap<ChainConfig>) => {
         set(() => ({ chainConfigsV2: configs, multiProvider: buildSmartProvider(configs) }));
       },
-      environment: Environment.Mainnet,
-      setEnvironment: (env: Environment) => set(() => ({ environment: env })),
       multiProvider: new MultiProvider(),
       setMultiProvider: (mp: MultiProvider) => set(() => ({ multiProvider: mp })),
       bannerClassName: '',

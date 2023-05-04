@@ -12,11 +12,11 @@ import { links } from '../../consts/links';
 import { useMultiProvider } from '../providers/multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
-import { useChainConfigs } from './useChainConfigs';
+import { useChainConfigsRW } from './useChainConfigs';
 import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
-  const { chainConfigs, setChainConfigs } = useChainConfigs();
+  const { chainConfigs, setChainConfigs } = useChainConfigsRW();
   const multiProvider = useMultiProvider();
 
   const [showAddChainModal, setShowAddChainModal] = useState(false);
@@ -191,7 +191,6 @@ const customChainTextareaPlaceholder = `{
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
   "contracts": {
     "mailbox": "0x123...",
-    "interchainSecurityModule": "0x123...",
     "interchainGasPaymaster": "0x123..."
   }
 }

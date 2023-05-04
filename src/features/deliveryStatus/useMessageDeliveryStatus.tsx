@@ -2,17 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
-import { chainIdToMetadata } from '@hyperlane-xyz/sdk';
-
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
+import { useChainConfigs } from '../chains/useChainConfigs';
 import { useMultiProvider } from '../providers/multiProvider';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
 export function useMessageDeliveryStatus({ message, pause }: { message: Message; pause: boolean }) {
+  const chainConfigs = useChainConfigs();
   const multiProvider = useMultiProvider();
+
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
     ['messageDeliveryStatus', serializedMessage, pause],
@@ -26,6 +27,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
             domainId={message.originDomainId}
           />,
         );
+        return null;
       } else if (!multiProvider.tryGetChainMetadata(message.destinationChainId)) {
         toast.error(
           <MissingChainConfigToast
@@ -33,18 +35,11 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
             domainId={message.destinationDomainId}
           />,
         );
+        return null;
       }
 
-      // TODO enable PI support here
-      if (
-        message.isPiMsg ||
-        !chainIdToMetadata[message.originChainId] ||
-        !chainIdToMetadata[message.destinationChainId]
-      )
-        return null;
-
       logger.debug('Fetching message delivery status for:', message.id);
-      const deliverStatus = await fetchDeliveryStatus(multiProvider, message);
+      const deliverStatus = await fetchDeliveryStatus(multiProvider, chainConfigs, message);
       logger.debug('Message delivery status result', deliverStatus);
       return deliverStatus;
     },
@@ -77,8 +72,6 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
         {
           status: data.debugStatus,
           details: data.debugDetails,
-          originChainId: message.originChainId,
-          originTxHash: message.origin.hash,
         },
       ];
     }

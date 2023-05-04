@@ -108,6 +108,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           status={status}
           transaction={destination}
           debugInfo={debugInfo}
+          isPiMsg={message.isPiMsg}
           helpText={helpText.destination}
           shouldBlur={shouldBlur}
         />

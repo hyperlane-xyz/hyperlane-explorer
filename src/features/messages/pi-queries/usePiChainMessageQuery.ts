@@ -25,7 +25,7 @@ export function usePiChainMessageSearchQuery({
   endTimeFilter: number | null;
   pause: boolean;
 }) {
-  const { chainConfigs } = useChainConfigs();
+  const chainConfigs = useChainConfigs();
   const multiProvider = useMultiProvider();
   const { isLoading, isError, data } = useQuery(
     [
@@ -72,7 +72,7 @@ export function usePiChainMessageQuery({
   messageId: string;
   pause: boolean;
 }) {
-  const { chainConfigs } = useChainConfigs();
+  const chainConfigs = useChainConfigs();
   const multiProvider = useMultiProvider();
   const { isLoading, isError, data } = useQuery(
     ['usePiChainMessageQuery', chainConfigs, messageId, pause],

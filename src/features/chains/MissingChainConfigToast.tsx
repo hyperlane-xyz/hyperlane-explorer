@@ -7,13 +7,14 @@ export function MissingChainConfigToast({
   chainId: number;
   domainId: number;
 }) {
+  const errorDesc = chainId
+    ? `chain ID: ${chainId}`
+    : domainId
+    ? `domain ID: ${domainId}`
+    : 'unknown message chain';
   return (
     <div>
-      <span>
-        {chainId
-          ? `No chain config found for chain ID: {chainId}. `
-          : `No known chain ID for domain ${domainId}. `}
-      </span>
+      <span>{`No chain config found for ${errorDesc}. `}</span>
       <Link href="/settings" className="underline">
         Add a config
       </Link>

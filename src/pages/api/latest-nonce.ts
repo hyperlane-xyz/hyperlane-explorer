@@ -21,6 +21,7 @@ export default async function handler(
   try {
     const body = req.body as { chainId: ChainId };
     if (!body.chainId) throw new Error('No chainId in body');
+    // TODO PI support here
     if (!chainIdToMetadata[body.chainId]) throw new Error('ChainId is unsupported');
     const multiProvider = new MultiProvider();
     const nonce = await fetchLatestNonce(multiProvider, body.chainId);
