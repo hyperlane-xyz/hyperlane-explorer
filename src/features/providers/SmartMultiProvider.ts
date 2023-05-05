@@ -17,7 +17,7 @@ export class SmartMultiProvider extends MultiProvider {
     logger.debug('SmartMultiProvider constructed');
   }
   // Override to use SmartProvider instead of FallbackProvider
-  tryGetProvider(chainNameOrId: ChainName | number): HyperlaneSmartProvider | null {
+  override tryGetProvider(chainNameOrId: ChainName | number): HyperlaneSmartProvider | null {
     const metadata = this.tryGetChainMetadata(chainNameOrId);
     if (!metadata) return null;
     const { name, publicRpcUrls, blockExplorers } = metadata;

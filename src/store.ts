@@ -25,7 +25,7 @@ export const useStore = create<AppState>()(
       setChainConfigs: (configs: ChainMap<ChainConfig>) => {
         set(() => ({ chainConfigsV2: configs, multiProvider: buildSmartProvider(configs) }));
       },
-      multiProvider: new MultiProvider(),
+      multiProvider: buildSmartProvider({}),
       setMultiProvider: (mp: MultiProvider) => set(() => ({ multiProvider: mp })),
       bannerClassName: '',
       setBanner: (className: string) => set(() => ({ bannerClassName: className })),

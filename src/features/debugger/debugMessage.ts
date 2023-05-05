@@ -124,7 +124,7 @@ async function debugMessageDelivery(
     );
     return { gasEstimate: deliveryGasEst.toString() };
   } catch (err: any) {
-    logger.info('Estimate gas call failed');
+    logger.info('Estimate gas call failed:', err);
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 

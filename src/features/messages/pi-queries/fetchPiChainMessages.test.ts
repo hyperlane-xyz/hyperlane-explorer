@@ -56,6 +56,9 @@ const goerliMessage: Message = {
     maxFeePerGas: 0,
     maxPriorityPerGas: 0,
   },
+  numPayments: 1,
+  totalGasAmount: '209736',
+  totalPayment: '1635940800000000',
   isPiMsg: true,
 };
 
