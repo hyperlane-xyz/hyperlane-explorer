@@ -14,7 +14,6 @@ import { HyperlaneSmartProvider } from './SmartProvider';
 export class SmartMultiProvider extends MultiProvider {
   constructor(chainMetadata?: ChainMap<ChainMetadata>, options?: any) {
     super(chainMetadata, options);
-    logger.debug('SmartMultiProvider constructed');
   }
   // Override to use SmartProvider instead of FallbackProvider
   override tryGetProvider(chainNameOrId: ChainName | number): HyperlaneSmartProvider | null {
@@ -31,5 +30,6 @@ export class SmartMultiProvider extends MultiProvider {
 }
 
 export function buildSmartProvider(customChainConfigs: ChainMap<ChainConfig>) {
+  logger.debug('Building new SmartMultiProvider');
   return new SmartMultiProvider({ ...chainMetadata, ...customChainConfigs });
 }

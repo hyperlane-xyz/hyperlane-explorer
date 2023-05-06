@@ -23,7 +23,7 @@
     "urql": "^3.0.3",
     "wagmi": "^0.11.6",
     "zod": "^3.21.2",
-    "zustand": "^4.3.3"
+    "zustand": "^4.3.8"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
@@ -65,7 +65,6 @@
   },
   "types": "dist/src/index.d.ts",
   "resolutions": {
-    "ethers": "^5.7",
-    "zustand": "^4.3.3"
+    "ethers": "^5.7"
   }
 }

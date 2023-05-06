@@ -23,12 +23,14 @@ export const useStore = create<AppState>()(
     (set) => ({
       chainConfigsV2: {},
       setChainConfigs: (configs: ChainMap<ChainConfig>) => {
-        set(() => ({ chainConfigsV2: configs, multiProvider: buildSmartProvider(configs) }));
+        set({ chainConfigsV2: configs, multiProvider: buildSmartProvider(configs) });
       },
       multiProvider: buildSmartProvider({}),
-      setMultiProvider: (mp: MultiProvider) => set(() => ({ multiProvider: mp })),
+      setMultiProvider: (mp: MultiProvider) => {
+        set({ multiProvider: mp });
+      },
       bannerClassName: '',
-      setBanner: (className: string) => set(() => ({ bannerClassName: className })),
+      setBanner: (className: string) => set({ bannerClassName: className }),
     }),
     {
       name: 'hyperlane', // name in storage
@@ -36,11 +38,11 @@ export const useStore = create<AppState>()(
       onRehydrateStorage: () => {
         logger.debug('Rehydrating state');
         return (state, error) => {
-          if (error) {
+          if (error || !state) {
             logger.error('Error during hydration', error);
             return;
           }
-          state?.setMultiProvider(buildSmartProvider(state.chainConfigsV2));
+          state.setMultiProvider(buildSmartProvider(state.chainConfigsV2));
           logger.debug('Hydration finished');
         };
       },

@@ -1,10 +1,7 @@
-import Image from 'next/image';
-
 import { Spinner } from '../../../components/animation/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
-import MailUnknown from '../../../images/icons/mail-unknown.svg';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
@@ -123,7 +120,7 @@ export function TransactionCard({
           )}
         </div>
       )}
-      {!transaction && status === MessageStatus.Pending && (
+      {!transaction && (status === MessageStatus.Pending || status === MessageStatus.Unknown) && (
         <div className="flex flex-col items-center py-5">
           <div className="text-gray-500 text-center max-w-xs">
             Delivery to destination chain still in progress.
@@ -134,14 +131,6 @@ export function TransactionCard({
             </div>
           )}
           <Spinner classes="mt-4 scale-75" />
-        </div>
-      )}
-      {!transaction && status === MessageStatus.Unknown && (
-        <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500 text-center max-w-xs">
-            Destination transaction tracking is unavailable for this message, sorry!{' '}
-          </div>
-          <Image src={MailUnknown} alt="" width={60} height={60} className="mt-7" />
         </div>
       )}
     </Card>
