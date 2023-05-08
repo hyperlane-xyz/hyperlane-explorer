@@ -7,8 +7,6 @@ export enum TxDebugStatus {
 export enum MessageDebugStatus {
   AlreadyProcessed = 'alreadyProcessed',
   NoErrorsFound = 'noErrorsFound',
-  InvalidDestDomain = 'invalidDestDomain',
-  UnknownDestChain = 'unknownDestChain',
   RecipientNotContract = 'recipientNotContract',
   RecipientNotHandler = 'recipientNotHandler',
   IcaCallFailure = 'icaCallFailure',
@@ -35,7 +33,6 @@ export interface LinkProperty {
 
 export interface MessageDebugDetails {
   status: MessageDebugStatus;
-  properties: Map<string, string | LinkProperty>;
   details: string;
 }
 

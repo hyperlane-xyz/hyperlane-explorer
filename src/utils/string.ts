@@ -1,5 +1,4 @@
 import { trimLeading0x } from './addresses';
-import { logger } from './logger';
 
 export function toTitleCase(str: string) {
   return str.replace(/\w\S*/g, (txt) => {
@@ -41,7 +40,6 @@ export function tryUtf8DecodeBytes(value: string, fatal = true) {
     const decodedBody = decoder.decode(Buffer.from(trimLeading0x(value), 'hex'));
     return decodedBody;
   } catch (error) {
-    logger.debug('Unable to parse utf-8 bytes', value);
     return undefined;
   }
 }

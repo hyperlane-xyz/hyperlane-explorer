@@ -82,12 +82,18 @@ export async function fetchMessagesFromPiChain(
     .map((l) => logToMessage(multiProvider, l, chainConfig))
     .filter((m): m is Message => !!m);
 
-  const messagesWithGasPayments: Message[] = [];
-  // Avoiding parallelism here out of caution for RPC rate limits
-  for (const m of messages) {
-    messagesWithGasPayments.push(await tryFetchIgpGasPayments(m, chainConfig, multiProvider));
+  // Fetch IGP gas payments for each message if it's a small set
+  if (messages.length < 5) {
+    const messagesWithGasPayments: Message[] = [];
+    // Avoiding parallelism here out of caution for RPC rate limits
+    for (const m of messages) {
+      messagesWithGasPayments.push(await tryFetchIgpGasPayments(m, chainConfig, multiProvider));
+    }
+    return messagesWithGasPayments;
+  } else {
+    // Otherwise skip IGP gas fetching
+    return messages;
   }
-  return messagesWithGasPayments;
 }
 
 async function fetchLogsForAddress(

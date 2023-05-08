@@ -2,7 +2,7 @@ import { chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
-import { SmartMultiProvider } from '../../providers/multiProvider';
+import { SmartMultiProvider } from '../../providers/SmartMultiProvider';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
@@ -56,6 +56,9 @@ const goerliMessage: Message = {
     maxFeePerGas: 0,
     maxPriorityPerGas: 0,
   },
+  numPayments: 1,
+  totalGasAmount: '209736',
+  totalPayment: '1635940800000000',
   isPiMsg: true,
 };
 

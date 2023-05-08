@@ -16,16 +16,21 @@ const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
 
 // Use the chainConfigs from the store
 export function useChainConfigs() {
+  return useStore((s) => s.chainConfigsV2);
+}
+
+// Use the chainConfigs and setChainConfigs from the store (i.e. Read/Write)
+export function useChainConfigsRW() {
   return useStore((s) => ({
     chainConfigs: s.chainConfigsV2,
     setChainConfigs: s.setChainConfigs,
   }));
 }
 
-// Use the chainConfigs from the store but with any
-// chainConfigs from the query string merged in
-export function useChainConfigsWithQueryParams() {
-  const { chainConfigs: storeConfigs, setChainConfigs } = useChainConfigs();
+// Look for chainConfigs in the query string and merge them into the store
+// Not to be used directly, should only require a single use in ChainConfigSyncer
+export function useQueryParamChainConfigSync() {
+  const { chainConfigs: storeConfigs, setChainConfigs } = useChainConfigsRW();
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
 
   useEffect(() => {

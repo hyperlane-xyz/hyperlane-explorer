@@ -40,8 +40,12 @@ export async function fetchWithTimeout(
   return response;
 }
 
-export function sleep(milliseconds: number, resolveValue: any = true) {
+export function timeout<T>(milliseconds: number, resolveValue: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(resolveValue), milliseconds));
+}
+
+export function sleep(milliseconds: number): Promise<true> {
+  return timeout(milliseconds, true);
 }
 
 export const PROMISE_TIMEOUT = '__promise_timeout__';
