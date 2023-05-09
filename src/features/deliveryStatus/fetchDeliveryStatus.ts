@@ -28,7 +28,7 @@ export async function fetchDeliveryStatus(
   customChainConfigs: ChainMap<ChainConfig>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
-  const destName = multiProvider.getChainName(message.destinationDomainId);
+  const destName = multiProvider.getChainName(message.destinationChainId);
   const destMailboxAddr = getContractAddress(customChainConfigs, destName, 'mailbox');
 
   const logs = await fetchMessageLogs(multiProvider, message, destMailboxAddr);
@@ -38,7 +38,7 @@ export async function fetchDeliveryStatus(
     const log = logs[0]; // Should only be 1 log per message delivery
     const txDetails = await fetchTransactionDetails(
       multiProvider,
-      message.destinationDomainId,
+      message.destinationChainId,
       log.transactionHash,
     );
     // If a delivery (aka process) tx is found, mark as success
@@ -82,17 +82,17 @@ export async function fetchDeliveryStatus(
 }
 
 function fetchMessageLogs(multiProvider: MultiProvider, message: Message, mailboxAddr: Address) {
-  const { msgId, origin, destinationDomainId } = message;
+  const { msgId, origin, destinationChainId } = message;
   logger.debug(`Searching for delivery logs for tx ${origin.hash}`);
-  const provider = multiProvider.getProvider(destinationDomainId);
+  const provider = multiProvider.getProvider(destinationChainId);
   return provider.getLogs({
     topics: [PROCESS_TOPIC_0, msgId],
     address: mailboxAddr,
   });
 }
 
-function fetchTransactionDetails(multiProvider: MultiProvider, domainId: DomainId, txHash: string) {
+function fetchTransactionDetails(multiProvider: MultiProvider, chainId: ChainId, txHash: string) {
   logger.debug(`Searching for transaction details for ${txHash}`);
-  const provider = multiProvider.getProvider(domainId);
+  const provider = multiProvider.getProvider(chainId);
   return provider.getTransaction(txHash);
 }
