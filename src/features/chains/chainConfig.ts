@@ -50,6 +50,15 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   const chainConfig = result.data as ChainConfig;
 
+  // Ensure https is used for RPCs (and not http)
+  const rpcUrls = chainConfig.publicRpcUrls;
+  if (rpcUrls?.some((r) => !r.http.startsWith('https://'))) {
+    return {
+      success: false,
+      error: 'all RPCs must use valid https url',
+    };
+  }
+
   // Force blockExplorers family value for now
   const blockExplorers = chainConfig.blockExplorers;
   if (blockExplorers?.some((e) => !e.family)) {
