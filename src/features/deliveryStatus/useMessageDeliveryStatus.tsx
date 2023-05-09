@@ -16,7 +16,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
 
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
-    ['messageDeliveryStatus', serializedMessage, pause],
+    ['messageDeliveryStatus', serializedMessage, multiProvider, pause],
     async () => {
       if (pause || !message || message.status === MessageStatus.Delivered) return null;
 

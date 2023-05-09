@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
 export function MissingChainConfigToast({
-  chainId,
   domainId,
+  chainId,
 }: {
-  chainId: number;
   domainId: number;
+  chainId: number | null | undefined;
 }) {
   const errorDesc = chainId
     ? `chain ID: ${chainId}`

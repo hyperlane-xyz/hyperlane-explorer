@@ -7,6 +7,7 @@ import { sanitizeString } from '../../utils/string';
 import { buildMessageSearchQuery } from '../messages/queries/build';
 import { MessagesQueryResult } from '../messages/queries/fragments';
 import { parseMessageQueryResult } from '../messages/queries/parse';
+import { SmartMultiProvider } from '../providers/SmartMultiProvider';
 
 import { ApiHandlerResult, ApiMessage, toApiMessage } from './types';
 import { failureResult, successResult } from './utils';
@@ -31,7 +32,10 @@ export async function handler(
     API_GRAPHQL_QUERY_LIMIT,
   );
   const result = await client.query<MessagesQueryResult>(query, variables).toPromise();
-  const messages = parseMessageQueryResult(result.data);
+
+  const multiProvider = new SmartMultiProvider();
+  const messages = parseMessageQueryResult(multiProvider, result.data);
+
   return successResult(messages.map(toApiMessage));
 }
 

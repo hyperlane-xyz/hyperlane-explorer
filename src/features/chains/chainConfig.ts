@@ -50,11 +50,20 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   const chainConfig = result.data as ChainConfig;
 
-  // Reject blockscout explorers for now
-  if (chainConfig.blockExplorers?.[0]?.url.includes('blockscout')) {
+  // Force blockExplorers family value for now
+  const blockExplorers = chainConfig.blockExplorers;
+  if (blockExplorers?.some((e) => !e.family)) {
     return {
       success: false,
-      error: 'only Etherscan-based explorers are supported',
+      error: 'family field for block explorers must be "etherscan"',
+    };
+  }
+
+  // Reject blockscout explorers for now
+  if (blockExplorers?.[0]?.url.includes('blockscout')) {
+    return {
+      success: false,
+      error: 'only Etherscan-based explorers are supported at this time',
     };
   }
 

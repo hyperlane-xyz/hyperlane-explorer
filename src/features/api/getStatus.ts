@@ -7,6 +7,7 @@ import { logger } from '../../utils/logger';
 import { buildMessageQuery } from '../messages/queries/build';
 import { MessagesStubQueryResult } from '../messages/queries/fragments';
 import { parseMessageStubResult } from '../messages/queries/parse';
+import { SmartMultiProvider } from '../providers/SmartMultiProvider';
 
 import { parseQueryParams } from './getMessages';
 import { ApiHandlerResult } from './types';
@@ -32,6 +33,9 @@ export async function handler(
     true,
   );
   const result = await client.query<MessagesStubQueryResult>(query, variables).toPromise();
-  const messages = parseMessageStubResult(result.data);
+
+  const multiProvider = new SmartMultiProvider();
+  const messages = parseMessageStubResult(multiProvider, result.data);
+
   return successResult(messages.map((m) => ({ id: m.msgId, status: m.status })));
 }

@@ -1,3 +1,5 @@
+import { MultiProvider } from '@hyperlane-xyz/sdk';
+
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
@@ -17,18 +19,35 @@ import {
  * ========================
  */
 
-export function parseMessageStubResult(data: MessagesStubQueryResult | undefined): MessageStub[] {
+export function parseMessageStubResult(
+  multiProvider: MultiProvider,
+  data: MessagesStubQueryResult | undefined,
+): MessageStub[] {
   if (!data?.message_view?.length) return [];
-  return data.message_view.map(parseMessageStub).filter((m): m is MessageStub => !!m);
+  return data.message_view
+    .map((m) => parseMessageStub(multiProvider, m))
+    .filter((m): m is MessageStub => !!m);
 }
 
-export function parseMessageQueryResult(data: MessagesQueryResult | undefined): Message[] {
+export function parseMessageQueryResult(
+  multiProvider: MultiProvider,
+  data: MessagesQueryResult | undefined,
+): Message[] {
   if (!data?.message_view?.length) return [];
-  return data.message_view.map(parseMessage).filter((m): m is Message => !!m);
+  return data.message_view
+    .map((m) => parseMessage(multiProvider, m))
+    .filter((m): m is Message => !!m);
 }
 
-function parseMessageStub(m: MessageStubEntry): MessageStub | null {
+function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): MessageStub | null {
   try {
+    const destinationDomainId = m.destination_domain_id;
+    const destinationChainId =
+      m.destination_chain_id || multiProvider.tryGetChainId(destinationDomainId);
+    if (!destinationChainId) {
+      logger.warn(`No dest chain id known for domain ${destinationDomainId}. Skipping message.`);
+      return null;
+    }
     return {
       status: getMessageStatus(m),
       id: m.id.toString(),
@@ -38,8 +57,8 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
       recipient: postgresByteaToString(m.recipient),
       originChainId: m.origin_chain_id,
       originDomainId: m.origin_domain_id,
-      destinationChainId: m.destination_chain_id,
-      destinationDomainId: m.destination_domain_id,
+      destinationChainId,
+      destinationDomainId,
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToString(m.origin_tx_hash),
@@ -59,9 +78,9 @@ function parseMessageStub(m: MessageStubEntry): MessageStub | null {
   }
 }
 
-function parseMessage(m: MessageEntry): Message | null {
+function parseMessage(multiProvider: MultiProvider, m: MessageEntry): Message | null {
   try {
-    const stub = parseMessageStub(m);
+    const stub = parseMessageStub(multiProvider, m);
     if (!stub) throw new Error('Message stub required');
 
     const body = postgresByteaToString(m.message_body ?? '');

@@ -14,8 +14,12 @@ export function getChainName(mp: MultiProvider, chainId?: number) {
   return mp.tryGetChainName(chainId || 0) || undefined;
 }
 
-export function getChainDisplayName(mp: MultiProvider, chainId?: number, shortName = false) {
-  const metadata = mp.tryGetChainMetadata(chainId || 0);
+export function getChainDisplayName(
+  mp: MultiProvider,
+  chainOrDomainId?: ChainId | DomainId,
+  shortName = false,
+) {
+  const metadata = mp.tryGetChainMetadata(chainOrDomainId || 0);
   if (!metadata) return 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return toTitleCase(displayName || metadata.displayName || metadata.name);

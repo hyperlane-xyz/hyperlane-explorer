@@ -4,6 +4,7 @@ import { useQuery } from 'urql';
 import { MessageStatus } from '../../../types';
 import { isValidAddressFast, isValidTransactionHash } from '../../../utils/addresses';
 import { useInterval } from '../../../utils/useInterval';
+import { useMultiProvider } from '../../providers/multiProvider';
 import {
   MessageIdentifierType,
   buildMessageQuery,
@@ -54,7 +55,11 @@ export function useMessageSearchQuery(
   const { data, fetching: isFetching, error } = result;
 
   // Parse results
-  const messageList = useMemo(() => parseMessageStubResult(data), [data]);
+  const multiProvider = useMultiProvider();
+  const messageList = useMemo(
+    () => parseMessageStubResult(multiProvider, data),
+    [multiProvider, data],
+  );
   const isMessagesFound = messageList.length > 0;
 
   // Setup interval to re-query
@@ -87,7 +92,11 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   });
 
   // Parse results
-  const messageList = useMemo(() => parseMessageQueryResult(data), [data]);
+  const multiProvider = useMultiProvider();
+  const messageList = useMemo(
+    () => parseMessageQueryResult(multiProvider, data),
+    [multiProvider, data],
+  );
   const isMessageFound = messageList.length > 0;
   const message = isMessageFound ? messageList[0] : null;
   const msgStatus = message?.status;
