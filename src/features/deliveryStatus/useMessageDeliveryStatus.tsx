@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
 import { Message, MessageStatus } from '../../types';
+import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { useChainConfigs } from '../chains/useChainConfigs';
@@ -16,7 +17,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
 
   const serializedMessage = JSON.stringify(message);
   const { data, error } = useQuery(
-    ['messageDeliveryStatus', serializedMessage, multiProvider, pause],
+    ['messageDeliveryStatus', serializedMessage, pause],
     async () => {
       if (pause || !message || message.status === MessageStatus.Delivered) return null;
 
@@ -50,7 +51,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);
-      toast.error(`${error}`);
+      toast.error(errorToString(error, 150));
     }
   }, [error]);
 
