@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
 import { Message, MessageStatus } from '../../types';
+import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { useChainConfigs } from '../chains/useChainConfigs';
@@ -50,7 +51,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);
-      toast.error(`${error}`);
+      toast.error(errorToString(error, 150));
     }
   }, [error]);
 

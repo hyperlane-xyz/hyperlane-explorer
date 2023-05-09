@@ -50,11 +50,29 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   const chainConfig = result.data as ChainConfig;
 
-  // Reject blockscout explorers for now
-  if (chainConfig.blockExplorers?.[0]?.url.includes('blockscout')) {
+  // Ensure https is used for RPCs (and not http)
+  const rpcUrls = chainConfig.publicRpcUrls;
+  if (rpcUrls?.some((r) => !r.http.startsWith('https://'))) {
     return {
       success: false,
-      error: 'only Etherscan-based explorers are supported',
+      error: 'all RPCs must use valid https url',
+    };
+  }
+
+  // Force blockExplorers family value for now
+  const blockExplorers = chainConfig.blockExplorers;
+  if (blockExplorers?.some((e) => !e.family)) {
+    return {
+      success: false,
+      error: 'family field for block explorers must be "etherscan"',
+    };
+  }
+
+  // Reject blockscout explorers for now
+  if (blockExplorers?.[0]?.url.includes('blockscout')) {
+    return {
+      success: false,
+      error: 'only Etherscan-based explorers are supported at this time',
     };
   }
 
