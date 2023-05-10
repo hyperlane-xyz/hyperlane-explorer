@@ -16,7 +16,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
   const multiProvider = useMultiProvider();
 
   const serializedMessage = JSON.stringify(message);
-  const { data, error } = useQuery(
+  const { data, error, isFetching } = useQuery(
     ['messageDeliveryStatus', serializedMessage, pause],
     async () => {
       if (pause || !message || message.status === MessageStatus.Delivered) return null;
@@ -79,5 +79,5 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
     return [message];
   }, [message, data]);
 
-  return { messageWithDeliveryStatus, debugInfo };
+  return { messageWithDeliveryStatus, debugInfo, isDeliveryStatusFetching: isFetching };
 }

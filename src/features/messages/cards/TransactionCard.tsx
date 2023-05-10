@@ -1,3 +1,5 @@
+import { PropsWithChildren, ReactNode } from 'react';
+
 import { Spinner } from '../../../components/animation/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
@@ -11,35 +13,109 @@ import { useMultiProvider } from '../../providers/multiProvider';
 
 import { KeyValueRow } from './KeyValueRow';
 
-interface TransactionCardProps {
-  title: string;
+export function OriginTransactionCard({
+  chainId,
+  transaction,
+  blur,
+}: {
   chainId: ChainId;
-  status: MessageStatus;
-  transaction?: MessageTx;
-  debugInfo?: TransactionCardDebugInfo;
-  isPiMsg?: boolean;
-  helpText: string;
-  shouldBlur: boolean;
+  transaction: MessageTx;
+  blur: boolean;
+}) {
+  return (
+    <TransactionCard chainId={chainId} title="Origin Transaction" helpText={helpText.origin}>
+      <TransactionDetails chainId={chainId} transaction={transaction} blur={blur} />
+    </TransactionCard>
+  );
 }
 
-export interface TransactionCardDebugInfo {
-  status: MessageDebugStatus;
-  details: string;
-}
-
-export function TransactionCard({
-  title,
+export function DestinationTransactionCard({
   chainId,
   status,
   transaction,
   debugInfo,
+  isStatusFetching,
   isPiMsg,
+  blur,
+}: {
+  chainId: ChainId;
+  status: MessageStatus;
+  transaction?: MessageTx;
+  debugInfo?: {
+    status: MessageDebugStatus;
+    details: string;
+  };
+  isStatusFetching: boolean;
+  isPiMsg?: boolean;
+  blur: boolean;
+}) {
+  let content: ReactNode;
+  if (transaction) {
+    content = <TransactionDetails chainId={chainId} transaction={transaction} blur={blur} />;
+  } else if (!debugInfo && isStatusFetching) {
+    content = (
+      <DeliveryStatus>
+        <div>Checking delivery status and inspecting message</div>
+        <Spinner classes="mt-4 scale-75" />
+      </DeliveryStatus>
+    );
+  } else if (status === MessageStatus.Failing) {
+    content = (
+      <DeliveryStatus>
+        <div className="text-gray-700">Delivery to destination chain is currently failing</div>
+        {debugInfo && (
+          <>
+            <div className="mt-4 text-gray-700 text-center">
+              {debugStatusToDesc[debugInfo.status]}
+            </div>
+            <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
+              {debugInfo.details}
+            </div>
+          </>
+        )}
+      </DeliveryStatus>
+    );
+  } else if (status === MessageStatus.Pending) {
+    content = (
+      <DeliveryStatus>
+        <div>Delivery to destination chain still in progress.</div>
+        {isPiMsg && (
+          <div className="mt-2 text-gray-700 text-sm max-w-xs">
+            Please ensure a relayer is running for this chain.
+          </div>
+        )}
+        <Spinner classes="mt-4 scale-75" />
+      </DeliveryStatus>
+    );
+  } else {
+    content = (
+      <DeliveryStatus>
+        <div className="text-gray-700">{`Delivery to status is currently unknown. ${
+          isPiMsg
+            ? 'Please ensure your chain config is correct and check back later.'
+            : 'Please check again later'
+        }`}</div>
+      </DeliveryStatus>
+    );
+  }
+
+  return (
+    <TransactionCard
+      chainId={chainId}
+      title="Destination Transaction"
+      helpText={helpText.destination}
+    >
+      {content}
+    </TransactionCard>
+  );
+}
+
+function TransactionCard({
+  chainId,
+  title,
   helpText,
-  shouldBlur,
-}: TransactionCardProps) {
-  const multiProvider = useMultiProvider();
-  const hash = transaction?.hash;
-  const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
+  children,
+}: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
   return (
     <Card classes="flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
@@ -51,88 +127,87 @@ export function TransactionCard({
           <HelpIcon size={16} text={helpText} />
         </div>
       </div>
-      {transaction && (
-        <>
-          <KeyValueRow
-            label="Chain:"
-            labelWidth="w-16"
-            display={`${getChainDisplayName(multiProvider, chainId)} (${chainId})`}
-            displayWidth="w-60 sm:w-64"
-            blurValue={shouldBlur}
-          />
-          <KeyValueRow
-            label="Tx hash:"
-            labelWidth="w-16"
-            display={transaction.hash}
-            displayWidth="w-60 sm:w-64"
-            showCopy={true}
-            blurValue={shouldBlur}
-          />
-          <KeyValueRow
-            label="From:"
-            labelWidth="w-16"
-            display={transaction.from}
-            displayWidth="w-60 sm:w-64"
-            showCopy={true}
-            blurValue={shouldBlur}
-          />
-          <KeyValueRow
-            label="Time:"
-            labelWidth="w-16"
-            display={getHumanReadableTimeString(transaction.timestamp)}
-            subDisplay={`(${getDateTimeString(transaction.timestamp)})`}
-            displayWidth="w-60 sm:w-64"
-            blurValue={shouldBlur}
-          />
-          <KeyValueRow
-            label="Block:"
-            labelWidth="w-16"
-            display={transaction.blockNumber.toString()}
-            displayWidth="w-60 sm:w-64"
-            blurValue={shouldBlur}
-          />
-          {txExplorerLink && (
-            <a
-              className="block text-sm text-gray-500 pl-px underline"
-              href={txExplorerLink}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View in block explorer
-            </a>
-          )}
-        </>
-      )}
-      {!transaction && status === MessageStatus.Failing && (
-        <div className="flex flex-col items-center py-5">
-          <div className="text-gray-700 text-center">
-            Delivery to destination chain is currently failing
-          </div>
-          {debugInfo && (
-            <>
-              <div className="mt-4 text-gray-700 text-center">
-                {debugStatusToDesc[debugInfo.status]}
-              </div>
-              <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
-                {debugInfo.details}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-      {!transaction && (status === MessageStatus.Pending || status === MessageStatus.Unknown) && (
-        <div className="flex flex-col items-center py-5">
-          <div className="text-gray-500 text-center max-w-xs">
-            Delivery to destination chain still in progress.
-          </div>
-          {isPiMsg && (
-            <div className="mt-2 text-gray-500 text-center text-sm max-w-xs">
-              Please ensure a relayer is running for this chain.
-            </div>
-          )}
-          <Spinner classes="mt-4 scale-75" />
-        </div>
-      )}
+      {children}
     </Card>
   );
 }
+
+function TransactionDetails({
+  chainId,
+  transaction,
+  blur,
+}: {
+  chainId: ChainId;
+  transaction: MessageTx;
+  blur: boolean;
+}) {
+  const { hash, from, timestamp, blockNumber } = transaction;
+  const multiProvider = useMultiProvider();
+  const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
+  return (
+    <>
+      <KeyValueRow
+        label="Chain:"
+        labelWidth="w-16"
+        display={`${getChainDisplayName(multiProvider, chainId)} (${chainId})`}
+        displayWidth="w-60 sm:w-64"
+        blurValue={blur}
+      />
+      <KeyValueRow
+        label="Tx hash:"
+        labelWidth="w-16"
+        display={hash}
+        displayWidth="w-60 sm:w-64"
+        showCopy={true}
+        blurValue={blur}
+      />
+      <KeyValueRow
+        label="From:"
+        labelWidth="w-16"
+        display={from}
+        displayWidth="w-60 sm:w-64"
+        showCopy={true}
+        blurValue={blur}
+      />
+      <KeyValueRow
+        label="Time:"
+        labelWidth="w-16"
+        display={getHumanReadableTimeString(timestamp)}
+        subDisplay={`(${getDateTimeString(timestamp)})`}
+        displayWidth="w-60 sm:w-64"
+        blurValue={blur}
+      />
+      <KeyValueRow
+        label="Block:"
+        labelWidth="w-16"
+        display={blockNumber.toString()}
+        displayWidth="w-60 sm:w-64"
+        blurValue={blur}
+      />
+      {txExplorerLink && (
+        <a
+          className="block text-sm text-gray-500 pl-px underline"
+          href={txExplorerLink}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View in block explorer
+        </a>
+      )}
+    </>
+  );
+}
+
+function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
+  return (
+    <div className="py-5 flex flex-col items-center text-gray-500 text-center">
+      <div className="max-w-xs">{children}</div>
+    </div>
+  );
+}
+
+const helpText = {
+  origin: 'Info about the transaction that initiated the message placement into the outbox.',
+  destination:
+    'Info about the transaction that triggered the delivery of the message from an inbox.',
+};

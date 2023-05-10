@@ -16,7 +16,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
   message: Message;
-  shouldBlur: boolean;
+  blur: boolean;
 }
 
 export function ContentDetailsCard({
@@ -30,7 +30,7 @@ export function ContentDetailsCard({
     body,
     decodedBody,
   },
-  shouldBlur,
+  blur,
 }: Props) {
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
   useEffect(() => {
@@ -74,21 +74,16 @@ export function ContentDetailsCard({
           display={msgId}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
-        <KeyValueRow
-          label="Nonce:"
-          labelWidth="w-16"
-          display={nonce.toString()}
-          blurValue={shouldBlur}
-        />
+        <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
           label="Sender:"
           labelWidth="w-16"
           display={sender}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
         <KeyValueRow
           label="Recipient:"
@@ -96,7 +91,7 @@ export function ContentDetailsCard({
           display={recipient}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
       </div>
       <div>

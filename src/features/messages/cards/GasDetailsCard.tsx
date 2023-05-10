@@ -16,7 +16,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
   message: Message;
-  shouldBlur: boolean;
+  blur: boolean;
 }
 
 const unitOptions = [
@@ -25,7 +25,7 @@ const unitOptions = [
   { value: 'wei', display: 'Wei' },
 ];
 
-export function GasDetailsCard({ message, shouldBlur }: Props) {
+export function GasDetailsCard({ message, blur }: Props) {
   const [unit, setUnit] = useState(unitOptions[0].value);
 
   const { totalGasAmount, totalPayment: totalPaymentWei, numPayments } = message;
@@ -60,28 +60,28 @@ export function GasDetailsCard({ message, shouldBlur }: Props) {
           label="Payment count:"
           labelWidth="w-28"
           display={numPayments?.toString() || '0'}
-          blurValue={shouldBlur}
+          blurValue={blur}
           classes="basis-5/12"
         />
         <KeyValueRow
           label="Total gas amount:"
           labelWidth="w-28"
           display={totalGasAmount?.toString() || '0'}
-          blurValue={shouldBlur}
+          blurValue={blur}
           classes="basis-5/12"
         />
         <KeyValueRow
           label="Total paid:"
           labelWidth="w-28"
           display={totalPaymentWei ? paymentFormatted : '0'}
-          blurValue={shouldBlur}
+          blurValue={blur}
           classes="basis-5/12"
         />
         <KeyValueRow
           label="Average price:"
           labelWidth="w-28"
           display={avgPrice ? avgPrice.formatted : '-'}
-          blurValue={shouldBlur}
+          blurValue={blur}
           classes="basis-5/12"
         />
       </div>

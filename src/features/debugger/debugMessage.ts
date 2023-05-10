@@ -203,7 +203,7 @@ async function tryCheckIgpGasFunded(
     }
 
     logger.debug('Amount of gas paid for to IGP:', gasAlreadyFunded.toString());
-    logger.debug('Amount of gas required:', deliveryGasEst);
+    logger.debug('Approximate amount of gas required:', deliveryGasEst);
     if (gasAlreadyFunded.lte(0)) {
       return { isFunded: false, igpDetails: 'Origin IGP has not received any gas payments' };
     } else if (gasAlreadyFunded.lte(deliveryGasEst)) {

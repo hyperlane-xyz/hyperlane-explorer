@@ -11,10 +11,10 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
   message: Message;
-  shouldBlur: boolean;
+  blur: boolean;
 }
 
-export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }: Props) {
+export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Props) {
   const decodeResult = useMemo(() => tryDecodeIcaBody(body), [body]);
 
   const {
@@ -42,7 +42,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
             display={decodeResult.sender}
             displayWidth="w-60 sm:w-80"
             showCopy={true}
-            blurValue={shouldBlur}
+            blurValue={blur}
           />
           <KeyValueRow
             label="ICA Address:"
@@ -58,7 +58,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
             }
             displayWidth="w-60 sm:w-80"
             showCopy={true}
-            blurValue={shouldBlur}
+            blurValue={blur}
           />
           {decodeResult.calls.length ? (
             decodeResult.calls.map((c, i) => (
@@ -73,7 +73,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
                     display={c.destinationAddress}
                     displayWidth="w-60 sm:w-80"
                     showCopy={true}
-                    blurValue={shouldBlur}
+                    blurValue={blur}
                   />
                   <KeyValueRow
                     label="Raw call bytes:"
@@ -81,7 +81,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, shouldBlur }
                     display={c.callBytes}
                     displayWidth="w-60 sm:w-96 lg:w-112"
                     showCopy={true}
-                    blurValue={shouldBlur}
+                    blurValue={blur}
                   />
                 </div>
               </div>
