@@ -110,7 +110,11 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
         {!message.isPiMsg && <TimelineCard message={message} blur={blur} />}
         <ContentDetailsCard message={message} blur={blur} />
-        <GasDetailsCard message={message} blur={blur} />
+        <GasDetailsCard
+          message={message}
+          igpPayments={debugInfo?.gasDetails?.contractToPayments}
+          blur={blur}
+        />
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>

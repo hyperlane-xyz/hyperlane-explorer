@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
@@ -9,13 +9,15 @@ import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
-import { fromWei } from '../../../utils/amount';
+import { BigNumberMax, fromWei } from '../../../utils/amount';
 import { logger } from '../../../utils/logger';
+import { GasPayment } from '../../debugger/types';
 
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
   message: Message;
+  igpPayments?: AddressTo<GasPayment[]>;
   blur: boolean;
 }
 
@@ -25,12 +27,39 @@ const unitOptions = [
   { value: 'wei', display: 'Wei' },
 ];
 
-export function GasDetailsCard({ message, blur }: Props) {
+export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const [unit, setUnit] = useState(unitOptions[0].value);
 
-  const { totalGasAmount, totalPayment: totalPaymentWei, numPayments } = message;
-  const paymentFormatted = fromWei(totalPaymentWei, unit).toString();
-  const avgPrice = computeAvgGasPrice(unit, totalGasAmount, totalPaymentWei);
+  const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
+    useMemo(() => {
+      const paymentsWithAddr = Object.keys(igpPayments)
+        .map((contract) =>
+          igpPayments[contract].map((p) => ({
+            gasAmount: p.gasAmount,
+            paymentAmount: fromWei(p.paymentAmount, unit).toString(),
+            contract,
+          })),
+        )
+        .flat();
+
+      let totalGasAmount = paymentsWithAddr.reduce(
+        (sum, val) => sum.plus(val.gasAmount),
+        new BigNumber(0),
+      );
+      let totalPaymentWei = paymentsWithAddr.reduce(
+        (sum, val) => sum.plus(val.paymentAmount),
+        new BigNumber(0),
+      );
+      let numPayments = paymentsWithAddr.length;
+
+      totalGasAmount = BigNumberMax(totalGasAmount, new BigNumber(message.totalGasAmount || 0));
+      totalPaymentWei = BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0));
+      numPayments = Math.max(numPayments, message.numPayments || 0);
+
+      const paymentFormatted = fromWei(totalPaymentWei.toString(), unit).toString();
+      const avgPrice = computeAvgGasPrice(unit, totalGasAmount, totalPaymentWei);
+      return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
+    }, [unit, message, igpPayments]);
 
   return (
     <Card classes="w-full space-y-4 relative">
@@ -59,21 +88,24 @@ export function GasDetailsCard({ message, blur }: Props) {
         <KeyValueRow
           label="Payment count:"
           labelWidth="w-28"
-          display={numPayments?.toString() || '0'}
+          display={numPayments.toString()}
+          allowZeroish={true}
           blurValue={blur}
           classes="basis-5/12"
         />
         <KeyValueRow
           label="Total gas amount:"
           labelWidth="w-28"
-          display={totalGasAmount?.toString() || '0'}
+          display={totalGasAmount.toString()}
+          allowZeroish={true}
           blurValue={blur}
           classes="basis-5/12"
         />
         <KeyValueRow
           label="Total paid:"
           labelWidth="w-28"
-          display={totalPaymentWei ? paymentFormatted : '0'}
+          display={paymentFormatted}
+          allowZeroish={true}
           blurValue={blur}
           classes="basis-5/12"
         />
@@ -81,10 +113,16 @@ export function GasDetailsCard({ message, blur }: Props) {
           label="Average price:"
           labelWidth="w-28"
           display={avgPrice ? avgPrice.formatted : '-'}
+          allowZeroish={true}
           blurValue={blur}
           classes="basis-5/12"
         />
       </div>
+      {!!paymentsWithAddr.length && (
+        <div className="md:pt-2 pb-8 md:pb-6">
+          <IgpPaymentsTable payments={paymentsWithAddr} />
+        </div>
+      )}
       <div className="absolute right-2 bottom-2">
         <RadioButtons
           options={unitOptions}
@@ -97,7 +135,30 @@ export function GasDetailsCard({ message, blur }: Props) {
   );
 }
 
-function computeAvgGasPrice(unit: string, gasAmount?: string, payment?: string) {
+function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contract: Address }> }) {
+  return (
+    <table className="rounded border-collapse overflow-hidden">
+      <thead>
+        <tr>
+          <th className={style.th}>IGP Address</th>
+          <th className={style.th}>Gas amount</th>
+          <th className={style.th}>Payment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {payments.map((p, i) => (
+          <tr key={`igp-payment-${i}`}>
+            <td className={style.td}>{p.contract}</td>
+            <td className={style.td}>{p.gasAmount}</td>
+            <td className={style.td}>{p.paymentAmount}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
   try {
     if (!gasAmount || !payment) return null;
     const gasBN = new BigNumber(gasAmount);
@@ -111,3 +172,8 @@ function computeAvgGasPrice(unit: string, gasAmount?: string, payment?: string) 
     return null;
   }
 }
+
+const style = {
+  th: 'p-1 md:p-2 text-sm text-gray-500 font-normal text-left border border-gray-200 rounded',
+  td: 'p-1 md:p-2 text-xs md:text-sm text-gray-700 text-left border border-gray-200 rounded',
+};

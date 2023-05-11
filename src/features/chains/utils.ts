@@ -2,6 +2,7 @@ import {
   type ChainMap,
   type ChainName,
   type MultiProvider,
+  chainIdToMetadata,
   hyperlaneContractAddresses,
 } from '@hyperlane-xyz/sdk';
 
@@ -50,4 +51,8 @@ export function getContractAddress(
   const addr = tryGetContractAddress(customChainConfigs, chainName, contractName);
   if (!addr) throw new Error(`No contract address found for ${contractName} on ${chainName}`);
   return addr;
+}
+
+export function isPiChain(chainId: number) {
+  return !chainIdToMetadata[chainId];
 }

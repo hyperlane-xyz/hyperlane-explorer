@@ -13,6 +13,7 @@ import { MessageDebugStatus } from '../debugger/types';
 
 import {
   MessageDeliveryFailingResult,
+  MessageDeliveryPendingResult,
   MessageDeliveryStatusResponse,
   MessageDeliverySuccessResult,
 } from './types';
@@ -60,20 +61,22 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const debugResult = await debugExplorerMessage(multiProvider, customChainConfigs, message);
-    if (
-      debugResult.status === MessageDebugStatus.NoErrorsFound ||
-      debugResult.status === MessageDebugStatus.AlreadyProcessed
-    ) {
-      return { status: MessageStatus.Pending };
-    } else {
-      const result: MessageDeliveryFailingResult = {
-        status: MessageStatus.Failing,
-        debugStatus: debugResult.status,
-        debugDetails: debugResult.details,
-      };
-      return result;
-    }
+    const {
+      status: debugStatus,
+      details: debugDetails,
+      gasDetails,
+    } = await debugExplorerMessage(multiProvider, customChainConfigs, message);
+    const messageStatus =
+      debugStatus === MessageDebugStatus.NoErrorsFound
+        ? MessageStatus.Pending
+        : MessageStatus.Failing;
+    const result: MessageDeliveryPendingResult | MessageDeliveryFailingResult = {
+      status: messageStatus,
+      debugStatus,
+      debugDetails,
+      gasDetails,
+    };
+    return result;
   }
 }
 

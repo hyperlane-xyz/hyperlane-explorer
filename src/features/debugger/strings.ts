@@ -1,7 +1,6 @@
 import { MessageDebugStatus } from './types';
 
 export const debugStatusToDesc: Record<MessageDebugStatus, string> = {
-  [MessageDebugStatus.AlreadyProcessed]: 'No errors found, message already processed',
   [MessageDebugStatus.NoErrorsFound]: 'No errors found, message appears to be deliverable',
   [MessageDebugStatus.RecipientNotContract]: 'Recipient address is not a contract',
   [MessageDebugStatus.RecipientNotHandler]:

@@ -1,5 +1,4 @@
 export enum MessageDebugStatus {
-  AlreadyProcessed = 'alreadyProcessed',
   NoErrorsFound = 'noErrorsFound',
   RecipientNotContract = 'recipientNotContract',
   RecipientNotHandler = 'recipientNotHandler',
@@ -11,4 +10,13 @@ export enum MessageDebugStatus {
 export interface MessageDebugDetails {
   status: MessageDebugStatus;
   details: string;
+  gasDetails?: {
+    deliveryGasEstimate?: string;
+    contractToPayments?: AddressTo<GasPayment[]>;
+  };
+}
+
+export interface GasPayment {
+  gasAmount: string;
+  paymentAmount: string;
 }

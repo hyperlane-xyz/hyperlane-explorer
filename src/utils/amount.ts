@@ -69,3 +69,10 @@ export function areAmountsNearlyEqual(amountInWei1: BigNumber, amountInWei2: Num
   // Is difference btwn amount and balance less than min amount shown for token
   return amountInWei1.minus(amountInWei2).abs().lt(minValueWei);
 }
+
+export function BigNumberMin(bn1: BigNumber, bn2: BigNumber) {
+  return bn1.gte(bn2) ? bn2 : bn1;
+}
+export function BigNumberMax(bn1: BigNumber, bn2: BigNumber) {
+  return bn1.lte(bn2) ? bn2 : bn1;
+}

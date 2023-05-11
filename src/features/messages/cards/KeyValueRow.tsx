@@ -10,6 +10,7 @@ interface Props {
   showCopy?: boolean;
   blurValue?: boolean;
   classes?: string;
+  allowZeroish?: boolean;
 }
 
 export function KeyValueRow({
@@ -21,16 +22,17 @@ export function KeyValueRow({
   showCopy,
   blurValue,
   classes,
+  allowZeroish = false,
 }: Props) {
-  const isValueZeroish = isZeroish(display);
+  const useFallbackVal = isZeroish(display) && !allowZeroish;
   return (
     <div className={`flex items-center pl-px ${classes}`}>
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <div className={`text-sm ml-1 truncate ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
-        <span>{!isValueZeroish ? display : 'Unknown'}</span>
-        {subDisplay && !isValueZeroish && <span className="text-xs ml-2">{subDisplay}</span>}
+        <span>{!useFallbackVal ? display : 'Unknown'}</span>
+        {subDisplay && !useFallbackVal && <span className="text-xs ml-2">{subDisplay}</span>}
       </div>
-      {showCopy && !isValueZeroish && (
+      {showCopy && !useFallbackVal && (
         <CopyButton copyValue={display} width={13} height={13} classes="ml-1" />
       )}
     </div>
