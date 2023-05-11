@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, constants } from 'ethers';
 
 import { logger } from './logger';
 import { isNullish } from './typeof';
@@ -22,6 +22,16 @@ export function isBigNumberish(value: any): value is BigNumberish {
   try {
     if (isNullish(value)) return false;
     return BigNumber.from(value)._isBigNumber;
+  } catch (error) {
+    return false;
+  }
+}
+
+// If a value (e.g. hex string or number) is zeroish (0, 0x0, 0x00, etc.)
+export function isZeroish(value: BigNumberish) {
+  try {
+    if (!value || value === constants.HashZero || value === constants.AddressZero) return true;
+    return BigNumber.from(value).isZero();
   } catch (error) {
     return false;
   }

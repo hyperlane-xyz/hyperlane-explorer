@@ -1,5 +1,7 @@
 // Inspired by https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site
 export function getHumanReadableTimeString(timestamp: number) {
+  if (timestamp <= 0) return '';
+
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
 
   if (seconds <= 1) {
