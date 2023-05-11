@@ -1,12 +1,8 @@
 // Forked from debug script in monorepo but mostly rewritten
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, providers } from 'ethers';
+import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import {
-  type IInterchainGasPaymaster,
-  IMessageRecipient__factory,
-  InterchainGasPaymaster__factory,
-} from '@hyperlane-xyz/core';
+import { IMessageRecipient__factory, InterchainGasPaymaster__factory } from '@hyperlane-xyz/core';
 import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
@@ -77,6 +73,7 @@ export async function debugExplorerMessage(
   );
   if (insufficientGas) return insufficientGas;
 
+  logger.debug(`No errors found debugging message id: ${msgId}`);
   return noErrorFound();
 }
 
@@ -163,9 +160,8 @@ async function isIgpUnderfunded(
     logger.debug('No IGP address provided, skipping gas funding check');
     return false;
   }
-  const igpContract = InterchainGasPaymaster__factory.connect(igpAddress, originProvider);
   const { isFunded, igpDetails } = await tryCheckIgpGasFunded(
-    igpContract,
+    originProvider,
     msgId,
     deliveryGasEst,
     totalGasAmount,
@@ -180,7 +176,7 @@ async function isIgpUnderfunded(
 }
 
 async function tryCheckIgpGasFunded(
-  igp: IInterchainGasPaymaster,
+  originProvider: Provider,
   messageId: string,
   deliveryGasEst?: string,
   totalGasAmount?: string,
@@ -189,17 +185,25 @@ async function tryCheckIgpGasFunded(
     if (!deliveryGasEst) throw new Error('No gas estimate provided');
 
     let gasAlreadyFunded = BigNumber.from(0);
-    if (totalGasAmount) {
-      const filter = igp.filters.GasPayment(messageId, null, null);
-      const matchedEvents = (await igp.queryFilter(filter)) || [];
-      logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${messageId}`);
-      logger.debug(matchedEvents);
-      for (const payment of matchedEvents) {
-        gasAlreadyFunded = gasAlreadyFunded.add(payment.args.gasAmount);
-      }
-    } else {
+    if (totalGasAmount && BigNumber.from(totalGasAmount).gt(0)) {
       logger.debug(`Using totalGasAmount info from message: ${totalGasAmount}`);
       gasAlreadyFunded = BigNumber.from(totalGasAmount);
+    } else {
+      logger.debug('Querying for gas payments events for msg to any contract');
+      const { contractAddrToTotalGas, numPayments, numIGPs } = await fetchGasPaymentEvents(
+        originProvider,
+        messageId,
+      );
+      logger.debug(`Found ${numPayments} payments to ${numIGPs} IGPs for msg ${messageId}`);
+      if (numIGPs === 1) {
+        gasAlreadyFunded = Object.values(contractAddrToTotalGas)[0];
+      } else if (numIGPs > 1) {
+        logger.warn(`>1 IGPs paid for msg ${messageId}. Unsure which to use, skipping check.`);
+        return {
+          isFunded: true,
+          igpDetails: '',
+        };
+      }
     }
 
     logger.debug('Amount of gas paid for to IGP:', gasAlreadyFunded.toString());
@@ -218,6 +222,31 @@ async function tryCheckIgpGasFunded(
     logger.warn('Error estimating delivery gas cost for message', error);
     return { isFunded: true, igpDetails: '' };
   }
+}
+
+async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
+  const igpInterface = InterchainGasPaymaster__factory.createInterface();
+  const paymentFragment = igpInterface.getEvent('GasPayment');
+  const paymentTopics = igpInterface.encodeFilterTopics(paymentFragment.name, [messageId]);
+  const paymentLogs = (await provider.getLogs({ topics: paymentTopics })) || [];
+  const contractAddrToEvents: Record<Address, ethersUtils.LogDescription[]> = {};
+  const contractAddrToTotalGas: Record<Address, BigNumber> = {};
+  let numPayments = 0;
+  for (const log of paymentLogs) {
+    const contractAddr = log.address;
+    const events = contractAddrToEvents[contractAddr] || [];
+    const total = contractAddrToTotalGas[contractAddr] || BigNumber.from(0);
+    try {
+      const newEvent = igpInterface.parseLog(log);
+      contractAddrToEvents[contractAddr] = [...events, newEvent];
+      contractAddrToTotalGas[contractAddr] = total.add(newEvent.args.gasAmount);
+      numPayments += 1;
+    } catch (error) {
+      logger.warn('Error parsing gas payment log', error);
+    }
+  }
+  const numIGPs = Object.keys(contractAddrToEvents).length;
+  return { contractAddrToEvents, contractAddrToTotalGas, numPayments, numIGPs };
 }
 
 async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {

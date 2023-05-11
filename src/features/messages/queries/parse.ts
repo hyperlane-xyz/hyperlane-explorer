@@ -42,11 +42,11 @@ export function parseMessageQueryResult(
 function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): MessageStub | null {
   try {
     const destinationDomainId = m.destination_domain_id;
-    const destinationChainId =
+    let destinationChainId =
       m.destination_chain_id || multiProvider.tryGetChainId(destinationDomainId);
     if (!destinationChainId) {
-      logger.warn(`No dest chain id known for domain ${destinationDomainId}. Skipping message.`);
-      return null;
+      logger.warn(`No chainId known for domain ${destinationDomainId}. Using domain as chainId`);
+      destinationChainId = destinationDomainId;
     }
     return {
       status: getMessageStatus(m),
