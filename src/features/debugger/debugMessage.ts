@@ -1,6 +1,6 @@
 // Forked from debug script in monorepo but mostly rewritten
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, providers } from 'ethers';
+import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
 import { IMessageRecipient__factory, InterchainGasPaymaster__factory } from '@hyperlane-xyz/core';
 import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
@@ -148,9 +148,11 @@ async function tryCheckIgpGasFunded(
   deliveryGasEstimate?: string,
   totalGasAmount?: string,
 ) {
+  if (!deliveryGasEstimate) {
+    logger.warn('No gas estimate provided, skipping IGP check');
+    return {};
+  }
   try {
-    if (!deliveryGasEstimate) throw new Error('No gas estimate provided');
-
     let gasAlreadyFunded = BigNumber.from(0);
     let gasDetails: MessageDebugDetails['gasDetails'] = {
       deliveryGasEstimate,
@@ -205,20 +207,22 @@ async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
   let numPayments = 0;
   for (const log of paymentLogs) {
     const contractAddr = log.address;
-    const payments = contractToPayments[contractAddr] || [];
-    const total = contractToTotalGas[contractAddr] || BigNumber.from(0);
+    let newEvent: ethersUtils.LogDescription;
     try {
-      const newEvent = igpInterface.parseLog(log);
-      const newPayment = {
-        gasAmount: BigNumber.from(newEvent.args.gasAmount).toString(),
-        paymentAmount: BigNumber.from(newEvent.args.payment).toString(),
-      };
-      contractToPayments[contractAddr] = [...payments, newPayment];
-      contractToTotalGas[contractAddr] = total.add(newEvent.args.gasAmount);
-      numPayments += 1;
+      newEvent = igpInterface.parseLog(log);
     } catch (error) {
       logger.warn('Error parsing gas payment log', error);
+      continue;
     }
+    const newPayment = {
+      gasAmount: BigNumber.from(newEvent.args.gasAmount).toString(),
+      paymentAmount: BigNumber.from(newEvent.args.payment).toString(),
+    };
+    contractToPayments[contractAddr] = [...(contractToPayments[contractAddr] || []), newPayment];
+    contractToTotalGas[contractAddr] = (contractToTotalGas[contractAddr] || BigNumber.from(0)).add(
+      newEvent.args.gasAmount,
+    );
+    numPayments += 1;
   }
   const numIGPs = Object.keys(contractToPayments).length;
   return { contractToPayments, contractToTotalGas, numPayments, numIGPs };
