@@ -11,7 +11,7 @@ export function LabelAndCodeBlock({ label, value }: { label: string; value: stri
 
 export function CodeBlock({ value }: { value: string }) {
   return (
-    <div className="relative max-w-full break-words py-2 pl-2 pr-9 mt-2 bg-gray-100 text-sm font-mono rounded">
+    <div className="relative max-w-full break-words py-2 pl-2 pr-9 mt-2 min-h-[2rem] bg-gray-100 text-sm font-mono rounded">
       {value}
       <CopyButton
         copyValue={value}

@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { utils } from '@hyperlane-xyz/utils';
 
@@ -9,6 +9,7 @@ import { Card } from '../../../components/layout/Card';
 import { MAILBOX_VERSION } from '../../../consts/environments';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
+import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
@@ -40,20 +41,30 @@ export function ContentDetailsCard({
     setBodyDecodeType(value);
   };
 
-  const bodyDisplay =
-    bodyDecodeType === 'hex'
-      ? body
-      : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode';
+  const bodyDisplay = useMemo(() => {
+    return (
+      (bodyDecodeType === 'hex'
+        ? body
+        : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode') || ''
+    );
+  }, [bodyDecodeType, decodedBody, body]);
 
-  const rawBytes = utils.formatMessage(
-    MAILBOX_VERSION,
-    nonce,
-    originDomainId,
-    sender,
-    destinationDomainId,
-    recipient,
-    body,
-  );
+  const rawBytes = useMemo(() => {
+    try {
+      return utils.formatMessage(
+        MAILBOX_VERSION,
+        nonce,
+        originDomainId,
+        sender,
+        destinationDomainId,
+        recipient,
+        body,
+      );
+    } catch (error) {
+      logger.warn('Error formatting message', error);
+      return '';
+    }
+  }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
   return (
     <Card classes="w-full space-y-4">

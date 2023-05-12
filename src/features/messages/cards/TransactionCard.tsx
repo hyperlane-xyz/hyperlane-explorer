@@ -180,7 +180,7 @@ function TransactionDetails({
       <KeyValueRow
         label="Block:"
         labelWidth="w-16"
-        display={blockNumber.toString()}
+        display={blockNumber?.toString()}
         displayWidth="w-60 sm:w-64"
         blurValue={blur}
       />
