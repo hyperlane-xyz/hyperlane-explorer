@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { utils } from '@hyperlane-xyz/utils';
 
@@ -9,6 +9,7 @@ import { Card } from '../../../components/layout/Card';
 import { MAILBOX_VERSION } from '../../../consts/environments';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
+import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
@@ -16,7 +17,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
   message: Message;
-  shouldBlur: boolean;
+  blur: boolean;
 }
 
 export function ContentDetailsCard({
@@ -30,7 +31,7 @@ export function ContentDetailsCard({
     body,
     decodedBody,
   },
-  shouldBlur,
+  blur,
 }: Props) {
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
   useEffect(() => {
@@ -40,20 +41,30 @@ export function ContentDetailsCard({
     setBodyDecodeType(value);
   };
 
-  const bodyDisplay =
-    bodyDecodeType === 'hex'
-      ? body
-      : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode';
+  const bodyDisplay = useMemo(() => {
+    return (
+      (bodyDecodeType === 'hex'
+        ? body
+        : decodedBody || tryUtf8DecodeBytes(body, false) || 'Unable to decode') || ''
+    );
+  }, [bodyDecodeType, decodedBody, body]);
 
-  const rawBytes = utils.formatMessage(
-    MAILBOX_VERSION,
-    nonce,
-    originDomainId,
-    sender,
-    destinationDomainId,
-    recipient,
-    body,
-  );
+  const rawBytes = useMemo(() => {
+    try {
+      return utils.formatMessage(
+        MAILBOX_VERSION,
+        nonce,
+        originDomainId,
+        sender,
+        destinationDomainId,
+        recipient,
+        body,
+      );
+    } catch (error) {
+      logger.warn('Error formatting message', error);
+      return '';
+    }
+  }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
   return (
     <Card classes="w-full space-y-4">
@@ -74,21 +85,16 @@ export function ContentDetailsCard({
           display={msgId}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
-        <KeyValueRow
-          label="Nonce:"
-          labelWidth="w-16"
-          display={nonce.toString()}
-          blurValue={shouldBlur}
-        />
+        <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
           label="Sender:"
           labelWidth="w-16"
           display={sender}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
         <KeyValueRow
           label="Recipient:"
@@ -96,7 +102,7 @@ export function ContentDetailsCard({
           display={recipient}
           displayWidth="w-64 sm:w-80"
           showCopy={true}
-          blurValue={shouldBlur}
+          blurValue={blur}
         />
       </div>
       <div>

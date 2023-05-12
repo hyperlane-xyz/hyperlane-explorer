@@ -2,10 +2,10 @@ import { BigNumber } from 'ethers';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import NextCors from 'nextjs-cors';
 
-import { MultiProvider, chainIdToMetadata } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Environment } from '../../consts/environments';
-import { getChainEnvironment } from '../../features/chains/utils';
+import { getChainEnvironment, isPiChain } from '../../features/chains/utils';
 import { logger } from '../../utils/logger';
 import { fetchWithTimeout } from '../../utils/timeout';
 
@@ -22,7 +22,7 @@ export default async function handler(
     const body = req.body as { chainId: ChainId };
     if (!body.chainId) throw new Error('No chainId in body');
     // TODO PI support here
-    if (!chainIdToMetadata[body.chainId]) throw new Error('ChainId is unsupported');
+    if (isPiChain(body.chainId)) throw new Error('ChainId is unsupported');
     const multiProvider = new MultiProvider();
     const nonce = await fetchLatestNonce(multiProvider, body.chainId);
     res.status(200).json({ nonce });

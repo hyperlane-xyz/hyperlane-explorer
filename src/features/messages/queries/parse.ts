@@ -3,6 +3,7 @@ import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
+import { isPiChain } from '../../chains/utils';
 
 import { postgresByteaToString } from './encoding';
 import {
@@ -42,12 +43,14 @@ export function parseMessageQueryResult(
 function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): MessageStub | null {
   try {
     const destinationDomainId = m.destination_domain_id;
-    const destinationChainId =
+    let destinationChainId =
       m.destination_chain_id || multiProvider.tryGetChainId(destinationDomainId);
     if (!destinationChainId) {
-      logger.warn(`No dest chain id known for domain ${destinationDomainId}. Skipping message.`);
-      return null;
+      logger.warn(`No chainId known for domain ${destinationDomainId}. Using domain as chainId`);
+      destinationChainId = destinationDomainId;
     }
+    const isPiMsg = isPiChain(m.origin_chain_id) || isPiChain(destinationChainId);
+
     return {
       status: getMessageStatus(m),
       id: m.id.toString(),
@@ -71,6 +74,7 @@ function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): Me
             from: postgresByteaToString(m.destination_tx_sender!),
           }
         : undefined,
+      isPiMsg,
     };
   } catch (error) {
     logger.error('Error parsing message stub', error);

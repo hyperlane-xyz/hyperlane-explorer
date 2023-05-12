@@ -16,7 +16,7 @@ import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
-import { TransactionCard } from './cards/TransactionCard';
+import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
@@ -60,12 +60,16 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const isMessageFound = !!messageFromUrlParams || isGraphQlMessageFound || isPiMessageFound;
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
-  const shouldBlur = !isMessageFound;
+  const blur = !isMessageFound;
   const isIcaMsg = useIsIcaMessage(_message);
 
   // If message isn't delivered, attempt to check for
   // more recent updates and possibly debug info
-  const { messageWithDeliveryStatus: message, debugInfo } = useMessageDeliveryStatus({
+  const {
+    messageWithDeliveryStatus: message,
+    debugInfo,
+    isDeliveryStatusFetching,
+  } = useMessageDeliveryStatus({
     message: _message,
     pause: !isMessageFound,
   });
@@ -94,28 +98,24 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
       </div>
       <div className="flex flex-wrap items-stretch justify-between mt-5 gap-3">
-        <TransactionCard
-          title="Origin Transaction"
-          chainId={originChainId}
-          status={status}
-          transaction={origin}
-          helpText={helpText.origin}
-          shouldBlur={shouldBlur}
-        />
-        <TransactionCard
-          title="Destination Transaction"
+        <OriginTransactionCard chainId={originChainId} transaction={origin} blur={blur} />
+        <DestinationTransactionCard
           chainId={destChainId}
           status={status}
           transaction={destination}
           debugInfo={debugInfo}
+          isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={message.isPiMsg}
-          helpText={helpText.destination}
-          shouldBlur={shouldBlur}
+          blur={blur}
         />
-        {!message.isPiMsg && <TimelineCard message={message} shouldBlur={shouldBlur} />}
-        <ContentDetailsCard message={message} shouldBlur={shouldBlur} />
-        <GasDetailsCard message={message} shouldBlur={shouldBlur} />
-        {isIcaMsg && <IcaDetailsCard message={message} shouldBlur={shouldBlur} />}
+        {!message.isPiMsg && <TimelineCard message={message} blur={blur} />}
+        <ContentDetailsCard message={message} blur={blur} />
+        <GasDetailsCard
+          message={message}
+          igpPayments={debugInfo?.gasDetails?.contractToPayments}
+          blur={blur}
+        />
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
   );
@@ -191,9 +191,3 @@ function useDynamicBannerColor(
     return () => setBanner('');
   }, [setBanner]);
 }
-
-const helpText = {
-  origin: 'Info about the transaction that initiated the message placement into the outbox.',
-  destination:
-    'Info about the transaction that triggered the delivery of the message from an inbox.',
-};

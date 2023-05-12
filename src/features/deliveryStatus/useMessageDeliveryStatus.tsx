@@ -16,7 +16,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
   const multiProvider = useMultiProvider();
 
   const serializedMessage = JSON.stringify(message);
-  const { data, error } = useQuery(
+  const { data, error, isFetching } = useQuery(
     ['messageDeliveryStatus', serializedMessage, pause],
     async () => {
       if (pause || !message || message.status === MessageStatus.Delivered) return null;
@@ -41,7 +41,6 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
 
       logger.debug('Fetching message delivery status for:', message.id);
       const deliverStatus = await fetchDeliveryStatus(multiProvider, chainConfigs, message);
-      logger.debug('Message delivery status result', deliverStatus);
       return deliverStatus;
     },
     { retry: false },
@@ -64,20 +63,22 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
           destination: data.deliveryTransaction,
         },
       ];
-    } else if (data?.status === MessageStatus.Failing) {
+    } else if (data?.status === MessageStatus.Failing || data?.status === MessageStatus.Pending) {
       return [
         {
           ...message,
-          status: MessageStatus.Failing,
+          status: data.status,
         },
         {
           status: data.debugStatus,
           details: data.debugDetails,
+          gasDetails: data.gasDetails,
         },
       ];
+    } else {
+      return [message];
     }
-    return [message];
   }, [message, data]);
 
-  return { messageWithDeliveryStatus, debugInfo };
+  return { messageWithDeliveryStatus, debugInfo, isDeliveryStatusFetching: isFetching };
 }

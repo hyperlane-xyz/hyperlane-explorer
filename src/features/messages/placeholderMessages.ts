@@ -2,14 +2,12 @@ import { constants } from 'ethers';
 
 import { Message, MessageStatus, MessageTx } from '../../types';
 
-export const TX_HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
 export const TX_ZERO: MessageTx = {
   timestamp: Date.now(),
-  hash: TX_HASH_ZERO,
+  hash: constants.HashZero,
   from: constants.AddressZero,
   to: constants.AddressZero,
-  blockHash: TX_HASH_ZERO,
+  blockHash: constants.HashZero,
   blockNumber: 123456789,
   mailbox: constants.AddressZero,
   nonce: 0,
@@ -27,7 +25,7 @@ const BODY_ZERO =
 
 export const PLACEHOLDER_MESSAGE: Message = {
   id: '1',
-  msgId: TX_HASH_ZERO,
+  msgId: constants.HashZero,
   nonce: 1,
   status: MessageStatus.Pending,
   sender: constants.AddressZero,
