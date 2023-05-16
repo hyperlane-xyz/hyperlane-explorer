@@ -2,12 +2,19 @@
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import { IMessageRecipient__factory, InterchainGasPaymaster__factory } from '@hyperlane-xyz/core';
+import {
+  IInterchainSecurityModule__factory,
+  IMailbox__factory,
+  IMessageRecipient__factory,
+  InterchainGasPaymaster__factory,
+  LegacyMultisigIsm__factory,
+} from '@hyperlane-xyz/core';
 import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
+import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
-import { trimLeading0x } from '../../utils/addresses';
+import { isValidAddress, trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { trimToLength } from '../../utils/string';
@@ -21,13 +28,14 @@ type Provider = providers.Provider;
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 
-export async function debugExplorerMessage(
+export async function debugMessage(
   multiProvider: MultiProvider,
   customChainConfigs: ChainMap<ChainConfig>,
   message: Message,
 ): Promise<MessageDebugDetails> {
   const {
     msgId,
+    nonce,
     sender,
     recipient,
     originDomainId: originDomain,
@@ -58,16 +66,35 @@ export async function debugExplorerMessage(
   if (deliveryResult.status && deliveryResult.details) return deliveryResult;
   const gasEstimate = deliveryResult.gasEstimate;
 
+  const messageBytes = utils.formatMessage(
+    MAILBOX_VERSION,
+    nonce,
+    originDomain,
+    sender,
+    destDomain,
+    recipient,
+    body,
+  );
+  const multisigIsmCheckResult = await checkMultisigIsmEmpty(
+    recipient,
+    messageBytes,
+    destMailbox,
+    destProvider,
+  );
+  if (multisigIsmCheckResult.status && multisigIsmCheckResult.details)
+    return multisigIsmCheckResult;
+  // TODO surface multisigIsmCheckResult.ismDetails up to UI
+
   const gasCheckResult = await tryCheckIgpGasFunded(
     msgId,
     originProvider,
     gasEstimate,
     totalGasAmount,
   );
-  if (gasCheckResult.status && gasCheckResult.details) return gasCheckResult;
+  if (gasCheckResult?.status && gasCheckResult?.details) return gasCheckResult;
 
   logger.debug(`No errors found debugging message id: ${msgId}`);
-  return { ...noErrorFound(), gasDetails: gasCheckResult.gasDetails };
+  return { ...noErrorFound(), gasDetails: gasCheckResult?.gasDetails };
 }
 
 async function isInvalidRecipient(provider: Provider, recipient: Address) {
@@ -142,6 +169,57 @@ async function debugMessageDelivery(
   }
 }
 
+// Must match https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/interfaces/IInterchainSecurityModule.sol#L5
+enum IsmModuleTypes {
+  UNUSED,
+  ROUTING,
+  AGGREGATION,
+  LEGACY_MULTISIG,
+  MULTISIG,
+}
+
+async function checkMultisigIsmEmpty(
+  recipientAddr: Address,
+  messageBytes: string,
+  destMailbox: Address,
+  destProvider: Provider,
+) {
+  const mailbox = IMailbox__factory.connect(destMailbox, destProvider);
+  const ismAddr = await mailbox.recipientIsm(recipientAddr);
+  if (!isValidAddress(ismAddr)) {
+    logger.error(
+      `Recipient ${recipientAddr} on mailbox ${destMailbox} does not have a valid ISM address: ${ismAddr}`,
+    );
+    throw new Error('Recipient ISM is not a valid address');
+  }
+  const ism = IInterchainSecurityModule__factory.connect(ismAddr, destProvider);
+  const moduleType = await ism.moduleType();
+
+  const ismDetails = { ismAddr, moduleType };
+  if (moduleType !== IsmModuleTypes.LEGACY_MULTISIG) {
+    return { ismDetails };
+  }
+
+  const legacyMultisigIsm = LegacyMultisigIsm__factory.connect(ismAddr, destProvider);
+  const [validators, threshold] = await legacyMultisigIsm.validatorsAndThreshold(messageBytes);
+
+  if (!validators?.length) {
+    return {
+      status: MessageDebugStatus.MultisigIsmEmpty,
+      details:
+        'Validator list is empty, did you register the validators with the ValidatorAnnounce contract?',
+      ismDetails,
+    };
+  } else if (threshold < 1) {
+    return {
+      status: MessageDebugStatus.MultisigIsmEmpty,
+      details: 'Threshold is less than 1, did you initialize the ISM contract?',
+      ismDetails,
+    };
+  }
+  return { ismDetails };
+}
+
 async function tryCheckIgpGasFunded(
   messageId: string,
   originProvider: Provider,
@@ -150,7 +228,7 @@ async function tryCheckIgpGasFunded(
 ) {
   if (!deliveryGasEstimate) {
     logger.warn('No gas estimate provided, skipping IGP check');
-    return {};
+    return null;
   }
   try {
     let gasAlreadyFunded = BigNumber.from(0);
@@ -193,7 +271,7 @@ async function tryCheckIgpGasFunded(
     }
   } catch (error) {
     logger.warn('Error estimating delivery gas cost for message', error);
-    return {};
+    return null;
   }
 }
 

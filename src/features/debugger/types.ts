@@ -4,6 +4,7 @@ export enum MessageDebugStatus {
   RecipientNotHandler = 'recipientNotHandler',
   IcaCallFailure = 'icaCallFailure',
   HandleCallFailure = 'handleCallFailure',
+  MultisigIsmEmpty = 'multisigIsmEmpty',
   GasUnderfunded = 'gasUnderfunded',
 }
 

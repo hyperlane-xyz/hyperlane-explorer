@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import type { ChainConfig } from '../chains/chainConfig';
 import { getContractAddress } from '../chains/utils';
-import { debugExplorerMessage } from '../debugger/debugMessage';
+import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 
 import {
@@ -65,7 +65,7 @@ export async function fetchDeliveryStatus(
       status: debugStatus,
       details: debugDetails,
       gasDetails,
-    } = await debugExplorerMessage(multiProvider, customChainConfigs, message);
+    } = await debugMessage(multiProvider, customChainConfigs, message);
     const messageStatus =
       debugStatus === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending
