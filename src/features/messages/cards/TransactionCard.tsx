@@ -8,7 +8,7 @@ import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
-import { MessageDebugStatus } from '../../debugger/types';
+import { MessageDebugResult } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
 
 import { KeyValueRow } from './KeyValueRow';
@@ -33,7 +33,7 @@ export function DestinationTransactionCard({
   chainId,
   status,
   transaction,
-  debugInfo,
+  debugResult,
   isStatusFetching,
   isPiMsg,
   blur,
@@ -41,10 +41,7 @@ export function DestinationTransactionCard({
   chainId: ChainId;
   status: MessageStatus;
   transaction?: MessageTx;
-  debugInfo?: {
-    status: MessageDebugStatus;
-    details: string;
-  };
+  debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
@@ -52,7 +49,7 @@ export function DestinationTransactionCard({
   let content: ReactNode;
   if (transaction) {
     content = <TransactionDetails chainId={chainId} transaction={transaction} blur={blur} />;
-  } else if (!debugInfo && isStatusFetching) {
+  } else if (!debugResult && isStatusFetching) {
     content = (
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
@@ -63,13 +60,13 @@ export function DestinationTransactionCard({
     content = (
       <DeliveryStatus>
         <div className="text-gray-700">Delivery to destination chain is currently failing</div>
-        {debugInfo && (
+        {debugResult && (
           <>
             <div className="mt-4 text-gray-700 text-center">
-              {debugStatusToDesc[debugInfo.status]}
+              {debugStatusToDesc[debugResult.status]}
             </div>
             <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
-              {debugInfo.details}
+              {debugResult.description}
             </div>
           </>
         )}

@@ -54,7 +54,7 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
     }
   }, [error]);
 
-  const [messageWithDeliveryStatus, debugInfo] = useMemo(() => {
+  const [messageWithDeliveryStatus, debugResult] = useMemo(() => {
     if (data?.status === MessageStatus.Delivered) {
       return [
         {
@@ -69,16 +69,12 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
           ...message,
           status: data.status,
         },
-        {
-          status: data.debugStatus,
-          details: data.debugDetails,
-          gasDetails: data.gasDetails,
-        },
+        data.debugResult,
       ];
     } else {
       return [message];
     }
   }, [message, data]);
 
-  return { messageWithDeliveryStatus, debugInfo, isDeliveryStatusFetching: isFetching };
+  return { messageWithDeliveryStatus, debugResult, isDeliveryStatusFetching: isFetching };
 }

@@ -1,5 +1,5 @@
 import type { MessageStatus, MessageTx } from '../../types';
-import type { MessageDebugDetails, MessageDebugStatus } from '../debugger/types';
+import type { MessageDebugResult } from '../debugger/types';
 
 interface MessageDeliveryResult {
   status: MessageStatus;
@@ -12,16 +12,12 @@ export interface MessageDeliverySuccessResult extends MessageDeliveryResult {
 
 export interface MessageDeliveryFailingResult extends MessageDeliveryResult {
   status: MessageStatus.Failing;
-  debugStatus: MessageDebugStatus;
-  debugDetails: string;
-  gasDetails: MessageDebugDetails['gasDetails'];
+  debugResult: MessageDebugResult;
 }
 
 export interface MessageDeliveryPendingResult extends MessageDeliveryResult {
   status: MessageStatus.Pending;
-  debugStatus: MessageDebugStatus;
-  debugDetails: string;
-  gasDetails: MessageDebugDetails['gasDetails'];
+  debugResult: MessageDebugResult;
 }
 
 export type MessageDeliveryStatusResponse =

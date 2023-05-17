@@ -61,20 +61,14 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const {
-      status: debugStatus,
-      details: debugDetails,
-      gasDetails,
-    } = await debugMessage(multiProvider, customChainConfigs, message);
+    const debugResult = await debugMessage(multiProvider, customChainConfigs, message);
     const messageStatus =
-      debugStatus === MessageDebugStatus.NoErrorsFound
+      debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending
         : MessageStatus.Failing;
     const result: MessageDeliveryPendingResult | MessageDeliveryFailingResult = {
       status: messageStatus,
-      debugStatus,
-      debugDetails,
-      gasDetails,
+      debugResult,
     };
     return result;
   }

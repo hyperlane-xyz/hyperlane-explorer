@@ -33,7 +33,7 @@ export function KeyValueRow({
         {subDisplay && !useFallbackVal && <span className="text-xs ml-2">{subDisplay}</span>}
       </div>
       {showCopy && !useFallbackVal && (
-        <CopyButton copyValue={display} width={13} height={13} classes="ml-1" />
+        <CopyButton copyValue={display} width={13} height={13} classes="ml-1.5" />
       )}
     </div>
   );
