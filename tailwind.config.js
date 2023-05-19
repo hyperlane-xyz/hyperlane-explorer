@@ -11,6 +11,7 @@ module.exports = {
       mono: ['Courier New', 'monospace'],
     },
     screens: {
+      any: '1px',
       xs: '480px',
       ...defaultTheme.screens,
     },

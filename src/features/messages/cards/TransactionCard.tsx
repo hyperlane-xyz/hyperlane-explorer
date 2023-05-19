@@ -1,9 +1,11 @@
-import { PropsWithChildren, ReactNode } from 'react';
+import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { Spinner } from '../../../components/animation/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
+import { Modal } from '../../../components/layout/Modal';
+import { links } from '../../../consts/links';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
@@ -11,6 +13,7 @@ import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
 
+import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
@@ -59,17 +62,15 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Failing) {
     content = (
       <DeliveryStatus>
-        <div className="text-gray-700">Delivery to destination chain is currently failing</div>
-        {debugResult && (
-          <>
-            <div className="mt-4 text-gray-700 text-center">
-              {debugStatusToDesc[debugResult.status]}
-            </div>
-            <div className="mt-4 text-gray-700 text-sm max-w-sm text-center break-words">
-              {debugResult.description}
-            </div>
-          </>
+        <div className="text-sm text-gray-800 leading-relaxed">{`Delivery to destination chain seems to be failing ${
+          debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
+        }`}</div>
+        {!!debugResult?.description && (
+          <div className="mt-5 text-sm text-gray-800 text-center leading-relaxed break-words">
+            {debugResult.description}
+          </div>
         )}
+        <CallDataModal debugResult={debugResult} />
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Pending) {
@@ -82,6 +83,7 @@ export function DestinationTransactionCard({
           </div>
         )}
         <Spinner classes="mt-4 scale-75" />
+        <CallDataModal debugResult={debugResult} />
       </DeliveryStatus>
     );
   } else {
@@ -114,7 +116,7 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
   return (
-    <Card classes="flex-1 min-w-fit space-y-3">
+    <Card classes="flex flex-col flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainLogo chainId={chainId} />
@@ -183,7 +185,7 @@ function TransactionDetails({
       />
       {txExplorerLink && (
         <a
-          className="block text-sm text-gray-500 pl-px underline"
+          className={`block ${styles.textLink}`}
           href={txExplorerLink}
           target="_blank"
           rel="noopener noreferrer"
@@ -197,9 +199,44 @@ function TransactionDetails({
 
 function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   return (
-    <div className="py-5 flex flex-col items-center text-gray-500 text-center">
-      <div className="max-w-xs">{children}</div>
+    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 text-center">
+      <div className="max-w-sm">{children}</div>
     </div>
+  );
+}
+
+function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
+  const [isOpen, setIsOpen] = useState(false);
+  if (!debugResult?.calldataDetails) return null;
+  const { contract, handleCalldata } = debugResult.calldataDetails;
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)} className={`mt-5 ${styles.textLink}`}>
+        View calldata details
+      </button>
+      <Modal
+        isOpen={isOpen}
+        title="Message Delivery Calldata"
+        close={() => setIsOpen(false)}
+        maxWidth="max-w-sm sm:max-w-md"
+      >
+        <div className="mt-2 flex flex-col space-y-3.5">
+          <p className="text-sm">
+            {`The last step of message delivery is the recipient contract's 'handle' function. If the handle reverting, try debugging it with `}
+            <a
+              className={`${styles.textLink} any:text-blue-500`}
+              href={links.tenderlySimDocs}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Tenderly.
+            </a>
+          </p>
+          <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
+          <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
+        </div>
+      </Modal>
+    </>
   );
 }
 
@@ -207,4 +244,9 @@ const helpText = {
   origin: 'Info about the transaction that initiated the message placement into the outbox.',
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',
+};
+
+const styles = {
+  textLink:
+    'text-sm text-gray-500 hover:text-gray-600 active:text-gray-700 underline underline-offset-1 transition-all',
 };

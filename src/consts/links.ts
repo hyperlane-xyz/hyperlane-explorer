@@ -7,4 +7,6 @@ export const links = {
   jobs: 'https://jobs.lever.co/Hyperlane',
   twitter: 'https://twitter.com/hyperlane_xyz',
   blog: 'https://medium.com/hyperlane',
+  tenderlySimDocs:
+    'https://docs.tenderly.co/simulations-and-forks/how-to-simulate-a-transaction/using-simulation-ui',
 };

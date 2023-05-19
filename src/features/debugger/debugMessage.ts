@@ -43,6 +43,8 @@ export async function debugMessage(
   }: Message,
 ): Promise<MessageDebugResult> {
   logger.debug(`Debugging message id: ${msgId}`);
+
+  // Prepare some useful data/encodings
   const messageBytes = utils.formatMessage(
     MAILBOX_VERSION,
     nonce,
@@ -52,11 +54,13 @@ export async function debugMessage(
     recipient,
     body,
   );
-
   const destName = multiProvider.tryGetChainName(destDomain)!;
   const originProvider = multiProvider.getProvider(originDomain);
   const destProvider = multiProvider.getProvider(destDomain);
   const senderBytes = utils.addressToBytes32(sender);
+
+  // Create a bag to hold all the useful info collected along the way
+  const details: Omit<MessageDebugResult, 'status' | 'description'> = {};
 
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
@@ -72,7 +76,7 @@ export async function debugMessage(
     body,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
-  const gasEstimate = deliveryResult.gasEstimate;
+  else details.calldataDetails = deliveryResult.calldataDetails;
 
   const ismCheckResult = await checkMultisigIsmEmpty(
     recipient,
@@ -80,24 +84,23 @@ export async function debugMessage(
     destMailbox,
     destProvider,
   );
-  if (ismCheckResult.status && ismCheckResult.description) return ismCheckResult;
-  const ismDetails = ismCheckResult.ismDetails;
+  if (ismCheckResult.status && ismCheckResult.description) return { ...ismCheckResult, ...details };
+  else details.ismDetails = ismCheckResult.ismDetails;
 
   const gasCheckResult = await tryCheckIgpGasFunded(
     msgId,
     originProvider,
-    gasEstimate,
+    deliveryResult.gasEstimate,
     totalGasAmount,
   );
   if (gasCheckResult?.status && gasCheckResult?.description)
-    return { ...gasCheckResult, ismDetails };
-  const gasDetails = gasCheckResult?.gasDetails;
+    return { ...gasCheckResult, ...details };
+  else details.gasDetails = gasCheckResult?.gasDetails;
 
   logger.debug(`No errors found debugging message id: ${msgId}`);
   return {
     ...noErrorFound(),
-    gasDetails,
-    ismDetails,
+    ...details,
   };
 }
 
@@ -128,6 +131,12 @@ async function debugMessageDelivery(
   body: string,
 ) {
   const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
+  const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
+    originDomain,
+    senderBytes,
+    body,
+  ]);
+  const calldataDetails = { handleCalldata, contract: recipient };
   try {
     // TODO add special case for Arbitrum:
     // TODO account for mailbox handling gas overhead
@@ -136,14 +145,12 @@ async function debugMessageDelivery(
       originDomain,
       senderBytes,
       body,
-      {
-        from: destMailbox,
-      },
+      { from: destMailbox },
     );
     logger.debug(
       `Calling recipient handle function from the inbox does not revert. Gas: ${deliveryGasEst.toString()}`,
     );
-    return { gasEstimate: deliveryGasEst.toString() };
+    return { gasEstimate: deliveryGasEst.toString(), calldataDetails };
   } catch (err: any) {
     logger.info('Estimate gas call failed:', err);
     const errorReason = extractReasonString(err);
@@ -155,6 +162,7 @@ async function debugMessageDelivery(
       return {
         status: MessageDebugStatus.RecipientNotHandler,
         description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        calldataDetails,
       };
     }
 
@@ -163,12 +171,14 @@ async function debugMessageDelivery(
       return {
         status: MessageDebugStatus.IcaCallFailure,
         description: icaCallErr,
+        calldataDetails,
       };
     }
 
     return {
       status: MessageDebugStatus.HandleCallFailure,
       description: errorReason,
+      calldataDetails,
     };
   }
 }
