@@ -19,6 +19,10 @@ export interface MessageDebugResult {
     ismAddress: Address;
     moduleType: IsmModuleTypes;
   };
+  calldataDetails?: {
+    handleCalldata: HexString;
+    contract: Address;
+  };
 }
 
 export interface GasPayment {

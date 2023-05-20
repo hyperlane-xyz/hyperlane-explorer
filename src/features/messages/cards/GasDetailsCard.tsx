@@ -11,7 +11,9 @@ import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
 import { BigNumberMax, fromWei } from '../../../utils/amount';
 import { logger } from '../../../utils/logger';
+import { toTitleCase } from '../../../utils/string';
 import { GasPayment } from '../../debugger/types';
+import { useMultiProvider } from '../../providers/multiProvider';
 
 import { KeyValueRow } from './KeyValueRow';
 
@@ -21,13 +23,18 @@ interface Props {
   blur: boolean;
 }
 
-const unitOptions = [
-  { value: 'ether', display: 'Eth' },
-  { value: 'gwei', display: 'Gwei' },
-  { value: 'wei', display: 'Wei' },
-];
-
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
+  const multiProvider = useMultiProvider();
+  const unitOptions = useMemo(() => {
+    const originMetadata = multiProvider.tryGetChainMetadata(message.originChainId);
+    const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
+    return [
+      { value: 'ether', display: toTitleCase(nativeCurrencyName) },
+      { value: 'gwei', display: 'Gwei' },
+      { value: 'wei', display: 'Wei' },
+    ];
+  }, [message, multiProvider]);
+
   const [unit, setUnit] = useState(unitOptions[0].value);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
@@ -76,7 +83,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       <p className="text-sm">
         Interchain gas payments are required to fund message delivery on the destination chain.{' '}
         <a
-          href={`${links.docs}/docs/build-with-hyperlane/guides/paying-for-interchain-gas`}
+          href={`${links.docs}/docs/protocol/interchain-gas-payments`}
           target="_blank"
           rel="noopener noreferrer"
           className="cursor-pointer text-blue-500 hover:text-blue-400 active:text-blue-300 transition-all"
