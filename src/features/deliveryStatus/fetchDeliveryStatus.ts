@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import type { ChainConfig } from '../chains/chainConfig';
 import { getContractAddress } from '../chains/utils';
-import { debugExplorerMessage } from '../debugger/debugMessage';
+import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 
 import {
@@ -61,20 +61,14 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const {
-      status: debugStatus,
-      details: debugDetails,
-      gasDetails,
-    } = await debugExplorerMessage(multiProvider, customChainConfigs, message);
+    const debugResult = await debugMessage(multiProvider, customChainConfigs, message);
     const messageStatus =
-      debugStatus === MessageDebugStatus.NoErrorsFound
+      debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending
         : MessageStatus.Failing;
     const result: MessageDeliveryPendingResult | MessageDeliveryFailingResult = {
       status: messageStatus,
-      debugStatus,
-      debugDetails,
-      gasDetails,
+      debugResult,
     };
     return result;
   }

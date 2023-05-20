@@ -2,12 +2,19 @@
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import { IMessageRecipient__factory, InterchainGasPaymaster__factory } from '@hyperlane-xyz/core';
+import {
+  IInterchainSecurityModule__factory,
+  IMailbox__factory,
+  IMessageRecipient__factory,
+  IMultisigIsm__factory,
+  InterchainGasPaymaster__factory,
+} from '@hyperlane-xyz/core';
 import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { utils } from '@hyperlane-xyz/utils';
 
+import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
-import { trimLeading0x } from '../../utils/addresses';
+import { isValidAddress, trimLeading0x } from '../../utils/addresses';
 import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { trimToLength } from '../../utils/string';
@@ -15,37 +22,46 @@ import type { ChainConfig } from '../chains/chainConfig';
 import { getContractAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
-import { GasPayment, MessageDebugDetails, MessageDebugStatus } from './types';
+import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 
-export async function debugExplorerMessage(
+export async function debugMessage(
   multiProvider: MultiProvider,
   customChainConfigs: ChainMap<ChainConfig>,
-  message: Message,
-): Promise<MessageDebugDetails> {
-  const {
+  {
     msgId,
+    nonce,
     sender,
     recipient,
     originDomainId: originDomain,
     destinationDomainId: destDomain,
     body,
     totalGasAmount,
-  } = message;
+  }: Message,
+): Promise<MessageDebugResult> {
   logger.debug(`Debugging message id: ${msgId}`);
+  const messageBytes = utils.formatMessage(
+    MAILBOX_VERSION,
+    nonce,
+    originDomain,
+    sender,
+    destDomain,
+    recipient,
+    body,
+  );
 
   const destName = multiProvider.tryGetChainName(destDomain)!;
   const originProvider = multiProvider.getProvider(originDomain);
   const destProvider = multiProvider.getProvider(destDomain);
+  const senderBytes = utils.addressToBytes32(sender);
 
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
   const destMailbox = getContractAddress(customChainConfigs, destName, 'mailbox');
-  const senderBytes = utils.addressToBytes32(sender);
   const deliveryResult = await debugMessageDelivery(
     originDomain,
     destMailbox,
@@ -55,8 +71,17 @@ export async function debugExplorerMessage(
     senderBytes,
     body,
   );
-  if (deliveryResult.status && deliveryResult.details) return deliveryResult;
+  if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   const gasEstimate = deliveryResult.gasEstimate;
+
+  const ismCheckResult = await checkMultisigIsmEmpty(
+    recipient,
+    messageBytes,
+    destMailbox,
+    destProvider,
+  );
+  if (ismCheckResult.status && ismCheckResult.description) return ismCheckResult;
+  const ismDetails = ismCheckResult.ismDetails;
 
   const gasCheckResult = await tryCheckIgpGasFunded(
     msgId,
@@ -64,10 +89,16 @@ export async function debugExplorerMessage(
     gasEstimate,
     totalGasAmount,
   );
-  if (gasCheckResult.status && gasCheckResult.details) return gasCheckResult;
+  if (gasCheckResult?.status && gasCheckResult?.description)
+    return { ...gasCheckResult, ismDetails };
+  const gasDetails = gasCheckResult?.gasDetails;
 
   logger.debug(`No errors found debugging message id: ${msgId}`);
-  return { ...noErrorFound(), gasDetails: gasCheckResult.gasDetails };
+  return {
+    ...noErrorFound(),
+    gasDetails,
+    ismDetails,
+  };
 }
 
 async function isInvalidRecipient(provider: Provider, recipient: Address) {
@@ -76,7 +107,7 @@ async function isInvalidRecipient(provider: Provider, recipient: Address) {
     logger.info(`Recipient address ${recipient} is not a contract`);
     return {
       status: MessageDebugStatus.RecipientNotContract,
-      details: `Recipient address is ${recipient}. Ensure that the bytes32 value is not malformed.`,
+      description: `Recipient address is ${recipient}. Ensure that the bytes32 value is not malformed.`,
     };
   }
   return false;
@@ -123,7 +154,7 @@ async function debugMessageDelivery(
       logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
-        details: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
       };
     }
 
@@ -131,15 +162,57 @@ async function debugMessageDelivery(
     if (icaCallErr) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
-        details: icaCallErr,
+        description: icaCallErr,
       };
     }
 
     return {
       status: MessageDebugStatus.HandleCallFailure,
-      details: errorReason,
+      description: errorReason,
     };
   }
+}
+
+// TODO, this must check recursively for to handle aggregation/routing isms
+async function checkMultisigIsmEmpty(
+  recipientAddr: Address,
+  messageBytes: string,
+  destMailbox: Address,
+  destProvider: Provider,
+) {
+  const mailbox = IMailbox__factory.connect(destMailbox, destProvider);
+  const ismAddress = await mailbox.recipientIsm(recipientAddr);
+  if (!isValidAddress(ismAddress)) {
+    logger.error(
+      `Recipient ${recipientAddr} on mailbox ${destMailbox} does not have a valid ISM address: ${ismAddress}`,
+    );
+    throw new Error('Recipient ISM is not a valid address');
+  }
+  const ism = IInterchainSecurityModule__factory.connect(ismAddress, destProvider);
+  const moduleType = await ism.moduleType();
+
+  const ismDetails = { ismAddress, moduleType };
+  if (moduleType !== IsmModuleTypes.LEGACY_MULTISIG && moduleType !== IsmModuleTypes.MULTISIG) {
+    return { ismDetails };
+  }
+
+  const multisigIsm = IMultisigIsm__factory.connect(ismAddress, destProvider);
+  const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
+
+  if (!validators?.length) {
+    return {
+      status: MessageDebugStatus.MultisigIsmEmpty,
+      description: 'Validator list is empty, has the ISM been configured correctly?',
+      ismDetails,
+    };
+  } else if (threshold < 1) {
+    return {
+      status: MessageDebugStatus.MultisigIsmEmpty,
+      description: 'Threshold is less than 1, has the ISM been configured correctly?',
+      ismDetails,
+    };
+  }
+  return { ismDetails };
 }
 
 async function tryCheckIgpGasFunded(
@@ -150,11 +223,11 @@ async function tryCheckIgpGasFunded(
 ) {
   if (!deliveryGasEstimate) {
     logger.warn('No gas estimate provided, skipping IGP check');
-    return {};
+    return null;
   }
   try {
     let gasAlreadyFunded = BigNumber.from(0);
-    let gasDetails: MessageDebugDetails['gasDetails'] = {
+    let gasDetails: MessageDebugResult['gasDetails'] = {
       deliveryGasEstimate,
     };
     if (totalGasAmount && BigNumber.from(totalGasAmount).gt(0)) {
@@ -179,13 +252,13 @@ async function tryCheckIgpGasFunded(
     if (gasAlreadyFunded.lte(0)) {
       return {
         status: MessageDebugStatus.GasUnderfunded,
-        details: 'Origin IGP has not received any gas payments',
+        description: 'Origin IGP has not received any gas payments',
         gasDetails,
       };
     } else if (gasAlreadyFunded.lte(deliveryGasEstimate)) {
       return {
         status: MessageDebugStatus.GasUnderfunded,
-        details: `Origin IGP gas amount is ${gasAlreadyFunded.toString()} but requires ${deliveryGasEstimate}`,
+        description: `Origin IGP gas amount is ${gasAlreadyFunded.toString()} but requires ${deliveryGasEstimate}`,
         gasDetails,
       };
     } else {
@@ -193,7 +266,7 @@ async function tryCheckIgpGasFunded(
     }
   } catch (error) {
     logger.warn('Error estimating delivery gas cost for message', error);
-    return {};
+    return null;
   }
 }
 
@@ -311,9 +384,9 @@ function extractReasonString(rawError: any) {
   }
 }
 
-function noErrorFound(): MessageDebugDetails {
+function noErrorFound(): MessageDebugResult {
   return {
     status: MessageDebugStatus.NoErrorsFound,
-    details: 'Message may just need more time to be processed',
+    description: 'Message may just need more time to be processed',
   };
 }

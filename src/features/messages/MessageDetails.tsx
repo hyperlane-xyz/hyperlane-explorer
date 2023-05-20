@@ -15,6 +15,7 @@ import { useMultiProvider } from '../providers/multiProvider';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
+import { IsmDetailsCard } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
 import { useIsIcaMessage } from './ica';
@@ -67,7 +68,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   // more recent updates and possibly debug info
   const {
     messageWithDeliveryStatus: message,
-    debugInfo,
+    debugResult,
     isDeliveryStatusFetching,
   } = useMessageDeliveryStatus({
     message: _message,
@@ -103,7 +104,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           chainId={destChainId}
           status={status}
           transaction={destination}
-          debugInfo={debugInfo}
+          debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={message.isPiMsg}
           blur={blur}
@@ -112,9 +113,12 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
-          igpPayments={debugInfo?.gasDetails?.contractToPayments}
+          igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
+        {debugResult?.ismDetails && (
+          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+        )}
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>

@@ -7,5 +7,6 @@ export const debugStatusToDesc: Record<MessageDebugStatus, string> = {
     'Recipient bytecode is missing handle function selector',
   [MessageDebugStatus.IcaCallFailure]: 'A call from the ICA account failed',
   [MessageDebugStatus.HandleCallFailure]: 'Error calling handle on the recipient contract',
+  [MessageDebugStatus.MultisigIsmEmpty]: 'ISM has no validators and/or no quorum threshold',
   [MessageDebugStatus.GasUnderfunded]: 'Insufficient interchain gas has been paid for delivery',
 };
