@@ -15,7 +15,7 @@ import { parseMessageQueryResult, parseMessageStubResult } from '../queries/pars
 
 const SEARCH_AUTO_REFRESH_DELAY = 15000;
 const MSG_AUTO_REFRESH_DELAY = 10000;
-const LATEST_QUERY_LIMIT = 12;
+const LATEST_QUERY_LIMIT = 30;
 const SEARCH_QUERY_LIMIT = 50;
 
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
