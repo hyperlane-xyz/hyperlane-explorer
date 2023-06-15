@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@ortege/sdk';
 
 import { Message } from '../../../types';
 import { ensureLeading0x } from '../../../utils/addresses';

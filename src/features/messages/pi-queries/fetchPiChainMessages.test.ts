@@ -1,4 +1,4 @@
-import { chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { chainMetadata, hyperlaneEnvironments } from '@ortege/sdk';
 
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';

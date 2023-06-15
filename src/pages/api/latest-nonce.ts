@@ -2,7 +2,7 @@ import { BigNumber } from 'ethers';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import NextCors from 'nextjs-cors';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@ortege/sdk';
 
 import { Environment } from '../../consts/environments';
 import { getChainEnvironment, isPiChain } from '../../features/chains/utils';

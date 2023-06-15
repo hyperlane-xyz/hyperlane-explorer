@@ -1,10 +1,10 @@
 import {
-  type ChainMap,
-  type ChainName,
-  type MultiProvider,
-  chainIdToMetadata,
-  hyperlaneContractAddresses,
-} from '@hyperlane-xyz/sdk';
+    chainIdToMetadata,
+    hyperlaneContractAddresses,
+    type ChainMap,
+    type ChainName,
+    type MultiProvider,
+} from '@ortege/sdk';
 
 import { Environment } from '../../consts/environments';
 import { toTitleCase } from '../../utils/string';

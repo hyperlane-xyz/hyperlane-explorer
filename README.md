@@ -1,6 +1,6 @@
-# Hyperlane Explorer App
+# Ortege Explorer App
 
-An interchain explorer for the Hyperlane protocol and network.
+An interchain explorer for the Ortege protocol and network.
 
 ## Setup
 
@@ -31,4 +31,4 @@ yarn lint
 
 ## Learn more
 
-For more information, see the [Hyperlane documentation](https://docs.hyperlane.xyz/hyperlane-docs/).
+For more information, see the [Ortege documentation](https://docs.hyperlane.xyz/hyperlane-docs/).

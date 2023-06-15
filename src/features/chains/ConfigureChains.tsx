@@ -1,6 +1,6 @@
 import { ChangeEventHandler, useState } from 'react';
 
-import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@ortege/sdk';
 
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';

@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { BigNumber, providers, utils } from 'ethers';
 import { useMemo } from 'react';
 
-import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
-import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { InterchainAccountRouter__factory } from '@ortege/core';
+import { hyperlaneEnvironments } from '@ortege/sdk';
 
 import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';

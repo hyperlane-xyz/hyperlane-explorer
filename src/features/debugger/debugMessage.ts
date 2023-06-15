@@ -8,9 +8,9 @@ import {
   IMessageRecipient__factory,
   IMultisigIsm__factory,
   InterchainGasPaymaster__factory,
-} from '@hyperlane-xyz/core';
-import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
-import { utils } from '@hyperlane-xyz/utils';
+} from '@ortege/core';
+import type { ChainMap, MultiProvider } from '@ortege/sdk';
+import { utils } from '@ortege/utils';
 
 import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';

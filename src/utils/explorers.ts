@@ -1,6 +1,6 @@
 import { BigNumber, providers } from 'ethers';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@ortege/sdk';
 
 import { config } from '../consts/config';
 import type { ExtendedLog } from '../types';

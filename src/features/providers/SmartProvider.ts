@@ -1,6 +1,6 @@
 import { providers } from 'ethers';
 
-import { ChainMetadata, ExplorerFamily } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ExplorerFamily } from '@ortege/sdk';
 
 import { logger } from '../../utils/logger';
 import { timeout } from '../../utils/timeout';
@@ -9,10 +9,10 @@ import { HyperlaneEtherscanProvider } from './HyperlaneEtherscanProvider';
 import { HyperlaneJsonRpcProvider } from './HyperlaneJsonRpcProvider';
 import { IProviderMethods, ProviderMethod } from './ProviderMethods';
 import {
-  ChainMetadataWithRpcConnectionInfo,
-  ProviderPerformResult,
-  ProviderStatus,
-  ProviderTimeoutResult,
+    ChainMetadataWithRpcConnectionInfo,
+    ProviderPerformResult,
+    ProviderStatus,
+    ProviderTimeoutResult,
 } from './types';
 
 const PROVIDER_STAGGER_DELAY_MS = 1000; // 1 seconds

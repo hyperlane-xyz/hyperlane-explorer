@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@ortege/sdk';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { MessageStatus, MessageStub } from '../../types';

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
-import { utils } from '@hyperlane-xyz/utils';
+import { utils } from '@ortege/utils';
 
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';

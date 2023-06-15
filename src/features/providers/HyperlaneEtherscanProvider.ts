@@ -1,6 +1,6 @@
 import { providers } from 'ethers';
 
-import { ChainMetadata, objFilter } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, objFilter } from '@ortege/sdk';
 
 import { logger } from '../../utils/logger';
 import { sleep } from '../../utils/timeout';

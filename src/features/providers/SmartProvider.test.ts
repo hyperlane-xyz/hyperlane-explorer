@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-import { ChainMetadata, chainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, chainMetadata } from '@ortege/sdk';
 
 import { areAddressesEqual } from '../../utils/addresses';
 import { logger } from '../../utils/logger';

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { z } from 'zod';
 
-import { ChainMap, ChainMetadata, ChainMetadataSchema, objMerge } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, ChainMetadataSchema, objMerge } from '@ortege/sdk';
 
 import { useStore } from '../../store';
 import { fromBase64 } from '../../utils/base64';

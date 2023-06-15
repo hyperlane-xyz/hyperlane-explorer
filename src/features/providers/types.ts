@@ -1,6 +1,6 @@
 import type { utils } from 'ethers';
 
-import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@ortege/sdk';
 
 export type RpcConfigWithConnectionInfo = ChainMetadata['publicRpcUrls'][number] & {
   connection?: utils.ConnectionInfo;

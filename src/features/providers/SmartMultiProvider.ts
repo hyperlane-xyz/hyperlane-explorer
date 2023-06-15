@@ -1,10 +1,10 @@
 import {
-  ChainMap,
-  ChainMetadata,
-  ChainName,
-  MultiProvider,
-  chainMetadata,
-} from '@hyperlane-xyz/sdk';
+    ChainMap,
+    ChainMetadata,
+    ChainName,
+    MultiProvider,
+    chainMetadata,
+} from '@ortege/sdk';
 
 import { logger } from '../../utils/logger';
 import type { ChainConfig } from '../chains/chainConfig';

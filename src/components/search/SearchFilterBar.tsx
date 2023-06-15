@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@ortege/sdk';
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../features/providers/multiProvider';

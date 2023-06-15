@@ -1,8 +1,8 @@
 import { BigNumber, constants, ethers, providers } from 'ethers';
 
-import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@hyperlane-xyz/core';
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { utils } from '@hyperlane-xyz/utils';
+import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@ortege/core';
+import { MultiProvider } from '@ortege/sdk';
+import { utils } from '@ortege/utils';
 
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { isValidAddress, isValidTransactionHash, normalizeAddress } from '../../../utils/addresses';

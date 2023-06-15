@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProvider } from '@ortege/sdk';
 
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
@@ -7,10 +7,10 @@ import { isPiChain } from '../../chains/utils';
 
 import { postgresByteaToString } from './encoding';
 import {
-  MessageEntry,
-  MessageStubEntry,
-  MessagesQueryResult,
-  MessagesStubQueryResult,
+    MessageEntry,
+    MessageStubEntry,
+    MessagesQueryResult,
+    MessagesStubQueryResult,
 } from './fragments';
 
 /**

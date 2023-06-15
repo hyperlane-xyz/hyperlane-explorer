@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, MultiProvider } from '@ortege/sdk';
 
 import { ChainConfig } from './features/chains/chainConfig';
 import { buildSmartProvider } from './features/providers/SmartMultiProvider';

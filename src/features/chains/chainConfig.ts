@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ChainMetadata, ChainMetadataSchema, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ChainMetadataSchema, MultiProvider } from '@ortege/sdk';
 
 import { logger } from '../../utils/logger';
 

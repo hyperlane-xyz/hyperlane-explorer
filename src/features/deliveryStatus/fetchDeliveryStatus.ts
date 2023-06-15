@@ -1,7 +1,7 @@
 import { constants } from 'ethers';
 
-import { IMailbox__factory } from '@hyperlane-xyz/core';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { IMailbox__factory } from '@ortege/core';
+import { ChainMap, MultiProvider } from '@ortege/sdk';
 
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
