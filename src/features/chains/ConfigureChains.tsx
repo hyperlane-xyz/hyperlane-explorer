@@ -1,6 +1,5 @@
-import { ChangeEventHandler, useState } from 'react';
-
 import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@ortege/sdk';
+import { ChangeEventHandler, useState } from 'react';
 
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
@@ -75,9 +74,9 @@ export function ConfigureChains() {
         <h4 className="text-gray-600">Mainnets:</h4>
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {mainnetChainsMetadata.map((c) => (
-            <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</span>
+            <div className="shrink-0 text-sm flex items-center" key={c?.name}>
+              <ChainLogo chainId={c?.chainId} size={15} color={true} background={false} />
+              <span className="ml-1.5">{getChainDisplayName(multiProvider, c?.chainId, true)}</span>
             </div>
           ))}
         </div>
@@ -86,9 +85,9 @@ export function ConfigureChains() {
         <h4 className="text-gray-600">Testnets:</h4>
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {testnetChainsMetadata.map((c) => (
-            <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <div className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</div>
+            <div className="shrink-0 text-sm flex items-center" key={c?.name}>
+              <ChainLogo chainId={c?.chainId} size={15} color={true} background={false} />
+              <div className="ml-1.5">{getChainDisplayName(multiProvider, c?.chainId, true)}</div>
             </div>
           ))}
         </div>

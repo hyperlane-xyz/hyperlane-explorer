@@ -5,13 +5,12 @@
 //   wallet,
 // } from '@rainbow-me/rainbowkit';
 // import '@rainbow-me/rainbowkit/styles.css';
+import '@ortege/widgets/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
-
-import '@hyperlane-xyz/widgets/styles.css';
 
 // import { WagmiConfig, configureChains, createClient as createWagmiClient } from 'wagmi';
 // import { publicProvider } from 'wagmi/providers/public';

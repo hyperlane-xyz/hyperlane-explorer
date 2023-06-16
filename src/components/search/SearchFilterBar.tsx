@@ -1,8 +1,7 @@
+import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@ortege/sdk';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-
-import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@ortege/sdk';
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../features/providers/multiProvider';
@@ -94,7 +93,7 @@ function ChainMultiSelector({
   const [checkedChains, setCheckedChains] = useState(
     value
       ? arrayToObject(value.split(','))
-      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId)),
+      : arrayToObject(mainnetAndTestChains.map((c) => c?.chainId)),
   );
 
   const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {

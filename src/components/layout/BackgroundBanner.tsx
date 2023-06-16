@@ -1,4 +1,4 @@
-import { WideChevron } from '@hyperlane-xyz/widgets';
+import { WideChevron } from '@ortege/widgets';
 
 import { useStore } from '../../store';
 import { classNameToColor } from '../../styles/Color';

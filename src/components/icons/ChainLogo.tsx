@@ -1,6 +1,5 @@
+import { ChainLogo as ChainLogoInner } from '@ortege/widgets';
 import { ComponentProps } from 'react';
-
-import { ChainLogo as ChainLogoInner } from '@hyperlane-xyz/widgets';
 
 import { getChainName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../features/providers/multiProvider';

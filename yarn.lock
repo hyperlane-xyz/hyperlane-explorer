@@ -1294,17 +1294,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:1.3.4":
-  version: 1.3.4
-  resolution: "@hyperlane-xyz/widgets@npm:1.3.4"
-  peerDependencies:
-    "@hyperlane-xyz/sdk": ^1.3.4
-    react: ^18
-    react-dom: ^18
-  checksum: 16a7447e9c0d767b2dabcb56f5450e3c376e1d6d58116228a052c7e1dd2442264dd7c2ac8bbd43ccd7c5601dd62ff664b58ec8e91cedbacfcff2573ce568d961
-  languageName: node
-  linkType: hard
-
 "@istanbuljs/load-nyc-config@npm:^1.0.0":
   version: 1.1.0
   resolution: "@istanbuljs/load-nyc-config@npm:1.1.0"
@@ -1985,14 +1974,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ortege/core@npm:1.3.6-beta0":
-  version: 1.3.6-beta0
-  resolution: "@ortege/core@npm:1.3.6-beta0"
+"@ortege/core@npm:1.3.7":
+  version: 1.3.7
+  resolution: "@ortege/core@npm:1.3.7"
   dependencies:
     "@openzeppelin/contracts": ^4.8.0
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-    "@ortege/utils": 1.3.6-beta0
-  checksum: 32380675387e3f1d89c8652b74fa484323afb051b1ac152f8b4e4e3c8a3b96dc3635c5e641f24d310bb5da210b5f1d8614140f96db39b814be2a57f483939661
+    "@ortege/utils": 1.3.6
+  checksum: be4e60d4c30bbbb7caaeea747cbb3af9315bd318afc50f180c045c7b59d70d2a98fdca73f53c69ade9659519183112deadff60c1847c9f2b06424072a9b29344
   languageName: node
   linkType: hard
 
@@ -2001,11 +1990,11 @@ __metadata:
   resolution: "@ortege/explorer@workspace:."
   dependencies:
     "@headlessui/react": ^1.7.11
-    "@hyperlane-xyz/widgets": 1.3.4
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
-    "@ortege/core": 1.3.6-beta0
-    "@ortege/sdk": 1.3.6-beta0
-    "@ortege/utils": 1.3.6-beta0
+    "@ortege/core": 1.3.7
+    "@ortege/sdk": 1.3.6
+    "@ortege/utils": 1.3.6
+    "@ortege/widgets": 1.3.6
     "@rainbow-me/rainbowkit": ^0.11.0
     "@tanstack/react-query": ^4.24.10
     "@trivago/prettier-plugin-sort-imports": ^4.0.0
@@ -2042,12 +2031,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ortege/sdk@npm:1.3.6-beta0":
-  version: 1.3.6-beta0
-  resolution: "@ortege/sdk@npm:1.3.6-beta0"
+"@ortege/sdk@npm:1.3.6":
+  version: 1.3.6
+  resolution: "@ortege/sdk@npm:1.3.6"
   dependencies:
-    "@ortege/core": 1.3.6-beta0
-    "@ortege/utils": 1.3.6-beta0
+    "@ortege/core": 1.3.7
+    "@ortege/utils": 1.3.6
     "@types/coingecko-api": ^1.0.10
     "@types/debug": ^4.1.7
     "@wagmi/chains": ^0.2.6
@@ -2056,16 +2045,27 @@ __metadata:
     debug: ^4.3.4
     ethers: ^5.7.2
     zod: ^3.21.2
-  checksum: d8b5e2095162e742c453a083e9322b234ffff88cb566ba9b5fce6f7ab7ed3e2bff6bc01f4b9168867e0f6e4915094b5a72dbc243057c957ebb328fee29c7c90f
+  checksum: 52086cb16742bd169c606602f261d3daf83b3d875f88f1f75a3a9e2df540f2fa256744c289d65234e6a9860d79b92594fb8aa8aa718e1431960edcd9a5e965a0
   languageName: node
   linkType: hard
 
-"@ortege/utils@npm:1.3.6-beta0":
-  version: 1.3.6-beta0
-  resolution: "@ortege/utils@npm:1.3.6-beta0"
+"@ortege/utils@npm:1.3.6":
+  version: 1.3.6
+  resolution: "@ortege/utils@npm:1.3.6"
   dependencies:
     ethers: ^5.7.2
-  checksum: 390a3a9719de13faa72ddbbd2a580dcc1c968e5a4899f8288691a59594b8a9a3c9d5c5683f749cce6e2e3d2f442fd0e07327762b3ba04d03513177735a737e74
+  checksum: 4532be5ef9e5345f6bebc1218a1cdfa098cde61d4ea690f5a0695e283ffeba874730598e52ded3b012bace6d1537682b6856dd82f12a148dba0e62da1e01f7c1
+  languageName: node
+  linkType: hard
+
+"@ortege/widgets@npm:1.3.6":
+  version: 1.3.6
+  resolution: "@ortege/widgets@npm:1.3.6"
+  peerDependencies:
+    "@ortege/sdk": ">=1.3.6"
+    react: ^18
+    react-dom: ^18
+  checksum: 054a5f07420ca7382ee4de9a5e096b4e6265bcbe8daf32fb37475be1a3f54a890738c070a6ba5239f98bd786b503f52d5d47c8a76767b92f6fac7854caad0046
   languageName: node
   linkType: hard
 
