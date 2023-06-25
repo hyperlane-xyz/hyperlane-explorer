@@ -4,8 +4,8 @@ import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import SearchOffIcon from '../../images/icons/search-off.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
-import { Fade } from '../animation/Fade';
-import { Spinner } from '../animation/Spinner';
+import { Fade } from '../animations/Fade';
+import { Spinner } from '../animations/Spinner';
 
 export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetching?: boolean }) {
   return (

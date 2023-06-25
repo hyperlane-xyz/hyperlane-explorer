@@ -1,6 +1,6 @@
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
-import { Spinner } from '../../../components/animation/Spinner';
+import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
@@ -76,14 +76,16 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Pending) {
     content = (
       <DeliveryStatus>
-        <div>Delivery to destination chain still in progress.</div>
-        {isPiMsg && (
-          <div className="mt-2 text-gray-700 text-sm max-w-xs">
-            Please ensure a relayer is running for this chain.
-          </div>
-        )}
-        <Spinner classes="mt-4 scale-75" />
-        <CallDataModal debugResult={debugResult} />
+        <div className="flex flex-col items-center">
+          <div>Delivery to destination chain still in progress.</div>
+          {isPiMsg && (
+            <div className="mt-2 text-gray-700 text-sm max-w-xs">
+              Please ensure a relayer is running for this chain.
+            </div>
+          )}
+          <Spinner classes="my-4 scale-75" />
+          <CallDataModal debugResult={debugResult} />
+        </div>
       </DeliveryStatus>
     );
   } else {

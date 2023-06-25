@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
-import { Spinner } from '../../components/animation/Spinner';
+import { Spinner } from '../../components/animations/Spinner';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';

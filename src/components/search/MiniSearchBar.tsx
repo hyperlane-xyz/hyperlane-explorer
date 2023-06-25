@@ -22,15 +22,15 @@ export function MiniSearchBar() {
   return (
     <Formik<FormValues> initialValues={initialValues} onSubmit={onSubmit}>
       <Form>
-        <div className="flex items-center bg-white rounded shadow">
+        <div className="p-1 flex items-center bg-white ring-4 ring-blue-400 hover:ring-blue-200 rounded-full transition-all">
           <Field
             id="search"
             name="search"
             type="search"
             placeholder="Hash or address"
-            className="w-32 focus:w-64 py-2 px-2.5 h-8 text-sm rounded placeholder:text-gray-500 focus:outline-none transition-[width] ease-in-out duration-500"
+            className="w-32 focus:w-64 py-2 px-2.5 h-8 text-sm rounded-full placeholder:text-gray-500 focus:outline-none transition-[width] ease-in-out duration-500"
           />
-          <div className="h-8 w-8 flex items-center justify-center rounded bg-gray-200">
+          <div className="h-8 w-8 flex items-center justify-center rounded-full bg-pink-500">
             <IconButton
               type="submit"
               imgSrc={SearchIcon}

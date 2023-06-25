@@ -1,37 +1,54 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { PropsWithChildren, useEffect, useState } from 'react';
 
 import { links } from '../../consts/links';
-import BookIcon from '../../images/icons/book.svg';
-import DatabaseIcon from '../../images/icons/database.svg';
-import GearIcon from '../../images/icons/gear.svg';
-import HamburgerIcon from '../../images/icons/hamburger.svg';
-import HouseIcon from '../../images/icons/house.svg';
-import InfoIcon from '../../images/icons/info-circle.svg';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
+import { Color } from '../../styles/Color';
+import { HyperlaneWideChevron } from '../icons/Chevron';
 import { DropdownMenu } from '../layout/Dropdown';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
+  // For dynamic sizing on scroll
+  const [animateHeader, setAnimateHeader] = useState(false);
+  useEffect(() => {
+    const listener = () => {
+      if (window.scrollY > 100) {
+        setAnimateHeader(true);
+      } else setAnimateHeader(false);
+    };
+    window.addEventListener('scroll', listener);
+    return () => {
+      window.removeEventListener('scroll', listener);
+    };
+  }, []);
+
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   const navLinkClass = (path?: string) =>
-    path && pathName === path
-      ? styles.navLink + ' text-blue-500'
-      : styles.navLink + ' text-gray-600';
+    path && pathName === path ? styles.navLink + ' underline' : styles.navLink;
 
   return (
-    <header className="px-2 pt-4 pb-3 sm:pt-5 sm:px-6 lg:pr-14 w-full">
+    <header
+      className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-500 ${
+        animateHeader ? 'py-1 border-b border-blue-400' : 'py-4 sm:py-5'
+      }`}
+    >
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center">
-          <div className="flex items-center scale-90 sm:scale-100">
-            <Image src={Logo} width={22} alt="" />
-            <Image src={Name} width={110} alt="Hyperlane" className="mt-0.5 ml-2" />
-            <Image src={Explorer} width={108} alt="Explorer" className="mt-0.5 ml-2" />
+          <div
+            className={`flex items-center ${
+              animateHeader && 'scale-90'
+            } transition-all ease-in-out duration-500`}
+          >
+            <Image src={Logo} alt="" className="h-8 sm:h-10 w-auto" />
+            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-8 w-auto mt-1 ml-3" />
+            <Image src={Explorer} alt="Explorer" className="h-7 sm:h-8 w-auto mt-1 ml-2.5" />
           </div>
         </Link>
         <nav
@@ -59,39 +76,38 @@ export function Header({ pathName }: { pathName: string }) {
         {/* Dropdown menu, used on mobile */}
         <div className="relative flex item-center sm:hidden mr-2">
           <DropdownMenu
-            buttonContent={<Image src={HamburgerIcon} width={22} height={22} alt="..." />}
+            ButtonContent={DropdownButton}
             buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
             buttonTitle="Options"
             menuItems={[
-              <Link href="/" className={styles.dropdownOption} key="dropdown-item-home">
-                <DropdownItemContent icon={HouseIcon} text="Home" />
-              </Link>,
-              <Link href="/settings" className={styles.dropdownOption} key="dropdown-item-home">
-                <DropdownItemContent icon={GearIcon} text="Settings" />
-              </Link>,
-              <Link href="/api-docs" className={styles.dropdownOption} key="dropdown-item-api">
-                <DropdownItemContent icon={DatabaseIcon} text="API" />
-              </Link>,
-              <a
-                className={styles.dropdownOption}
-                target="_blank"
-                href={links.docs}
-                rel="noopener noreferrer"
-                key="dropdown-item-docs"
-              >
-                <DropdownItemContent icon={BookIcon} text="Docs" />
-              </a>,
-              <a
-                className={styles.dropdownOption}
-                target="_blank"
-                href={links.home}
-                rel="noopener noreferrer"
-                key="dropdown-item-about"
-              >
-                <DropdownItemContent icon={InfoIcon} text="About" />
-              </a>,
+              (c: Fn) => (
+                <MobileNavLink href="/" closeDropdown={c} key="Home">
+                  Home
+                </MobileNavLink>
+              ),
+              (c: Fn) => (
+                <MobileNavLink href="/settings" closeDropdown={c} key="Settings">
+                  Settings
+                </MobileNavLink>
+              ),
+              (c: Fn) => (
+                <MobileNavLink href="/api" closeDropdown={c} key="API">
+                  API
+                </MobileNavLink>
+              ),
+              (c: Fn) => (
+                <MobileNavLink href={links.docs} closeDropdown={c} key="Docs">
+                  Docs
+                </MobileNavLink>
+              ),
+              (c: Fn) => (
+                <MobileNavLink href={links.home} closeDropdown={c} key="About">
+                  About
+                </MobileNavLink>
+              ),
             ]}
-            menuClasses="p-2 w-32 right-0"
+            menuClasses="pt-8 px-8"
+            isFullscreen={true}
           />
         </div>
       </div>
@@ -99,18 +115,56 @@ export function Header({ pathName }: { pathName: string }) {
   );
 }
 
-function DropdownItemContent({ icon, text }: { icon: any; text: string }) {
+function DropdownButton({ isOpen }: { isOpen: boolean }) {
   return (
-    <>
-      <Image src={icon} width={18} height={18} className="opacity-70 mr-2.5" alt="" />
-      <span>{text}</span>
-    </>
+    <div className="px-4 py-1 flex flex-col items-center border border-white bg-pink-500 rounded-lg">
+      <HyperlaneWideChevron
+        width={10}
+        height={14}
+        direction={isOpen ? 'n' : 's'}
+        color={Color.primaryWhite}
+        classes="transition-all"
+      />
+      <HyperlaneWideChevron
+        width={10}
+        height={14}
+        direction={isOpen ? 'n' : 's'}
+        color={Color.primaryWhite}
+        classes="-mt-1 transition-all"
+      />
+      <HyperlaneWideChevron
+        width={10}
+        height={14}
+        direction={isOpen ? 'n' : 's'}
+        color={Color.primaryWhite}
+        classes="-mt-1 transition-all"
+      />
+    </div>
+  );
+}
+
+function MobileNavLink({
+  href,
+  closeDropdown,
+  children,
+}: PropsWithChildren<{ href: string; closeDropdown?: () => void }>) {
+  const isExternal = href.startsWith('http');
+  return (
+    <Link
+      href={href}
+      className="py-4 pl-3 flex items-center cursor-pointer hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[2px] transition-all"
+      onClick={closeDropdown}
+      rel={isExternal ? 'noopener noreferrer' : undefined}
+      target={isExternal ? '_blank' : undefined}
+    >
+      <span className="text-2xl font-medium text-white capitalize">{children}</span>
+    </Link>
   );
 }
 
 const styles = {
   navLink:
-    'pt-px flex items-center tracking-wide text-[0.95rem] hover:underline hover:opacity-80 active:opacity-70 decoration-2 underline-offset-[6px] transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[2px] transition-all',
   dropdownOption:
-    'flex items-center cursor-pointer p-2 mt-1 rounded text-gray-600 hover:underline decoration-2 underline-offset-4 transition-all',
+    'flex items-center cursor-pointer p-2 mt-1 rounded text-blue-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };

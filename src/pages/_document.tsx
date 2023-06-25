@@ -1,8 +1,10 @@
 import { Head, Html, Main, NextScript } from 'next/document';
 
+import { links } from '../consts/links';
+
 export default function Document() {
   return (
-    <Html>
+    <Html lang="en">
       <Head>
         <meta charSet="utf-8" />
 
@@ -16,23 +18,26 @@ export default function Document() {
         <meta name="theme-color" content="#ffffff" />
 
         <meta name="application-name" content="Hyperlane Explorer" />
-        <meta name="keywords" content="Hyperlane Explorer Scan Interchain App" />
+        <meta
+          name="keywords"
+          content="Hyperlane Explorer Scan Interchain Permissionless Interoperability Network Blockchain"
+        />
         <meta
           name="description"
-          content="An interchain explorer for the Hyperlane protocol and network"
+          content="The official interchain explorer for the Hyperlane protocol and network."
         />
 
         <meta name="HandheldFriendly" content="true" />
         <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
-        <meta property="og:url" content="https://explorer.hyperlane.xyz" />
+        <meta property="og:url" content={links.baseUrl} />
         <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://explorer.hyperlane.xyz/icon.png" />
+        <meta property="og:image" content={links.baseUrl + '/logo.png'} />
         <meta
           property="og:description"
-          content="An interchain explorer for the Hyperlane protocol and network"
+          content="The official interchain explorer for the Hyperlane protocol and network."
         />
       </Head>
       <body className="text-black">

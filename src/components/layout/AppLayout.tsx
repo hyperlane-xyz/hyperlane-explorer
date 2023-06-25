@@ -17,13 +17,18 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
-      <div id="app-content" className="h-full min-h-screen w-full min-w-screen">
+      <div
+        id="app-content"
+        className="w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
+      >
         {/* <InfoBanner /> */}
-        <div className="max-w-5xl mx-auto flex flex-col justify-between min-h-screen">
-          <Header pathName={pathName} />
-          <main className="w-full grow">{children}</main>
-          <Footer />
+        <Header pathName={pathName} />
+        <div className="max-w-5xl mx-auto grow">
+          <main style={styles.container} className="min-h-full pt-2 ">
+            {children}
+          </main>
         </div>
+        <Footer />
       </div>
     </>
   );
@@ -34,3 +39,9 @@ function getHeadTitle(pathName: string) {
   if (segments.length <= 1 || !segments[1]) return 'Home';
   else return toTitleCase(segments[1]);
 }
+
+const styles = {
+  container: {
+    width: 'min(900px,96vw)',
+  },
+};

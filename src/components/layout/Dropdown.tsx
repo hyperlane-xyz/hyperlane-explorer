@@ -1,44 +1,40 @@
 import { Menu, Popover, Transition } from '@headlessui/react';
-import { Fragment, ReactElement, ReactNode } from 'react';
+import { Fragment, PropsWithChildren, ReactElement, ReactNode } from 'react';
 
 interface MenuProps {
-  buttonContent: ReactNode;
+  ButtonContent: (p: { isOpen: boolean }) => ReactElement;
   buttonClasses?: string;
   buttonTitle?: string;
-  menuItems: ReactNode[];
+  menuItems: Array<(close: () => void) => ReactElement>;
   menuClasses?: string;
+  isFullscreen?: boolean;
 }
 
 // Uses Headless menu, which auto-closes on any item click
 export function DropdownMenu({
-  buttonContent,
+  ButtonContent,
   buttonClasses,
   buttonTitle,
   menuItems,
   menuClasses,
+  isFullscreen,
 }: MenuProps) {
+  const menuItemsClass = isFullscreen
+    ? `z-50 fixed left-0 right-0 top-20 bottom-0 w-screen bg-blue-500 focus:outline-none ${menuClasses}`
+    : `z-50 absolute -right-1.5 mt-3 origin-top-right rounded-md bg-white shadow-md drop-shadow-md focus:outline-none ${menuClasses}`;
+
   return (
     <Menu as="div" className="relative">
       <Menu.Button title={buttonTitle} className={`flex ${buttonClasses}`}>
-        {buttonContent}
+        {({ open }) => <ButtonContent isOpen={open} />}
       </Menu.Button>
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-200"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-100"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
-      >
-        <Menu.Items
-          className={`z-50 absolute -right-1.5 mt-3 origin-top-right rounded-md bg-white shadow-md drop-shadow-md ring-1 ring-black ring-opacity-5 focus:outline-none ${menuClasses}`}
-        >
+      <DropdownTransition>
+        <Menu.Items className={menuItemsClass}>
           {menuItems.map((mi, i) => (
-            <Menu.Item key={`menu-item-${i}`}>{mi}</Menu.Item>
+            <Menu.Item key={`menu-item-${i}`}>{({ close }) => mi(close)}</Menu.Item>
           ))}
         </Menu.Items>
-      </Transition>
+      </DropdownTransition>
     </Menu>
   );
 }
@@ -64,21 +60,29 @@ export function DropdownModal({
       <Popover.Button title={buttonTitle} className={`flex ${buttonClasses}`}>
         {buttonContent}
       </Popover.Button>
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-200"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-100"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
-      >
+      <DropdownTransition>
         <Popover.Panel
-          className={`z-50 absolute mt-3 origin-top-right rounded-md bg-white shadow-md drop-shadow-md ring-1 ring-black ring-opacity-5 focus:outline-none ${modalClasses}`}
+          className={`z-50 absolute mt-3 origin-top-right rounded-md bg-white shadow-md drop-shadow-md focus:outline-none ${modalClasses}`}
         >
           {({ close }) => modalContent(close)}
         </Popover.Panel>
-      </Transition>
+      </DropdownTransition>
     </Popover>
+  );
+}
+
+function DropdownTransition({ children }: PropsWithChildren<unknown>) {
+  return (
+    <Transition
+      as={Fragment}
+      enter="transition ease-out duration-200"
+      enterFrom="transform opacity-0 scale-95"
+      enterTo="transform opacity-100 scale-100"
+      leave="transition ease-in duration-100"
+      leaveFrom="transform opacity-100 scale-100"
+      leaveTo="transform opacity-0 scale-95"
+    >
+      {children}
+    </Transition>
   );
 }
