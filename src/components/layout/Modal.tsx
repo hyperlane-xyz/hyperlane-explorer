@@ -42,7 +42,7 @@ export function Modal({
                   maxWidth || 'max-w-xs'
                 } max-h-[90vh] transform overflow-auto rounded-md bg-white px-4 py-4 text-left shadow-lg transition-all`}
               >
-                <Dialog.Title as="h3" className="text text-gray-700">
+                <Dialog.Title as="h3" className="font-medium text-blue-500">
                   {title}
                 </Dialog.Title>
                 {children}

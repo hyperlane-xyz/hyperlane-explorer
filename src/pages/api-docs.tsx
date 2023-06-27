@@ -6,28 +6,30 @@ const ApiDocs: NextPage = () => {
   return (
     <div className="mt-4 mb-2 px-2 sm:px-6 lg:pr-14 w-full">
       <Card>
-        <h2 className="mt-1 text-xl text-blue-500">Explorer APIs - Overview and documentation</h2>
-        <p className="mt-3">
+        <h2 className="mt-1 text-lg text-blue-500 font-medium">
+          Explorer APIs - Overview and documentation
+        </h2>
+        <p className="mt-3 font-light">
           The Explorer REST API provides endpoints to retrieve data about messages.
         </p>
-        <p className="mt-1">
+        <p className="mt-1 font-light">
           The APIs are currently available free of charge and without authentication required.
         </p>
 
-        <h3 className="mt-4 text-lg text-blue-500">Example Request</h3>
-        <div className="mt-2 bg-gray-50 rounded p-2.5 text-sm overflow-auto">
+        <h3 className="mt-5 text-blue-500 font-medium">Example Request</h3>
+        <div className="mt-2 bg-gray-50 rounded-xl p-2.5 text-sm overflow-auto">
           <pre>
             <code>{exampleRequest}</code>
           </pre>
         </div>
-        <h3 className="mt-4 text-lg text-blue-500">Example Response</h3>
-        <div className="mt-2 bg-gray-50 rounded p-2.5 text-sm overflow-auto">
+        <h3 className="mt-5 text-blue-500 font-medium">Example Response</h3>
+        <div className="mt-2 bg-gray-50 rounded-xl p-2.5 text-sm overflow-auto">
           <pre>
             <code>{exampleResponse}</code>
           </pre>
         </div>
 
-        <h3 className="mt-4 text-lg text-blue-500">API Reference</h3>
+        <h3 className="mt-4 font-medium text-blue-500">API Reference</h3>
         <h4 className="mt-2 text-gray-600">
           Module:<code className="ml-2">message</code>
         </h4>
@@ -76,7 +78,7 @@ function ParamItem({ name, desc }: { name: string; desc: string }) {
   return (
     <li>
       <code className="mr-2">{name + ':'}</code>
-      {desc}
+      <span className="font-light">{desc}</span>
     </li>
   );
 }

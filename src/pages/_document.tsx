@@ -34,7 +34,7 @@ export default function Document() {
         <meta property="og:url" content={links.baseUrl} />
         <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content={links.baseUrl + '/logo.png'} />
+        <meta property="og:image" content={links.baseUrl + '/images/logo.png'} />
         <meta
           property="og:description"
           content="The official interchain explorer for the Hyperlane protocol and network."

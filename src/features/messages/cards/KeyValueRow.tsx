@@ -26,7 +26,7 @@ export function KeyValueRow({
 }: Props) {
   const useFallbackVal = isZeroish(display) && !allowZeroish;
   return (
-    <div className={`flex items-center pl-px ${classes}`}>
+    <div className={`flex items-center pl-px font-light ${classes}`}>
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <div className={`text-sm ml-1 truncate ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
         <span>{!useFallbackVal ? display : 'Unknown'}</span>

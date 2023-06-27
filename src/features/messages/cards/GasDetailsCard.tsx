@@ -69,18 +69,18 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     }, [unit, message, igpPayments]);
 
   return (
-    <Card classes="w-full space-y-4 relative">
+    <Card className="w-full space-y-4 relative">
       <div className="flex items-center justify-between">
         <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">Interchain Gas Payments</h3>
+          <h3 className="text-blue-500 font-medium text-md mr-2">Interchain Gas Payments</h3>
           <HelpIcon
             size={16}
             text="Amounts paid to the Interchain Gas Paymaster for message delivery."
           />
         </div>
       </div>
-      <p className="text-sm">
+      <p className="text-sm font-light">
         Interchain gas payments are required to fund message delivery on the destination chain.{' '}
         <a
           href={`${links.docs}/docs/protocol/interchain-gas-payments`}

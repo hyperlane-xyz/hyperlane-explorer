@@ -36,7 +36,7 @@ export function Header({ pathName }: { pathName: string }) {
   return (
     <header
       className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-500 ${
-        animateHeader ? 'py-1 border-b border-blue-400' : 'py-4 sm:py-5'
+        animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -122,21 +122,21 @@ function DropdownButton({ isOpen }: { isOpen: boolean }) {
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.primaryWhite}
+        color={Color.White}
         classes="transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.primaryWhite}
+        color={Color.White}
         classes="-mt-1 transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.primaryWhite}
+        color={Color.White}
         classes="-mt-1 transition-all"
       />
     </div>

@@ -24,13 +24,13 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
   } = useIcaAddress(originDomainId, decodeResult?.sender);
 
   return (
-    <Card classes="w-full space-y-4">
+    <Card className="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <Image src={AccountStar} width={28} height={28} alt="" className="opacity-80" />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">ICA Details</h3>
+          <h3 className="text-blue-500 font-medium text-md mr-2">ICA Details</h3>
           <HelpIcon size={16} text="Extra information for messages from/to Interchain Accounts." />
         </div>
       </div>

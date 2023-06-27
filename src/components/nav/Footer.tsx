@@ -3,13 +3,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { links } from '../../consts/links';
-// import FooterLine from '../../images/footer/footer-line-desktop.svg';
-// import FooterLineMobile from '../../images/footer/footer-line-mobile.svg';
-import FooterBg from '../../images/footer/footer-bg.svg';
-import FooterLogo from '../../images/footer/footer-logo.svg';
-import FooterTopBorder from '../../images/footer/footer-top-border.svg';
+// import FooterLine from '../../images/backgrounds/footer-line-desktop.svg';
+// import FooterLineMobile from '../../images/backgrounds/footer-line-mobile.svg';
+import FooterBg from '../../images/backgrounds/footer-bg.svg';
+import FooterTopBorder from '../../images/backgrounds/footer-top-border.svg';
+import { Color } from '../../styles/Color';
 import { Discord } from '../icons/Discord';
 import { Github } from '../icons/Github';
+import { HyperlaneLogo } from '../icons/HyperlaneLogo';
 import { Medium } from '../icons/Medium';
 import { Twitter } from '../icons/Twitter';
 
@@ -47,7 +48,7 @@ export function Footer() {
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-center">
             <div className="ml-2 h-20 w-20">
-              <Image src={FooterLogo} alt="footer-logo" />
+              <HyperlaneLogo fill={Color.White} />
             </div>
             <div className="text-2xl font-medium ml-6 space-y-1 ">
               <div>Go Interchain</div>

@@ -118,13 +118,13 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
   return (
-    <Card classes="flex flex-col flex-1 min-w-fit space-y-3">
+    <Card className="flex flex-col flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainLogo chainId={chainId} />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">{title}</h3>
+          <h3 className="text-blue-500 font-medium text-md mr-2">{title}</h3>
           <HelpIcon size={16} text={helpText} />
         </div>
       </div>

@@ -18,13 +18,14 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
       <div
+        style={styles.container}
         id="app-content"
-        className="w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
+        className="relative w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
       >
         {/* <InfoBanner /> */}
         <Header pathName={pathName} />
         <div className="max-w-5xl mx-auto grow">
-          <main style={styles.container} className="min-h-full pt-2 ">
+          <main style={styles.main} className="relative min-h-full pt-3 z-20">
             {children}
           </main>
         </div>
@@ -42,6 +43,12 @@ function getHeadTitle(pathName: string) {
 
 const styles = {
   container: {
+    backgroundImage: 'url(/images/lines-bg-top.svg)',
+    backgroundSize: '94vw',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center 80px',
+  },
+  main: {
     width: 'min(900px,96vw)',
   },
 };

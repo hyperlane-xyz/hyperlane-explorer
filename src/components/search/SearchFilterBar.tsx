@@ -7,8 +7,9 @@ import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hy
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../features/providers/multiProvider';
 import GearIcon from '../../images/icons/gear.svg';
+import { Color } from '../../styles/Color';
 import { arrayToObject } from '../../utils/objects';
-import { BorderedButton } from '../buttons/BorderedButton';
+import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
 import { ChainLogo } from '../icons/ChainLogo';
 import { ChevronIcon } from '../icons/Chevron';
@@ -61,15 +62,10 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
-      <div className="w-px h-8 bg-gray-200"></div>
       <Link href="/settings" title="View explorer settings">
-        <Image
-          src={GearIcon}
-          width={24}
-          height={24}
-          className="opacity-40 hover:opacity-30 active:opacity-20 hover:rotate-90 transition-all"
-          alt=""
-        />
+        <div className="p-1.5 bg-pink-500 rounded-full active:opacity-90 hover:rotate-90 transition-all">
+          <Image src={GearIcon} width={16} height={16} className="invert" alt="Settings" />
+        </div>
       </Link>
     </div>
   );
@@ -151,23 +147,26 @@ function ChainMultiSelector({
     <DropdownModal
       buttonContent={
         <>
-          <span className="text-gray-700 py-px">{text}</span>
-          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+          <span className="text-white font-medium py-px">{text}</span>
+          <ChevronIcon
+            direction="s"
+            width={9}
+            height={5}
+            classes="ml-2 opacity-80"
+            color={Color.White}
+          />
         </>
       }
-      buttonClasses="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      buttonClasses="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
       modalContent={(closeDropdown) => (
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-gray-700 text-lg">{header}</h3>
+            <h3 className="font-medium text-blue-500">{header}</h3>
             <div className="flex mr-4">
-              <TextButton classes="text-sm underline underline-offset-2" onClick={onToggleAll}>
+              <TextButton classes="text-sm font-medium text-pink-500" onClick={onToggleAll}>
                 All
               </TextButton>
-              <TextButton
-                classes="ml-3.5 text-sm underline underline-offset-2"
-                onClick={onToggleNone}
-              >
+              <TextButton classes="ml-3.5 text-sm font-medium text-pink-500" onClick={onToggleNone}>
                 None
               </TextButton>
             </div>
@@ -180,7 +179,7 @@ function ChainMultiSelector({
                   onToggle={onToggleSection(mainnetChainsMetadata)}
                   name="mainnet-chains"
                 >
-                  <h4 className="ml-2 text-gray-700">Mainnet Chains</h4>
+                  <h4 className="ml-2 text-gray-800">Mainnet Chains</h4>
                 </CheckBox>
               </div>
               {mainnetChainsMetadata.map((c) => (
@@ -191,7 +190,7 @@ function ChainMultiSelector({
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">
+                    <span className="mr-2 font-light">
                       {getChainDisplayName(multiProvider, c.chainId, true)}
                     </span>
                     <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
@@ -207,7 +206,7 @@ function ChainMultiSelector({
                   onToggle={onToggleSection(testnetChainsMetadata)}
                   name="testnet-chains"
                 >
-                  <h4 className="ml-2 text-gray-700">Testnet Chains</h4>
+                  <h4 className="ml-2 text-gray-800">Testnet Chains</h4>
                 </CheckBox>
               </div>
               {testnetChainsMetadata.map((c) => (
@@ -218,7 +217,7 @@ function ChainMultiSelector({
                   name={c.name}
                 >
                   <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2">
+                    <span className="mr-2 font-light">
                       {getChainDisplayName(multiProvider, c.chainId, true)}
                     </span>
                     <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
@@ -227,12 +226,12 @@ function ChainMultiSelector({
               ))}
             </div>
           </div>
-          <BorderedButton
+          <SolidButton
             classes="mt-2.5 text-sm px-2 py-1 w-full"
             onClick={() => onClickApply(closeDropdown)}
           >
             Apply
-          </BorderedButton>
+          </SolidButton>
         </div>
       )}
       modalClasses={`w-88 ${position || 'right-0'}`}
@@ -270,33 +269,39 @@ function DatetimeSelector({
     <DropdownModal
       buttonContent={
         <>
-          <span className="text-gray-700 py-px px-2">Time</span>
-          <ChevronIcon direction="s" width={9} height={5} classes="ml-2 opacity-80" />
+          <span className="text-white font-medium py-px px-2">Time</span>
+          <ChevronIcon
+            direction="s"
+            width={9}
+            height={5}
+            classes="ml-2 opacity-80"
+            color={Color.White}
+          />
         </>
       }
-      buttonClasses="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded border border-gray-500 hover:opacity-70 active:opacity-60 transition-all"
+      buttonClasses="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
       modalContent={(closeDropdown) => (
         <div className="p-4" key="date-time-selector">
           <div className="flex items-center justify-between">
-            <h3 className="text-gray-700 text-lg">Time Range</h3>
+            <h3 className="text-blue-500 font-medium">Time Range</h3>
             <div className="flex pt-1">
-              <TextButton classes="text-sm underline underline-offset-2" onClick={onClickClear}>
+              <TextButton classes="text-sm font-medium text-pink-500" onClick={onClickClear}>
                 Clear
               </TextButton>
             </div>
           </div>
           <div className="flex flex-col">
-            <h4 className="mt-3 mb-1 text-gray-700">Start Time</h4>
+            <h4 className="mt-3 mb-1 text-gray-500 text-sm font-medium">Start Time</h4>
             <DatetimeField timestamp={startTime} onChange={setStartTime} />
-            <h4 className="mt-3 mb-1 text-gray-700">End Time</h4>
+            <h4 className="mt-3 mb-1 text-gray-500 text-sm font-medium">End Time</h4>
             <DatetimeField timestamp={endTime} onChange={setEndTime} />
           </div>
-          <BorderedButton
+          <SolidButton
             classes="mt-4 text-sm px-2 py-1 w-full"
             onClick={() => onClickApply(closeDropdown)}
           >
             Apply
-          </BorderedButton>
+          </SolidButton>
         </div>
       )}
       modalClasses="w-60 -right-8"

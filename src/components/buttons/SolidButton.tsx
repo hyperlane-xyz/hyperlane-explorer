@@ -1,7 +1,7 @@
 import { PropsWithChildren, ReactElement } from 'react';
 
 interface ButtonProps {
-  color?: 'white' | 'blue' | 'green' | 'red'; // defaults to blue
+  color?: 'white' | 'blue' | 'green' | 'red' | 'pink'; // defaults to blue
   type?: 'submit' | 'reset' | 'button';
   onClick?: () => void;
   classes?: string;
@@ -18,7 +18,7 @@ export function SolidButton(props: PropsWithChildren<ButtonProps>) {
     onClick,
     color: _color,
     classes,
-    bold,
+    bold = true,
     icon,
     disabled,
     title,
@@ -26,12 +26,16 @@ export function SolidButton(props: PropsWithChildren<ButtonProps>) {
   } = props;
   const color = _color ?? 'blue';
 
-  const base = 'flex items-center justify-center rounded transition-all duration-500';
+  const base = 'flex items-center justify-center rounded-full transition-all duration-500';
   let baseColors, onHover, onActive;
   if (color === 'blue') {
     baseColors = 'bg-blue-500 text-white';
     onHover = 'hover:bg-blue-600';
     onActive = 'active:bg-blue-700';
+  } else if (color === 'pink') {
+    baseColors = 'bg-pink-500 text-white';
+    onHover = 'hover:bg-pink-600';
+    onActive = 'active:bg-pink-700';
   } else if (color === 'green') {
     baseColors = 'bg-green-500 text-white';
     onHover = 'hover:bg-green-600';

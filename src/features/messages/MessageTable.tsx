@@ -38,7 +38,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`cursor-pointer hover:bg-gray-100 active:bg-gray-200 border-b border-gray-100 last:border-0 ${
+            className={`cursor-pointer hover:bg-pink-50 active:bg-pink-100 border-b border-blue-50 last:border-0 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
@@ -62,10 +62,10 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
     destination,
   } = message;
 
-  let statusColor = 'bg-beige-500';
+  let statusColor = 'bg-blue-50 text-gray-700';
   let statusText = 'Pending';
   if (status === MessageStatus.Delivered) {
-    statusColor = 'bg-green-400 text-white';
+    statusColor = 'bg-[#14825d] text-white';
     statusText = 'Delivered';
   } else if (status === MessageStatus.Failing) {
     statusColor = 'bg-red-500 text-white';
@@ -107,7 +107,9 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
           : '-'}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center justify-center">
-        <div className={`text-center w-20 md:w-[5.25rem] py-1.5 text-sm rounded ${statusColor}`}>
+        <div
+          className={`text-center w-20 md:w-[5.25rem] py-1.5 text-sm rounded-full ${statusColor}`}
+        >
           {statusText}
         </div>
       </LinkCell>
@@ -134,8 +136,8 @@ function LinkCell({
 }
 
 const styles = {
-  header: 'text-sm text-gray-700 font-normal pt-2 pb-3 text-center',
-  value: 'py-3.5 flex items-center justify-center text-sm text-center px-1',
-  valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center truncate',
-  chainName: 'text-sm ml-2',
+  header: 'text-sm text-blue-500 font-medium pt-2 pb-3 text-center',
+  value: 'py-3.5 flex items-center justify-center text-sm text-center font-light px-1',
+  valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center font-light truncate',
+  chainName: 'text-sm font-light ml-2',
 };

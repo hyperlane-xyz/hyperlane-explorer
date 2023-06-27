@@ -17,7 +17,7 @@ export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetc
             <div className="flex items-center justify-center scale-90">
               <Spinner />
             </div>
-            <div className="mt-4 text-center leading-loose text-gray-700">
+            <div className="mt-4 text-center font-light leading-loose text-gray-700">
               {isPiFetching ? 'Searching custom chains for messages' : 'Searching for messages'}
             </div>
           </div>
@@ -45,7 +45,7 @@ export function SearchError({
         <div className="flex justify-center my-10">
           <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
             <Image src={imgSrc} width={imgWidth} className="opacity-80" alt="" />
-            <div className="mt-4 text-center leading-loose text-gray-700">{text}</div>
+            <div className="mt-4 text-center font-light leading-loose text-gray-700">{text}</div>
           </div>
         </div>
       </Fade>
