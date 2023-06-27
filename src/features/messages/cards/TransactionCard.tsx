@@ -201,7 +201,7 @@ function TransactionDetails({
 
 function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   return (
-    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 text-center">
+    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 font-light text-center">
       <div className="max-w-sm">{children}</div>
     </div>
   );
