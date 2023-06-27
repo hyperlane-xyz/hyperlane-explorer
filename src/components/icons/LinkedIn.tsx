@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo } from 'react';
 
 function _Linkedin({
   width,
@@ -6,10 +6,10 @@ function _Linkedin({
   fill,
   className = '',
 }: {
-  width?: number | string
-  height?: number | string
-  fill?: string
-  className?: string
+  width?: number | string;
+  height?: number | string;
+  fill?: string;
+  className?: string;
 }) {
   return (
     <svg
@@ -24,7 +24,7 @@ function _Linkedin({
         fill={fill}
       />
     </svg>
-  )
+  );
 }
 
-export const Linkedin = memo(_Linkedin)
+export const Linkedin = memo(_Linkedin);

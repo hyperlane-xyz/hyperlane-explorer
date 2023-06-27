@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo } from 'react';
 
 function _Web({
   width,
@@ -6,10 +6,10 @@ function _Web({
   fill,
   className = '',
 }: {
-  width?: number | string
-  height?: number | string
-  fill?: string
-  className?: string
+  width?: number | string;
+  height?: number | string;
+  fill?: string;
+  className?: string;
 }) {
   return (
     <svg
@@ -74,7 +74,7 @@ function _Web({
         clip-rule="evenodd"
       />
     </svg>
-  )
+  );
 }
 
-export const Web = memo(_Web)
+export const Web = memo(_Web);

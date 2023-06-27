@@ -20,7 +20,7 @@
   border-radius: 0.2rem;
   transform: scale(0);
   transition: 200ms all ease-in-out;
-  background-color: #2362C0;
+  background-color: #2362c0;
 }
 
 .checkbox:checked::before {

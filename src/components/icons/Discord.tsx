@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo } from 'react';
 
 function _Discord({
   width,
@@ -6,10 +6,10 @@ function _Discord({
   fill,
   className = '',
 }: {
-  width?: number | string
-  height?: number | string
-  fill?: string
-  className?: string
+  width?: number | string;
+  height?: number | string;
+  fill?: string;
+  className?: string;
 }) {
   return (
     <svg
@@ -32,7 +32,7 @@ function _Discord({
         </clipPath>
       </defs>
     </svg>
-  )
+  );
 }
 
-export const Discord = memo(_Discord)
+export const Discord = memo(_Discord);
