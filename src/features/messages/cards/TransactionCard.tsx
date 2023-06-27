@@ -223,7 +223,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
         maxWidth="max-w-sm sm:max-w-md"
       >
         <div className="mt-2 flex flex-col space-y-3.5">
-          <p className="text-sm">
+          <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle reverting, try debugging it with `}
             <a
               className={`${styles.textLink} any:text-blue-500`}

@@ -40,7 +40,7 @@ export function Modal({
               <Dialog.Panel
                 className={`w-full ${
                   maxWidth || 'max-w-xs'
-                } max-h-[90vh] transform overflow-auto rounded-md bg-white px-4 py-4 text-left shadow-lg transition-all`}
+                } max-h-[90vh] transform overflow-auto rounded-xl bg-white px-4 py-4 text-left shadow-lg transition-all`}
               >
                 <Dialog.Title as="h3" className="font-medium text-blue-500">
                   {title}
