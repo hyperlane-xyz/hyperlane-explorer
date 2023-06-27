@@ -1,4 +1,4 @@
-// Mostly copied from https://github.com/hyperlane-xyz/hyperlane-website/blob/main/src/components/nav/Footer.tsx
+// Partly copied from https://github.com/hyperlane-xyz/hyperlane-website/blob/main/src/components/nav/Footer.tsx
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -45,12 +45,12 @@ export function Footer() {
         />
       </div>
       <div className="px-8 py-5 bg-pink-500">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
           <div className="flex items-center justify-center">
-            <div className="ml-2 h-20 w-20">
+            <div className="ml-2 w-16 sm:w-20 h-16 sm:h-20">
               <HyperlaneLogo fill={Color.White} />
             </div>
-            <div className="text-2xl font-medium ml-6 space-y-1 ">
+            <div className="text-xl sm:text-2xl font-medium ml-6 space-y-1 ">
               <div>Go Interchain</div>
               <div>With Hyperlane</div>
             </div>
@@ -63,50 +63,48 @@ export function Footer() {
             </div>
           </div> */}
           </div>
-          <div className="max-w-2xl">
-            <nav className="flex text-lg font-medium">
-              <ul className={`${styles.linkCol} mr-14`}>
-                {footerLinks1.map((item) => (
-                  <li className="" key={item.title}>
-                    <Link
-                      className={styles.linkItem}
-                      target={item.external ? '_blank' : '_self'}
-                      href={item.url}
-                    >
-                      <div className="">{item.title}</div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <ul className={`${styles.linkCol}  mr-14`}>
-                {footerLinks2.map((item) => (
-                  <li key={item.title}>
-                    <Link
-                      className={styles.linkItem}
-                      target={item.external ? '_blank' : '_self'}
-                      href={item.url}
-                    >
-                      <div className="">{item.title}</div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <ul className={`${styles.linkCol}`}>
-                {footerLinks3.map((item) => (
-                  <li key={item.title}>
-                    <Link
-                      className={styles.linkItem}
-                      target={item.external ? '_blank' : '_self'}
-                      href={item.url}
-                    >
-                      {item?.icon && <div className="mr-4 w-6">{item?.icon}</div>}
-                      <div className="">{item.title}</div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
+          <nav className="flex text-lg font-medium">
+            <ul className={`${styles.linkCol} mr-14`}>
+              {footerLinks1.map((item) => (
+                <li className="" key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <ul className={`${styles.linkCol}  mr-14`}>
+              {footerLinks2.map((item) => (
+                <li key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <ul className={`${styles.linkCol}`}>
+              {footerLinks3.map((item) => (
+                <li key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    {item?.icon && <div className="mr-4 w-6">{item?.icon}</div>}
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>

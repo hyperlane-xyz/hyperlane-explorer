@@ -27,7 +27,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
           />
         </div>
       </div>
-      <p className="text-sm">
+      <p className="text-sm font-light">
         Interchain Security Modules define the rules for verifying messages before delivery.{' '}
         <a
           href={`${links.docs}/docs/protocol/sovereign-consensus`}

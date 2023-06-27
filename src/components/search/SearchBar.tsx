@@ -29,7 +29,11 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
         className="p-1 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 font-light rounded-full placeholder:text-gray-600 focus:outline-none"
       />
       <div className="h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded-full bg-pink-500">
-        {isFetching && <Spinner classes="scale-[30%] mr-2.5 invert" />}
+        {isFetching && (
+          <div className="scale-[30%] sm:scale-[35%]">
+            <Spinner classes="invert" />
+          </div>
+        )}
         {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
         {!isFetching && value && (
           <IconButton
