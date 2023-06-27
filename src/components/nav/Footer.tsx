@@ -1,79 +1,117 @@
+// Partly copied from https://github.com/hyperlane-xyz/hyperlane-website/blob/main/src/components/nav/Footer.tsx
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { links } from '../../consts/links';
-import Discord from '../../images/logos/discord.svg';
-import Github from '../../images/logos/github.svg';
-import Hyperlane from '../../images/logos/hyperlane-logo.svg';
-import Medium from '../../images/logos/medium.svg';
-import Twitter from '../../images/logos/twitter.svg';
+// import FooterLine from '../../images/backgrounds/footer-line-desktop.svg';
+// import FooterLineMobile from '../../images/backgrounds/footer-line-mobile.svg';
+import FooterBg from '../../images/backgrounds/footer-bg.svg';
+import FooterTopBorder from '../../images/backgrounds/footer-top-border.svg';
+import { Color } from '../../styles/Color';
+import { Discord } from '../icons/Discord';
+import { Github } from '../icons/Github';
+import { HyperlaneLogo } from '../icons/HyperlaneLogo';
+import { Medium } from '../icons/Medium';
+import { Twitter } from '../icons/Twitter';
+
+const footerLinks1 = [
+  { title: 'Docs', url: links.docs, external: true },
+  { title: 'Homepage', url: links.home, external: true },
+  { title: 'Chains', url: links.chains, external: true },
+];
+
+const footerLinks2 = [
+  { title: 'Crew', url: `${links.home}/crew`, external: true },
+  { title: 'Bounty', url: `${links.home}/bounty`, external: true },
+  { title: 'Brand', url: links.brand, external: true },
+];
+
+const footerLinks3 = [
+  { title: 'Twitter', url: links.twitter, external: true, icon: <Twitter fill="#fff" /> },
+  { title: 'Discord', url: links.discord, external: true, icon: <Discord fill="#fff" /> },
+  { title: 'Github', url: links.github, external: true, icon: <Github fill="#fff" /> },
+  { title: 'Blog', url: links.blog, external: true, icon: <Medium fill="#fff" /> },
+];
 
 export function Footer() {
   return (
-    <footer className="px-4 pt-5 pb-7 sm:px-10 opacity-80">
-      <div className="flex justify-between items-center gap-6 sm:gap-0">
-        <div className="flex items-center">
-          <div className="flex scale-90 sm:scale-100">
-            <Image src={Hyperlane} width={50} height={50} alt="" />
+    <footer className="text-white ">
+      <div className="relative">
+        <Image className="relative z-0 w-full" src={FooterBg} alt="background" />
+        <Image
+          className="absolute z-10 bottom-[1.5rem] w-full h-auto"
+          src={FooterTopBorder}
+          alt="border"
+        />
+      </div>
+      <div className="px-8 py-5 bg-pink-500">
+        <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
+          <div className="flex items-center justify-center">
+            <div className="ml-2 w-16 sm:w-20 h-16 sm:h-20">
+              <HyperlaneLogo fill={Color.White} />
+            </div>
+            <div className="text-xl sm:text-2xl font-medium ml-6 space-y-1 ">
+              <div>Go Interchain</div>
+              <div>With Hyperlane</div>
+            </div>
+            {/* <div className="absolute">
+            <div className="hidden sm:block">
+              <Image src={FooterLine} alt="" />
+            </div>
+            <div className="sm:hidden">
+              <Image src={FooterLineMobile} alt="" />
+            </div>
+          </div> */}
           </div>
-          <div className="hidden sm:flex flex-col ml-3">
-            <p className="text-sm font-light leading-5">
-              <span className="text-base font-medium">Hyperlane</span> is the platform
-              <br />
-              for developers building
-              <br />
-              the interchain universe.
-            </p>
-          </div>
-        </div>
-        <div className="flex">
-          <div className="flex flex-col">
-            <FooterLink href={links.home} text="About" />
-            <FooterLink href={links.docs} text="Docs" />
-            <FooterLink href={links.chains} text="Chains" />
-            <FooterLink href={links.jobs} text="Jobs" />
-          </div>
-          <div className="flex flex-col ml-16">
-            <FooterIconLink href={links.twitter} imgSrc={Twitter} text="Twitter" />
-            <FooterIconLink href={links.discord} imgSrc={Discord} text="Discord" />
-            <FooterIconLink href={links.github} imgSrc={Github} text="Github" />
-            <FooterIconLink href={links.blog} imgSrc={Medium} text="Blog" />
-          </div>
+          <nav className="flex text-lg font-medium">
+            <ul className={`${styles.linkCol} mr-14`}>
+              {footerLinks1.map((item) => (
+                <li className="" key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <ul className={`${styles.linkCol}  mr-14`}>
+              {footerLinks2.map((item) => (
+                <li key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <ul className={`${styles.linkCol}`}>
+              {footerLinks3.map((item) => (
+                <li key={item.title}>
+                  <Link
+                    className={styles.linkItem}
+                    target={item.external ? '_blank' : '_self'}
+                    href={item.url}
+                  >
+                    {item?.icon && <div className="mr-4 w-6">{item?.icon}</div>}
+                    <div className="">{item.title}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>
   );
 }
 
-function FooterLink({ href, text }: { href: string; text: string }) {
-  const aClasses =
-    'mt-1.5 text-sm hover:underline underline-offset-4 hover:opacity-70 transition-all';
-
-  if (href[0] === '/') {
-    return (
-      <Link href={href} className={aClasses}>
-        {text}
-      </Link>
-    );
-  } else {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={aClasses}>
-        {text}
-      </a>
-    );
-  }
-}
-
-function FooterIconLink({ href, imgSrc, text }: { href: string; imgSrc: any; text: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-1.5 flex items-center hover:underline underline-offset-4 hover:opacity-70 transition-all"
-    >
-      <Image src={imgSrc} width={18} height={18} alt="" />
-      <span className="ml-2.5 text-sm">{text}</span>
-    </a>
-  );
-}
+const styles = {
+  linkCol: 'flex flex-col gap-3',
+  linkItem: 'flex items-center capitalize text-decoration-none hover:underline underline-offset-2',
+};

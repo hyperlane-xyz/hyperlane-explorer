@@ -67,11 +67,11 @@ export function ContentDetailsCard({
   }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
   return (
-    <Card classes="w-full space-y-4">
+    <Card className="w-full space-y-4">
       <div className="flex items-center justify-between">
         <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">Message Details</h3>
+          <h3 className="text-blue-500 font-medium text-md mr-2">Message Details</h3>
           <HelpIcon
             size={16}
             text="Immutable information about the message itself such as its contents."

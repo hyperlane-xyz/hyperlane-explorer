@@ -3,7 +3,7 @@ import { ChangeEvent } from 'react';
 
 import SearchIcon from '../../images/icons/search.svg';
 import XIcon from '../../images/icons/x.svg';
-import { Spinner } from '../animation/Spinner';
+import { Spinner } from '../animations/Spinner';
 import { IconButton } from '../buttons/IconButton';
 
 interface Props {
@@ -20,24 +20,29 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   };
 
   return (
-    <div className="flex items-center bg-white w-full rounded shadow-md border border-blue-50">
+    <div className="p-1 flex items-center bg-white w-full rounded-full ring ring-blue-400 hover:ring-blue-200 transition-all duration-500">
       <input
         value={value}
         onChange={onChange}
         type="search"
         placeholder={placeholder}
-        className="p-2 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 rounded placeholder:text-gray-500 focus:outline-none"
+        className="p-1 sm:px-4 md:px-5 flex-1 h-10 sm:h-12 font-light rounded-full placeholder:text-gray-600 focus:outline-none"
       />
-      <div className="h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded bg-gray-200">
-        {isFetching && <Spinner classes="scale-[30%] mr-2.5" />}
+      <div className="h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded-full bg-pink-500">
+        {isFetching && (
+          <div className="scale-[30%] sm:scale-[35%]">
+            <Spinner classes="invert" />
+          </div>
+        )}
         {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
         {!isFetching && value && (
           <IconButton
             imgSrc={XIcon}
             title="Clear search"
-            width={28}
-            height={28}
+            width={16}
+            height={16}
             onClick={() => onChange(null)}
+            classes="invert"
           />
         )}
       </div>

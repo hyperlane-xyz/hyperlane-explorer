@@ -2,7 +2,6 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-import { ContentFrame } from '../../components/layout/ContentFrame';
 import { MessageDetails } from '../../features/messages/MessageDetails';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
@@ -20,11 +19,7 @@ const MessagePage: NextPage = () => {
 
   const message = data ? deserializeMessage<Message>(data) : undefined;
 
-  return (
-    <ContentFrame>
-      <MessageDetails messageId={messageId} message={message} />
-    </ContentFrame>
-  );
+  return <MessageDetails messageId={messageId} message={message} />;
 };
 
 // Required for dynamic routing to work by disabling Automatic Static Optimization

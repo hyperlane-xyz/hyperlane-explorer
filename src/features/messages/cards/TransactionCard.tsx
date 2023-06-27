@@ -1,6 +1,6 @@
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
-import { Spinner } from '../../../components/animation/Spinner';
+import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
@@ -76,14 +76,16 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Pending) {
     content = (
       <DeliveryStatus>
-        <div>Delivery to destination chain still in progress.</div>
-        {isPiMsg && (
-          <div className="mt-2 text-gray-700 text-sm max-w-xs">
-            Please ensure a relayer is running for this chain.
-          </div>
-        )}
-        <Spinner classes="mt-4 scale-75" />
-        <CallDataModal debugResult={debugResult} />
+        <div className="flex flex-col items-center">
+          <div>Delivery to destination chain still in progress.</div>
+          {isPiMsg && (
+            <div className="mt-2 text-gray-700 text-sm max-w-xs">
+              Please ensure a relayer is running for this chain.
+            </div>
+          )}
+          <Spinner classes="my-4 scale-75" />
+          <CallDataModal debugResult={debugResult} />
+        </div>
       </DeliveryStatus>
     );
   } else {
@@ -116,13 +118,13 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
   return (
-    <Card classes="flex flex-col flex-1 min-w-fit space-y-3">
+    <Card className="flex flex-col flex-1 min-w-fit space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -top-px -left-0.5">
           <ChainLogo chainId={chainId} />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-gray-500 font-medium text-md mr-2">{title}</h3>
+          <h3 className="text-blue-500 font-medium text-md mr-2">{title}</h3>
           <HelpIcon size={16} text={helpText} />
         </div>
       </div>
@@ -199,7 +201,7 @@ function TransactionDetails({
 
 function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   return (
-    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 text-center">
+    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 font-light text-center">
       <div className="max-w-sm">{children}</div>
     </div>
   );
@@ -221,7 +223,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
         maxWidth="max-w-sm sm:max-w-md"
       >
         <div className="mt-2 flex flex-col space-y-3.5">
-          <p className="text-sm">
+          <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle reverting, try debugging it with `}
             <a
               className={`${styles.textLink} any:text-blue-500`}

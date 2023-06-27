@@ -34,6 +34,13 @@
   font-family: 'Neue Haas Grotesk';
   font-style: normal;
   font-weight: 600;
+  src: url('/fonts/NeueHaasDisplayMedium.ttf');
+}
+
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  font-style: normal;
+  font-weight: 700;
   src: url('/fonts/NeueHaasDisplayBold.woff2') format('woff2'),
     url('/fonts/NeueHaasDisplayBold.woff') format('woff');
 }

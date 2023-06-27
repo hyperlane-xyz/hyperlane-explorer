@@ -57,8 +57,8 @@ export function ConfigureChains() {
 
   return (
     <Card>
-      <h2 className="mt-1 text-xl text-blue-500">Chain Settings</h2>
-      <p className="mt-3">
+      <h2 className="mt-1 text-lg text-blue-500 font-medium">Chain Settings</h2>
+      <p className="mt-3 font-light">
         Hyperlane can be deployed to any chain using{' '}
         <a
           href={`${links.docs}/docs/deploy/permissionless-interoperability`}
@@ -70,31 +70,35 @@ export function ConfigureChains() {
         </a>
         . This explorer can be configured to search for messages on any PI chain.
       </p>
-      <h3 className="mt-4 text-lg text-blue-500">Default Chains</h3>
+      <h3 className="mt-6 text-lg text-blue-500 font-medium">Default Chains</h3>
       <div className="mt-4 flex">
-        <h4 className="text-gray-600">Mainnets:</h4>
+        <h4 className="text-gray-600 font-medium text-sm">Mainnets:</h4>
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {mainnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <span className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</span>
+              <span className="ml-1.5 font-light">
+                {getChainDisplayName(multiProvider, c.chainId, true)}
+              </span>
             </div>
           ))}
         </div>
       </div>
-      <div className="mt-4 flex">
-        <h4 className="text-gray-600">Testnets:</h4>
+      <div className="mt-5 flex">
+        <h4 className="text-gray-600 font-medium text-sm">Testnets:</h4>
         <div className="ml-3 flex gap-3.5 flex-wrap">
           {testnetChainsMetadata.map((c) => (
             <div className="shrink-0 text-sm flex items-center" key={c.name}>
               <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <div className="ml-1.5">{getChainDisplayName(multiProvider, c.chainId, true)}</div>
+              <div className="ml-1.5 font-light">
+                {getChainDisplayName(multiProvider, c.chainId, true)}
+              </div>
             </div>
           ))}
         </div>
       </div>
-      <h3 className="mt-4 text-lg text-blue-500">Custom Chains</h3>
-      <table className="mt-4 w-full">
+      <h3 className="mt-6 text-lg text-blue-500 font-medium">Custom Chains</h3>
+      <table className="mt-2 w-full">
         <thead>
           <tr>
             <th className={styles.header}>Chain</th>
@@ -141,7 +145,7 @@ export function ConfigureChains() {
         title="Add Custom Chain"
         maxWidth="max-w-xl"
       >
-        <p className="mt-2">
+        <p className="mt-2 font-light">
           Input a chain metadata config including core contract addresses to enable exploration of
           that chain. See{' '}
           <a
@@ -156,7 +160,7 @@ export function ConfigureChains() {
         </p>
         <div className="relative mt-4">
           <textarea
-            className="w-full min-h-[20rem] p-2 border border-gray-400 rounded text-sm focus:outline-none"
+            className="w-full min-h-[20rem] p-2 border border-gray-400 rounded-xl text-sm font-light focus:outline-none"
             placeholder={customChainTextareaPlaceholder}
             value={customChainInput}
             onChange={onCustomChainInputChange}
@@ -165,7 +169,7 @@ export function ConfigureChains() {
             copyValue={customChainInput || customChainTextareaPlaceholder}
             width={16}
             height={16}
-            classes="absolute top-2 right-2"
+            classes="absolute top-3 right-3"
           />
         </div>
         {chainInputErr && <div className="mt-2 text-red-600 text-sm">{chainInputErr}</div>}
@@ -197,7 +201,7 @@ const customChainTextareaPlaceholder = `{
 `;
 
 const styles = {
-  header: 'text-sm text-gray-700 font-normal pt-2 pb-1 text-left',
-  value: 'py-4 text-sm px-1',
-  valueTruncated: 'py-4 text-sm truncate',
+  header: 'pt-2 pb-1 text-sm text-gray-700 font-normal text-left',
+  value: 'py-4 px-1 text-sm font-light',
+  valueTruncated: 'py-4 text-sm font-light truncate',
 };

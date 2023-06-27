@@ -2,12 +2,13 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
-import { Spinner } from '../../components/animation/Spinner';
+import { Spinner } from '../../components/animations/Spinner';
+import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
-import { toTitleCase } from '../../utils/string';
+import { toTitleCase, trimToLength } from '../../utils/string';
 import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { useMultiProvider } from '../providers/multiProvider';
@@ -75,7 +76,14 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     pause: !isMessageFound,
   });
 
-  const { status, originChainId, destinationChainId: destChainId, origin, destination } = message;
+  const {
+    msgId,
+    status,
+    originChainId,
+    destinationChainId: destChainId,
+    origin,
+    destination,
+  } = message;
 
   // Mark delivery found to prevent pause queries
   useEffect(() => {
@@ -87,18 +95,21 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   return (
     <>
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-white text-lg">{`${
+      <Card className="flex items-center justify-between px-1 rounded-full">
+        <h2 className="text-blue-500 font-medium">{`${
           isIcaMsg ? 'ICA ' : ''
-        } Message to ${getChainDisplayName(multiProvider, destChainId)}`}</h2>
+        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
+          multiProvider,
+          destChainId,
+        )}`}</h2>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
         />
-      </div>
-      <div className="flex flex-wrap items-stretch justify-between mt-5 gap-3">
+      </Card>
+      <div className="flex flex-wrap items-stretch justify-between mt-3 md:mt-4 gap-3 md:gap-4">
         <OriginTransactionCard chainId={originChainId} transaction={origin} blur={blur} />
         <DestinationTransactionCard
           chainId={destChainId}
@@ -150,7 +161,7 @@ function StatusHeader({
     icon = (
       <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
         <div className="scale-[35%]">
-          <Spinner white={true} />
+          <Spinner />
         </div>
       </div>
     );
@@ -163,7 +174,7 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="text-white text-lg mr-3">{text}</h3>
+      <h3 className="text-blue-500 font-medium lg mr-3">{text}</h3>
       {icon}
     </div>
   );

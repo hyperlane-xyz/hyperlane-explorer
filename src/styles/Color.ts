@@ -1,11 +1,12 @@
 // Should match tailwind.config.js
 export enum Color {
-  primaryBlack = '#010101',
-  primaryWhite = '#FFFFFF',
-  primaryGray = '#6B7280',
-  primaryBlue = '#2362C1',
-  primaryBeige = '#F1EDE9',
-  primaryRed = '#BF1B15',
+  Black = '#010101',
+  White = '#FFFFFF',
+  Gray = '#6B7280',
+  Blue = '#2362C1',
+  Pink = '#D631B9',
+  Beige = '#F1EDE9',
+  Red = '#BF1B15',
 }
 
 // Useful for cases when using class names isn't convenient
@@ -13,11 +14,13 @@ export enum Color {
 export function classNameToColor(className) {
   switch (className) {
     case 'bg-blue-500':
-      return Color.primaryBlue;
+      return Color.Blue;
+    case 'bg-pink-500':
+      return Color.Pink;
     case 'bg-red-500':
-      return Color.primaryRed;
+      return Color.Red;
     case 'bg-gray-500':
-      return Color.primaryGray;
+      return Color.Gray;
     default:
       throw new Error('Missing color for className: ' + className);
   }

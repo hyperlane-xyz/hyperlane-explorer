@@ -1,11 +1,16 @@
 import { PropsWithChildren } from 'react';
 
 interface Props {
-  classes?: string;
+  className?: string;
+  padding?: string;
 }
 
-export function Card({ classes, children }: PropsWithChildren<Props>) {
+export function Card({ className, padding = 'p-4 sm:p-5', children }: PropsWithChildren<Props>) {
   return (
-    <div className={`p-4 bg-white shadow border rounded overflow-auto ${classes}`}>{children}</div>
+    <div
+      className={`bg-white ring ring-blue-300 rounded-3xl overflow-auto ${padding} ${className}`}
+    >
+      {children}
+    </div>
   );
 }
