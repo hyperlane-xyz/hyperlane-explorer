@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { Spinner } from '../../../components/animations/Spinner';
@@ -70,7 +71,7 @@ export function DestinationTransactionCard({
             {debugResult.description}
           </div>
         )}
-        <CallDataModal debugResult={debugResult} />
+        <CallDataModal debugResult={debugResult} chainId={chainId} />
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Pending) {
@@ -84,7 +85,7 @@ export function DestinationTransactionCard({
             </div>
           )}
           <Spinner classes="my-4 scale-75" />
-          <CallDataModal debugResult={debugResult} />
+          <CallDataModal debugResult={debugResult} chainId={chainId} />
         </div>
       </DeliveryStatus>
     );
@@ -207,10 +208,15 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   );
 }
 
-function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
+function CallDataModal({ debugResult,chainId }: { debugResult?: MessageDebugResult,chainId:ChainId }) {
   const [isOpen, setIsOpen] = useState(false);
+  const disabled=false
+  const [buttonText,setButtonText]=useState<string>("Simulate Handle Call")
   if (!debugResult?.calldataDetails) return null;
   const { contract, handleCalldata } = debugResult.calldataDetails;
+  function handleClick() {
+    setButtonText('Simulating');
+  }
   return (
     <>
       <button onClick={() => setIsOpen(true)} className={`mt-5 ${styles.textLink}`}>
@@ -236,10 +242,63 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
           </p>
           <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
           <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
+          <button onClick={async()=>{
+            handleClick()
+            await simulateCall({contract,handleCalldata,chainId})
+          }}
+            disabled={disabled}
+            className='underline text-blue-400'
+          >
+            {buttonText}
+          </button>
+
         </div>
       </Modal>
     </>
   );
+}
+const simulateCall=async({contract,handleCalldata,chainId}:{contract:string,handleCalldata:string,chainId:ChainId})=>{
+  const TENDERLY_USER=''
+  const TENDERLY_PROJECT=''
+  const TENDERLY_ACCESS_KEY=''
+
+  console.time('Simulation')
+
+  const resp = await axios.post(
+    `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulate`,
+    {
+      save: true,
+      save_if_fails: true, 
+      simulation_type: 'full',
+      network_id: chainId, 
+      from: '0xdc6bdc37b2714ee601734cf55a05625c9e512461',//can be any address, doesn't matter
+      to: contract,
+      input:handleCalldata,
+      gas: 8000000,
+      gas_price: 0,
+      value: 0,
+    },
+    {
+      headers: {
+        'X-Access-Key': TENDERLY_ACCESS_KEY as string,
+      },
+    }
+  );
+  console.timeEnd('Simulation');
+  console.log(resp.data)
+  const share = await axios.post(
+    `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulations/${resp.data.simulation.id}/share`,
+    {
+
+    },
+    {
+      headers: {
+        'X-Access-Key': TENDERLY_ACCESS_KEY,
+      }
+    }
+  )
+  console.log(share)
+  window.location.assign(`https://dashboard.tenderly.co/shared/simulation/${resp.data.simulation.id}`)
 }
 
 const helpText = {
