@@ -1,19 +1,17 @@
-import axios from 'axios';
 import { PropsWithChildren, ReactNode, useState } from 'react';
-
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
+import { TENDERLY_ACCESS_KEY, TENDERLY_PROJECT, TENDERLY_USER } from '../../../consts/config';
 import { links } from '../../../consts/links';
-import { MessageStatus, MessageTx } from '../../../types';
+import { Message, MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
-
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -41,6 +39,7 @@ export function DestinationTransactionCard({
   isStatusFetching,
   isPiMsg,
   blur,
+  message
 }: {
   chainId: ChainId;
   status: MessageStatus;
@@ -49,6 +48,7 @@ export function DestinationTransactionCard({
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
+  message:Message;
 }) {
   let content: ReactNode;
   if (transaction) {
@@ -71,7 +71,7 @@ export function DestinationTransactionCard({
             {debugResult.description}
           </div>
         )}
-        <CallDataModal debugResult={debugResult} chainId={chainId} />
+        <CallDataModal debugResult={debugResult} chainId={chainId} message={message} />
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Pending) {
@@ -85,7 +85,7 @@ export function DestinationTransactionCard({
             </div>
           )}
           <Spinner classes="my-4 scale-75" />
-          <CallDataModal debugResult={debugResult} chainId={chainId} />
+          <CallDataModal debugResult={debugResult} chainId={chainId} message={message}/>
         </div>
       </DeliveryStatus>
     );
@@ -208,14 +208,22 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   );
 }
 
-function CallDataModal({ debugResult,chainId }: { debugResult?: MessageDebugResult,chainId:ChainId }) {
+function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDebugResult,chainId:ChainId,message:Message }) {
   const [isOpen, setIsOpen] = useState(false);
-  const disabled=false
-  const [buttonText,setButtonText]=useState<string>("Simulate Handle Call")
+  const [disabled,setDisabled]=useState(false)
+  const [buttonText,setButtonText]=useState("Simulate call with Tenderly")
+  const [showSpinner,setShowSpinner]=useState(false)
   if (!debugResult?.calldataDetails) return null;
   const { contract, handleCalldata } = debugResult.calldataDetails;
-  function handleClick() {
+  
+  const handleClick=async()=>{
     setButtonText('Simulating');
+    setDisabled(true)
+    setShowSpinner(true)
+    await simulateCall({contract,handleCalldata,chainId,message})
+    setDisabled(false)
+    setShowSpinner(false)
+    setButtonText('Simulate call with Tenderly')
   }
   return (
     <>
@@ -242,64 +250,61 @@ function CallDataModal({ debugResult,chainId }: { debugResult?: MessageDebugResu
           </p>
           <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
           <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
-          <button onClick={async()=>{
-            handleClick()
-            await simulateCall({contract,handleCalldata,chainId})
-          }}
+          <button onClick={handleClick}
             disabled={disabled}
             className='underline text-blue-400'
           >
             {buttonText}
           </button>
-
+          {showSpinner && <Spinner classes="mt-4 scale-75 self-center" />}
         </div>
       </Modal>
     </>
   );
 }
-const simulateCall=async({contract,handleCalldata,chainId}:{contract:string,handleCalldata:string,chainId:ChainId})=>{
-  const TENDERLY_USER=''
-  const TENDERLY_PROJECT=''
-  const TENDERLY_ACCESS_KEY=''
+async function simulateCall({contract,handleCalldata,chainId,message}:{contract:string,handleCalldata:string,chainId:ChainId,message:Message}){
 
-  console.time('Simulation')
-
-  const resp = await axios.post(
-    `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulate`,
-    {
-      save: true,
-      save_if_fails: true, 
-      simulation_type: 'full',
-      network_id: chainId, 
-      from: '0xdc6bdc37b2714ee601734cf55a05625c9e512461',//can be any address, doesn't matter
-      to: contract,
-      input:handleCalldata,
-      gas: 8000000,
-      gas_price: 0,
-      value: 0,
-    },
-    {
-      headers: {
-        'X-Access-Key': TENDERLY_ACCESS_KEY as string,
-      },
-    }
-  );
-  console.timeEnd('Simulation');
-  console.log(resp.data)
-  const share = await axios.post(
-    `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulations/${resp.data.simulation.id}/share`,
-    {
-
-    },
-    {
-      headers: {
-        'X-Access-Key': TENDERLY_ACCESS_KEY,
+  const data={
+        save: true,
+        save_if_fails: true, 
+        simulation_type: 'full',
+        network_id: chainId, 
+        from: '0x0000000000000000000000000000000000000000',//can be any address, doesn't matter
+        to: contract,
+        input:handleCalldata,
+        gas: Number(message.totalGasAmount),
+        gas_price: Number(message.totalPayment)/Number(message.totalGasAmount),
+        value: 0,
+  }
+  
+  try {
+    const resp = await fetch(
+      `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulate`,
+      {
+        method:'POST',
+        body:JSON.stringify(data),
+        headers: {
+          'X-Access-Key': TENDERLY_ACCESS_KEY as string,
+        },
       }
-    }
-  )
-  console.log(share)
-  window.location.assign(`https://dashboard.tenderly.co/shared/simulation/${resp.data.simulation.id}`)
+    );
+    const simulationId=await resp.json().then((data)=>data.simulation.id)
+    await fetch(
+      `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulations/${simulationId}/share`,
+      {
+        method:'POST',
+        headers: {
+          'X-Access-Key': TENDERLY_ACCESS_KEY as string,
+        },
+      }
+    )
+    window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
+  } catch (error) {
+    console.error(error)
+  }
+  
 }
+
 
 const helpText = {
   origin: 'Info about the transaction that initiated the message placement into the outbox.',
