@@ -4,7 +4,6 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
-import { TENDERLY_ACCESS_KEY, TENDERLY_PROJECT, TENDERLY_USER } from '../../../consts/config';
 import { links } from '../../../consts/links';
 import { Message, MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
@@ -276,33 +275,15 @@ async function simulateCall({contract,handleCalldata,chainId,message}:{contract:
         gas_price: Number(message.totalPayment)/Number(message.totalGasAmount),
         value: 0,
   }
-  
-  try {
-    const resp = await fetch(
-      `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulate`,
-      {
-        method:'POST',
-        body:JSON.stringify(data),
-        headers: {
-          'X-Access-Key': TENDERLY_ACCESS_KEY as string,
-        },
-      }
-    );
-    const simulationId=await resp.json().then((data)=>data.simulation.id)
-    await fetch(
-      `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulations/${simulationId}/share`,
-      {
-        method:'POST',
-        headers: {
-          'X-Access-Key': TENDERLY_ACCESS_KEY as string,
-        },
-      }
-    )
-    window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
-  } catch (error) {
-    console.error(error)
-  }
-  
+  const resp=await fetch(
+    `http://localhost:3000/api/simulation`,{
+      method:'POST',
+      body:JSON.stringify(data),
+    }
+  )
+ 
+  const simulationId=await resp.json()
+  window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
 }
 
 
