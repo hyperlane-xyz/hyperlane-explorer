@@ -276,7 +276,7 @@ async function simulateCall({contract,handleCalldata,chainId,message}:{contract:
         value: 0,
   }
   const resp=await fetch(
-    `http://localhost:3000/api/simulation`,{
+    `https://explorer.hyperlane.xyz/api/simulation`,{
       method:'POST',
       body:JSON.stringify(data),
     }
