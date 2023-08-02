@@ -1,10 +1,7 @@
+import { TENDERLY_ACCESS_KEY, TENDERLY_PROJECT, TENDERLY_USER } from "../../consts/config"
 import { successResult } from "../../features/api/utils"
-
 export default async function handler(req,res){
   const data=req.body
-  const TENDERLY_USER='ragingrahul'
-  const TENDERLY_PROJECT='project'
-  const TENDERLY_ACCESS_KEY='HqHW9xjIh6bRUVIPyAWHFZ2rPsoCgtMD'
   
   if(!TENDERLY_ACCESS_KEY || !TENDERLY_PROJECT || !TENDERLY_USER){
     console.log("ENV not defined")
