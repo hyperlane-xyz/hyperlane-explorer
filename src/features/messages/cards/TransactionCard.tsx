@@ -1,3 +1,5 @@
+import { BigNumber } from 'bignumber.js';
+import { BigNumber as BigNumEth } from 'ethers';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -5,7 +7,8 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
 import { links } from '../../../consts/links';
-import { Message, MessageStatus, MessageTx } from '../../../types';
+import { Message, MessageStatus, MessageTx, SimulateBody } from '../../../types';
+import { logger } from '../../../utils/logger';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
@@ -209,20 +212,17 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
 
 function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDebugResult,chainId:ChainId,message:Message }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [disabled,setDisabled]=useState(false)
+  const [loading,setLoading]=useState(false)
   const [buttonText,setButtonText]=useState("Simulate call with Tenderly")
-  const [showSpinner,setShowSpinner]=useState(false)
   if (!debugResult?.calldataDetails) return null;
   const { contract, handleCalldata } = debugResult.calldataDetails;
   
   const handleClick=async()=>{
     setButtonText('Simulating');
-    setDisabled(true)
-    setShowSpinner(true)
+    setLoading(true)
     await simulateCall({contract,handleCalldata,chainId,message})
-    setDisabled(false)
-    setShowSpinner(false)
     setButtonText('Simulate call with Tenderly')
+    setLoading(false) //using !loading is not setting the states properly and the state stays true
   }
   return (
     <>
@@ -250,12 +250,12 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
           <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
           <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
           <button onClick={handleClick}
-            disabled={disabled}
+            disabled={loading}
             className='underline text-blue-400'
           >
             {buttonText}
           </button>
-          {showSpinner && <Spinner classes="mt-4 scale-75 self-center" />}
+          {loading && <Spinner classes="mt-4 scale-75 self-center" />}
         </div>
       </Modal>
     </>
@@ -263,7 +263,8 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
 }
 async function simulateCall({contract,handleCalldata,chainId,message}:{contract:string,handleCalldata:string,chainId:ChainId,message:Message}){
 
-  const data={
+  
+  const data:SimulateBody={
         save: true,
         save_if_fails: true, 
         simulation_type: 'full',
@@ -271,19 +272,34 @@ async function simulateCall({contract,handleCalldata,chainId,message}:{contract:
         from: '0x0000000000000000000000000000000000000000',//can be any address, doesn't matter
         to: contract,
         input:handleCalldata,
-        gas: Number(message.totalGasAmount),
-        gas_price: Number(message.totalPayment)/Number(message.totalGasAmount),
+        gas: BigNumEth.from(message.totalGasAmount).toNumber(),
+        gas_price: Number(computeAvgGasPrice("wei",message.totalGasAmount,message.totalPayment)),
         value: 0,
   }
   const resp=await fetch(
-    `https://explorer.hyperlane.xyz/api/simulation`,{
+    `/api/simulation`,{
       method:'POST',
       body:JSON.stringify(data),
     }
   )
- 
-  const simulationId=await resp.json()
+  
+  const simulationId=await resp.json().then((data)=>data.data)
   window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
+  
+}
+
+function computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
+  try {
+    if (!gasAmount || !payment) return null;
+    const gasBN = new BigNumber(gasAmount);
+    const paymentBN = new BigNumber(payment);
+    if (gasBN.isZero() || paymentBN.isZero()) return null;
+    const wei = paymentBN.div(gasAmount).toFixed(0);
+    return wei;
+  } catch (error) {
+    logger.debug('Error computing avg gas price', error);
+    return null;
+  }
 }
 
 

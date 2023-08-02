@@ -60,3 +60,16 @@ export interface ExtendedLog extends providers.Log {
   from?: Address;
   to?: Address;
 }
+
+export interface SimulateBody {
+  save:boolean;
+  save_if_fails:boolean; 
+  simulation_type:string,
+  network_id:ChainId, 
+  from:Address,//can be any address, doesn't matter
+  to:Address,
+  input:string,
+  gas:number,
+  gas_price:number|null,
+  value:number,
+}
