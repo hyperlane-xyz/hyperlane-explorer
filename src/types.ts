@@ -61,6 +61,7 @@ export interface ExtendedLog extends providers.Log {
   to?: Address;
 }
 
+// Type of body for tenderly POST requests https://docs.tenderly.co/simulations-and-forks/simulation-api/using-simulation-api
 export interface SimulateBody {
   save:boolean;
   save_if_fails:boolean; 

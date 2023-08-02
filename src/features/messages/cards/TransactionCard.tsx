@@ -1,6 +1,6 @@
-import { BigNumber } from 'bignumber.js';
 import { BigNumber as BigNumEth } from 'ethers';
 import { PropsWithChildren, ReactNode, useState } from 'react';
+import { toast } from 'react-toastify';
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
@@ -8,12 +8,12 @@ import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
 import { links } from '../../../consts/links';
 import { Message, MessageStatus, MessageTx, SimulateBody } from '../../../types';
-import { logger } from '../../../utils/logger';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
+import { computeAvgGasPrice } from '../utils';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -216,7 +216,6 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
   const [buttonText,setButtonText]=useState("Simulate call with Tenderly")
   if (!debugResult?.calldataDetails) return null;
   const { contract, handleCalldata } = debugResult.calldataDetails;
-  
   const handleClick=async()=>{
     setButtonText('Simulating');
     setLoading(true)
@@ -262,19 +261,18 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
   );
 }
 async function simulateCall({contract,handleCalldata,chainId,message}:{contract:string,handleCalldata:string,chainId:ChainId,message:Message}){
-
-  
+  const gasPrice=computeAvgGasPrice("wei",message.totalGasAmount,message.totalPayment)
   const data:SimulateBody={
-        save: true,
-        save_if_fails: true, 
-        simulation_type: 'full',
-        network_id: chainId, 
-        from: '0x0000000000000000000000000000000000000000',//can be any address, doesn't matter
-        to: contract,
-        input:handleCalldata,
-        gas: BigNumEth.from(message.totalGasAmount).toNumber(),
-        gas_price: Number(computeAvgGasPrice("wei",message.totalGasAmount,message.totalPayment)),
-        value: 0,
+    save: true,
+    save_if_fails: true, 
+    simulation_type: 'full',
+    network_id: chainId, 
+    from: '0x0000000000000000000000000000000000000000',//can be any address, doesn't matter
+    to: contract,
+    input:handleCalldata,
+    gas: BigNumEth.from(message.totalGasAmount).toNumber(),
+    gas_price: Number(gasPrice?.wei),
+    value: 0,
   }
   const resp=await fetch(
     `/api/simulation`,{
@@ -282,26 +280,15 @@ async function simulateCall({contract,handleCalldata,chainId,message}:{contract:
       body:JSON.stringify(data),
     }
   )
-  
-  const simulationId=await resp.json().then((data)=>data.data)
-  window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
-  
-}
-
-function computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
-  try {
-    if (!gasAmount || !payment) return null;
-    const gasBN = new BigNumber(gasAmount);
-    const paymentBN = new BigNumber(payment);
-    if (gasBN.isZero() || paymentBN.isZero()) return null;
-    const wei = paymentBN.div(gasAmount).toFixed(0);
-    return wei;
-  } catch (error) {
-    logger.debug('Error computing avg gas price', error);
-    return null;
+  const respMessage=await resp.json()
+  if(respMessage.success===true){
+    const simulationId=respMessage.data
+    window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
+  }
+  else{
+    toast.error(respMessage.error)
   }
 }
-
 
 const helpText = {
   origin: 'Info about the transaction that initiated the message placement into the outbox.',

@@ -1,5 +1,4 @@
 import BigNumber from 'bignumber.js';
-import { utils } from 'ethers';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
@@ -10,11 +9,10 @@ import { links } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
 import { BigNumberMax, fromWei } from '../../../utils/amount';
-import { logger } from '../../../utils/logger';
 import { toTitleCase } from '../../../utils/string';
 import { GasPayment } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
-
+import { computeAvgGasPrice } from '../utils';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
@@ -163,21 +161,6 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
       </tbody>
     </table>
   );
-}
-
-function computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
-  try {
-    if (!gasAmount || !payment) return null;
-    const gasBN = new BigNumber(gasAmount);
-    const paymentBN = new BigNumber(payment);
-    if (gasBN.isZero() || paymentBN.isZero()) return null;
-    const wei = paymentBN.div(gasAmount).toFixed(0);
-    const formatted = utils.formatUnits(wei, unit).toString();
-    return { wei, formatted };
-  } catch (error) {
-    logger.debug('Error computing avg gas price', error);
-    return null;
-  }
 }
 
 const style = {
