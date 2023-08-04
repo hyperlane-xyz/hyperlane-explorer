@@ -1,5 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { utils } from 'ethers/lib/ethers';
+
 import { Message, MessageStub } from '../../types';
 import { fromBase64, toBase64 } from '../../utils/base64';
 import { logger } from '../../utils/logger';
@@ -12,7 +13,11 @@ export function deserializeMessage<M extends MessageStub>(data: string | string[
   return fromBase64<M>(data);
 }
 
-export function  computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
+export function computeAvgGasPrice(
+  unit: string,
+  gasAmount?: BigNumber.Value,
+  payment?: BigNumber.Value,
+) {
   try {
     if (!gasAmount || !payment) return null;
     const gasBN = new BigNumber(gasAmount);

@@ -13,6 +13,7 @@ import { toTitleCase } from '../../../utils/string';
 import { GasPayment } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
 import { computeAvgGasPrice } from '../utils';
+
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {

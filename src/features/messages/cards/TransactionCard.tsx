@@ -1,6 +1,7 @@
 import { BigNumber as BigNumEth } from 'ethers';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { toast } from 'react-toastify';
+
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
@@ -14,6 +15,7 @@ import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
 import { computeAvgGasPrice } from '../utils';
+
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -41,7 +43,7 @@ export function DestinationTransactionCard({
   isStatusFetching,
   isPiMsg,
   blur,
-  message
+  message,
 }: {
   chainId: ChainId;
   status: MessageStatus;
@@ -50,7 +52,7 @@ export function DestinationTransactionCard({
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
-  message:Message;
+  message: Message;
 }) {
   let content: ReactNode;
   if (transaction) {
@@ -87,7 +89,7 @@ export function DestinationTransactionCard({
             </div>
           )}
           <Spinner classes="my-4 scale-75" />
-          <CallDataModal debugResult={debugResult} chainId={chainId} message={message}/>
+          <CallDataModal debugResult={debugResult} chainId={chainId} message={message} />
         </div>
       </DeliveryStatus>
     );
@@ -210,19 +212,27 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   );
 }
 
-function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDebugResult,chainId:ChainId,message:Message }) {
+function CallDataModal({
+  debugResult,
+  chainId,
+  message,
+}: {
+  debugResult?: MessageDebugResult;
+  chainId: ChainId;
+  message: Message;
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [loading,setLoading]=useState(false)
-  const [buttonText,setButtonText]=useState("Simulate call with Tenderly")
+  const [loading, setLoading] = useState(false);
+  const [buttonText, setButtonText] = useState('Simulate call with Tenderly');
   if (!debugResult?.calldataDetails) return null;
   const { contract, handleCalldata } = debugResult.calldataDetails;
-  const handleClick=async()=>{
+  const handleClick = async () => {
     setButtonText('Simulating');
-    setLoading(true)
-    await simulateCall({contract,handleCalldata,chainId,message})
-    setButtonText('Simulate call with Tenderly')
-    setLoading(false) //using !loading is not setting the states properly and the state stays true
-  }
+    setLoading(true);
+    await simulateCall({ contract, handleCalldata, chainId, message });
+    setButtonText('Simulate call with Tenderly');
+    setLoading(false); //using !loading is not setting the states properly and the state stays true
+  };
   return (
     <>
       <button onClick={() => setIsOpen(true)} className={`mt-5 ${styles.textLink}`}>
@@ -248,10 +258,7 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
           </p>
           <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
           <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
-          <button onClick={handleClick}
-            disabled={loading}
-            className='underline text-blue-400'
-          >
+          <button onClick={handleClick} disabled={loading} className="underline text-blue-400">
             {buttonText}
           </button>
           {loading && <Spinner classes="mt-4 scale-75 self-center" />}
@@ -260,33 +267,40 @@ function CallDataModal({ debugResult,chainId,message}: { debugResult?: MessageDe
     </>
   );
 }
-async function simulateCall({contract,handleCalldata,chainId,message}:{contract:string,handleCalldata:string,chainId:ChainId,message:Message}){
-  const gasPrice=computeAvgGasPrice("wei",message.totalGasAmount,message.totalPayment)
-  const data:SimulateBody={
+async function simulateCall({
+  contract,
+  handleCalldata,
+  chainId,
+  message,
+}: {
+  contract: string;
+  handleCalldata: string;
+  chainId: ChainId;
+  message: Message;
+}) {
+  const gasPrice = computeAvgGasPrice('wei', message.totalGasAmount, message.totalPayment);
+  const data: SimulateBody = {
     save: true,
-    save_if_fails: true, 
+    save_if_fails: true,
     simulation_type: 'full',
-    network_id: chainId, 
-    from: '0x0000000000000000000000000000000000000000',//can be any address, doesn't matter
+    network_id: chainId,
+    from: '0x0000000000000000000000000000000000000000', //can be any address, doesn't matter
     to: contract,
-    input:handleCalldata,
+    input: handleCalldata,
     gas: BigNumEth.from(message.totalGasAmount).toNumber(),
     gas_price: Number(gasPrice?.wei),
     value: 0,
-  }
-  const resp=await fetch(
-    `/api/simulation`,{
-      method:'POST',
-      body:JSON.stringify(data),
-    }
-  )
-  const respMessage=await resp.json()
-  if(respMessage.success===true){
-    const simulationId=respMessage.data
-    window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`)
-  }
-  else{
-    toast.error(respMessage.error)
+  };
+  const resp = await fetch(`/api/simulation`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  const respMessage = await resp.json();
+  if (respMessage.success === true) {
+    const simulationId = respMessage.data;
+    window.open(`https://dashboard.tenderly.co/shared/simulation/${simulationId}`);
+  } else {
+    toast.error(respMessage.error);
   }
 }
 
