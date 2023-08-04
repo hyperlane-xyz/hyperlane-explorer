@@ -119,6 +119,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={message.isPiMsg}
           blur={blur}
+          message={message}
         />
         {!message.isPiMsg && <TimelineCard message={message} blur={blur} />}
         <ContentDetailsCard message={message} blur={blur} />

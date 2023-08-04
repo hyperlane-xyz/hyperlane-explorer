@@ -60,3 +60,17 @@ export interface ExtendedLog extends providers.Log {
   from?: Address;
   to?: Address;
 }
+
+// Type of body for tenderly POST requests https://docs.tenderly.co/simulations-and-forks/simulation-api/using-simulation-api
+export interface SimulateBody {
+  save: boolean;
+  save_if_fails: boolean;
+  simulation_type: string;
+  network_id: ChainId;
+  from: Address; //can be any address, doesn't matter
+  to: Address;
+  input: string;
+  gas: number;
+  gas_price: number | null;
+  value: number;
+}
