@@ -80,7 +80,9 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     msgId,
     status,
     originChainId,
-    destinationChainId: destChainId,
+    destinationChainId,
+    originDomainId,
+    destinationDomainId,
     origin,
     destination,
   } = message;
@@ -100,7 +102,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           isIcaMsg ? 'ICA ' : ''
         } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
           multiProvider,
-          destChainId,
+          destinationChainId,
         )}`}</h2>
         <StatusHeader
           messageStatus={status}
@@ -110,9 +112,15 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
       </Card>
       <div className="flex flex-wrap items-stretch justify-between mt-3 md:mt-4 gap-3 md:gap-4">
-        <OriginTransactionCard chainId={originChainId} transaction={origin} blur={blur} />
+        <OriginTransactionCard
+          chainId={originChainId}
+          domainId={originDomainId}
+          transaction={origin}
+          blur={blur}
+        />
         <DestinationTransactionCard
-          chainId={destChainId}
+          chainId={destinationChainId}
+          domainId={destinationDomainId}
           status={status}
           transaction={destination}
           debugResult={debugResult}

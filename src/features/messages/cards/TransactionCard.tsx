@@ -1,4 +1,7 @@
+import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
+
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -18,22 +21,30 @@ import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
   chainId,
+  domainId,
   transaction,
   blur,
 }: {
   chainId: ChainId;
+  domainId: DomainId;
   transaction: MessageTx;
   blur: boolean;
 }) {
   return (
     <TransactionCard chainId={chainId} title="Origin Transaction" helpText={helpText.origin}>
-      <TransactionDetails chainId={chainId} transaction={transaction} blur={blur} />
+      <TransactionDetails
+        chainId={chainId}
+        domainId={domainId}
+        transaction={transaction}
+        blur={blur}
+      />
     </TransactionCard>
   );
 }
 
 export function DestinationTransactionCard({
   chainId,
+  domainId,
   status,
   transaction,
   debugResult,
@@ -42,6 +53,7 @@ export function DestinationTransactionCard({
   blur,
 }: {
   chainId: ChainId;
+  domainId: DomainId;
   status: MessageStatus;
   transaction?: MessageTx;
   debugResult?: MessageDebugResult;
@@ -49,9 +61,19 @@ export function DestinationTransactionCard({
   isPiMsg?: boolean;
   blur: boolean;
 }) {
+  const multiProvider = useMultiProvider();
+  const hasChainConfig = !!multiProvider.tryGetChainMetadata(chainId);
+
   let content: ReactNode;
   if (transaction) {
-    content = <TransactionDetails chainId={chainId} transaction={transaction} blur={blur} />;
+    content = (
+      <TransactionDetails
+        transaction={transaction}
+        chainId={chainId}
+        domainId={domainId}
+        blur={blur}
+      />
+    );
   } else if (!debugResult && isStatusFetching) {
     content = (
       <DeliveryStatus>
@@ -73,13 +95,32 @@ export function DestinationTransactionCard({
         <CallDataModal debugResult={debugResult} />
       </DeliveryStatus>
     );
+  } else if (!hasChainConfig) {
+    content = (
+      <DeliveryStatus>
+        <div className="flex flex-col items-center">
+          <div>Delivery status is unknown.</div>
+          <div className="mt-2 text-sm max-w-xs">
+            Permissionless Interoperability (PI) chains require a config.
+          </div>
+          <div className="mt-2 mb-6 text-sm max-w-xs">
+            Please{' '}
+            <Link href="/settings" className="underline underline-offset-2">
+              add a config
+            </Link>{' '}
+            for this chain.
+          </div>
+          <CallDataModal debugResult={debugResult} />
+        </div>
+      </DeliveryStatus>
+    );
   } else if (status === MessageStatus.Pending) {
     content = (
       <DeliveryStatus>
         <div className="flex flex-col items-center">
           <div>Delivery to destination chain still in progress.</div>
           {isPiMsg && (
-            <div className="mt-2 text-gray-700 text-sm max-w-xs">
+            <div className="mt-2 text-sm max-w-xs">
               Please ensure a relayer is running for this chain.
             </div>
           )}
@@ -91,7 +132,7 @@ export function DestinationTransactionCard({
   } else {
     content = (
       <DeliveryStatus>
-        <div className="text-gray-700">{`Delivery to status is currently unknown. ${
+        <div>{`Delivery to status is currently unknown. ${
           isPiMsg
             ? 'Please ensure your chain config is correct and check back later.'
             : 'Please check again later'
@@ -135,10 +176,12 @@ function TransactionCard({
 
 function TransactionDetails({
   chainId,
+  domainId,
   transaction,
   blur,
 }: {
   chainId: ChainId;
+  domainId: DomainId;
   transaction: MessageTx;
   blur: boolean;
 }) {
@@ -147,12 +190,11 @@ function TransactionDetails({
   const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
   return (
     <>
-      <KeyValueRow
-        label="Chain:"
-        labelWidth="w-16"
-        display={`${getChainDisplayName(multiProvider, chainId)} (${chainId})`}
-        displayWidth="w-60 sm:w-64"
-        blurValue={blur}
+      <ChainDescriptionRow
+        chainId={chainId}
+        domainId={domainId}
+        multiProvider={multiProvider}
+        blur={blur}
       />
       <KeyValueRow
         label="Tx hash:"
@@ -201,9 +243,11 @@ function TransactionDetails({
 
 function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   return (
-    <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-500 font-light text-center">
-      <div className="max-w-sm">{children}</div>
-    </div>
+    <>
+      <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-700 font-light text-center">
+        <div className="max-w-sm">{children}</div>
+      </div>
+    </>
   );
 }
 
@@ -239,6 +283,35 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
         </div>
       </Modal>
     </>
+  );
+}
+
+function ChainDescriptionRow({
+  chainId,
+  domainId,
+  multiProvider,
+  blur,
+}: {
+  chainId: ChainId;
+  domainId: DomainId;
+  multiProvider: MultiProvider;
+  blur: boolean;
+}) {
+  const idString = chainId && chainId !== domainId ? `${chainId} / ${domainId}` : `${domainId}`;
+  const chainDescription = `${getChainDisplayName(
+    multiProvider,
+    domainId,
+    false,
+    false,
+  )} (${idString})`;
+  return (
+    <KeyValueRow
+      label="Chain:"
+      labelWidth="w-16"
+      display={chainDescription}
+      displayWidth="w-60 sm:w-64"
+      blurValue={blur}
+    />
   );
 }
 
