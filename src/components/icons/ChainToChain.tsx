@@ -6,7 +6,7 @@ import { useIsMobile } from '../../styles/mediaQueries';
 
 import { ChainLogo } from './ChainLogo';
 
-function _ChainToChain({
+function ChainToChain_({
   originChainId,
   destinationChainId,
   size = 32,
@@ -36,4 +36,4 @@ function _ChainToChain({
   );
 }
 
-export const ChainToChain = memo(_ChainToChain);
+export const ChainToChain = memo(ChainToChain_);

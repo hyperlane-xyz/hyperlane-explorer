@@ -1,9 +1,8 @@
 import { BigNumber, providers } from 'ethers';
 
+import { chunk, isBigNumberish, isNullish } from '@hyperlane-xyz/utils';
+
 import { logger } from '../../utils/logger';
-import { isBigNumberish } from '../../utils/number';
-import { chunk } from '../../utils/string';
-import { isNullish } from '../../utils/typeof';
 
 import { AllProviderMethods, IProviderMethods, ProviderMethod } from './ProviderMethods';
 import { RpcConfigWithConnectionInfo } from './types';

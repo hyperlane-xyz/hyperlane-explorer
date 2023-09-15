@@ -19,9 +19,9 @@ export class SmartMultiProvider extends MultiProvider {
   override tryGetProvider(chainNameOrId: ChainName | number): HyperlaneSmartProvider | null {
     const metadata = this.tryGetChainMetadata(chainNameOrId);
     if (!metadata) return null;
-    const { name, publicRpcUrls, blockExplorers } = metadata;
+    const { name, rpcUrls, blockExplorers } = metadata;
 
-    if (!this.providers[name] && (publicRpcUrls?.length || blockExplorers?.length)) {
+    if (!this.providers[name] && (rpcUrls?.length || blockExplorers?.length)) {
       this.providers[name] = new HyperlaneSmartProvider(metadata);
     }
 

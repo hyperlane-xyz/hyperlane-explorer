@@ -1,15 +1,7 @@
-import {
-  type ChainMap,
-  type ChainName,
-  type MultiProvider,
-  chainIdToMetadata,
-  hyperlaneContractAddresses,
-} from '@hyperlane-xyz/sdk';
+import { type MultiProvider, chainIdToMetadata } from '@hyperlane-xyz/sdk';
+import { toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
-import { toTitleCase } from '../../utils/string';
-
-import type { ChainConfig } from './chainConfig';
 
 export function getChainName(mp: MultiProvider, chainId?: number) {
   return mp.tryGetChainName(chainId || 0) || undefined;
@@ -30,28 +22,6 @@ export function getChainDisplayName(
 export function getChainEnvironment(mp: MultiProvider, chainIdOrName: number | string) {
   const isTestnet = mp.tryGetChainMetadata(chainIdOrName)?.isTestnet;
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
-}
-
-export function tryGetContractAddress(
-  customChainConfigs: ChainMap<ChainConfig>,
-  chainName: ChainName,
-  contractName: keyof ChainConfig['contracts'],
-): Address | undefined {
-  return (
-    customChainConfigs[chainName]?.contracts?.[contractName] ||
-    hyperlaneContractAddresses[chainName]?.[contractName] ||
-    undefined
-  );
-}
-
-export function getContractAddress(
-  customChainConfigs: ChainMap<ChainConfig>,
-  chainName: ChainName,
-  contractName: keyof ChainConfig['contracts'],
-): Address {
-  const addr = tryGetContractAddress(customChainConfigs, chainName, contractName);
-  if (!addr) throw new Error(`No contract address found for ${contractName} on ${chainName}`);
-  return addr;
 }
 
 export function isPiChain(chainId: number) {

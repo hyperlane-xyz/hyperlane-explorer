@@ -1,13 +1,14 @@
 import { BigNumber, providers } from 'ethers';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { sleep } from '@hyperlane-xyz/utils';
 
 import { config } from '../consts/config';
 import type { ExtendedLog } from '../types';
 
 import { logger } from './logger';
 import { toDecimalNumber, tryToDecimalNumber } from './number';
-import { fetchWithTimeout, sleep } from './timeout';
+import { fetchWithTimeout } from './timeout';
 
 const BLOCK_EXPLORER_RATE_LIMIT = 6000; // once every 6 seconds
 // Used for crude rate-limiting of explorer queries without API keys

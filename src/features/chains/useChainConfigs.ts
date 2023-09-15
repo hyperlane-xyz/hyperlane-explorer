@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { z } from 'zod';
 
-import { ChainMap, ChainMetadata, ChainMetadataSchema, objMerge } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk';
+import { fromBase64, objMerge } from '@hyperlane-xyz/utils';
 
 import { useStore } from '../../store';
-import { fromBase64 } from '../../utils/base64';
 import { logger } from '../../utils/logger';
 import { useQueryParam } from '../../utils/queryParams';
 
@@ -54,7 +54,7 @@ export function useQueryParamChainConfigSync() {
       (acc, chainMetadata) => {
         // TODO would be great if we could get contract addrs here too
         // But would require apps like warp template to get that from devs
-        acc[chainMetadata.name] = { ...chainMetadata, contracts: { mailbox: '' } };
+        acc[chainMetadata.name] = chainMetadata;
         return acc;
       },
       {},

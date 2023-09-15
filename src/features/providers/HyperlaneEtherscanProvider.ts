@@ -1,9 +1,9 @@
 import { providers } from 'ethers';
 
-import { ChainMetadata, objFilter } from '@hyperlane-xyz/sdk';
+import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { objFilter, sleep } from '@hyperlane-xyz/utils';
 
 import { logger } from '../../utils/logger';
-import { sleep } from '../../utils/timeout';
 
 import { IProviderMethods, ProviderMethod, excludeMethods } from './ProviderMethods';
 

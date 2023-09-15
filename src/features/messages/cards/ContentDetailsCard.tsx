@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
-import { utils } from '@hyperlane-xyz/utils';
+import { formatMessage } from '@hyperlane-xyz/utils';
 
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';
@@ -51,7 +51,7 @@ export function ContentDetailsCard({
 
   const rawBytes = useMemo(() => {
     try {
-      return utils.formatMessage(
+      return formatMessage(
         MAILBOX_VERSION,
         nonce,
         originDomainId,

@@ -2,12 +2,12 @@ import type { utils } from 'ethers';
 
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 
-export type RpcConfigWithConnectionInfo = ChainMetadata['publicRpcUrls'][number] & {
+export type RpcConfigWithConnectionInfo = ChainMetadata['rpcUrls'][number] & {
   connection?: utils.ConnectionInfo;
 };
 
-export interface ChainMetadataWithRpcConnectionInfo extends ChainMetadata {
-  publicRpcUrls: RpcConfigWithConnectionInfo[];
+export interface ChainMetadataWithRpcConnectionInfo extends Omit<ChainMetadata, 'rpcUrls'> {
+  rpcUrls: Array<RpcConfigWithConnectionInfo>;
 }
 
 export enum ProviderStatus {

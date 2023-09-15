@@ -10,16 +10,19 @@ import {
   InterchainGasPaymaster__factory,
 } from '@hyperlane-xyz/core';
 import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
-import { utils } from '@hyperlane-xyz/utils';
+import {
+  addressToBytes32,
+  errorToString,
+  formatMessage,
+  isValidAddress,
+  strip0x,
+  trimToLength,
+} from '@hyperlane-xyz/utils';
 
 import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
-import { isValidAddress, trimLeading0x } from '../../utils/addresses';
-import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
-import { trimToLength } from '../../utils/string';
 import type { ChainConfig } from '../chains/chainConfig';
-import { getContractAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
@@ -45,7 +48,7 @@ export async function debugMessage(
   logger.debug(`Debugging message id: ${msgId}`);
 
   // Prepare some useful data/encodings
-  const messageBytes = utils.formatMessage(
+  const messageBytes = formatMessage(
     MAILBOX_VERSION,
     nonce,
     originDomain,
@@ -57,7 +60,7 @@ export async function debugMessage(
   const destName = multiProvider.tryGetChainName(destDomain)!;
   const originProvider = multiProvider.getProvider(originDomain);
   const destProvider = multiProvider.getProvider(destDomain);
-  const senderBytes = utils.addressToBytes32(sender);
+  const senderBytes = addressToBytes32(sender);
 
   // Create a bag to hold all the useful info collected along the way
   const details: Omit<MessageDebugResult, 'status' | 'description'> = {};
@@ -65,7 +68,10 @@ export async function debugMessage(
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
-  const destMailbox = getContractAddress(customChainConfigs, destName, 'mailbox');
+  const destMailbox = customChainConfigs[destName]?.mailbox;
+  if (!destMailbox)
+    throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
+
   const deliveryResult = await debugMessageDelivery(
     originDomain,
     destMailbox,
@@ -318,7 +324,7 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
     const msgRecipientInterface = IMessageRecipient__factory.createInterface();
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-    return bytecode.includes(trimLeading0x(handleSignature));
+    return bytecode.includes(strip0x(handleSignature));
   } catch (error) {
     logger.error('Error checking bytecode for handle fn', error);
     return true;

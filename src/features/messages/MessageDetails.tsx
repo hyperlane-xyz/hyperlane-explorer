@@ -2,13 +2,14 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
+import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
+
 import { Spinner } from '../../components/animations/Spinner';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
-import { toTitleCase, trimToLength } from '../../utils/string';
 import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { useMultiProvider } from '../providers/multiProvider';

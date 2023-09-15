@@ -120,7 +120,7 @@ export function ConfigureChains() {
               <td className={styles.value}>{chain.domainId || chain.chainId}</td>
               <td className={styles.value}>{chain.displayName || chain.name}</td>
               <td className={styles.value + ' hidden sm:table-cell'}>
-                {chain.publicRpcUrls?.[0]?.http || 'Unknown'}
+                {chain.rpcUrls?.[0]?.http || 'Unknown'}
               </td>
               <td className={styles.value + ' hidden md:table-cell'}>
                 {chain.blockExplorers?.[0]?.url || 'Unknown'}
@@ -184,7 +184,8 @@ export function ConfigureChains() {
 const customChainTextareaPlaceholder = `{
   "chainId": 5,
   "name": "goerli",
-  "publicRpcUrls": [{ "http": "https://foobar.com" }],
+  "protocol": "ethereum",
+  "rpcUrls": [{ "http": "https://foobar.com" }],
   "blockExplorers": [ {
       "name": "GoerliScan",
       "family": "etherscan",
@@ -193,10 +194,8 @@ const customChainTextareaPlaceholder = `{
       "apiKey": "12345"
   } ],
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
-  "contracts": {
-    "mailbox": "0x123...",
-    "interchainGasPaymaster": "0x123..."
-  }
+  "mailbox": "0x123...",
+  "interchainGasPaymaster": "0x123..."
 }
 `;
 

@@ -1,7 +1,8 @@
 import Head from 'next/head';
 import { PropsWithChildren } from 'react';
 
-import { toTitleCase } from '../../utils/string';
+import { toTitleCase } from '@hyperlane-xyz/utils';
+
 import { Footer } from '../nav/Footer';
 import { Header } from '../nav/Header';
 
@@ -19,7 +20,6 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
       </Head>
       <div
         style={styles.container}
-        id="app-content"
         className="relative w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
       >
         {/* <InfoBanner /> */}

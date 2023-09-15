@@ -3,7 +3,6 @@ import { providers } from 'ethers';
 import { ChainMetadata, ExplorerFamily } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
-import { timeout } from '../../utils/timeout';
 
 import { HyperlaneEtherscanProvider } from './HyperlaneEtherscanProvider';
 import { HyperlaneJsonRpcProvider } from './HyperlaneJsonRpcProvider';
@@ -48,8 +47,8 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
       this.explorerProviders = [];
     }
 
-    if (chainMetadata.publicRpcUrls?.length) {
-      this.rpcProviders = chainMetadata.publicRpcUrls.map((rpcConfig) => {
+    if (chainMetadata.rpcUrls?.length) {
+      this.rpcProviders = chainMetadata.rpcUrls.map((rpcConfig) => {
         const newProvider = new HyperlaneJsonRpcProvider(rpcConfig, network);
         newProvider.supportedMethods.forEach((m) => supportedMethods.add(m));
         return newProvider;
@@ -108,9 +107,7 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
         }
 
         const resultPromise = wrapProviderPerform(provider, providerUrl, method, params, reqId);
-        const timeoutPromise = timeout<ProviderTimeoutResult>(PROVIDER_STAGGER_DELAY_MS, {
-          status: ProviderStatus.Timeout,
-        });
+        const timeoutPromise = timeoutResult(1);
         const result = await Promise.race([resultPromise, timeoutPromise]);
 
         if (result.status === ProviderStatus.Success) {
@@ -136,9 +133,7 @@ export class HyperlaneSmartProvider extends providers.BaseProvider implements IP
         }
       } else if (providerResultPromises.length > 0) {
         // All providers already triggered, wait for one to complete or all to fail/timeout
-        const timeoutPromise = timeout<ProviderTimeoutResult>(PROVIDER_STAGGER_DELAY_MS * 20, {
-          status: ProviderStatus.Timeout,
-        });
+        const timeoutPromise = timeoutResult(20);
         const resultPromise = waitForProviderSuccess(providerResultPromises);
         const result = await Promise.race([resultPromise, timeoutPromise]);
 
@@ -227,10 +222,25 @@ function throwCombinedProviderErrors(errors: unknown[], fallbackMsg: string): vo
   else throw new Error(fallbackMsg);
 }
 
-function chainMetadataToProviderNetwork(chainMetadata: ChainMetadata): providers.Network {
+function chainMetadataToProviderNetwork(
+  chainMetadata: ChainMetadata | ChainMetadataWithRpcConnectionInfo,
+): providers.Network {
   return {
     name: chainMetadata.name,
     chainId: chainMetadata.chainId,
+    // @ts-ignore add ensAddress to ChainMetadata
     ensAddress: chainMetadata.ensAddress,
   };
+}
+
+function timeoutResult(multiplier: number) {
+  return new Promise<ProviderTimeoutResult>((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          status: ProviderStatus.Timeout,
+        }),
+      PROVIDER_STAGGER_DELAY_MS * multiplier,
+    ),
+  );
 }

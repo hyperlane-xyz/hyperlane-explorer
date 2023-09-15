@@ -1,8 +1,8 @@
 import { ethers } from 'ethers';
 
 import { ChainMetadata, chainMetadata } from '@hyperlane-xyz/sdk';
+import { eqAddress } from '@hyperlane-xyz/utils';
 
-import { areAddressesEqual } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 
 import { ProviderMethod } from './ProviderMethods';
@@ -17,19 +17,19 @@ const WETH_TRANSFER_TOPIC0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a116
 const TRANSFER_TX_HASH = '0x45a586f90ffd5d0f8e618f0f3703b14c2c9e4611af6231d6fed32c62776b6c1b';
 
 const goerliRpcConfig = {
-  ...chainMetadata.goerli.publicRpcUrls[0],
+  ...chainMetadata.goerli.rpcUrls[0],
   pagination: {
     maxBlockRange: 1000,
     minBlockNumber: MIN_BLOCK_NUM,
   },
 };
-const justExplorersConfig: ChainMetadata = { ...chainMetadata.goerli, publicRpcUrls: [] };
+const justExplorersConfig: ChainMetadata = { ...chainMetadata.goerli, rpcUrls: [] as any };
 const justRpcsConfig: ChainMetadata = {
   ...chainMetadata.goerli,
-  publicRpcUrls: [goerliRpcConfig],
+  rpcUrls: [goerliRpcConfig],
   blockExplorers: [],
 };
-const combinedConfig: ChainMetadata = { ...chainMetadata.goerli, publicRpcUrls: [goerliRpcConfig] };
+const combinedConfig: ChainMetadata = { ...chainMetadata.goerli, rpcUrls: [goerliRpcConfig] };
 const configs: [string, ChainMetadata][] = [
   ['Just Explorers', justExplorersConfig],
   ['Just RPCs', justRpcsConfig],
@@ -118,7 +118,7 @@ describe('SmartProvider', () => {
         });
         logger.debug('Logs found', result1.length);
         expect(result1.length).toBeGreaterThan(100);
-        expect(areAddressesEqual(result1[0].address, WETH_CONTRACT)).toBeTruthy();
+        expect(eqAddress(result1[0].address, WETH_CONTRACT)).toBeTruthy();
 
         logger.debug('Testing logs with small from/to range');
         const result2 = await provider.getLogs({
@@ -128,7 +128,7 @@ describe('SmartProvider', () => {
           toBlock: MIN_BLOCK_NUM + 100,
         });
         expect(result2.length).toBeGreaterThan(10);
-        expect(areAddressesEqual(result2[0].address, WETH_CONTRACT)).toBeTruthy();
+        expect(eqAddress(result2[0].address, WETH_CONTRACT)).toBeTruthy();
 
         logger.debug('Testing logs with large from/to range');
         const result3 = await provider.getLogs({
@@ -138,7 +138,7 @@ describe('SmartProvider', () => {
           toBlock: 'latest',
         });
         expect(result3.length).toBeGreaterThan(10);
-        expect(areAddressesEqual(result3[0].address, WETH_CONTRACT)).toBeTruthy();
+        expect(eqAddress(result3[0].address, WETH_CONTRACT)).toBeTruthy();
       });
 
       itDoesIfSupported(ProviderMethod.EstimateGas, async () => {

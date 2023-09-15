@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
+import { isAddressEvm, isValidTransactionHashEvm } from '@hyperlane-xyz/utils';
+
 import { MessageStatus } from '../../../types';
-import { isValidAddressFast, isValidTransactionHash } from '../../../utils/addresses';
 import { useInterval } from '../../../utils/useInterval';
 import { useMultiProvider } from '../../providers/multiProvider';
 import {
@@ -20,8 +21,8 @@ const SEARCH_QUERY_LIMIT = 50;
 
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
   if (!input) return false;
-  if (isValidTransactionHash(input)) return true;
-  if (allowAddress && isValidAddressFast(input)) return true;
+  if (isValidTransactionHashEvm(input)) return true;
+  if (allowAddress && isAddressEvm(input)) return true;
   return false;
 }
 
