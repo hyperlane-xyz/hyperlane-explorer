@@ -7,10 +7,13 @@ import { ChainConfig } from './features/chains/chainConfig';
 import { buildSmartProvider } from './features/providers/SmartMultiProvider';
 import { logger } from './utils/logger';
 
+// Increment this when persist state has breaking changes
+const PERSIST_STATE_VERSION = 1;
+
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
-  chainConfigsV2: ChainMap<ChainConfig>; // v2 because schema changed
+  chainConfigs: ChainMap<ChainConfig>;
   setChainConfigs: (configs: ChainMap<ChainConfig>) => void;
   multiProvider: MultiProvider;
   setMultiProvider: (mp: MultiProvider) => void;
@@ -21,9 +24,9 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      chainConfigsV2: {},
+      chainConfigs: {},
       setChainConfigs: (configs: ChainMap<ChainConfig>) => {
-        set({ chainConfigsV2: configs, multiProvider: buildSmartProvider(configs) });
+        set({ chainConfigs: configs, multiProvider: buildSmartProvider(configs) });
       },
       multiProvider: buildSmartProvider({}),
       setMultiProvider: (mp: MultiProvider) => {
@@ -34,7 +37,8 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'hyperlane', // name in storage
-      partialize: (state) => ({ chainConfigsV2: state.chainConfigsV2 }), // fields to persist
+      version: PERSIST_STATE_VERSION,
+      partialize: (state) => ({ chainConfigs: state.chainConfigs }), // fields to persist
       onRehydrateStorage: () => {
         logger.debug('Rehydrating state');
         return (state, error) => {
@@ -42,7 +46,7 @@ export const useStore = create<AppState>()(
             logger.error('Error during hydration', error);
             return;
           }
-          state.setMultiProvider(buildSmartProvider(state.chainConfigsV2));
+          state.setMultiProvider(buildSmartProvider(state.chainConfigs));
           logger.debug('Hydration finished');
         };
       },

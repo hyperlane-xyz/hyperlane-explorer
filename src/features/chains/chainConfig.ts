@@ -46,7 +46,7 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   const chainConfig = result.data as ChainConfig;
 
-  // Ensure http is used for RPCs (and not http)
+  // Ensure https is used for RPCs
   const rpcUrls = chainConfig.rpcUrls;
   if (rpcUrls?.some((r) => !r.http.startsWith('https://'))) {
     return {

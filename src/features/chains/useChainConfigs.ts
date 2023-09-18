@@ -16,13 +16,13 @@ const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
 
 // Use the chainConfigs from the store
 export function useChainConfigs() {
-  return useStore((s) => s.chainConfigsV2);
+  return useStore((s) => s.chainConfigs);
 }
 
 // Use the chainConfigs and setChainConfigs from the store (i.e. Read/Write)
 export function useChainConfigsRW() {
   return useStore((s) => ({
-    chainConfigs: s.chainConfigsV2,
+    chainConfigs: s.chainConfigs,
     setChainConfigs: s.setChainConfigs,
   }));
 }
