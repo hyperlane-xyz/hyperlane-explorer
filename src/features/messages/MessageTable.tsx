@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { shortenAddress } from '@hyperlane-xyz/utils';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { MessageStatus, MessageStub } from '../../types';
-import { shortenAddress } from '../../utils/addresses';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
 import { useMultiProvider } from '../providers/multiProvider';

@@ -7,7 +7,6 @@ import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import type { ChainConfig } from '../chains/chainConfig';
-import { getContractAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 
@@ -24,7 +23,11 @@ export async function fetchDeliveryStatus(
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.getChainName(message.destinationChainId);
-  const destMailboxAddr = getContractAddress(customChainConfigs, destName, 'mailbox');
+  const destMailboxAddr = customChainConfigs[destName]?.mailbox;
+  if (!destMailboxAddr)
+    throw new Error(
+      `Cannot check delivery status, no mailbox address provided for chain ${destName}`,
+    );
 
   const { isDelivered, blockNumber, transactionHash } = await checkIsMessageDelivered(
     multiProvider,

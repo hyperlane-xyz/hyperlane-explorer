@@ -1,19 +1,15 @@
 import { z } from 'zod';
 
-import { ChainMetadata, ChainMetadataSchema, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadataSchema, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
 
-export const chainContractsSchema = z.object({
-  mailbox: z.string(),
+export const ChainConfigSchema = ChainMetadataSchema.extend({
+  mailbox: z.string().optional(),
   interchainGasPaymaster: z.string().optional(),
-  // interchainAccountRouter: z.string().optional(),
 });
 
-export type ChainConfig = ChainMetadata & { contracts: z.infer<typeof chainContractsSchema> };
-export const chainConfigSchema = ChainMetadataSchema.extend({
-  contracts: chainContractsSchema,
-});
+export type ChainConfig = z.infer<typeof ChainConfigSchema>;
 
 type ParseResult =
   | {
@@ -37,7 +33,7 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
     };
   }
 
-  const result = chainConfigSchema.safeParse(data);
+  const result = ChainConfigSchema.safeParse(data);
 
   if (!result.success) {
     logger.error('Error validating chain config', result.error);
@@ -50,8 +46,8 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   const chainConfig = result.data as ChainConfig;
 
-  // Ensure https is used for RPCs (and not http)
-  const rpcUrls = chainConfig.publicRpcUrls;
+  // Ensure https is used for RPCs
+  const rpcUrls = chainConfig.rpcUrls;
   if (rpcUrls?.some((r) => !r.http.startsWith('https://'))) {
     return {
       success: false,
@@ -84,7 +80,7 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
   ) {
     return {
       success: false,
-      error: 'chainId, name, or domainId is already in use',
+      error: 'chainId, domainId, or name is already in use',
     };
   }
 

@@ -2,10 +2,17 @@ import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@hyperlane-xyz/core';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { utils } from '@hyperlane-xyz/utils';
+import {
+  addressToBytes32,
+  bytes32ToAddress,
+  isValidAddress,
+  isValidTransactionHash,
+  messageId,
+  normalizeAddress,
+  parseMessage,
+} from '@hyperlane-xyz/utils';
 
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
-import { isValidAddress, isValidTransactionHash, normalizeAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 
@@ -97,14 +104,14 @@ export async function fetchMessagesFromPiChain(
 }
 
 async function fetchLogsForAddress(
-  { chainId, contracts }: ChainConfig,
+  { chainId, mailbox }: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {
   const address = query.input;
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
-  const mailboxAddr = contracts.mailbox;
-  const dispatchTopic = utils.addressToBytes32(address);
+  if (!mailbox) throw new Error(`No mailbox address found for chain ${chainId}}`);
+  const dispatchTopic = addressToBytes32(address);
 
   return fetchLogsFromProvider(
     [
@@ -113,7 +120,7 @@ async function fetchLogsForAddress(
       // [processTopic0, dispatchTopic],
       // [processTopic0, null, null, dispatchTopic],
     ],
-    mailboxAddr,
+    mailbox,
     chainId,
     query,
     multiProvider,
@@ -150,17 +157,17 @@ async function fetchLogsForMsgId(
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {
-  const { contracts, chainId } = chainConfig;
+  const { mailbox, chainId } = chainConfig;
   const msgId = query.input;
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
-  const mailboxAddr = contracts.mailbox;
+  if (!mailbox) throw new Error(`No mailbox address found for chain ${chainId}}`);
   const topic1 = msgId;
   const logs: ExtendedLog[] = await fetchLogsFromProvider(
     [
       [dispatchIdTopic0, topic1],
       // [processIdTopic0, topic1],
     ],
-    mailboxAddr,
+    mailbox,
     chainId,
     query,
     multiProvider,
@@ -246,10 +253,10 @@ function logToMessage(
 
   try {
     const bytes = logDesc.args['message'];
-    const message = utils.parseMessage(bytes);
-    const msgId = utils.messageId(bytes);
-    const sender = normalizeAddress(utils.bytes32ToAddress(message.sender));
-    const recipient = normalizeAddress(utils.bytes32ToAddress(message.recipient));
+    const message = parseMessage(bytes);
+    const msgId = messageId(bytes);
+    const sender = normalizeAddress(bytes32ToAddress(message.sender));
+    const recipient = normalizeAddress(bytes32ToAddress(message.recipient));
     const originChainId = multiProvider.getChainId(message.origin);
     const destinationChainId = multiProvider.getChainId(message.destination);
 
@@ -272,7 +279,7 @@ function logToMessage(
         to: log.to ? normalizeAddress(log.to) : constants.AddressZero,
         blockHash: log.blockHash,
         blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-        mailbox: chainConfig.contracts.mailbox,
+        mailbox: chainConfig.mailbox || constants.AddressZero,
         nonce: 0,
         // TODO get more gas info from tx
         gasLimit: 0,
@@ -297,14 +304,16 @@ async function tryFetchIgpGasPayments(
   chainConfig: ChainConfig,
   multiProvider: MultiProvider,
 ): Promise<Message> {
-  const { chainId, contracts } = chainConfig;
-  const igpAddr = contracts.interchainGasPaymaster;
-  if (!igpAddr || !isValidAddress(igpAddr)) {
+  const { chainId, interchainGasPaymaster } = chainConfig;
+  if (!interchainGasPaymaster || !isValidAddress(interchainGasPaymaster)) {
     logger.warn('No IGP address found for chain:', chainId);
     return message;
   }
 
-  const igp = IInterchainGasPaymaster__factory.connect(igpAddr, multiProvider.getProvider(chainId));
+  const igp = IInterchainGasPaymaster__factory.connect(
+    interchainGasPaymaster,
+    multiProvider.getProvider(chainId),
+  );
   const filter = igp.filters.GasPayment(message.msgId);
   const matchedEvents = (await igp.queryFilter(filter)) || [];
   logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${message.msgId}`);

@@ -1,9 +1,9 @@
 import { RadioGroup } from '@headlessui/react';
 
 interface Props {
-  options: Array<{ value: string; display: string }>;
-  selected: string;
-  onChange: (value: string) => void;
+  options: Array<{ value: string | number; display: string }>;
+  selected: string | number;
+  onChange: (value: string | number) => void;
   label?: string;
 }
 

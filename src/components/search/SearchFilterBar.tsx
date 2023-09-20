@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { arrayToObject } from '@hyperlane-xyz/utils';
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../features/providers/multiProvider';
 import GearIcon from '../../images/icons/gear.svg';
 import { Color } from '../../styles/Color';
-import { arrayToObject } from '../../utils/objects';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
 import { ChainLogo } from '../icons/ChainLogo';

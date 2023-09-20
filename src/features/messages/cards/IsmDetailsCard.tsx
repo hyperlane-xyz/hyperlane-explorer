@@ -1,10 +1,11 @@
 import Image from 'next/image';
 
+import { isNullish } from '@hyperlane-xyz/utils';
+
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import ShieldLock from '../../../images/icons/shield-lock.svg';
-import { isNullish } from '../../../utils/typeof';
 import { IsmModuleTypes, MessageDebugResult } from '../../debugger/types';
 
 import { KeyValueRow } from './KeyValueRow';

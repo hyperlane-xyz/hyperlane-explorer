@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { ensure0x } from '@hyperlane-xyz/utils';
 
 import { Message } from '../../../types';
-import { ensureLeading0x } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 import { useChainConfigs } from '../../chains/useChainConfigs';
@@ -42,7 +42,7 @@ export function usePiChainMessageSearchQuery({
       if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return [];
       logger.debug('Starting PI Chain message search for:', sanitizedInput);
       // TODO convert timestamps to from/to blocks here
-      const query = { input: ensureLeading0x(sanitizedInput) };
+      const query = { input: ensure0x(sanitizedInput) };
       try {
         const messages = await Promise.any(
           Object.values(chainConfigs).map((c) => fetchMessagesOrThrow(c, query, multiProvider)),
@@ -79,7 +79,7 @@ export function usePiChainMessageQuery({
     async () => {
       if (pause || !messageId || !Object.keys(chainConfigs).length) return [];
       logger.debug('Starting PI Chain message query for:', messageId);
-      const query = { input: ensureLeading0x(messageId) };
+      const query = { input: ensure0x(messageId) };
       try {
         const messages = await Promise.any(
           Object.values(chainConfigs).map((c) =>

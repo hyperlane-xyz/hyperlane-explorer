@@ -3,15 +3,16 @@ import { utils } from 'ethers';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
+import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
+
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
-import { BigNumberMax, fromWei } from '../../../utils/amount';
+import { BigNumberMax } from '../../../utils/big-number';
 import { logger } from '../../../utils/logger';
-import { toTitleCase } from '../../../utils/string';
 import { GasPayment } from '../../debugger/types';
 import { useMultiProvider } from '../../providers/multiProvider';
 
@@ -29,13 +30,13 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     const originMetadata = multiProvider.tryGetChainMetadata(message.originChainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     return [
-      { value: 'ether', display: toTitleCase(nativeCurrencyName) },
-      { value: 'gwei', display: 'Gwei' },
-      { value: 'wei', display: 'Wei' },
+      { value: 18, display: toTitleCase(nativeCurrencyName) },
+      { value: 9, display: 'Gwei' },
+      { value: 0, display: 'Wei' },
     ];
   }, [message, multiProvider]);
 
-  const [unit, setUnit] = useState(unitOptions[0].value);
+  const [decimals, setDecimals] = useState(unitOptions[0].value);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
@@ -43,7 +44,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         .map((contract) =>
           igpPayments[contract].map((p) => ({
             gasAmount: p.gasAmount,
-            paymentAmount: fromWei(p.paymentAmount, unit).toString(),
+            paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
             contract,
           })),
         )
@@ -63,10 +64,10 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       totalPaymentWei = BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0));
       numPayments = Math.max(numPayments, message.numPayments || 0);
 
-      const paymentFormatted = fromWei(totalPaymentWei.toString(), unit).toString();
-      const avgPrice = computeAvgGasPrice(unit, totalGasAmount, totalPaymentWei);
+      const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
+      const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
       return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
-    }, [unit, message, igpPayments]);
+    }, [decimals, message, igpPayments]);
 
   return (
     <Card className="w-full space-y-4 relative">
@@ -133,8 +134,8 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       <div className="absolute right-2 bottom-2">
         <RadioButtons
           options={unitOptions}
-          selected={unit}
-          onChange={(value) => setUnit(value)}
+          selected={decimals}
+          onChange={(value) => setDecimals(parseInt(value.toString(), 10))}
           label="Gas unit"
         />
       </div>
@@ -165,14 +166,18 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
   );
 }
 
-function computeAvgGasPrice(unit: string, gasAmount?: BigNumber.Value, payment?: BigNumber.Value) {
+function computeAvgGasPrice(
+  decimals: number,
+  gasAmount?: BigNumber.Value,
+  payment?: BigNumber.Value,
+) {
   try {
     if (!gasAmount || !payment) return null;
     const gasBN = new BigNumber(gasAmount);
     const paymentBN = new BigNumber(payment);
     if (gasBN.isZero() || paymentBN.isZero()) return null;
     const wei = paymentBN.div(gasAmount).toFixed(0);
-    const formatted = utils.formatUnits(wei, unit).toString();
+    const formatted = utils.formatUnits(wei, decimals).toString();
     return { wei, formatted };
   } catch (error) {
     logger.debug('Error computing avg gas price', error);

@@ -1,5 +1,6 @@
+import { isZeroish } from '@hyperlane-xyz/utils';
+
 import { CopyButton } from '../../../components/buttons/CopyButton';
-import { isZeroish } from '../../../utils/number';
 
 interface Props {
   label: string;

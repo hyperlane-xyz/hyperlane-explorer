@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 
+import { errorToString } from '@hyperlane-xyz/utils';
+
 import { Message, MessageStatus } from '../../types';
-import { errorToString } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { useChainConfigs } from '../chains/useChainConfigs';

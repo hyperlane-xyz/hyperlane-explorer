@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 
-import { areAddressesEqual, isValidAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../providers/multiProvider';
 
@@ -32,7 +32,7 @@ export function isIcaMessage({ sender, recipient }: { sender: Address; recipient
 function isAddressIcaRouter(addr: Address) {
   try {
     // TODO PI support
-    return ICA_ADDRESS && areAddressesEqual(addr, ICA_ADDRESS);
+    return ICA_ADDRESS && eqAddress(addr, ICA_ADDRESS);
   } catch (error) {
     logger.warn('Error checking if address is ICA router', error, addr);
     return false;

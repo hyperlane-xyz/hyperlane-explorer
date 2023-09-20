@@ -39,7 +39,7 @@ export function Footer() {
       <div className="relative">
         <Image className="relative z-0 w-full" src={FooterBg} alt="background" />
         <Image
-          className="absolute z-10 bottom-[1.5rem] w-full h-auto"
+          className="absolute z-10 bottom-[1.6rem] w-full h-auto"
           src={FooterTopBorder}
           alt="border"
         />
