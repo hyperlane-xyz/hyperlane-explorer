@@ -23,6 +23,7 @@ import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import type { ChainConfig } from '../chains/chainConfig';
+import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
@@ -68,7 +69,7 @@ export async function debugMessage(
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
-  const destMailbox = customChainConfigs[destName]?.mailbox;
+  const destMailbox = getMailboxAddress(customChainConfigs, destName);
   if (!destMailbox)
     throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
 
