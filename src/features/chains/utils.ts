@@ -1,10 +1,21 @@
-import { type MultiProvider, chainIdToMetadata } from '@hyperlane-xyz/sdk';
+import {
+  ChainMap,
+  type MultiProvider,
+  chainIdToMetadata,
+  hyperlaneContractAddresses,
+} from '@hyperlane-xyz/sdk';
 import { toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 
+import { ChainConfig } from './chainConfig';
+
 export function getChainName(mp: MultiProvider, chainId?: number) {
   return mp.tryGetChainName(chainId || 0) || undefined;
+}
+
+export function getMailboxAddress(customChainConfigs: ChainMap<ChainConfig>, chainName: string) {
+  return customChainConfigs[chainName]?.mailbox ?? hyperlaneContractAddresses[chainName]?.mailbox;
 }
 
 export function getChainDisplayName(
