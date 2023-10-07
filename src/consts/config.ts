@@ -12,6 +12,6 @@ interface Config {
 export const config: Config = Object.freeze({
   debug: isDevMode,
   version,
-  apiUrl: 'https://hyperlane-explorer-3.hasura.app/v1/graphql',
+  apiUrl: 'https://explorer4.hasura.app/v1/graphql',
   explorerApiKeys,
 });
