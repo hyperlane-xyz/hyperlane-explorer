@@ -8,7 +8,7 @@ import { XIconButton } from '../../components/buttons/XIconButton';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
-import { links } from '../../consts/links';
+import { docLinks } from '../../consts/links';
 import { useMultiProvider } from '../providers/multiProvider';
 
 import { tryParseChainConfig } from './chainConfig';
@@ -61,7 +61,7 @@ export function ConfigureChains() {
       <p className="mt-3 font-light">
         Hyperlane can be deployed to any chain using{' '}
         <a
-          href={`${links.docs}/docs/deploy/permissionless-interoperability`}
+          href={docLinks.pi}
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 text-blue-500 hover:text-blue-400"
@@ -149,7 +149,7 @@ export function ConfigureChains() {
           Input a chain metadata config including core contract addresses to enable exploration of
           that chain. See{' '}
           <a
-            href={`${links.docs}/docs/build-with-hyperlane/explorer/configuring-pi-chains`}
+            href={docLinks.pi}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 text-blue-500 hover:text-blue-400"

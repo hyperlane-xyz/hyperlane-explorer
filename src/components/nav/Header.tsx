@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
-import { links } from '../../consts/links';
+import { docLinks, links } from '../../consts/links';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
@@ -68,7 +68,12 @@ export function Header({ pathName }: { pathName: string }) {
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
-          <a className={navLinkClass()} target="_blank" href={links.docs} rel="noopener noreferrer">
+          <a
+            className={navLinkClass()}
+            target="_blank"
+            href={docLinks.home}
+            rel="noopener noreferrer"
+          >
             Docs
           </a>
           {showSearch && <MiniSearchBar />}
@@ -96,7 +101,7 @@ export function Header({ pathName }: { pathName: string }) {
                 </MobileNavLink>
               ),
               (c: Fn) => (
-                <MobileNavLink href={links.docs} closeDropdown={c} key="Docs">
+                <MobileNavLink href={docLinks.home} closeDropdown={c} key="Docs">
                   Docs
                 </MobileNavLink>
               ),

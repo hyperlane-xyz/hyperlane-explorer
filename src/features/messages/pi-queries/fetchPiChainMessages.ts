@@ -3,6 +3,7 @@ import { BigNumber, constants, ethers, providers } from 'ethers';
 import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@hyperlane-xyz/core';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import {
+  ProtocolType,
   addressToBytes32,
   bytes32ToAddress,
   isValidAddress,
@@ -72,7 +73,7 @@ export async function fetchMessagesFromPiChain(
   let logs: ExtendedLog[] = [];
   if (isValidAddress(input) && (!queryType || queryType === PiQueryType.Address)) {
     logs = await fetchLogsForAddress(chainConfig, query, multiProvider);
-  } else if (isValidTransactionHash(input)) {
+  } else if (isValidTransactionHash(input, ProtocolType.Ethereum)) {
     if (!queryType || queryType === PiQueryType.TxHash) {
       logs = await fetchLogsForTxHash(chainConfig, query, multiProvider);
     }

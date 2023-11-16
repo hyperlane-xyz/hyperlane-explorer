@@ -5,7 +5,7 @@ export function MissingChainConfigToast({
   chainId,
 }: {
   domainId: number;
-  chainId: number | null | undefined;
+  chainId: number | string | null | undefined;
 }) {
   const errorDesc = chainId
     ? `chain ID: ${chainId}`

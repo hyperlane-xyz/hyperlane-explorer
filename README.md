@@ -31,4 +31,4 @@ yarn lint
 
 ## Learn more
 
-For more information, see the [Hyperlane documentation](https://docs.hyperlane.xyz/hyperlane-docs/).
+For more information, see the [Hyperlane documentation](https://v3.hyperlane.xyz).

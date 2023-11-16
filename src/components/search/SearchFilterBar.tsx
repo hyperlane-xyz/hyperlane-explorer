@@ -90,7 +90,7 @@ function ChainMultiSelector({
   const [checkedChains, setCheckedChains] = useState(
     value
       ? arrayToObject(value.split(','))
-      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId)),
+      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId.toString())),
   );
 
   const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
@@ -113,7 +113,7 @@ function ChainMultiSelector({
 
   const onToggleSection = (chains: ChainMetadata[]) => {
     return () => {
-      const chainIds = chains.map((c) => c.chainId);
+      const chainIds = chains.map((c) => c.chainId.toString());
       if (hasAnyUncheckedChain(chains)) {
         // If some are unchecked, check all
         setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, true) });
@@ -125,7 +125,7 @@ function ChainMultiSelector({
   };
 
   const onToggleAll = () => {
-    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.chainId)));
+    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.chainId.toString())));
   };
 
   const onToggleNone = () => {
