@@ -5,6 +5,7 @@ import { toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Footer } from '../nav/Footer';
 import { Header } from '../nav/Header';
+import { InfoBanner } from '../nav/InfoBanner';
 
 interface Props {
   pathName: string;
@@ -22,7 +23,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         style={styles.container}
         className="relative w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
       >
-        {/* <InfoBanner /> */}
+        <InfoBanner />
         <Header pathName={pathName} />
         <div className="max-w-5xl mx-auto grow">
           <main style={styles.main} className="relative min-h-full pt-3 z-20">
