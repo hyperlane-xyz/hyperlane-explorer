@@ -10,7 +10,7 @@ import { Environment } from '../../consts/environments';
 
 import { ChainConfig } from './chainConfig';
 
-export function getChainName(mp: MultiProvider, chainId?: number) {
+export function getChainName(mp: MultiProvider, chainId?: number | string) {
   return mp.tryGetChainName(chainId || 0) || undefined;
 }
 
@@ -35,6 +35,6 @@ export function getChainEnvironment(mp: MultiProvider, chainIdOrName: number | s
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
-export function isPiChain(chainId: number) {
+export function isPiChain(chainId: number | string) {
   return !chainIdToMetadata[chainId];
 }

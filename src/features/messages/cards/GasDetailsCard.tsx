@@ -8,7 +8,7 @@ import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
-import { links } from '../../../consts/links';
+import { docLinks } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { Message } from '../../../types';
 import { BigNumberMax } from '../../../utils/big-number';
@@ -84,7 +84,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       <p className="text-sm font-light">
         Interchain gas payments are required to fund message delivery on the destination chain.{' '}
         <a
-          href={`${links.docs}/docs/protocol/interchain-gas-payments`}
+          href={docLinks.gas}
           target="_blank"
           rel="noopener noreferrer"
           className="cursor-pointer text-blue-500 hover:text-blue-400 active:text-blue-300 transition-all"

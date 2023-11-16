@@ -227,7 +227,7 @@ function chainMetadataToProviderNetwork(
 ): providers.Network {
   return {
     name: chainMetadata.name,
-    chainId: chainMetadata.chainId,
+    chainId: chainMetadata.chainId as number,
     // @ts-ignore add ensAddress to ChainMetadata
     ensAddress: chainMetadata.ensAddress,
   };

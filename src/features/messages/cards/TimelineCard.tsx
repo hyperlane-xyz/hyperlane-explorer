@@ -9,6 +9,7 @@ interface Props {
 }
 
 export function TimelineCard({ message, blur }: Props) {
+  // @ts-ignore TODO update widget chainId type
   const { stage, timings } = useMessageStage({ message });
 
   return (

@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { links } from '../../consts/links';
+import { docLinks, links } from '../../consts/links';
 // import FooterLine from '../../images/backgrounds/footer-line-desktop.svg';
 // import FooterLineMobile from '../../images/backgrounds/footer-line-mobile.svg';
 import FooterBg from '../../images/backgrounds/footer-bg.svg';
@@ -15,9 +15,9 @@ import { Medium } from '../icons/Medium';
 import { Twitter } from '../icons/Twitter';
 
 const footerLinks1 = [
-  { title: 'Docs', url: links.docs, external: true },
+  { title: 'Docs', url: docLinks.home, external: true },
   { title: 'Homepage', url: links.home, external: true },
-  { title: 'Chains', url: links.chains, external: true },
+  { title: 'Chains', url: docLinks.chains, external: true },
 ];
 
 const footerLinks2 = [

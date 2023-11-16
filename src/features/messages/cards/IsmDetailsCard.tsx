@@ -4,7 +4,7 @@ import { isNullish } from '@hyperlane-xyz/utils';
 
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
-import { links } from '../../../consts/links';
+import { docLinks } from '../../../consts/links';
 import ShieldLock from '../../../images/icons/shield-lock.svg';
 import { IsmModuleTypes, MessageDebugResult } from '../../debugger/types';
 
@@ -31,7 +31,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
       <p className="text-sm font-light">
         Interchain Security Modules define the rules for verifying messages before delivery.{' '}
         <a
-          href={`${links.docs}/docs/protocol/sovereign-consensus`}
+          href={docLinks.ism}
           target="_blank"
           rel="noopener noreferrer"
           className="cursor-pointer text-blue-500 hover:text-blue-400 active:text-blue-300 transition-all"
