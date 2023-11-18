@@ -22,6 +22,7 @@ export interface MessageDebugResult {
   calldataDetails?: {
     handleCalldata: HexString;
     contract: Address;
+    mailbox: Address;
   };
 }
 

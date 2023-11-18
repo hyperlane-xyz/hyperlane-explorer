@@ -143,7 +143,7 @@ async function debugMessageDelivery(
     senderBytes,
     body,
   ]);
-  const calldataDetails = { handleCalldata, contract: recipient };
+  const calldataDetails = { handleCalldata, contract: recipient, mailbox: destMailbox };
   try {
     // TODO add special case for Arbitrum:
     // TODO account for mailbox handling gas overhead
