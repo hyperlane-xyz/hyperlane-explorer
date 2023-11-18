@@ -254,7 +254,7 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
 function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
   const [isOpen, setIsOpen] = useState(false);
   if (!debugResult?.calldataDetails) return null;
-  const { contract, handleCalldata } = debugResult.calldataDetails;
+  const { contract, handleCalldata, mailbox } = debugResult.calldataDetails;
   return (
     <>
       <button onClick={() => setIsOpen(true)} className={`mt-5 ${styles.textLink}`}>
@@ -268,7 +268,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
       >
         <div className="mt-2 flex flex-col space-y-3.5">
           <p className="text-sm font-light">
-            {`The last step of message delivery is the recipient contract's 'handle' function. If the handle reverting, try debugging it with `}
+            {`The last step of message delivery is the recipient contract's 'handle' function. If the handle is reverting, try debugging it with `}
             <a
               className={`${styles.textLink} any:text-blue-500`}
               href={links.tenderlySimDocs}
@@ -277,9 +277,14 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
             >
               Tenderly.
             </a>
+            {`You can simulate the call in Tenderly by setting the following values:`}
           </p>
-          <LabelAndCodeBlock label="Recipient contract address:" value={contract} />
-          <LabelAndCodeBlock label="Handle function input calldata:" value={handleCalldata} />
+          <LabelAndCodeBlock label="From (Mailbox address):" value={mailbox} />
+          <LabelAndCodeBlock label="To (Recipient contract address):" value={contract} />
+          <LabelAndCodeBlock
+            label="Calldata (handle function input calldata):"
+            value={handleCalldata}
+          />
         </div>
       </Modal>
     </>
