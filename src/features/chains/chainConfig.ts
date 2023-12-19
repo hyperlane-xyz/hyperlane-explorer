@@ -1,14 +1,13 @@
 import { z } from 'zod';
 
-import { ChainMetadata, ChainMetadataSchema, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, ChainMetadataSchemaObject, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
 
-export const ChainConfigSchema = z.record(
-  ChainMetadataSchema.and(
-    z.object({ mailbox: z.string().optional(), interchainGasPaymaster: z.string().optional() }),
-  ),
-);
+export const ChainConfigSchema = ChainMetadataSchemaObject.extend({
+  mailbox: z.string().optional(),
+  interchainGasPaymaster: z.string().optional(),
+});
 
 export type ChainConfig = ChainMetadata & { mailbox?: Address; interchainGasPaymaster?: Address };
 
