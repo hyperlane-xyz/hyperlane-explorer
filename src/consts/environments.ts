@@ -6,4 +6,4 @@ export enum Environment {
 
 export const environments = Object.values(Environment);
 
-export const MAILBOX_VERSION = 0;
+export const MAILBOX_VERSION = 3;
