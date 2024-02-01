@@ -4,7 +4,7 @@ import NextCors from 'nextjs-cors';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { Environment } from '../../consts/environments';
+import { ENVIRONMENT_BUCKET_SEGMENT } from '../../consts/environments';
 import { getChainEnvironment, isPiChain } from '../../features/chains/utils';
 import { logger } from '../../utils/logger';
 import { fetchWithTimeout } from '../../utils/timeout';
@@ -47,9 +47,9 @@ async function fetchLatestNonce(multiProvider: MultiProvider, chainId: ChainId) 
 // Partly copied from https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/1fc65f3b7f31f86722204a9de08506f212720a52/typescript/infra/config/environments/mainnet/validators.ts#L12
 function getS3BucketUrl(multiProvider: MultiProvider, chainId: ChainId) {
   const chainName = multiProvider.getChainName(chainId);
-  const environment =
-    getChainEnvironment(multiProvider, chainId) === Environment.Mainnet ? 'mainnet2' : 'testnet3';
-  const bucketName = `hyperlane-${environment}-${chainName}-validator-0`;
+  const environment = getChainEnvironment(multiProvider, chainId);
+  const segment = ENVIRONMENT_BUCKET_SEGMENT[environment];
+  const bucketName = `hyperlane-${segment}-${chainName}-validator-0`;
   return `https://${bucketName}.s3.us-east-1.amazonaws.com/checkpoint_latest_index.json`;
 }
 

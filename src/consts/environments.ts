@@ -4,6 +4,10 @@ export enum Environment {
   Testnet = 'testnet',
 }
 
-export const environments = Object.values(Environment);
+export const ENVIRONMENT_BUCKET_SEGMENT: Record<Environment, string> = {
+  [Environment.Mainnet]: 'mainnet3',
+  [Environment.Testnet]: 'testnet4',
+};
 
+// TODO replace with SDK version
 export const MAILBOX_VERSION = 3;
