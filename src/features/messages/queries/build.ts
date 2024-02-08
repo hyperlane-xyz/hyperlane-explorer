@@ -60,6 +60,11 @@ export function buildMessageQuery(
   return { query, variables };
 }
 
+// TODO removing destination-based or clauses for now due to DB load
+// Queries will need to be restructured into multiple requests
+// https://github.com/hyperlane-xyz/hyperlane-explorer/issues/59
+// {destination_tx_hash: {_eq: $search}},
+// {destination_tx_sender: {_eq: $search}},
 const searchWhereClause = `
   {_or: [
     {msg_id: {_eq: $search}},
@@ -67,8 +72,6 @@ const searchWhereClause = `
     {recipient: {_eq: $search}},
     {origin_tx_hash: {_eq: $search}},
     {origin_tx_sender: {_eq: $search}},
-    {destination_tx_hash: {_eq: $search}},
-    {destination_tx_sender: {_eq: $search}},
   ]}
 `;
 
