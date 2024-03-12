@@ -2,14 +2,13 @@ import {
   ChainMap,
   ChainMetadata,
   ChainName,
+  HyperlaneSmartProvider,
   MultiProvider,
   chainMetadata,
 } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
 import type { ChainConfig } from '../chains/chainConfig';
-
-import { HyperlaneSmartProvider } from './SmartProvider';
 
 export class SmartMultiProvider extends MultiProvider {
   constructor(chainMetadata?: ChainMap<ChainMetadata>, options?: any) {
@@ -22,7 +21,7 @@ export class SmartMultiProvider extends MultiProvider {
     const { name, rpcUrls, blockExplorers } = metadata;
 
     if (!this.providers[name] && (rpcUrls?.length || blockExplorers?.length)) {
-      this.providers[name] = new HyperlaneSmartProvider(metadata);
+      this.providers[name] = new HyperlaneSmartProvider(name, rpcUrls, blockExplorers);
     }
 
     return (this.providers[name] as HyperlaneSmartProvider) || null;
