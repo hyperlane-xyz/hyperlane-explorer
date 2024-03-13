@@ -1,14 +1,17 @@
+import { ChainMetadata, ExplorerFamily } from '@hyperlane-xyz/sdk';
+import { ProtocolType } from '@hyperlane-xyz/utils';
+
 import { tryParseChainConfig } from './chainConfig';
 
-const validConfig = {
+const validConfig: ChainMetadata<{ mailbox: Address }> = {
   chainId: 12345,
   name: 'mytestnet',
-  protocol: 'ethereum',
+  protocol: ProtocolType.Ethereum,
   rpcUrls: [{ http: 'https://fakerpc.com' }],
   blockExplorers: [
     {
       name: 'FakeScan',
-      family: 'other',
+      family: ExplorerFamily.Other,
       url: 'https://fakeexplorer.com',
       apiUrl: 'https://fakeexplorer.com',
     },

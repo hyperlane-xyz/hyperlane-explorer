@@ -1,8 +1,7 @@
-import { chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { MultiProvider, chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
-import { SmartMultiProvider } from '../../providers/SmartMultiProvider';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
@@ -155,5 +154,5 @@ describe('fetchMessagesFromPiChain', () => {
 });
 
 function createMP(config: ChainConfig) {
-  return new SmartMultiProvider({ ...chainMetadata, sepolia: config });
+  return new MultiProvider({ ...chainMetadata, sepolia: config });
 }

@@ -1,3 +1,5 @@
+import { isAddress } from '@hyperlane-xyz/utils';
+
 import { adjustToUtcTime } from '../../../utils/time';
 
 import { stringToPostgresBytea } from './encoding';
@@ -60,21 +62,6 @@ export function buildMessageQuery(
   return { query, variables };
 }
 
-// TODO removing destination-based or clauses for now due to DB load
-// Queries will need to be restructured into multiple requests
-// https://github.com/hyperlane-xyz/hyperlane-explorer/issues/59
-// {destination_tx_hash: {_eq: $search}},
-// {destination_tx_sender: {_eq: $search}},
-const searchWhereClause = `
-  {_or: [
-    {msg_id: {_eq: $search}},
-    {sender: {_eq: $search}},
-    {recipient: {_eq: $search}},
-    {origin_tx_hash: {_eq: $search}},
-    {origin_tx_sender: {_eq: $search}},
-  ]}
-`;
-
 export function buildMessageSearchQuery(
   searchInput: string,
   originFilter: string | null,
@@ -97,25 +84,49 @@ export function buildMessageSearchQuery(
     startTime,
     endTime,
   };
+  const whereClauses = buildSearchWhereClauses(searchInput);
 
-  const query = `
-  query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) {
-    message_view(
-      where: {
-        _and: [
-          ${originFilter ? '{origin_chain_id: {_in: $originChains}},' : ''}
-          ${destFilter ? '{destination_chain_id: {_in: $destinationChains}},' : ''}
-          ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
-          ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
-          ${hasInput ? searchWhereClause : ''}
-        ]
-      },
-      order_by: {send_occurred_at: desc},
-      limit: ${limit}
-      ) {
-        ${useStub ? messageStubFragment : messageDetailsFragment}
-      }
-  }
-  `;
+  // Due to DB performance issues, we cannot use an `_or` clause
+  // Instead, each where clause for the search will be its own query
+  const queries = whereClauses.map(
+    (whereClause, i) =>
+      `q${i}: message_view(
+    where: {
+      _and: [
+        ${originFilter ? '{origin_chain_id: {_in: $originChains}},' : ''}
+        ${destFilter ? '{destination_chain_id: {_in: $destinationChains}},' : ''}
+        ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
+        ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
+        ${whereClause}
+      ]
+    },
+    order_by: {send_occurred_at: desc},
+    limit: ${limit}
+    ) {
+      ${useStub ? messageStubFragment : messageDetailsFragment}
+    }`,
+  );
+
+  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) {
+    ${queries.join('\n')}
+  }`;
   return { query, variables };
+}
+
+function buildSearchWhereClauses(searchInput: string) {
+  if (!searchInput) return [''];
+  if (isAddress(searchInput)) {
+    return [
+      `{sender: {_eq: $search}}`,
+      `{recipient: {_eq: $search}}`,
+      `{origin_tx_sender: {_eq: $search}}`,
+      `{destination_tx_sender: {_eq: $search}}`,
+    ];
+  } else {
+    return [
+      `{msg_id: {_eq: $search}}`,
+      `{origin_tx_hash: {_eq: $search}}`,
+      `{destination_tx_hash: {_eq: $search}}`,
+    ];
+  }
 }

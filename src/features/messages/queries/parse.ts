@@ -24,20 +24,24 @@ export function parseMessageStubResult(
   multiProvider: MultiProvider,
   data: MessagesStubQueryResult | undefined,
 ): MessageStub[] {
-  if (!data?.message_view?.length) return [];
-  return data.message_view
+  if (!data || !Object.keys(data).length) return [];
+  return Object.values(data)
+    .flat()
     .map((m) => parseMessageStub(multiProvider, m))
-    .filter((m): m is MessageStub => !!m);
+    .filter((m): m is MessageStub => !!m)
+    .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
 export function parseMessageQueryResult(
   multiProvider: MultiProvider,
   data: MessagesQueryResult | undefined,
 ): Message[] {
-  if (!data?.message_view?.length) return [];
-  return data.message_view
+  if (!data || !Object.keys(data).length) return [];
+  return Object.values(data)
+    .flat()
     .map((m) => parseMessage(multiProvider, m))
-    .filter((m): m is Message => !!m);
+    .filter((m): m is Message => !!m)
+    .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
 function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): MessageStub | null {
