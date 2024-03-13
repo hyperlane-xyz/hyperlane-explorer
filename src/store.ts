@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from './features/chains/chainConfig';
-import { buildSmartProvider } from './features/providers/SmartMultiProvider';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -26,9 +25,9 @@ export const useStore = create<AppState>()(
     (set) => ({
       chainConfigs: {},
       setChainConfigs: (configs: ChainMap<ChainConfig>) => {
-        set({ chainConfigs: configs, multiProvider: buildSmartProvider(configs) });
+        set({ chainConfigs: configs, multiProvider: buildMultiProvider(configs) });
       },
-      multiProvider: buildSmartProvider({}),
+      multiProvider: buildMultiProvider({}),
       setMultiProvider: (mp: MultiProvider) => {
         set({ multiProvider: mp });
       },
@@ -46,10 +45,14 @@ export const useStore = create<AppState>()(
             logger.error('Error during hydration', error);
             return;
           }
-          state.setMultiProvider(buildSmartProvider(state.chainConfigs));
+          state.setMultiProvider(buildMultiProvider(state.chainConfigs));
           logger.debug('Hydration finished');
         };
       },
     },
   ),
 );
+
+function buildMultiProvider(customChainConfigs: ChainMap<ChainConfig>) {
+  return new MultiProvider({ ...chainMetadata, ...customChainConfigs });
+}

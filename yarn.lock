@@ -1336,19 +1336,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:3.7.0":
-  version: 3.7.0
-  resolution: "@hyperlane-xyz/core@npm:3.7.0"
+"@hyperlane-xyz/core@npm:3.8.0":
+  version: 3.8.0
+  resolution: "@hyperlane-xyz/core@npm:3.8.0"
   dependencies:
     "@eth-optimism/contracts": "npm:^0.6.0"
-    "@hyperlane-xyz/utils": "npm:3.7.0"
+    "@hyperlane-xyz/utils": "npm:3.8.0"
     "@openzeppelin/contracts": "npm:^4.9.3"
     "@openzeppelin/contracts-upgradeable": "npm:^v4.9.3"
   peerDependencies:
     "@ethersproject/abi": "*"
     "@ethersproject/providers": "*"
     "@types/sinon-chai": "*"
-  checksum: efa01d943dd5b67830bb7244291c8ba9849472e804dff589463de76d3c03e56bc8d62454b575a6621aa1b8b53cc0d1d3b752a83d34f4b328ecd85e1ff23230d5
+  checksum: f0f614bd1a1d8a755d8522409473b5cb3042304450e3ffb8ac96cd2756ca27b9a6f0a243608ffddf70a31af3b1e8dba0138154615c41424b2fb2e5baca52c963
   languageName: node
   linkType: hard
 
@@ -1357,9 +1357,9 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^1.7.17"
-    "@hyperlane-xyz/sdk": "npm:3.7.0"
-    "@hyperlane-xyz/utils": "npm:3.7.0"
-    "@hyperlane-xyz/widgets": "npm:3.7.0"
+    "@hyperlane-xyz/sdk": "npm:3.8.0"
+    "@hyperlane-xyz/utils": "npm:3.8.0"
+    "@hyperlane-xyz/widgets": "npm:3.8.0"
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": "npm:0.12.16"
     "@tanstack/react-query": "npm:^4.24.10"
@@ -1397,14 +1397,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/sdk@npm:3.7.0":
-  version: 3.7.0
-  resolution: "@hyperlane-xyz/sdk@npm:3.7.0"
+"@hyperlane-xyz/sdk@npm:3.8.0":
+  version: 3.8.0
+  resolution: "@hyperlane-xyz/sdk@npm:3.8.0"
   dependencies:
     "@cosmjs/cosmwasm-stargate": "npm:^0.31.3"
     "@cosmjs/stargate": "npm:^0.31.3"
-    "@hyperlane-xyz/core": "npm:3.7.0"
-    "@hyperlane-xyz/utils": "npm:3.7.0"
+    "@hyperlane-xyz/core": "npm:3.8.0"
+    "@hyperlane-xyz/utils": "npm:3.8.0"
     "@solana/spl-token": "npm:^0.3.8"
     "@solana/web3.js": "npm:^1.78.0"
     "@types/coingecko-api": "npm:^1.0.10"
@@ -1421,30 +1421,30 @@ __metadata:
   peerDependencies:
     "@ethersproject/abi": "*"
     "@ethersproject/providers": "*"
-  checksum: b124a42f34502c4dad4127723d345158f592056d7e60e17d87c84bf81664ead20232ffaff66e6c21968dfd5693ba5122910fbcaa6b7db5b05fdd5d2051592835
+  checksum: 5ca551b639a3a5a92266adbac9da973dd417e8a399797c2449b07af15c0f1f4659d1b98f4c1b834db999db476f66b832db4eac37efa1b9f50bc6c2530b2f98fd
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:3.7.0":
-  version: 3.7.0
-  resolution: "@hyperlane-xyz/utils@npm:3.7.0"
+"@hyperlane-xyz/utils@npm:3.8.0":
+  version: 3.8.0
+  resolution: "@hyperlane-xyz/utils@npm:3.8.0"
   dependencies:
     "@cosmjs/encoding": "npm:^0.31.3"
     "@solana/web3.js": "npm:^1.78.0"
     bignumber.js: "npm:^9.1.1"
     ethers: "npm:^5.7.2"
-  checksum: c76f36913c572702b9dfe22fd868db6fed01c0da9485319e33e8d00a6b8a1bfdcecb5f61c8a3fd8ccbef0b36809e8055db62d75d0c6759d5e079ee330586bcd1
+  checksum: 9d313133d3cc0cdae605c96ffdcebb704a5951a75201bc23be8a2653fbad45e0a1fd4782f8d93ec0b5a01bddaa98999ef5f320cfbb6eef44e0de2176a8a4fb7b
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:3.7.0":
-  version: 3.7.0
-  resolution: "@hyperlane-xyz/widgets@npm:3.7.0"
+"@hyperlane-xyz/widgets@npm:3.8.0":
+  version: 3.8.0
+  resolution: "@hyperlane-xyz/widgets@npm:3.8.0"
   peerDependencies:
     "@hyperlane-xyz/sdk": ^3.1
     react: ^18
     react-dom: ^18
-  checksum: 5ddf7a7a5f599f1b340bbe4e981e0cb10dd8930cc616c566abb58210658acd2826386afd18e8789f8bb62fc19d14b69db87433adcc97c38ebda2c322cc7865a2
+  checksum: 2a36a90d43250c86084b05580909f316f13ed37a9416feea4e20411cd16ca42d430c5746636abfc9eb948199f888cf2f02b1e4d2a92dbc7fa4eee24af0f13579
   languageName: node
   linkType: hard
 

@@ -121,10 +121,5 @@ export interface MessageEntry extends MessageStubEntry {
   num_payments: number;
 }
 
-export interface MessagesStubQueryResult {
-  message_view: MessageStubEntry[];
-}
-
-export interface MessagesQueryResult {
-  message_view: MessageEntry[];
-}
+export type MessagesStubQueryResult = Record<string, MessageStubEntry[]>;
+export type MessagesQueryResult = Record<string, MessageEntry[]>;
