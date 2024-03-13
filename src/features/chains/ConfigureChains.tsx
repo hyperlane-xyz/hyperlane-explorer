@@ -182,15 +182,15 @@ export function ConfigureChains() {
 }
 
 const customChainTextareaPlaceholder = `{
-  "chainId": 5,
-  "name": "goerli",
+  "chainId": 11155111,
+  "name": "sepolia",
   "protocol": "ethereum",
   "rpcUrls": [{ "http": "https://foobar.com" }],
   "blockExplorers": [ {
-      "name": "GoerliScan",
+      "name": "Sepolia Etherscan",
       "family": "etherscan",
-      "url": "https://goerli.etherscan.io",
-      "apiUrl": "https://api-goerli.etherscan.io/api",
+      "url": "https://sepolia.etherscan.io",
+      "apiUrl": "https://api-sepolia.etherscan.io/api",
       "apiKey": "12345"
   } ],
   "blocks": { "confirmations": 1, "estimateBlockTime": 13 },

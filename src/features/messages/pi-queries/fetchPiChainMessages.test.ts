@@ -6,21 +6,21 @@ import { SmartMultiProvider } from '../../providers/SmartMultiProvider';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
-// NOTE: THE GOERLI MESSAGE MAY NEED TO BE UPDATED ON OCCASION AS IT GETS TOO OLD
+// NOTE: THE SEPOLIA MESSAGE MAY NEED TO BE UPDATED ON OCCASION AS IT GETS TOO OLD
 // THIS IS DUE TO LIMITATIONS OF THE RPC PROVIDER
 // TODO: MOCK THE PROVIDER TO MAKE THESE NETWORK INDEPENDENT
 
 jest.setTimeout(30000);
 
-const goerliMailbox = hyperlaneEnvironments.testnet.goerli.mailbox;
-const goerliIgp = hyperlaneEnvironments.testnet.goerli.interchainGasPaymaster;
-const goerliConfigWithExplorer: ChainConfig = {
-  ...chainMetadata.goerli,
-  mailbox: goerliMailbox,
-  interchainGasPaymaster: goerliIgp,
+const sepoliaMailbox = hyperlaneEnvironments.testnet.sepolia.mailbox;
+const sepoliaIgp = hyperlaneEnvironments.testnet.sepolia.interchainGasPaymaster;
+const sepoliaConfigWithExplorer: ChainConfig = {
+  ...chainMetadata.sepolia,
+  mailbox: sepoliaMailbox,
+  interchainGasPaymaster: sepoliaIgp,
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { blockExplorers, ...goerliConfigNoExplorer } = goerliConfigWithExplorer;
+const { blockExplorers, ...sepoliaConfigNoExplorer } = sepoliaConfigWithExplorer;
 
 // https://explorer.hyperlane.xyz/message/0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459e
 const txHash = '0xea0ba6b69ca70147d7cfdc2a806fe6b6ca5bce143408ebcf348fdec30cdd7daf';
@@ -28,7 +28,7 @@ const msgId = '0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459
 const senderAddress = '0x405bfdecb33230b4ad93c29ba4499b776cfba189';
 const recipientAddress = '0x5da3b8d6f73df6003a490072106730218c475aad';
 
-const goerliMessage: Message = {
+const sepoliaMessage: Message = {
   id: '',
   msgId: '0xfec74152c40d8dfe117bf1a83ba443c85d0de8962272445019c526686a70459e',
   originChainId: 5,
@@ -66,94 +66,94 @@ const goerliMessage: Message = {
 describe('fetchMessagesFromPiChain', () => {
   it('Fetches messages using explorer for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigWithExplorer,
+      sepoliaConfigWithExplorer,
       { input: txHash },
-      createMP(goerliConfigWithExplorer),
+      createMP(sepoliaConfigWithExplorer),
     );
-    expect(messages).toEqual([goerliMessage]);
+    expect(messages).toEqual([sepoliaMessage]);
   });
   it('Fetches messages using explorer for msg id', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigWithExplorer,
+      sepoliaConfigWithExplorer,
       { input: msgId },
-      createMP(goerliConfigWithExplorer),
+      createMP(sepoliaConfigWithExplorer),
     );
-    expect(messages).toEqual([goerliMessage]);
+    expect(messages).toEqual([sepoliaMessage]);
   });
   it('Fetches messages using explorer for sender address', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigWithExplorer,
+      sepoliaConfigWithExplorer,
       {
         input: senderAddress,
-        fromBlock: goerliMessage.origin.blockNumber - 100,
+        fromBlock: sepoliaMessage.origin.blockNumber - 100,
       },
-      createMP(goerliConfigWithExplorer),
+      createMP(sepoliaConfigWithExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
   });
   it('Fetches messages using explorer for recipient address', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigWithExplorer,
+      sepoliaConfigWithExplorer,
       {
         input: recipientAddress,
-        fromBlock: goerliMessage.origin.blockNumber - 100,
+        fromBlock: sepoliaMessage.origin.blockNumber - 100,
       },
-      createMP(goerliConfigWithExplorer),
+      createMP(sepoliaConfigWithExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
   });
   it('Fetches messages using provider for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigNoExplorer,
+      sepoliaConfigNoExplorer,
       { input: txHash },
-      createMP(goerliConfigNoExplorer),
+      createMP(sepoliaConfigNoExplorer),
     );
-    expect(messages).toEqual([goerliMessage]);
+    expect(messages).toEqual([sepoliaMessage]);
   });
   it('Fetches messages using provider for msg id', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigNoExplorer,
+      sepoliaConfigNoExplorer,
       { input: msgId },
-      createMP(goerliConfigNoExplorer),
+      createMP(sepoliaConfigNoExplorer),
     );
-    expect(messages).toEqual([goerliMessage]);
+    expect(messages).toEqual([sepoliaMessage]);
   });
   it('Fetches messages using provider for sender address', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigNoExplorer,
+      sepoliaConfigNoExplorer,
       {
         input: senderAddress,
       },
-      createMP(goerliConfigNoExplorer),
+      createMP(sepoliaConfigNoExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
   });
   it('Fetches messages using provider for recipient address', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigNoExplorer,
+      sepoliaConfigNoExplorer,
       {
         input: recipientAddress,
       },
-      createMP(goerliConfigNoExplorer),
+      createMP(sepoliaConfigNoExplorer),
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
   });
   it('Returns empty for invalid input', async () => {
     const messages = await fetchMessagesFromPiChain(
-      goerliConfigWithExplorer,
+      sepoliaConfigWithExplorer,
       {
         input: 'invalidInput',
       },
-      createMP(goerliConfigNoExplorer),
+      createMP(sepoliaConfigNoExplorer),
     );
     expect(messages).toEqual([]);
   });
 });
 
 function createMP(config: ChainConfig) {
-  return new SmartMultiProvider({ ...chainMetadata, goerli: config });
+  return new SmartMultiProvider({ ...chainMetadata, sepolia: config });
 }
