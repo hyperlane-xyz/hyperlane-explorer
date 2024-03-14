@@ -100,7 +100,7 @@ export function buildMessageSearchQuery(
         ${whereClause}
       ]
     },
-    order_by: {send_occurred_at: desc},
+    order_by: {id: desc},
     limit: ${limit}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
