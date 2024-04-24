@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { ToastContainer, Zoom, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Tooltip } from 'react-tooltip';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
@@ -84,6 +85,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
         </UrqlProvider>
       </QueryClientProvider>
       <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
+      <Tooltip id="my-tooltip" className="z-50" />
       {/* </RainbowKitProvider> */}
       {/* </WagmiConfig> */}
     </ErrorBoundary>
