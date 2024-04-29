@@ -1,10 +1,7 @@
 import { memo } from 'react';
 
-
-
 import Question from '../../images/icons/question-circle.svg';
 import { IconButton } from '../buttons/IconButton';
-
 
 function _HelpIcon({ text, size = 20 }: { text: string; size?: number }) {
   return (
