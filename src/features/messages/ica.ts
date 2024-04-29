@@ -70,7 +70,7 @@ export function tryDecodeIcaBody(body: string): { sender: string; calls: { desti
 
     return { sender, calls: formattedCalls };
   } catch (error) {
-    logger.error('Error decoding ICA body', error.message);
+    logger.error('Error decoding ICA body', error);
     return null;
   }
 }
