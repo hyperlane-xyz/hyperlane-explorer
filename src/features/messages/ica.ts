@@ -40,39 +40,41 @@ function isAddressIcaRouter(addr: Address) {
   }
 }
 
-export function tryDecodeIcaBody(body: string) {
-  if (!body || BigNumber.from(body).isZero()) return null;
+export function tryDecodeIcaBody(body: string): { sender: string; calls: { destinationAddress: string; callBytes: string; }[] } | null {
+  if (typeof body !== 'string' || !body.trim()) return null; // Ensure body is a non-empty string
+
   try {
     const decoder = utils.defaultAbiCoder;
     const decodedBody = decoder.decode(['address sender', 'tuple(address, bytes)[] calls'], body);
-    const { sender, calls } = decodedBody as unknown as {
-      sender: string;
-      calls: Array<[string, string]>;
-    };
-    if (typeof sender !== 'string' || !isValidAddress(sender))
-      throw new Error(`Invalid sender address: ${sender}`);
-    if (!Array.isArray(calls)) throw new Error(`Invalid call list: ${JSON.stringify(calls)}`);
+    
+    const { sender, calls } = decodedBody as { sender: string; calls: [string, string][] }; // Adjusted type assertion
 
-    const formattedCalls = calls.map((c) => {
-      const [destinationAddress, callBytes] = c;
-      if (typeof destinationAddress !== 'string' || !isValidAddress(destinationAddress))
+    if (typeof sender !== 'string' || !isValidAddress(sender)) {
+      throw new Error(`Invalid sender address: ${sender}`);
+    }
+
+    if (!Array.isArray(calls)) {
+      throw new Error(`Invalid call list: ${JSON.stringify(calls)}`);
+    }
+
+    const formattedCalls = calls.map(([destinationAddress, callBytes]) => {
+      if (typeof destinationAddress !== 'string' || !isValidAddress(destinationAddress)) {
         throw new Error(`Invalid call dest address: ${destinationAddress}`);
-      if (typeof callBytes !== 'string') throw new Error(`Invalid call bytes: ${callBytes}`);
-      return {
-        destinationAddress,
-        callBytes,
-      };
+      }
+      if (typeof callBytes !== 'string') {
+        throw new Error(`Invalid call bytes: ${callBytes}`);
+      }
+
+      return { destinationAddress, callBytes };
     });
 
-    return {
-      sender,
-      calls: formattedCalls,
-    };
+    return { sender, calls: formattedCalls };
   } catch (error) {
-    logger.error('Error decoding ICA body', error);
+    logger.error('Error decoding ICA body', error.message);
     return null;
   }
 }
+
 
 export async function tryFetchIcaAddress(
   originDomainId: DomainId,
