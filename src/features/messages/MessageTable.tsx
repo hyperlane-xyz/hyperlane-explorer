@@ -1,14 +1,19 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
+
+
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import TimeElapsed from '../../components/timer/TimeElapsed';
 import { MessageStatus, MessageStub } from '../../types';
-import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
+import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
 import { useMultiProvider } from '../providers/multiProvider';
+
+
 
 import { serializeMessage } from './utils';
 
@@ -94,7 +99,7 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
         {shortenAddress(recipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
-        {getHumanReadableTimeString(origin.timestamp)}
+        <TimeElapsed timestamp={origin.timestamp} />
       </LinkCell>
       <LinkCell
         id={msgId}
