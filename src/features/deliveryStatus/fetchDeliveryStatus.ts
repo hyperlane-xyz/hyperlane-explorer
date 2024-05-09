@@ -1,6 +1,7 @@
 import { constants } from 'ethers';
 
 import { IMailbox__factory } from '@hyperlane-xyz/core';
+import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../types';
@@ -20,11 +21,12 @@ import {
 
 export async function fetchDeliveryStatus(
   multiProvider: MultiProvider,
+  registry: IRegistry,
   customChainConfigs: ChainMap<ChainConfig>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.getChainName(message.destinationChainId);
-  const destMailboxAddr = getMailboxAddress(customChainConfigs, destName);
+  const destMailboxAddr = await getMailboxAddress(destName, customChainConfigs, registry);
   if (!destMailboxAddr)
     throw new Error(
       `Cannot check delivery status, no mailbox address provided for chain ${destName}`,
@@ -65,7 +67,7 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const debugResult = await debugMessage(multiProvider, customChainConfigs, message);
+    const debugResult = await debugMessage(multiProvider, registry, customChainConfigs, message);
     const messageStatus =
       debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending

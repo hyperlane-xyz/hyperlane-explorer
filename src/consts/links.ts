@@ -18,4 +18,5 @@ export const docLinks = {
   pi: 'https://v3.hyperlane.xyz/docs/deploy-hyperlane',
   ism: 'https://v3.hyperlane.xyz/docs/reference/ISM/specify-your-ISM',
   gas: 'https://v3.hyperlane.xyz/docs/protocol/interchain-gas-payment',
+  registry: 'https://docs.hyperlane.xyz/docs/reference/registries',
 };

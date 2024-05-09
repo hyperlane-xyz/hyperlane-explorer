@@ -9,7 +9,8 @@ import {
   IMultisigIsm__factory,
   InterchainGasPaymaster__factory,
 } from '@hyperlane-xyz/core';
-import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { IRegistry } from '@hyperlane-xyz/registry';
+import { ChainMap, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -19,7 +20,6 @@ import {
   trimToLength,
 } from '@hyperlane-xyz/utils';
 
-import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import type { ChainConfig } from '../chains/chainConfig';
@@ -34,6 +34,7 @@ const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 
 export async function debugMessage(
   multiProvider: MultiProvider,
+  registry: IRegistry,
   customChainConfigs: ChainMap<ChainConfig>,
   {
     msgId,
@@ -69,7 +70,7 @@ export async function debugMessage(
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
-  const destMailbox = getMailboxAddress(customChainConfigs, destName);
+  const destMailbox = await getMailboxAddress(destName, customChainConfigs, registry);
   if (!destMailbox)
     throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
 

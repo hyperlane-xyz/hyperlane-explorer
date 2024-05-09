@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { ChainMap, MultiProvider, chainMetadata } from '@hyperlane-xyz/sdk';
+import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
+import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from './features/chains/chainConfig';
 import { logger } from './utils/logger';
@@ -16,20 +17,27 @@ interface AppState {
   setChainConfigs: (configs: ChainMap<ChainConfig>) => void;
   multiProvider: MultiProvider;
   setMultiProvider: (mp: MultiProvider) => void;
+  registry: IRegistry;
+  setRegistry: (registry: IRegistry) => void;
   bannerClassName: string;
   setBanner: (className: string) => void;
 }
 
 export const useStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       chainConfigs: {},
-      setChainConfigs: (configs: ChainMap<ChainConfig>) => {
-        set({ chainConfigs: configs, multiProvider: buildMultiProvider(configs) });
+      setChainConfigs: async (configs: ChainMap<ChainConfig>) => {
+        const multiProvider = await buildMultiProvider(get().registry, configs);
+        set({ chainConfigs: configs, multiProvider });
       },
-      multiProvider: buildMultiProvider({}),
-      setMultiProvider: (mp: MultiProvider) => {
-        set({ multiProvider: mp });
+      multiProvider: new MultiProvider({}),
+      setMultiProvider: (multiProvider: MultiProvider) => {
+        set({ multiProvider });
+      },
+      registry: new GithubRegistry(),
+      setRegistry: (registry: IRegistry) => {
+        set({ registry });
       },
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
@@ -45,14 +53,24 @@ export const useStore = create<AppState>()(
             logger.error('Error during hydration', error);
             return;
           }
-          state.setMultiProvider(buildMultiProvider(state.chainConfigs));
-          logger.debug('Hydration finished');
+          buildMultiProvider(state.registry, state.chainConfigs)
+            .then((mp) => state.setMultiProvider(mp))
+            .catch((e) => logger.error('Error building MultiProvider', e));
         };
       },
     },
   ),
 );
 
-function buildMultiProvider(customChainConfigs: ChainMap<ChainConfig>) {
-  return new MultiProvider({ ...chainMetadata, ...customChainConfigs });
+export function useMultiProvider() {
+  return useStore((s) => s.multiProvider);
+}
+
+export function useRegistry() {
+  return useStore((s) => s.registry);
+}
+
+async function buildMultiProvider(registry: IRegistry, customChainConfigs: ChainMap<ChainConfig>) {
+  const registryChainMetadata = await registry.getMetadata();
+  return new MultiProvider({ ...registryChainMetadata, ...customChainConfigs });
 }

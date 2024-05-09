@@ -1,40 +1,40 @@
-import {
-  ChainMap,
-  type MultiProvider,
-  chainIdToMetadata,
-  hyperlaneContractAddresses,
-} from '@hyperlane-xyz/sdk';
+import { CoreChain, CoreChains, IRegistry } from '@hyperlane-xyz/registry';
+import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 
 import { ChainConfig } from './chainConfig';
 
-export function getChainName(mp: MultiProvider, chainId?: number | string) {
-  return mp.tryGetChainName(chainId || 0) || undefined;
-}
-
-export function getMailboxAddress(customChainConfigs: ChainMap<ChainConfig>, chainName: string) {
-  return customChainConfigs[chainName]?.mailbox ?? hyperlaneContractAddresses[chainName]?.mailbox;
+export async function getMailboxAddress(
+  chainName: string,
+  customChainConfigs: ChainMap<ChainConfig>,
+  registry: IRegistry,
+) {
+  if (customChainConfigs[chainName]?.mailbox) return customChainConfigs[chainName].mailbox;
+  const addresses = await registry.getChainAddresses(chainName);
+  if (addresses?.mailbox) return addresses.mailbox;
+  else return undefined;
 }
 
 export function getChainDisplayName(
-  mp: MultiProvider,
+  multiProvider: MultiProvider,
   chainOrDomainId?: ChainId | DomainId,
   shortName = false,
   fallbackToId = true,
 ) {
-  const metadata = mp.tryGetChainMetadata(chainOrDomainId || 0);
+  const metadata = multiProvider.tryGetChainMetadata(chainOrDomainId || 0);
   if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return toTitleCase(displayName || metadata.displayName || metadata.name);
 }
 
-export function getChainEnvironment(mp: MultiProvider, chainIdOrName: number | string) {
-  const isTestnet = mp.tryGetChainMetadata(chainIdOrName)?.isTestnet;
+export function getChainEnvironment(multiProvider: MultiProvider, chainIdOrName: number | string) {
+  const isTestnet = multiProvider.tryGetChainMetadata(chainIdOrName)?.isTestnet;
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
-export function isPiChain(chainId: number | string) {
-  return !chainIdToMetadata[chainId];
+export function isPiChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
+  const chainName = multiProvider.tryGetChainName(chainIdOrName);
+  return !chainName || !CoreChains.includes(chainName as CoreChain);
 }

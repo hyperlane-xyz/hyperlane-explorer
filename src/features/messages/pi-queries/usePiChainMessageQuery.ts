@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x } from '@hyperlane-xyz/utils';
 
+import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 import { useChainConfigs } from '../../chains/useChainConfigs';
-import { useMultiProvider } from '../../providers/multiProvider';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';

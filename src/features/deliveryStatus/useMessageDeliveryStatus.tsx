@@ -4,17 +4,18 @@ import { toast } from 'react-toastify';
 
 import { errorToString } from '@hyperlane-xyz/utils';
 
+import { useMultiProvider, useRegistry } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { useChainConfigs } from '../chains/useChainConfigs';
-import { useMultiProvider } from '../providers/multiProvider';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
 export function useMessageDeliveryStatus({ message, pause }: { message: Message; pause: boolean }) {
   const chainConfigs = useChainConfigs();
   const multiProvider = useMultiProvider();
+  const registry = useRegistry();
 
   const serializedMessage = JSON.stringify(message);
   const { data, error, isFetching } = useQuery(
@@ -41,7 +42,12 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
       }
 
       logger.debug('Fetching message delivery status for:', message.id);
-      const deliverStatus = await fetchDeliveryStatus(multiProvider, chainConfigs, message);
+      const deliverStatus = await fetchDeliveryStatus(
+        multiProvider,
+        registry,
+        chainConfigs,
+        message,
+      );
       return deliverStatus;
     },
     { retry: false },

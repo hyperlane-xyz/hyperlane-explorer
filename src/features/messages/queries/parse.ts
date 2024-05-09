@@ -53,7 +53,8 @@ function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): Me
       logger.warn(`No chainId known for domain ${destinationDomainId}. Using domain as chainId`);
       destinationChainId = destinationDomainId;
     }
-    const isPiMsg = isPiChain(m.origin_chain_id) || isPiChain(destinationChainId);
+    const isPiMsg =
+      isPiChain(multiProvider, m.origin_chain_id) || isPiChain(multiProvider, destinationChainId);
 
     return {
       status: getMessageStatus(m),

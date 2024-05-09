@@ -9,12 +9,12 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
 import { links } from '../../../consts/links';
+import { useMultiProvider } from '../../../store';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-import { useMultiProvider } from '../../providers/multiProvider';
 
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';

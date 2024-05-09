@@ -5,10 +5,10 @@ import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import { useMultiProvider } from '../../store';
 import { MessageStatus, MessageStub } from '../../types';
 import { getHumanReadableDuration, getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
-import { useMultiProvider } from '../providers/multiProvider';
 
 import { serializeMessage } from './utils';
 

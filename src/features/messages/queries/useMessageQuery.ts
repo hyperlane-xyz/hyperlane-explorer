@@ -3,9 +3,9 @@ import { useQuery } from 'urql';
 
 import { isAddressEvm, isValidTransactionHashEvm } from '@hyperlane-xyz/utils';
 
+import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useInterval } from '../../../utils/useInterval';
-import { useMultiProvider } from '../../providers/multiProvider';
 import {
   MessageIdentifierType,
   buildMessageQuery,

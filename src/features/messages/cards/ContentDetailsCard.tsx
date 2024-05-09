@@ -1,12 +1,12 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
+import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
-import { MAILBOX_VERSION } from '../../../consts/environments';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';

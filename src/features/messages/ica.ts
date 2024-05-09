@@ -5,8 +5,8 @@ import { useMemo } from 'react';
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 
+import { useMultiProvider } from '../../store';
 import { logger } from '../../utils/logger';
-import { useMultiProvider } from '../providers/multiProvider';
 
 // This assumes all chains have the same ICA address
 // const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;

@@ -59,15 +59,12 @@ export function Header({ pathName }: { pathName: string }) {
           <Link href="/" className={navLinkClass('/')}>
             Home
           </Link>
-          <Link href="/settings" className={navLinkClass('/settings')}>
-            Settings
-          </Link>
-          <Link href="/api-docs" className={navLinkClass('/api-docs')}>
-            API
-          </Link>
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
+          <Link href="/api-docs" className={navLinkClass('/api-docs')}>
+            API
+          </Link>
           <a
             className={navLinkClass()}
             target="_blank"
@@ -76,6 +73,9 @@ export function Header({ pathName }: { pathName: string }) {
           >
             Docs
           </a>
+          <Link href="/settings" className={navLinkClass('/settings')}>
+            Settings
+          </Link>
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
