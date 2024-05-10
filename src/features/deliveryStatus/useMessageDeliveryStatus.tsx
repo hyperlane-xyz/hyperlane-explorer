@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 
-import { useMultiProvider, useRegistry } from '../../store';
+import { useReadyMultiProvider, useRegistry } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
@@ -12,46 +13,70 @@ import { useChainConfigs } from '../chains/useChainConfigs';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
-export function useMessageDeliveryStatus({ message, pause }: { message: Message; pause: boolean }) {
+export function useMessageDeliveryStatus({
+  message,
+  enabled = true,
+}: {
+  message: Message;
+  enabled: boolean;
+}) {
   const chainConfigs = useChainConfigs();
-  const multiProvider = useMultiProvider();
+  const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
 
-  const serializedMessage = JSON.stringify(message);
-  const { data, error, isFetching } = useQuery(
-    ['messageDeliveryStatus', serializedMessage, pause],
-    async () => {
-      if (pause || !message || message.status === MessageStatus.Delivered) return null;
-
-      if (!multiProvider.tryGetChainMetadata(message.originChainId)) {
-        toast.error(
-          <MissingChainConfigToast
-            chainId={message.originChainId}
-            domainId={message.originDomainId}
-          />,
-        );
-        return null;
-      } else if (!multiProvider.tryGetChainMetadata(message.destinationChainId)) {
-        toast.error(
-          <MissingChainConfigToast
-            chainId={message.destinationChainId}
-            domainId={message.destinationDomainId}
-          />,
-        );
-        return null;
+  const { data, error, isFetching } = useQuery({
+    queryKey: ['messageDeliveryStatus', message, !!multiProvider],
+    queryFn: async () => {
+      if (!multiProvider || message.status == MessageStatus.Delivered) {
+        return { message };
       }
 
-      logger.debug('Fetching message delivery status for:', message.id);
+      const { id, originChainId, originDomainId, destinationChainId, destinationDomainId } =
+        message;
+
+      if (
+        !checkHasChain(multiProvider, originChainId, originDomainId) ||
+        !checkHasChain(multiProvider, destinationChainId, destinationDomainId)
+      ) {
+        return { message };
+      }
+
+      logger.debug('Fetching message delivery status for:', id);
       const deliverStatus = await fetchDeliveryStatus(
         multiProvider,
         registry,
         chainConfigs,
         message,
       );
-      return deliverStatus;
+
+      if (deliverStatus.status === MessageStatus.Delivered) {
+        return {
+          message: {
+            ...message,
+            status: MessageStatus.Delivered,
+            destination: deliverStatus.deliveryTransaction,
+          },
+        };
+      } else if (
+        deliverStatus.status === MessageStatus.Failing ||
+        deliverStatus.status === MessageStatus.Pending
+      ) {
+        return {
+          message: {
+            ...message,
+            status: deliverStatus.status,
+          },
+          debugResult: deliverStatus.debugResult,
+        };
+      } else {
+        return { message };
+      }
     },
-    { retry: false },
-  );
+    retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
+    enabled,
+  });
 
   // Show toast on error
   useEffect(() => {
@@ -61,27 +86,17 @@ export function useMessageDeliveryStatus({ message, pause }: { message: Message;
     }
   }, [error]);
 
-  const [messageWithDeliveryStatus, debugResult] = useMemo(() => {
-    if (data?.status === MessageStatus.Delivered) {
-      return [
-        {
-          ...message,
-          status: MessageStatus.Delivered,
-          destination: data.deliveryTransaction,
-        },
-      ];
-    } else if (data?.status === MessageStatus.Failing || data?.status === MessageStatus.Pending) {
-      return [
-        {
-          ...message,
-          status: data.status,
-        },
-        data.debugResult,
-      ];
-    } else {
-      return [message];
-    }
-  }, [message, data]);
+  return {
+    messageWithDeliveryStatus: data?.message || message,
+    debugResult: data?.debugResult,
+    isDeliveryStatusFetching: isFetching,
+  };
+}
 
-  return { messageWithDeliveryStatus, debugResult, isDeliveryStatusFetching: isFetching };
+function checkHasChain(multiProvider: MultiProvider, chainId: ChainId, domainId: number) {
+  if (!multiProvider.hasChain(chainId)) {
+    toast.error(<MissingChainConfigToast chainId={chainId} domainId={domainId} />);
+    return false;
+  }
+  return true;
 }

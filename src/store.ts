@@ -29,14 +29,17 @@ export const useStore = create<AppState>()(
       chainConfigs: {},
       setChainConfigs: async (configs: ChainMap<ChainConfig>) => {
         const multiProvider = await buildMultiProvider(get().registry, configs);
+        console.log('setChainConfigs');
         set({ chainConfigs: configs, multiProvider });
       },
       multiProvider: new MultiProvider({}),
       setMultiProvider: (multiProvider: MultiProvider) => {
+        console.log('setMultiProvider');
         set({ multiProvider });
       },
       registry: new GithubRegistry(),
       setRegistry: (registry: IRegistry) => {
+        console.log('setRegistry');
         set({ registry });
       },
       bannerClassName: '',
@@ -54,7 +57,10 @@ export const useStore = create<AppState>()(
             return;
           }
           buildMultiProvider(state.registry, state.chainConfigs)
-            .then((mp) => state.setMultiProvider(mp))
+            .then((mp) => {
+              state.setMultiProvider(mp);
+              logger.debug('Rehydration complete');
+            })
             .catch((e) => logger.error('Error building MultiProvider', e));
         };
       },
@@ -62,12 +68,20 @@ export const useStore = create<AppState>()(
   ),
 );
 
+export function useRegistry() {
+  return useStore((s) => s.registry);
+}
+
 export function useMultiProvider() {
   return useStore((s) => s.multiProvider);
 }
 
-export function useRegistry() {
-  return useStore((s) => s.registry);
+// Ensures that the multiProvider has been populated during the onRehydrateStorage hook above,
+// otherwise returns undefined
+export function useReadyMultiProvider() {
+  const multiProvider = useMultiProvider();
+  if (multiProvider.getKnownChainNames().length === 0) return undefined;
+  return multiProvider;
 }
 
 async function buildMultiProvider(registry: IRegistry, customChainConfigs: ChainMap<ChainConfig>) {

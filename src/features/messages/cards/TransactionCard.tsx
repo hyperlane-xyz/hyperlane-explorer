@@ -212,14 +212,16 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
-      <KeyValueRow
-        label="Time:"
-        labelWidth="w-16"
-        display={getHumanReadableTimeString(timestamp)}
-        subDisplay={`(${getDateTimeString(timestamp)})`}
-        displayWidth="w-60 sm:w-64"
-        blurValue={blur}
-      />
+      {!!timestamp && (
+        <KeyValueRow
+          label="Time:"
+          labelWidth="w-16"
+          display={getHumanReadableTimeString(timestamp)}
+          subDisplay={`(${getDateTimeString(timestamp)})`}
+          displayWidth="w-60 sm:w-64"
+          blurValue={blur}
+        />
+      )}
       <KeyValueRow
         label="Block:"
         labelWidth="w-16"
