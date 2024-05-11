@@ -10,6 +10,7 @@ import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { useChainConfigs } from '../chains/useChainConfigs';
+import { isEvmChain } from '../chains/utils';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
@@ -35,8 +36,8 @@ export function useMessageDeliveryStatus({
         message;
 
       if (
-        !checkHasChain(multiProvider, originChainId, originDomainId) ||
-        !checkHasChain(multiProvider, destinationChainId, destinationDomainId)
+        !checkChain(multiProvider, originChainId, originDomainId) ||
+        !checkChain(multiProvider, destinationChainId, destinationDomainId)
       ) {
         return { message };
       }
@@ -93,9 +94,13 @@ export function useMessageDeliveryStatus({
   };
 }
 
-function checkHasChain(multiProvider: MultiProvider, chainId: ChainId, domainId: number) {
+function checkChain(multiProvider: MultiProvider, chainId: ChainId, domainId: number) {
   if (!multiProvider.hasChain(chainId)) {
     toast.error(<MissingChainConfigToast chainId={chainId} domainId={domainId} />);
+    return false;
+  }
+  if (!isEvmChain(multiProvider, chainId)) {
+    logger.debug('Skipping delivery status check for non-EVM chain:', chainId);
     return false;
   }
   return true;

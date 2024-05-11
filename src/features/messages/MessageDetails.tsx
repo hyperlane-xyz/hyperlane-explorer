@@ -10,7 +10,7 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
-import { getChainDisplayName } from '../chains/utils';
+import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
@@ -81,7 +81,13 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     destinationDomainId,
     origin,
     destination,
+    isPiMsg,
   } = message;
+
+  const showTimeline =
+    !isPiMsg &&
+    isEvmChain(multiProvider, originChainId) &&
+    isEvmChain(multiProvider, destinationChainId);
 
   // Banner color setter
   useDynamicBannerColor(isFetching, status, isMessageFound, isError || isPiError);
@@ -116,10 +122,10 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           transaction={destination}
           debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
-          isPiMsg={message.isPiMsg}
+          isPiMsg={isPiMsg}
           blur={blur}
         />
-        {!message.isPiMsg && <TimelineCard message={message} blur={blur} />}
+        {showTimeline && <TimelineCard message={message} blur={blur} />}
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
