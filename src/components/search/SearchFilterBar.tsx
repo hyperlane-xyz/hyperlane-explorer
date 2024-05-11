@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
-import { arrayToObject } from '@hyperlane-xyz/utils';
+import { ProtocolType, arrayToObject } from '@hyperlane-xyz/utils';
 
 import { getChainDisplayName } from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
@@ -85,8 +85,10 @@ function ChainMultiSelector({
   const multiProvider = useMultiProvider();
   const { chains, mainnets, testnets } = useMemo(() => {
     const chains = Object.values(multiProvider.metadata);
-    const mainnets = chains.filter((c) => !c.isTestnet);
-    const testnets = chains.filter((c) => !!c.isTestnet);
+    // Filtering to EVM is necessary to prevent errors until cosmos support is added
+    // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
+    const mainnets = chains.filter((c) => !c.isTestnet && c.protocol === ProtocolType.Ethereum);
+    const testnets = chains.filter((c) => !!c.isTestnet && c.protocol === ProtocolType.Ethereum);
     return { chains, mainnets, testnets };
   }, [multiProvider]);
 
