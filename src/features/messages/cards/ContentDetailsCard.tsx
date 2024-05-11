@@ -51,6 +51,7 @@ export function ContentDetailsCard({
 
   const rawBytes = useMemo(() => {
     try {
+      if (!originDomainId || !destinationDomainId) return '';
       return formatMessage(
         MAILBOX_VERSION,
         nonce,

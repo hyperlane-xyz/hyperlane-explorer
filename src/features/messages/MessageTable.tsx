@@ -95,16 +95,18 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       {statusIcon && (
-        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-          <Image
-            src={statusIcon}
-            width={18}
-            height={18}
-            alt={statusTitle}
-            title={statusTitle}
-            className="pt-px"
-          />
-        </div>
+        <LinkCell id={msgId} base64={base64} tdClasses="w-0">
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2">
+            <Image
+              src={statusIcon}
+              width={18}
+              height={18}
+              alt={statusTitle}
+              title={statusTitle}
+              className="pt-px"
+            />
+          </span>
+        </LinkCell>
       )}
     </>
   );
