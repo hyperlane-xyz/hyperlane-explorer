@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
@@ -196,9 +197,15 @@ function TransactionDetails({
   transaction: MessageTx;
   blur: boolean;
 }) {
-  const { hash, from, timestamp, blockNumber } = transaction;
   const multiProvider = useMultiProvider();
-  const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
+
+  const { hash, from, timestamp, blockNumber } = transaction;
+
+  const txExplorerLink =
+    hash && !new BigNumber(hash).isZero()
+      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash })
+      : null;
+
   return (
     <>
       <ChainDescriptionRow
