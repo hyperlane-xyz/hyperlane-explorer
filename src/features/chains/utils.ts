@@ -1,6 +1,6 @@
 import { CoreChain, CoreChains, IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
-import { toTitleCase } from '@hyperlane-xyz/utils';
+import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 
@@ -37,4 +37,9 @@ export function getChainEnvironment(multiProvider: MultiProvider, chainIdOrName:
 export function isPiChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const chainName = multiProvider.tryGetChainName(chainIdOrName);
   return !chainName || !CoreChains.includes(chainName as CoreChain);
+}
+
+export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
+  const protocol = multiProvider.tryGetProtocol(chainIdOrName);
+  return protocol === ProtocolType.Ethereum;
 }

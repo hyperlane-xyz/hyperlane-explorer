@@ -70,7 +70,7 @@ export function ConfigureChains() {
         . This explorer can be configured to search for messages on any PI chain.
       </p>
       <p className="mt-3 font-light">
-        To make you chain available to all users, add its metadata to the{' '}
+        To make your chain available to all users, add its metadata to the{' '}
         <a
           href={docLinks.registry}
           target="_blank"
@@ -79,7 +79,7 @@ export function ConfigureChains() {
         >
           canonical Hyperlane Registry
         </a>
-        . Or use the section below to add for just your own use.
+        . Or use the section below to add it for just your own use.
       </p>
       <h3 className="mt-6 text-lg text-blue-500 font-medium">Custom Chains</h3>
       <table className="mt-2 w-full">

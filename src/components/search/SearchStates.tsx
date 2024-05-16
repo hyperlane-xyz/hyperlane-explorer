@@ -113,7 +113,7 @@ export function SearchUnknownError({ show }: { show: boolean }) {
     <SearchError
       show={show}
       imgSrc={ErrorIcon}
-      text="Sorry, an error has occurred. Please try a query or try again later."
+      text="Sorry, an error has occurred. Please try again later."
       imgWidth={70}
     />
   );
