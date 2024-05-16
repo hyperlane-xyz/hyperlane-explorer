@@ -9,7 +9,8 @@ import {
   IMultisigIsm__factory,
   InterchainGasPaymaster__factory,
 } from '@hyperlane-xyz/core';
-import type { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { IRegistry } from '@hyperlane-xyz/registry';
+import { ChainMap, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -19,7 +20,6 @@ import {
   trimToLength,
 } from '@hyperlane-xyz/utils';
 
-import { MAILBOX_VERSION } from '../../consts/environments';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import type { ChainConfig } from '../chains/chainConfig';
@@ -31,19 +31,23 @@ import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } fr
 type Provider = providers.Provider;
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
+const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
 
 export async function debugMessage(
   multiProvider: MultiProvider,
+  registry: IRegistry,
   customChainConfigs: ChainMap<ChainConfig>,
   {
     msgId,
     nonce,
     sender,
     recipient,
+    origin,
     originDomainId: originDomain,
     destinationDomainId: destDomain,
     body,
     totalGasAmount,
+    isPiMsg,
   }: Message,
 ): Promise<MessageDebugResult> {
   logger.debug(`Debugging message id: ${msgId}`);
@@ -69,7 +73,7 @@ export async function debugMessage(
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
-  const destMailbox = getMailboxAddress(customChainConfigs, destName);
+  const destMailbox = await getMailboxAddress(destName, customChainConfigs, registry);
   if (!destMailbox)
     throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
 
@@ -94,15 +98,21 @@ export async function debugMessage(
   if (ismCheckResult.status && ismCheckResult.description) return { ...ismCheckResult, ...details };
   else details.ismDetails = ismCheckResult.ismDetails;
 
-  const gasCheckResult = await tryCheckIgpGasFunded(
-    msgId,
-    originProvider,
-    deliveryResult.gasEstimate,
-    totalGasAmount,
-  );
-  if (gasCheckResult?.status && gasCheckResult?.description)
-    return { ...gasCheckResult, ...details };
-  else details.gasDetails = gasCheckResult?.gasDetails;
+  // TODO support for non-default IGP gas checks here
+  // Disabling for now for https://github.com/hyperlane-xyz/hyperlane-monorepo/issues/3668
+  // Also skipping if the message is still very new otherwise this raises premature
+  // underfunded errors when in fact payment was made
+  if (!isPiMsg && Date.now() - origin.timestamp > IGP_PAYMENT_CHECK_DELAY) {
+    const gasCheckResult = await tryCheckIgpGasFunded(
+      msgId,
+      originProvider,
+      deliveryResult.gasEstimate,
+      totalGasAmount,
+    );
+    if (gasCheckResult?.status && gasCheckResult?.description)
+      return { ...gasCheckResult, ...details };
+    else details.gasDetails = gasCheckResult?.gasDetails;
+  }
 
   logger.debug(`No errors found debugging message id: ${msgId}`);
   return {
@@ -242,6 +252,7 @@ async function tryCheckIgpGasFunded(
     logger.warn('No gas estimate provided, skipping IGP check');
     return null;
   }
+
   try {
     let gasAlreadyFunded = BigNumber.from(0);
     let gasDetails: MessageDebugResult['gasDetails'] = {

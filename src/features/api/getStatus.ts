@@ -1,8 +1,6 @@
 import { Client } from '@urql/core';
 import type { NextApiRequest } from 'next';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-
 import { API_GRAPHQL_QUERY_LIMIT } from '../../consts/api';
 import { MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
@@ -12,7 +10,7 @@ import { parseMessageStubResult } from '../messages/queries/parse';
 
 import { parseQueryParams } from './getMessages';
 import { ApiHandlerResult } from './types';
-import { failureResult, successResult } from './utils';
+import { failureResult, getMultiProvider, successResult } from './utils';
 
 interface MessageStatusResult {
   id: string;
@@ -35,7 +33,7 @@ export async function handler(
   );
   const result = await client.query<MessagesStubQueryResult>(query, variables).toPromise();
 
-  const multiProvider = new MultiProvider();
+  const multiProvider = await getMultiProvider();
   const messages = parseMessageStubResult(multiProvider, result.data);
 
   return successResult(messages.map((m) => ({ id: m.msgId, status: m.status })));

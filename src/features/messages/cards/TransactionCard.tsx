@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
@@ -9,12 +10,12 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { Modal } from '../../../components/layout/Modal';
 import { links } from '../../../consts/links';
+import { useMultiProvider } from '../../../store';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
-import { getChainDisplayName } from '../../chains/utils';
+import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-import { useMultiProvider } from '../../providers/multiProvider';
 
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
@@ -63,6 +64,8 @@ export function DestinationTransactionCard({
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(chainId);
+
+  const isDestinationEvmChain = isEvmChain(multiProvider, chainId);
 
   let content: ReactNode;
   if (transaction) {
@@ -115,20 +118,29 @@ export function DestinationTransactionCard({
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Pending) {
-    content = (
-      <DeliveryStatus>
-        <div className="flex flex-col items-center">
-          <div>Delivery to destination chain still in progress.</div>
-          {isPiMsg && (
-            <div className="mt-2 text-sm max-w-xs">
-              Please ensure a relayer is running for this chain.
-            </div>
-          )}
-          <Spinner classes="my-4 scale-75" />
-          <CallDataModal debugResult={debugResult} />
-        </div>
-      </DeliveryStatus>
-    );
+    if (isDestinationEvmChain) {
+      content = (
+        <DeliveryStatus>
+          <div className="flex flex-col items-center">
+            <div>Delivery to destination chain still in progress.</div>
+            {isPiMsg && (
+              <div className="mt-2 text-sm max-w-xs">
+                Please ensure a relayer is running for this chain.
+              </div>
+            )}
+            <Spinner classes="my-4 scale-75" />
+            <CallDataModal debugResult={debugResult} />
+          </div>
+        </DeliveryStatus>
+      );
+    } else {
+      content = (
+        <DeliveryStatus>
+          <div>Sorry, delivery information is currently available for only EVM-type chains.</div>
+          <div className="mt-2 text-sm pb-4">Support for other protocols is coming soon.</div>
+        </DeliveryStatus>
+      );
+    }
   } else {
     content = (
       <DeliveryStatus>
@@ -185,9 +197,15 @@ function TransactionDetails({
   transaction: MessageTx;
   blur: boolean;
 }) {
-  const { hash, from, timestamp, blockNumber } = transaction;
   const multiProvider = useMultiProvider();
-  const txExplorerLink = hash ? multiProvider.tryGetExplorerTxUrl(chainId, { hash }) : null;
+
+  const { hash, from, timestamp, blockNumber } = transaction;
+
+  const txExplorerLink =
+    hash && !new BigNumber(hash).isZero()
+      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash })
+      : null;
+
   return (
     <>
       <ChainDescriptionRow
@@ -212,14 +230,16 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
-      <KeyValueRow
-        label="Time:"
-        labelWidth="w-16"
-        display={getHumanReadableTimeString(timestamp)}
-        subDisplay={`(${getDateTimeString(timestamp)})`}
-        displayWidth="w-60 sm:w-64"
-        blurValue={blur}
-      />
+      {!!timestamp && (
+        <KeyValueRow
+          label="Time:"
+          labelWidth="w-16"
+          display={getHumanReadableTimeString(timestamp)}
+          subDisplay={`(${getDateTimeString(timestamp)})`}
+          displayWidth="w-60 sm:w-64"
+          blurValue={blur}
+        />
+      )}
       <KeyValueRow
         label="Block:"
         labelWidth="w-16"
@@ -277,7 +297,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
             >
               Tenderly.
             </a>
-            {`You can simulate the call in Tenderly by setting the following values:`}
+            {` You can simulate the call in Tenderly by setting the following values:`}
           </p>
           <LabelAndCodeBlock label="From (Mailbox address):" value={mailbox} />
           <LabelAndCodeBlock label="To (Recipient contract address):" value={contract} />

@@ -1,4 +1,5 @@
-import { MultiProvider, chainMetadata, hyperlaneEnvironments } from '@hyperlane-xyz/sdk';
+import { chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
@@ -11,8 +12,8 @@ import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 jest.setTimeout(30000);
 
-const sepoliaMailbox = hyperlaneEnvironments.testnet.sepolia.mailbox;
-const sepoliaIgp = hyperlaneEnvironments.testnet.sepolia.interchainGasPaymaster;
+const sepoliaMailbox = chainAddresses.sepolia.mailbox;
+const sepoliaIgp = chainAddresses.sepolia.interchainGasPaymaster;
 const sepoliaConfigWithExplorer: ChainConfig = {
   ...chainMetadata.sepolia,
   mailbox: sepoliaMailbox,

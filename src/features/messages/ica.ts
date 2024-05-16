@@ -5,8 +5,8 @@ import { useMemo } from 'react';
 import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 
+import { useReadyMultiProvider } from '../../store';
 import { logger } from '../../utils/logger';
-import { useMultiProvider } from '../providers/multiProvider';
 
 // This assumes all chains have the same ICA address
 // const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
@@ -98,15 +98,16 @@ export async function tryFetchIcaAddress(
 }
 
 export function useIcaAddress(originDomainId: DomainId, sender?: Address | null) {
-  const multiProvider = useMultiProvider();
-  return useQuery(
-    ['useIcaAddress', originDomainId, sender],
-    () => {
-      if (!originDomainId || !sender || BigNumber.from(sender).isZero()) return null;
+  const multiProvider = useReadyMultiProvider();
+  return useQuery({
+    queryKey: ['useIcaAddress', originDomainId, sender, !!multiProvider],
+    queryFn: () => {
+      if (!originDomainId || !multiProvider || !sender || BigNumber.from(sender).isZero())
+        return null;
       const provider = multiProvider.tryGetProvider(originDomainId);
       if (!provider) return null;
       return tryFetchIcaAddress(originDomainId, sender, provider);
     },
-    { retry: false },
-  );
+    retry: false,
+  });
 }

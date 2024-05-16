@@ -10,11 +10,11 @@ import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { docLinks } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
+import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
 import { BigNumberMax } from '../../../utils/big-number';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
-import { useMultiProvider } from '../../providers/multiProvider';
 
 import { KeyValueRow } from './KeyValueRow';
 

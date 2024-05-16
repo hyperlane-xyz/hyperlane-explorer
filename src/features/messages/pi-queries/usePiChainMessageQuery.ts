@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x } from '@hyperlane-xyz/utils';
 
+import { useReadyMultiProvider } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
 import { useChainConfigs } from '../../chains/useChainConfigs';
-import { useMultiProvider } from '../../providers/multiProvider';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
@@ -26,20 +26,28 @@ export function usePiChainMessageSearchQuery({
   pause: boolean;
 }) {
   const chainConfigs = useChainConfigs();
-  const multiProvider = useMultiProvider();
-  const { isLoading, isError, data } = useQuery(
-    [
+  const multiProvider = useReadyMultiProvider();
+  const { isLoading, isError, data } = useQuery({
+    queryKey: [
       'usePiChainMessageSearchQuery',
       chainConfigs,
       sanitizedInput,
       startTimeFilter,
       endTimeFilter,
+      !!multiProvider,
       pause,
     ],
-    async () => {
+    queryFn: async () => {
       const hasInput = !!sanitizedInput;
       const isValidInput = isValidSearchQuery(sanitizedInput, true);
-      if (pause || !hasInput || !isValidInput || !Object.keys(chainConfigs).length) return [];
+      if (
+        pause ||
+        !multiProvider ||
+        !hasInput ||
+        !isValidInput ||
+        !Object.keys(chainConfigs).length
+      )
+        return [];
       logger.debug('Starting PI Chain message search for:', sanitizedInput);
       // TODO convert timestamps to from/to blocks here
       const query = { input: ensure0x(sanitizedInput) };
@@ -53,8 +61,8 @@ export function usePiChainMessageSearchQuery({
         return [];
       }
     },
-    { retry: false },
-  );
+    retry: false,
+  });
 
   return {
     isFetching: isLoading,
@@ -73,11 +81,11 @@ export function usePiChainMessageQuery({
   pause: boolean;
 }) {
   const chainConfigs = useChainConfigs();
-  const multiProvider = useMultiProvider();
-  const { isLoading, isError, data } = useQuery(
-    ['usePiChainMessageQuery', chainConfigs, messageId, pause],
-    async () => {
-      if (pause || !messageId || !Object.keys(chainConfigs).length) return [];
+  const multiProvider = useReadyMultiProvider();
+  const { isLoading, isError, data } = useQuery({
+    queryKey: ['usePiChainMessageQuery', chainConfigs, messageId, !!multiProvider, pause],
+    queryFn: async () => {
+      if (pause || !multiProvider || !messageId || !Object.keys(chainConfigs).length) return [];
       logger.debug('Starting PI Chain message query for:', messageId);
       const query = { input: ensure0x(messageId) };
       try {
@@ -92,8 +100,8 @@ export function usePiChainMessageQuery({
         return [];
       }
     },
-    { retry: false },
-  );
+    retry: false,
+  });
 
   const message = data?.length ? data[0] : null;
   const isMessageFound = !!message;

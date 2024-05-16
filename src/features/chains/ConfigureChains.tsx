@@ -1,6 +1,6 @@
 import { ChangeEventHandler, useState } from 'react';
 
-import { ChainName, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
+import { ChainName } from '@hyperlane-xyz/sdk';
 
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
@@ -9,11 +9,10 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { Modal } from '../../components/layout/Modal';
 import { docLinks } from '../../consts/links';
-import { useMultiProvider } from '../providers/multiProvider';
+import { useMultiProvider } from '../../store';
 
 import { tryParseChainConfig } from './chainConfig';
 import { useChainConfigsRW } from './useChainConfigs';
-import { getChainDisplayName } from './utils';
 
 export function ConfigureChains() {
   const { chainConfigs, setChainConfigs } = useChainConfigsRW();
@@ -70,33 +69,18 @@ export function ConfigureChains() {
         </a>
         . This explorer can be configured to search for messages on any PI chain.
       </p>
-      <h3 className="mt-6 text-lg text-blue-500 font-medium">Default Chains</h3>
-      <div className="mt-4 flex">
-        <h4 className="text-gray-600 font-medium text-sm">Mainnets:</h4>
-        <div className="ml-3 flex gap-3.5 flex-wrap">
-          {mainnetChainsMetadata.map((c) => (
-            <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <span className="ml-1.5 font-light">
-                {getChainDisplayName(multiProvider, c.chainId, true)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mt-5 flex">
-        <h4 className="text-gray-600 font-medium text-sm">Testnets:</h4>
-        <div className="ml-3 flex gap-3.5 flex-wrap">
-          {testnetChainsMetadata.map((c) => (
-            <div className="shrink-0 text-sm flex items-center" key={c.name}>
-              <ChainLogo chainId={c.chainId} size={15} color={true} background={false} />
-              <div className="ml-1.5 font-light">
-                {getChainDisplayName(multiProvider, c.chainId, true)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <p className="mt-3 font-light">
+        To make your chain available to all users, add its metadata to the{' '}
+        <a
+          href={docLinks.registry}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 text-blue-500 hover:text-blue-400"
+        >
+          canonical Hyperlane Registry
+        </a>
+        . Or use the section below to add it for just your own use.
+      </p>
       <h3 className="mt-6 text-lg text-blue-500 font-medium">Custom Chains</h3>
       <table className="mt-2 w-full">
         <thead>
@@ -114,7 +98,7 @@ export function ConfigureChains() {
           {Object.values(chainConfigs).map((chain) => (
             <tr key={`chain-${chain.chainId}`}>
               <td>
-                <ChainLogo chainId={chain.chainId} size={32} color={true} background={true} />
+                <ChainLogo chainId={chain.chainId} size={32} background={true} />
               </td>
               <td className={styles.value}>{chain.chainId}</td>
               <td className={styles.value}>{chain.domainId || chain.chainId}</td>

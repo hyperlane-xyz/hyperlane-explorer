@@ -10,6 +10,7 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
+import { useReadyMultiProvider } from '../../store';
 import useDebounce from '../../utils/debounce';
 import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
@@ -21,6 +22,9 @@ import { useMessageSearchQuery } from './queries/useMessageQuery';
 const QUERY_SEARCH_PARAM = 'search';
 
 export function MessageSearch() {
+  // Chain metadata
+  const multiProvider = useReadyMultiProvider();
+
   // Search text input
   const defaultSearchQuery = useQueryParam(QUERY_SEARCH_PARAM);
   const [searchInput, setSearchInput] = useState(defaultSearchQuery);
@@ -92,7 +96,7 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade show={!isAnyError && isValidInput && isAnyMessageFound}>
+        <Fade show={!isAnyError && isValidInput && isAnyMessageFound && !!multiProvider}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching

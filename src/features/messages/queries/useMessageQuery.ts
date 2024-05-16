@@ -3,9 +3,9 @@ import { useQuery } from 'urql';
 
 import { isAddressEvm, isValidTransactionHashEvm } from '@hyperlane-xyz/utils';
 
+import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useInterval } from '../../../utils/useInterval';
-import { useMultiProvider } from '../../providers/multiProvider';
 import {
   MessageIdentifierType,
   buildMessageQuery,
@@ -14,8 +14,8 @@ import {
 import { MessagesQueryResult, MessagesStubQueryResult } from '../queries/fragments';
 import { parseMessageQueryResult, parseMessageStubResult } from '../queries/parse';
 
-const SEARCH_AUTO_REFRESH_DELAY = 15000;
-const MSG_AUTO_REFRESH_DELAY = 10000;
+const SEARCH_AUTO_REFRESH_DELAY = 15_000; // 15s
+const MSG_AUTO_REFRESH_DELAY = 10_000; // 10s
 const LATEST_QUERY_LIMIT = 20;
 const SEARCH_QUERY_LIMIT = 50;
 

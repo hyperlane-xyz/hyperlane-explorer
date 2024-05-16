@@ -5,6 +5,7 @@ import NextCors from 'nextjs-cors';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { ENVIRONMENT_BUCKET_SEGMENT } from '../../consts/environments';
+import { getMultiProvider } from '../../features/api/utils';
 import { getChainEnvironment, isPiChain } from '../../features/chains/utils';
 import { logger } from '../../utils/logger';
 import { fetchWithTimeout } from '../../utils/timeout';
@@ -21,9 +22,9 @@ export default async function handler(
   try {
     const body = req.body as { chainId: ChainId };
     if (!body.chainId) throw new Error('No chainId in body');
+    const multiProvider = await getMultiProvider();
     // TODO PI support here
-    if (isPiChain(body.chainId)) throw new Error('ChainId is unsupported');
-    const multiProvider = new MultiProvider();
+    if (isPiChain(multiProvider, body.chainId)) throw new Error('Only core chains are unsupported');
     const nonce = await fetchLatestNonce(multiProvider, body.chainId);
     res.status(200).json({ nonce });
   } catch (error) {

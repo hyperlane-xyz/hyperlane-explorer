@@ -1,13 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { ChainMetadata, mainnetChainsMetadata, testnetChainsMetadata } from '@hyperlane-xyz/sdk';
-import { arrayToObject } from '@hyperlane-xyz/utils';
+import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ProtocolType, arrayToObject } from '@hyperlane-xyz/utils';
 
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useMultiProvider } from '../../features/providers/multiProvider';
 import GearIcon from '../../images/icons/gear.svg';
+import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
@@ -16,8 +16,6 @@ import { ChevronIcon } from '../icons/Chevron';
 import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
 import { DropdownModal } from '../layout/Dropdown';
-
-const mainnetAndTestChains = [...mainnetChainsMetadata, ...testnetChainsMetadata];
 
 interface Props {
   originChain: string | null;
@@ -85,12 +83,20 @@ function ChainMultiSelector({
   position?: string;
 }) {
   const multiProvider = useMultiProvider();
+  const { chains, mainnets, testnets } = useMemo(() => {
+    const chains = Object.values(multiProvider.metadata);
+    // Filtering to EVM is necessary to prevent errors until cosmos support is added
+    // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
+    const mainnets = chains.filter((c) => !c.isTestnet && c.protocol === ProtocolType.Ethereum);
+    const testnets = chains.filter((c) => !!c.isTestnet && c.protocol === ProtocolType.Ethereum);
+    return { chains, mainnets, testnets };
+  }, [multiProvider]);
 
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(
     value
       ? arrayToObject(value.split(','))
-      : arrayToObject(mainnetAndTestChains.map((c) => c.chainId.toString())),
+      : arrayToObject(chains.map((c) => c.chainId.toString())),
   );
 
   const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
@@ -102,7 +108,7 @@ function ChainMultiSelector({
 
   const onToggle = (chainId: string | number) => {
     return (checked: boolean) => {
-      if (!hasAnyUncheckedChain(mainnetAndTestChains)) {
+      if (!hasAnyUncheckedChain(chains)) {
         // If none are unchecked, uncheck all except this one
         setCheckedChains({ [chainId]: true });
       } else {
@@ -125,7 +131,7 @@ function ChainMultiSelector({
   };
 
   const onToggleAll = () => {
-    setCheckedChains(arrayToObject(mainnetAndTestChains.map((c) => c.chainId.toString())));
+    setCheckedChains(arrayToObject(chains.map((c) => c.chainId.toString())));
   };
 
   const onToggleNone = () => {
@@ -134,7 +140,7 @@ function ChainMultiSelector({
 
   const onClickApply = (closeDropdown?: () => void) => {
     const checkedList = Object.keys(checkedChains).filter((c) => !!checkedChains[c]);
-    if (checkedList.length === 0 || checkedList.length === mainnetAndTestChains.length) {
+    if (checkedList.length === 0 || checkedList.length === chains.length) {
       // Use null value, indicating to filter needed
       onChangeValue(null);
     } else {
@@ -175,14 +181,14 @@ function ChainMultiSelector({
             <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
-                  checked={!hasAnyUncheckedChain(mainnetChainsMetadata)}
-                  onToggle={onToggleSection(mainnetChainsMetadata)}
+                  checked={!hasAnyUncheckedChain(mainnets)}
+                  onToggle={onToggleSection(mainnets)}
                   name="mainnet-chains"
                 >
                   <h4 className="ml-2 text-gray-800">Mainnet Chains</h4>
                 </CheckBox>
               </div>
-              {mainnetChainsMetadata.map((c) => (
+              {mainnets.map((c) => (
                 <CheckBox
                   key={c.name}
                   checked={!!checkedChains[c.chainId]}
@@ -193,7 +199,7 @@ function ChainMultiSelector({
                     <span className="mr-2 font-light">
                       {getChainDisplayName(multiProvider, c.chainId, true)}
                     </span>
-                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
+                    <ChainLogo chainId={c.chainId} size={12} background={false} />
                   </div>
                 </CheckBox>
               ))}
@@ -202,14 +208,14 @@ function ChainMultiSelector({
             <div className="flex flex-col">
               <div className="pb-1.5">
                 <CheckBox
-                  checked={!hasAnyUncheckedChain(testnetChainsMetadata)}
-                  onToggle={onToggleSection(testnetChainsMetadata)}
+                  checked={!hasAnyUncheckedChain(testnets)}
+                  onToggle={onToggleSection(testnets)}
                   name="testnet-chains"
                 >
                   <h4 className="ml-2 text-gray-800">Testnet Chains</h4>
                 </CheckBox>
               </div>
-              {testnetChainsMetadata.map((c) => (
+              {testnets.map((c) => (
                 <CheckBox
                   key={c.name}
                   checked={!!checkedChains[c.chainId]}
@@ -220,7 +226,7 @@ function ChainMultiSelector({
                     <span className="mr-2 font-light">
                       {getChainDisplayName(multiProvider, c.chainId, true)}
                     </span>
-                    <ChainLogo chainId={c.chainId} size={12} color={false} background={false} />
+                    <ChainLogo chainId={c.chainId} size={12} background={false} />
                   </div>
                 </CheckBox>
               ))}
