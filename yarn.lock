@@ -1424,10 +1424,10 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^1.7.17"
-    "@hyperlane-xyz/registry": "npm:^1.1.0"
+    "@hyperlane-xyz/registry": "npm:^1.1.2"
     "@hyperlane-xyz/sdk": "npm:3.11.1"
     "@hyperlane-xyz/utils": "npm:3.11.1"
-    "@hyperlane-xyz/widgets": "npm:3.8.0"
+    "@hyperlane-xyz/widgets": "npm:3.11.0"
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@rainbow-me/rainbowkit": "npm:0.12.16"
     "@tanstack/react-query": "npm:^4.24.10"
@@ -1466,13 +1466,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/registry@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "@hyperlane-xyz/registry@npm:1.1.0"
+"@hyperlane-xyz/registry@npm:1.1.2, @hyperlane-xyz/registry@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "@hyperlane-xyz/registry@npm:1.1.2"
   dependencies:
     yaml: "npm:^2"
     zod: "npm:^3.21.2"
-  checksum: 2280e2c17f0e1ea0dcd750e92017173335498d427b8f1cacfdade8f067952a579ae3199e95db3898f8ff150ed1d59040440f45fe1e24b12b04ea8d1116222aa8
+  checksum: ba0985641c1896bf20bcf74b8fa2d8f9c04e10de3fb0b4fe95cd2b9755f68b17ccbb5dee7ab3e1bd20485a81afcdf43f61915143104bd061349b50b9f455aa1b
   languageName: node
   linkType: hard
 
@@ -1519,14 +1519,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:3.8.0":
-  version: 3.8.0
-  resolution: "@hyperlane-xyz/widgets@npm:3.8.0"
+"@hyperlane-xyz/widgets@npm:3.11.0":
+  version: 3.11.0
+  resolution: "@hyperlane-xyz/widgets@npm:3.11.0"
+  dependencies:
+    "@hyperlane-xyz/registry": "npm:1.1.2"
   peerDependencies:
-    "@hyperlane-xyz/sdk": ^3.1
     react: ^18
     react-dom: ^18
-  checksum: 2a36a90d43250c86084b05580909f316f13ed37a9416feea4e20411cd16ca42d430c5746636abfc9eb948199f888cf2f02b1e4d2a92dbc7fa4eee24af0f13579
+  checksum: c7e025f4ef3f25b93c4849553f404cbcaebd4b9b463cdd82803007ef2b4502c0206132fd77043a268d1b22c7a8836d48a8ba412a4ec5b5e0a2180550697d457f
   languageName: node
   linkType: hard
 
