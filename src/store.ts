@@ -29,17 +29,14 @@ export const useStore = create<AppState>()(
       chainConfigs: {},
       setChainConfigs: async (configs: ChainMap<ChainConfig>) => {
         const multiProvider = await buildMultiProvider(get().registry, configs);
-        console.log('setChainConfigs');
         set({ chainConfigs: configs, multiProvider });
       },
       multiProvider: new MultiProvider({}),
       setMultiProvider: (multiProvider: MultiProvider) => {
-        console.log('setMultiProvider');
         set({ multiProvider });
       },
       registry: new GithubRegistry(),
       setRegistry: (registry: IRegistry) => {
-        console.log('setRegistry');
         set({ registry });
       },
       bannerClassName: '',
