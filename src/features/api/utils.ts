@@ -9,6 +9,7 @@ export function failureResult(error: string): { success: false; error: string } 
   return { success: false, error };
 }
 
+// TODO de-dupe this with store.ts and handle registry/multiProvider concerns in a single place
 export async function getMultiProvider(): Promise<MultiProvider> {
   const registry = new GithubRegistry();
   const chainMetadata = await registry.getMetadata();
