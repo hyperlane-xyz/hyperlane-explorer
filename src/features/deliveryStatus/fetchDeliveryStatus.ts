@@ -4,6 +4,7 @@ import { IMailbox__factory } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
+import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
@@ -18,8 +19,6 @@ import {
   MessageDeliveryStatusResponse,
   MessageDeliverySuccessResult,
 } from './types';
-
-const DELIVERY_LOG_CHECK_BLOCK_RANGE = 1000;
 
 export async function fetchDeliveryStatus(
   multiProvider: MultiProvider,

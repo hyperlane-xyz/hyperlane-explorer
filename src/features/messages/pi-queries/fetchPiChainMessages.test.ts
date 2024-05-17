@@ -1,4 +1,4 @@
-import { chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
+import { GithubRegistry, chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { Message, MessageStatus } from '../../../types';
@@ -64,11 +64,13 @@ const sepoliaMessage: Message = {
 };
 
 describe('fetchMessagesFromPiChain', () => {
+  const registry = new GithubRegistry();
   it('Fetches messages using explorer for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
       sepoliaConfigWithExplorer,
       { input: txHash },
       createMP(sepoliaConfigWithExplorer),
+      registry,
     );
     expect(messages).toEqual([sepoliaMessage]);
   });
@@ -77,6 +79,7 @@ describe('fetchMessagesFromPiChain', () => {
       sepoliaConfigWithExplorer,
       { input: msgId },
       createMP(sepoliaConfigWithExplorer),
+      registry,
     );
     expect(messages).toEqual([sepoliaMessage]);
   });
@@ -88,6 +91,7 @@ describe('fetchMessagesFromPiChain', () => {
         fromBlock: sepoliaMessage.origin.blockNumber - 100,
       },
       createMP(sepoliaConfigWithExplorer),
+      registry,
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -100,6 +104,7 @@ describe('fetchMessagesFromPiChain', () => {
         fromBlock: sepoliaMessage.origin.blockNumber - 100,
       },
       createMP(sepoliaConfigWithExplorer),
+      registry,
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -109,6 +114,7 @@ describe('fetchMessagesFromPiChain', () => {
       sepoliaConfigNoExplorer,
       { input: txHash },
       createMP(sepoliaConfigNoExplorer),
+      registry,
     );
     expect(messages).toEqual([sepoliaMessage]);
   });
@@ -117,6 +123,7 @@ describe('fetchMessagesFromPiChain', () => {
       sepoliaConfigNoExplorer,
       { input: msgId },
       createMP(sepoliaConfigNoExplorer),
+      registry,
     );
     expect(messages).toEqual([sepoliaMessage]);
   });
@@ -127,6 +134,7 @@ describe('fetchMessagesFromPiChain', () => {
         input: senderAddress,
       },
       createMP(sepoliaConfigNoExplorer),
+      registry,
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -138,6 +146,7 @@ describe('fetchMessagesFromPiChain', () => {
         input: recipientAddress,
       },
       createMP(sepoliaConfigNoExplorer),
+      registry,
     );
     const testMsg = messages.find((m) => m.msgId === msgId);
     expect(testMsg).toBeTruthy();
@@ -149,6 +158,7 @@ describe('fetchMessagesFromPiChain', () => {
         input: 'invalidInput',
       },
       createMP(sepoliaConfigNoExplorer),
+      registry,
     );
     expect(messages).toEqual([]);
   });

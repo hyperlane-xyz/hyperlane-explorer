@@ -1,6 +1,7 @@
 import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@hyperlane-xyz/core';
+import { IRegistry } from '@hyperlane-xyz/registry';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import {
   ProtocolType,
@@ -13,6 +14,7 @@ import {
   parseMessage,
 } from '@hyperlane-xyz/utils';
 
+import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
@@ -66,20 +68,21 @@ export async function fetchMessagesFromPiChain(
   chainConfig: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
+  registry: IRegistry,
   queryType?: PiQueryType, // optionally force search down to just one type
 ): Promise<Message[]> {
   const input = query.input;
 
   let logs: ExtendedLog[] = [];
   if (isValidAddress(input) && (!queryType || queryType === PiQueryType.Address)) {
-    logs = await fetchLogsForAddress(chainConfig, query, multiProvider);
+    logs = await fetchLogsForAddress(chainConfig, query, multiProvider, registry);
   } else if (isValidTransactionHash(input, ProtocolType.Ethereum)) {
     if (!queryType || queryType === PiQueryType.TxHash) {
       logs = await fetchLogsForTxHash(chainConfig, query, multiProvider);
     }
     // Input may be a msg id, check that next
     if ((!queryType || queryType === PiQueryType.MsgId) && !logs.length) {
-      logs = await fetchLogsForMsgId(chainConfig, query, multiProvider);
+      logs = await fetchLogsForMsgId(chainConfig, query, multiProvider, registry);
     }
   } else {
     logger.warn('Invalid PI search input', input, queryType);
@@ -105,13 +108,16 @@ export async function fetchMessagesFromPiChain(
 }
 
 async function fetchLogsForAddress(
-  { chainId, mailbox }: ChainConfig,
+  chainConfig: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
+  registry: IRegistry,
 ): Promise<ExtendedLog[]> {
+  const { chainId } = chainConfig;
   const address = query.input;
   logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
-  if (!mailbox) throw new Error(`No mailbox address found for chain ${chainId}}`);
+  const mailbox = await resolveMailbox(chainConfig, multiProvider, registry);
+  if (!mailbox) return [];
   const dispatchTopic = addressToBytes32(address);
 
   return fetchLogsFromProvider(
@@ -126,7 +132,6 @@ async function fetchLogsForAddress(
     query,
     multiProvider,
   );
-  // }
 }
 
 async function fetchLogsForTxHash(
@@ -157,11 +162,13 @@ async function fetchLogsForMsgId(
   chainConfig: ChainConfig,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
+  registry: IRegistry,
 ): Promise<ExtendedLog[]> {
-  const { mailbox, chainId } = chainConfig;
+  const { chainId } = chainConfig;
   const msgId = query.input;
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
-  if (!mailbox) throw new Error(`No mailbox address found for chain ${chainId}}`);
+  const mailbox = await resolveMailbox(chainConfig, multiProvider, registry);
+  if (!mailbox) return [];
   const topic1 = msgId;
   const logs: ExtendedLog[] = await fetchLogsFromProvider(
     [
@@ -194,12 +201,16 @@ async function fetchLogsFromProvider(
 ): Promise<ExtendedLog[]> {
   const provider = multiProvider.getProvider(chainId);
 
+  let { fromBlock, toBlock } = query;
+  fromBlock ||= (await provider.getBlockNumber()) - PI_MESSAGE_LOG_CHECK_BLOCK_RANGE;
+  toBlock ||= 'latest';
+
   let logs: providers.Log[] = [];
   for (const t of topics) {
     logs = logs.concat(
       await provider.getLogs({
-        fromBlock: query.fromBlock || 0,
-        toBlock: query.toBlock || 'latest',
+        fromBlock,
+        toBlock,
         address: contractAddr,
         topics: t,
       }),
@@ -259,7 +270,8 @@ function logToMessage(
     const sender = normalizeAddress(bytes32ToAddress(message.sender));
     const recipient = normalizeAddress(bytes32ToAddress(message.recipient));
     const originChainId = multiProvider.getChainId(message.origin);
-    const destinationChainId = multiProvider.getChainId(message.destination);
+    const destinationChainId =
+      multiProvider.tryGetChainId(message.destination) || message.destination;
 
     return {
       id: '', // No db id exists
@@ -331,4 +343,17 @@ async function tryFetchIgpGasPayments(
     totalPayment: totalPayment.toString(),
     numPayments: matchedEvents.length,
   };
+}
+
+async function resolveMailbox(
+  chainConfig: ChainConfig,
+  multiProvider: MultiProvider,
+  registry: IRegistry,
+) {
+  if (chainConfig.mailbox) return chainConfig.mailbox;
+  const chainName = multiProvider.getChainName(chainConfig.chainId);
+  const chainAddresses = await registry.getChainAddresses(chainName);
+  const mailbox = chainAddresses?.mailbox;
+  if (!mailbox) logger.debug(`No mailbox address found for chain ${chainName}`);
+  return mailbox;
 }

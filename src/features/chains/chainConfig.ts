@@ -1,3 +1,4 @@
+import { parse as yamlParse } from 'yaml';
 import { z } from 'zod';
 
 import { ChainMetadata, ChainMetadataSchemaObject, MultiProvider } from '@hyperlane-xyz/sdk';
@@ -24,12 +25,16 @@ type ParseResult =
 export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseResult {
   let data: any;
   try {
-    data = JSON.parse(input);
+    if (input.startsWith('{')) {
+      data = JSON.parse(input);
+    } else {
+      data = yamlParse(input);
+    }
   } catch (error) {
     logger.error('Error parsing chain config', error);
     return {
       success: false,
-      error: 'Input is not valid JSON',
+      error: 'Input is not valid chain JSON or YAML',
     };
   }
 
@@ -48,7 +53,7 @@ export function tryParseChainConfig(input: string, mp?: MultiProvider): ParseRes
 
   // Ensure https is used for RPCs
   const rpcUrls = chainConfig.rpcUrls;
-  if (rpcUrls?.some((r) => !r.http.startsWith('https://'))) {
+  if (rpcUrls?.some((r) => !r.http.startsWith('https://') && !r.http.includes('localhost'))) {
     return {
       success: false,
       error: 'all RPCs must use valid https url',

@@ -113,7 +113,7 @@ export function ConfigureChains() {
                 <XIconButton
                   onClick={() => onClickRemoveChain(chain.name)}
                   title="Remove"
-                  size={22}
+                  size={10}
                 />
               </td>
             </tr>
@@ -165,21 +165,22 @@ export function ConfigureChains() {
   );
 }
 
-const customChainTextareaPlaceholder = `{
-  "chainId": 11155111,
-  "name": "sepolia",
-  "protocol": "ethereum",
-  "rpcUrls": [{ "http": "https://foobar.com" }],
-  "blockExplorers": [ {
-      "name": "Sepolia Etherscan",
-      "family": "etherscan",
-      "url": "https://sepolia.etherscan.io",
-      "apiUrl": "https://api-sepolia.etherscan.io/api",
-      "apiKey": "12345"
-  } ],
-  "blocks": { "confirmations": 1, "estimateBlockTime": 13 },
-  "mailbox": "0x123...",
-}
+const customChainTextareaPlaceholder = `---
+chainId: 11155111
+name: sepolia
+protocol: ethereum
+rpcUrls:
+  - http: https://foobar.com
+blockExplorers:
+  - name: Sepolia Etherscan
+    family: etherscan
+    url: https://sepolia.etherscan.io
+    apiUrl: https://api-sepolia.etherscan.io/api
+    apiKey: '12345'
+blocks:
+  confirmations: 1
+  estimateBlockTime: 13
+mailbox: 0x123...
 `;
 
 const styles = {

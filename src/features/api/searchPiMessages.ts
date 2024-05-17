@@ -1,6 +1,7 @@
 import type { NextApiRequest } from 'next';
 import { z } from 'zod';
 
+import { GithubRegistry } from '@hyperlane-xyz/registry';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { logger } from '../../utils/logger';
@@ -30,8 +31,9 @@ export async function handler(req: NextApiRequest): Promise<ApiHandlerResult<Api
   try {
     logger.debug('Attempting to search for PI messages:', query);
     const multiProvider = new MultiProvider({ [chainConfig.name]: chainConfig });
+    const registry = new GithubRegistry();
     // TODO consider supporting block/time/chain filters here
-    const messages = await fetchMessagesFromPiChain(chainConfig, query, multiProvider);
+    const messages = await fetchMessagesFromPiChain(chainConfig, query, multiProvider, registry);
     logger.debug(`Found ${messages.length} PI messages`);
     return successResult(messages);
   } catch (error) {
