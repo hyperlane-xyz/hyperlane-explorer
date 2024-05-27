@@ -65,9 +65,8 @@ export function useMessageSearchQuery(
 
   // Setup interval to re-query
   const reExecutor = useCallback(() => {
-    if (query && isValidInput) {
-      reexecuteQuery({ requestPolicy: 'network-only' });
-    }
+    if (!query || !isValidInput || !isWindowVisible()) return;
+    reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
   useInterval(reExecutor, SEARCH_AUTO_REFRESH_DELAY);
 
@@ -101,12 +100,13 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   const isMessageFound = messageList.length > 0;
   const message = isMessageFound ? messageList[0] : null;
   const msgStatus = message?.status;
+  const isDelivered = isMessageFound && msgStatus === MessageStatus.Delivered;
 
   // Setup interval to re-query
   const reExecutor = useCallback(() => {
-    if (pause || (isMessageFound && msgStatus === MessageStatus.Delivered)) return;
+    if (pause || isDelivered || !isWindowVisible()) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [pause, isMessageFound, msgStatus, reexecuteQuery]);
+  }, [pause, isDelivered, reexecuteQuery]);
   useInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
 
   return {
@@ -116,4 +116,8 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     isMessageFound,
     message,
   };
+}
+
+function isWindowVisible() {
+  return document.visibilityState === 'visible';
 }
