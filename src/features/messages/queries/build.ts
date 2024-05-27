@@ -50,7 +50,7 @@ export function buildMessageQuery(
   const variables = { identifier: stringToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: bytea!){
+  query ($identifier: bytea!) @cached(ttl: 5) {
     message_view(
       where: {${whereClause}}, 
       limit: ${limit}
@@ -107,7 +107,7 @@ export function buildMessageSearchQuery(
     }`,
   );
 
-  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) {
+  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
     ${queries.join('\n')}
   }`;
   return { query, variables };
