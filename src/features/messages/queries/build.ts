@@ -50,7 +50,7 @@ export function buildMessageQuery(
   const variables = { identifier: stringToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: bytea!){
+  query ($identifier: bytea!) @cached(ttl: 5) {
     message_view(
       where: {${whereClause}}, 
       limit: ${limit}
