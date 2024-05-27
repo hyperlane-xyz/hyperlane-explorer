@@ -107,7 +107,7 @@ export function buildMessageSearchQuery(
     }`,
   );
 
-  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) {
+  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
     ${queries.join('\n')}
   }`;
   return { query, variables };
