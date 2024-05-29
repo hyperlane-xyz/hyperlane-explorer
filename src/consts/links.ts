@@ -4,7 +4,7 @@ export const links = {
   discord: 'https://discord.gg/VK9ZUy3aTV',
   github: 'https://github.com/hyperlane-xyz',
   jobs: 'https://jobs.lever.co/Hyperlane',
-  twitter: 'https://twitter.com/hyperlane_xyz',
+  twitter: 'https://twitter.com/hyperlane',
   blog: 'https://medium.com/hyperlane',
   tenderlySimDocs:
     'https://docs.tenderly.co/simulations-and-forks/how-to-simulate-a-transaction/using-simulation-ui',
