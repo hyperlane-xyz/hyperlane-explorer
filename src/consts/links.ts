@@ -13,10 +13,10 @@ export const links = {
 };
 
 export const docLinks = {
-  home: 'https://v3.hyperlane.xyz',
-  chains: 'https://v3.hyperlane.xyz/docs/reference/domains',
-  pi: 'https://v3.hyperlane.xyz/docs/deploy-hyperlane',
-  ism: 'https://v3.hyperlane.xyz/docs/reference/ISM/specify-your-ISM',
-  gas: 'https://v3.hyperlane.xyz/docs/protocol/interchain-gas-payment',
+  home: 'https://docs.hyperlane.xyz/',
+  chains: 'https://docs.hyperlane.xyz/docs/reference/domains',
+  pi: 'https://docs.hyperlane.xyz/docs/deploy-hyperlane',
+  ism: 'https://docs.hyperlane.xyz/docs/reference/ISM/specify-your-ISM',
+  gas: 'https://docs.hyperlane.xyz/docs/protocol/interchain-gas-payment',
   registry: 'https://docs.hyperlane.xyz/docs/reference/registries',
 };
