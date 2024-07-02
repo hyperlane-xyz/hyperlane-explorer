@@ -92,7 +92,7 @@ function ChainMultiSelector({
     );
     const mainnets = coreEvmChains.filter((c) => !c.isTestnet);
     const testnets = coreEvmChains.filter((c) => !!c.isTestnet);
-    // Return only evnChains because of graphql only accept query non-evm chains (with bigint type not string)
+    // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
     return { chains: coreEvmChains, mainnets, testnets };
   }, [multiProvider]);
 
