@@ -5,7 +5,12 @@ import { useMemo, useState } from 'react';
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { arrayToObject } from '@hyperlane-xyz/utils';
 
-import { getChainDisplayName, isEvmChain, isPiChain } from '../../features/chains/utils';
+import {
+  getChainDisplayName,
+  isEvmChain,
+  isPiChain,
+  isUnscrapedEvmChain,
+} from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
 import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
@@ -91,11 +96,7 @@ function ChainMultiSelector({
       (c) =>
         isEvmChain(multiProvider, c.chainId) &&
         !isPiChain(multiProvider, c.chainId) &&
-        // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts
-        c.chainId !== 88 && // Viction is not scraped
-        c.chainId !== 1329 && // Sei is not scraped
-        // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/testnet4/agent.ts
-        c.chainId !== 88002, // Proteus Testnet is not scraped
+        !isUnscrapedEvmChain(multiProvider, c.chainId),
     );
     const mainnets = coreEvmChains.filter((c) => !c.isTestnet);
     const testnets = coreEvmChains.filter((c) => !!c.isTestnet);
