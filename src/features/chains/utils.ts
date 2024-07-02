@@ -2,6 +2,7 @@ import { CoreChain, CoreChains, IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
+import { unscrapedEvmChains } from '../../consts/config';
 import { Environment } from '../../consts/environments';
 
 import { ChainConfig } from './chainConfig';
@@ -42,4 +43,10 @@ export function isPiChain(multiProvider: MultiProvider, chainIdOrName: number | 
 export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const protocol = multiProvider.tryGetProtocol(chainIdOrName);
   return protocol === ProtocolType.Ethereum;
+}
+
+// TODO: Remove once we fetch CoreChains dynamically from the DB https://github.com/hyperlane-xyz/hyperlane-explorer/issues/74
+export function isUnscrapedEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
+  const chainName = multiProvider.tryGetChainName(chainIdOrName);
+  return chainName && unscrapedEvmChains.includes(chainName as CoreChain);
 }
