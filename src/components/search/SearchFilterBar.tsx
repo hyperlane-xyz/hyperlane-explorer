@@ -88,7 +88,14 @@ function ChainMultiSelector({
     // Filtering to EVM is necessary to prevent errors until cosmos support is added
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
     const coreEvmChains = chains.filter(
-      (c) => isEvmChain(multiProvider, c.chainId) && !isPiChain(multiProvider, c.chainId),
+      (c) =>
+        isEvmChain(multiProvider, c.chainId) &&
+        !isPiChain(multiProvider, c.chainId) &&
+        // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts
+        c.chainId !== 88 && // Viction is not scraped
+        c.chainId !== 1329 && // Sei is not scraped
+        // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/testnet4/agent.ts
+        c.chainId !== 88002, // Proteus Testnet is not scraped
     );
     const mainnets = coreEvmChains.filter((c) => !c.isTestnet);
     const testnets = coreEvmChains.filter((c) => !!c.isTestnet);
