@@ -92,7 +92,8 @@ function ChainMultiSelector({
     );
     const mainnets = coreEvmChains.filter((c) => !c.isTestnet);
     const testnets = coreEvmChains.filter((c) => !!c.isTestnet);
-    return { chains, mainnets, testnets };
+    // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
+    return { chains: coreEvmChains, mainnets, testnets };
   }, [multiProvider]);
 
   // Need local state as buffer before user hits apply
