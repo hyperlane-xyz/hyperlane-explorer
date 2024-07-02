@@ -44,6 +44,8 @@ export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number |
   const protocol = multiProvider.tryGetProtocol(chainIdOrName);
   return protocol === ProtocolType.Ethereum;
 }
+
+// TODO: Remove once we fetch CoreChains dynamically from the DB https://github.com/hyperlane-xyz/hyperlane-explorer/issues/74
 export function isUnscrapedEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const chainName = multiProvider.tryGetChainName(chainIdOrName);
   return chainName && unscrapedEvmChains.includes(chainName as CoreChain);
