@@ -2097,10 +2097,10 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^1.7.17"
-    "@hyperlane-xyz/registry": "npm:2.2.0"
+    "@hyperlane-xyz/registry": "npm:2.3.0"
     "@hyperlane-xyz/sdk": "npm:3.13.0"
     "@hyperlane-xyz/utils": "npm:3.13.0"
-    "@hyperlane-xyz/widgets": "npm:3.13.1"
+    "@hyperlane-xyz/widgets": "npm:4.1.0"
     "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6"
     "@tanstack/react-query": "npm:^5.35.5"
     "@trivago/prettier-plugin-sort-imports": "npm:^4.1.1"
@@ -2138,13 +2138,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/registry@npm:2.2.0":
-  version: 2.2.0
-  resolution: "@hyperlane-xyz/registry@npm:2.2.0"
+"@hyperlane-xyz/registry@npm:2.3.0":
+  version: 2.3.0
+  resolution: "@hyperlane-xyz/registry@npm:2.3.0"
   dependencies:
     yaml: "npm:^2"
     zod: "npm:^3.21.2"
-  checksum: 0c4d6295e69aa4377fca0ad891c3077ce3bda05184dcb9e37b2e48a68685146c794594fe432e2fe5fa97b9b9b73e8425b70d030d82c1bdd3d6133473eba61d7d
+  checksum: c74a7201ef3114f7ff8e055e31592612cb881c6945d498afbe906f45e3d25acd73ee785f3101f6b2dc2bcd3a625142611ad4c5424ab59a5783b4c15d3253e4d6
   languageName: node
   linkType: hard
 
@@ -2192,13 +2192,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:3.13.1":
-  version: 3.13.1
-  resolution: "@hyperlane-xyz/widgets@npm:3.13.1"
+"@hyperlane-xyz/widgets@npm:4.1.0":
+  version: 4.1.0
+  resolution: "@hyperlane-xyz/widgets@npm:4.1.0"
   peerDependencies:
     react: ^18
     react-dom: ^18
-  checksum: 9d812685f2210db7dd7edd7cb181c3e2b5c95fd663ca81a42eedff47402911c2c984a10960a92c364d540104f867b63ea3d4a5cf5d3fa94f487643eb5d0a9614
+  checksum: 415368244d83810bf5ff291c2b11bf10bdc505c6f1500ff2b28285ee1770d952cbbae30053669c6266069a31fdf3dce4018efffa2dea499729a99e5259804f94
   languageName: node
   linkType: hard
 

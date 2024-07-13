@@ -82,6 +82,8 @@ export function useReadyMultiProvider() {
 }
 
 async function buildMultiProvider(registry: IRegistry, customChainConfigs: ChainMap<ChainConfig>) {
+  // TODO improve interface so this pre-cache isn't required
+  await registry.listRegistryContent();
   const registryChainMetadata = await registry.getMetadata();
   return new MultiProvider({ ...registryChainMetadata, ...customChainConfigs });
 }
