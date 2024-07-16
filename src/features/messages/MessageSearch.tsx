@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 import { Fade } from '../../components/animations/Fade';
 import { Card } from '../../components/layout/Card';
@@ -38,6 +39,9 @@ export function MessageSearch() {
   const [startTimeFilter, setStartTimeFilter] = useState<number | null>(null);
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
+  // Router
+  const router = useRouter();
+
   // GraphQL query and results
   const { isValidInput, isError, isFetching, hasRun, messageList, isMessagesFound } =
     useMessageSearchQuery(
@@ -71,6 +75,11 @@ export function MessageSearch() {
 
   // Keep url in sync
   useSyncQueryParam(QUERY_SEARCH_PARAM, isValidInput ? sanitizedInput : '');
+
+  // Reset query input when Router to homepage (no params)
+  useEffect(() => {
+    if (router.asPath === '/') setSearchInput('');
+  }, [router.asPath]);
 
   return (
     <>
