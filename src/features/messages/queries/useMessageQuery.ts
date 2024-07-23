@@ -10,9 +10,9 @@ import {
   MessageIdentifierType,
   buildMessageQuery,
   buildMessageSearchQuery,
-} from '../queries/build';
-import { MessagesQueryResult, MessagesStubQueryResult } from '../queries/fragments';
-import { parseMessageQueryResult, parseMessageStubResult } from '../queries/parse';
+} from './build';
+import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
+import { parseMessageQueryResult, parseMessageStubResult } from './parse';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000; // 15s
 const MSG_AUTO_REFRESH_DELAY = 10_000; // 10s
@@ -22,8 +22,7 @@ const SEARCH_QUERY_LIMIT = 50;
 export function isValidSearchQuery(input: string, allowAddress?: boolean) {
   if (!input) return false;
   if (isValidTransactionHashEvm(input)) return true;
-  if (allowAddress && isAddressEvm(input)) return true;
-  return false;
+  return !!(allowAddress && isAddressEvm(input));
 }
 
 export function useMessageSearchQuery(
