@@ -6,11 +6,8 @@ import { isAddressEvm, isValidTransactionHashEvm } from '@hyperlane-xyz/utils';
 import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useInterval } from '../../../utils/useInterval';
-import {
-  MessageIdentifierType,
-  buildMessageQuery,
-  buildMessageSearchQuery,
-} from './build';
+
+import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
 import { parseMessageQueryResult, parseMessageStubResult } from './parse';
 
