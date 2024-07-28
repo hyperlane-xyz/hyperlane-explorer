@@ -17,8 +17,7 @@ export async function tryClipboardSet(value: string) {
 export async function tryClipboardGet() {
   try {
     // Note: doesn't work in firefox, which only allows extensions to read clipboard
-    const value = await navigator.clipboard.readText();
-    return value;
+    return await navigator.clipboard.readText();
   } catch (error) {
     logger.error('Failed to read from clipboard', error);
     return null;

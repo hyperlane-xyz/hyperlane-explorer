@@ -41,8 +41,7 @@ async function queryExplorer<P>(
   }
 
   logger.debug('Querying explorer url:', url.toString());
-  const result = await executeQuery<P>(url);
-  return result;
+  return await executeQuery<P>(url);
 }
 
 async function executeQuery<P>(url: URL) {

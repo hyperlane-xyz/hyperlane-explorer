@@ -12,8 +12,7 @@ export function tryUtf8DecodeBytes(value: string, fatal = true) {
   if (!value) return undefined;
   try {
     const decoder = new TextDecoder('utf-8', { fatal });
-    const decodedBody = decoder.decode(Buffer.from(strip0x(value), 'hex'));
-    return decodedBody;
+    return decoder.decode(Buffer.from(strip0x(value), 'hex'));
   } catch (error) {
     return undefined;
   }
