@@ -12,6 +12,7 @@ import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
+import { AddressMapDomainRow } from './AddressMapDomainRow';
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -89,21 +90,19 @@ export function ContentDetailsCard({
           blurValue={blur}
         />
         <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
-        <KeyValueRow
+        <AddressMapDomainRow
           label="Sender:"
-          labelWidth="w-16"
-          display={sender}
+          address={sender}
+          blur={blur}
+          queryChainId={originDomainId}
           displayWidth="w-64 sm:w-80"
-          showCopy={true}
-          blurValue={blur}
         />
-        <KeyValueRow
+        <AddressMapDomainRow
           label="Recipient:"
-          labelWidth="w-16"
-          display={recipient}
+          address={recipient}
+          blur={blur}
+          queryChainId={destinationDomainId}
           displayWidth="w-64 sm:w-80"
-          showCopy={true}
-          blurValue={blur}
         />
       </div>
       <div>

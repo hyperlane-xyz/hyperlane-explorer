@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 
-const { version } = require('./package.json')
+const { version } = require('./package.json');
 
-const isDev = process.env.NODE_ENV !== 'production'
+const isDev = process.env.NODE_ENV !== 'production';
 
 const securityHeaders = [
   {
@@ -27,7 +27,7 @@ const securityHeaders = [
       isDev ? " 'unsafe-eval'" : ''
     }; connect-src *; img-src 'self' data: https://raw.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
   },
-]
+];
 
 const nextConfig = {
   async headers() {
@@ -36,7 +36,7 @@ const nextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
-    ]
+    ];
   },
 
   env: {
@@ -45,6 +45,7 @@ const nextConfig = {
 
   reactStrictMode: true,
   swcMinify: true,
-}
+  transpilePackages: ['@web3-name-sdk/core'],
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

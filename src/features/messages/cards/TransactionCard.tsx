@@ -17,6 +17,7 @@ import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 
+import { AddressMapDomainRow } from './AddressMapDomainRow';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -200,7 +201,7 @@ function TransactionDetails({
   const multiProvider = useMultiProvider();
 
   const { hash, from, timestamp, blockNumber } = transaction;
-
+  const queryChainId = chainId && chainId !== domainId ? Number(chainId) : domainId;
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
       ? multiProvider.tryGetExplorerTxUrl(chainId, { hash })
@@ -222,14 +223,7 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
-      <KeyValueRow
-        label="From:"
-        labelWidth="w-16"
-        display={from}
-        displayWidth="w-60 sm:w-64"
-        showCopy={true}
-        blurValue={blur}
-      />
+      <AddressMapDomainRow label="From:" address={from} blur={blur} queryChainId={queryChainId} />
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
