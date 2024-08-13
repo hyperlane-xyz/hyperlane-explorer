@@ -189,8 +189,11 @@ function ChainMultiSelector({
               </TextButton>
             </div>
           </div>
-          <div className="mt-2.5 flex space-x-6">
-            <div className="flex flex-col">
+          <div className="mt-2.5 flex space-x-2">
+            <div
+              className="flex flex-col overflow-y-auto max-h-100"
+              style={{ overflowX: 'hidden' }}
+            >
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(mainnets)}
@@ -216,8 +219,10 @@ function ChainMultiSelector({
                 </CheckBox>
               ))}
             </div>
-            <div className="self-stretch w-px my-1 bg-gray-100"></div>
-            <div className="flex flex-col">
+            <div
+              className="flex flex-col overflow-y-auto max-h-100"
+              style={{ overflowX: 'hidden' }}
+            >
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(testnets)}
