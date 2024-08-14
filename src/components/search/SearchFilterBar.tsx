@@ -219,8 +219,7 @@ function ChainMultiSelector({
               ))}
             </div>
             <div
-              className="flex flex-col overflow-y-auto max-h-100"
-              style={{ overflowX: 'hidden' }}
+              className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100"
             >
               <div className="pb-1.5">
                 <CheckBox
