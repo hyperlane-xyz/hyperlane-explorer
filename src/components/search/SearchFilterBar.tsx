@@ -190,9 +190,7 @@ function ChainMultiSelector({
             </div>
           </div>
           <div className="mt-2.5 flex space-x-2">
-            <div
-              className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100"
-            >
+            <div className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100">
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(mainnets)}
@@ -218,9 +216,7 @@ function ChainMultiSelector({
                 </CheckBox>
               ))}
             </div>
-            <div
-              className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100"
-            >
+            <div className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100">
               <div className="pb-1.5">
                 <CheckBox
                   checked={!hasAnyUncheckedChain(testnets)}
