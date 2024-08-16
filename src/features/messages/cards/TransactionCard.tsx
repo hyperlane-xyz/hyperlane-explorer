@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { isAddress } from '@hyperlane-xyz/utils';
 
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -235,14 +236,16 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
-      <KeyValueRow
-        label="Mailbox:"
-        labelWidth="w-16"
-        display={mailbox}
-        displayWidth="w-60 sm:w-64"
-        showCopy={true}
-        blurValue={blur}
-      />
+      {mailbox && isAddress(mailbox) && (
+        <KeyValueRow
+          label="Mailbox:"
+          labelWidth="w-16"
+          display={mailbox}
+          displayWidth="w-60 sm:w-64"
+          showCopy={true}
+          blurValue={blur}
+        />
+      )}
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
