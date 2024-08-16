@@ -37,14 +37,14 @@ export function getHumanReadableDuration(ms: number, minSec?: number) {
   }
 
   if (seconds <= 60) {
-    return `${seconds} sec`;
+    return `${seconds} seconds`;
   }
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    return `${minutes} min`;
+    return `${minutes} minutes`;
   }
   const hours = Math.floor(minutes / 60);
-  return `${hours} hr`;
+  return `${hours} hours`;
 }
 
 export function getDateTimeString(timestamp: number) {

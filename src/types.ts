@@ -22,7 +22,7 @@ export interface MessageTx extends MessageTxStub {
   nonce: number;
   gasLimit: number;
   gasPrice: number;
-  effectiveGasPrice;
+  effectiveGasPrice: number;
   gasUsed: number;
   cumulativeGasUsed: number;
   maxFeePerGas: number;

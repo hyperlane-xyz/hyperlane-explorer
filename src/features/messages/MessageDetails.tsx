@@ -10,6 +10,7 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
+import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
@@ -84,6 +85,10 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     isPiMsg,
   } = message;
 
+  const duration = destination?.timestamp
+    ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
+    : undefined;
+
   const showTimeline =
     !isPiMsg &&
     isEvmChain(multiProvider, originChainId) &&
@@ -120,6 +125,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           domainId={destinationDomainId}
           status={status}
           transaction={destination}
+          duration={duration}
           debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={isPiMsg}
