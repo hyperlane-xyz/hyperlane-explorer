@@ -48,6 +48,7 @@ export function DestinationTransactionCard({
   domainId,
   status,
   transaction,
+  duration,
   debugResult,
   isStatusFetching,
   isPiMsg,
@@ -57,6 +58,7 @@ export function DestinationTransactionCard({
   domainId: DomainId;
   status: MessageStatus;
   transaction?: MessageTx;
+  duration?: string;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
@@ -74,6 +76,7 @@ export function DestinationTransactionCard({
         transaction={transaction}
         chainId={chainId}
         domainId={domainId}
+        duration={duration}
         blur={blur}
       />
     );
@@ -190,16 +193,18 @@ function TransactionDetails({
   chainId,
   domainId,
   transaction,
+  duration,
   blur,
 }: {
   chainId: ChainId;
   domainId: DomainId;
   transaction: MessageTx;
+  duration?: string;
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
 
-  const { hash, from, timestamp, blockNumber } = transaction;
+  const { hash, from, timestamp, blockNumber, mailbox } = transaction;
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
@@ -230,6 +235,14 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
+      <KeyValueRow
+        label="Mailbox:"
+        labelWidth="w-16"
+        display={mailbox}
+        displayWidth="w-60 sm:w-64"
+        showCopy={true}
+        blurValue={blur}
+      />
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
@@ -247,6 +260,15 @@ function TransactionDetails({
         displayWidth="w-60 sm:w-64"
         blurValue={blur}
       />
+      {duration && (
+        <KeyValueRow
+          label="Duration:"
+          labelWidth="w-16"
+          display={duration}
+          displayWidth="w-60 sm:w-64"
+          blurValue={blur}
+        />
+      )}
       {txExplorerLink && (
         <a
           className={`block ${styles.textLink}`}

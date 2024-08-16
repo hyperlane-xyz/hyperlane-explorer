@@ -62,9 +62,9 @@ export function Header({ pathName }: { pathName: string }) {
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
             About
           </a>
-          <Link href="/api-docs" className={navLinkClass('/api-docs')}>
+          {/* <Link href="/api-docs" className={navLinkClass('/api-docs')}>
             API
-          </Link>
+          </Link> */}
           <a
             className={navLinkClass()}
             target="_blank"
@@ -95,11 +95,11 @@ export function Header({ pathName }: { pathName: string }) {
                   Settings
                 </MobileNavLink>
               ),
-              (c: Fn) => (
-                <MobileNavLink href="/api" closeDropdown={c} key="API">
-                  API
-                </MobileNavLink>
-              ),
+              // (c: Fn) => (
+              //   <MobileNavLink href="/api" closeDropdown={c} key="API">
+              //     API
+              //   </MobileNavLink>
+              // ),
               (c: Fn) => (
                 <MobileNavLink href={docLinks.home} closeDropdown={c} key="Docs">
                   Docs
