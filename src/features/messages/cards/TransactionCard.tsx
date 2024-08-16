@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { isAddress } from '@hyperlane-xyz/utils';
+import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -236,7 +236,7 @@ function TransactionDetails({
         showCopy={true}
         blurValue={blur}
       />
-      {mailbox && isAddress(mailbox) && (
+      {mailbox && isAddress(mailbox) && !isZeroish(mailbox) && (
         <KeyValueRow
           label="Mailbox:"
           labelWidth="w-16"
