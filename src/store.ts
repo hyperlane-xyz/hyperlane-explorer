@@ -5,6 +5,7 @@ import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { ChainConfig } from './features/chains/chainConfig';
+import { DomainsEntry } from './features/chains/queries/fragments';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -13,6 +14,8 @@ const PERSIST_STATE_VERSION = 1;
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
+  scrapedChains: Array<DomainsEntry>;
+  setScrapedChains: (chains: Array<DomainsEntry>) => void;
   chainConfigs: ChainMap<ChainConfig>;
   setChainConfigs: (configs: ChainMap<ChainConfig>) => void;
   multiProvider: MultiProvider;
@@ -26,6 +29,8 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
+      scrapedChains: [],
+      setScrapedChains: (chains: Array<DomainsEntry>) => set({ scrapedChains: chains }),
       chainConfigs: {},
       setChainConfigs: async (configs: ChainMap<ChainConfig>) => {
         const multiProvider = await buildMultiProvider(get().registry, configs);
