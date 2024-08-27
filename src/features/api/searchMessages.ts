@@ -9,7 +9,7 @@ import { MessagesQueryResult } from '../messages/queries/fragments';
 import { parseMessageQueryResult } from '../messages/queries/parse';
 
 import { ApiHandlerResult, ApiMessage, toApiMessage } from './types';
-import { failureResult, getMultiProvider, successResult } from './utils';
+import { failureResult, getMultiProvider, getScrapedChains, successResult } from './utils';
 
 const SEARCH_QUERY_PARAM_NAME = 'query';
 
@@ -33,7 +33,9 @@ export async function handler(
   const result = await client.query<MessagesQueryResult>(query, variables).toPromise();
 
   const multiProvider = await getMultiProvider();
-  const messages = parseMessageQueryResult(multiProvider, result.data);
+  const scrapedChains = await getScrapedChains(client);
+
+  const messages = parseMessageQueryResult(multiProvider, scrapedChains, result.data);
 
   return successResult(messages.map(toApiMessage));
 }
