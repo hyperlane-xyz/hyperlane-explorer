@@ -6,7 +6,12 @@ import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { arrayToObject } from '@hyperlane-xyz/utils';
 
 import { useScrapedChains } from '../../features/chains/queries/useScrapedChains';
-import { getChainDisplayName, isEvmChain, isPiChain } from '../../features/chains/utils';
+import {
+  getChainDisplayName,
+  isEvmChain,
+  isPiChain,
+  isUnscrapedDbChain,
+} from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
 import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
@@ -91,7 +96,9 @@ function ChainMultiSelector({
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
     const scrapedEvmChains = chains.filter(
       (c) =>
-        isEvmChain(multiProvider, c.chainId) && !isPiChain(multiProvider, scrapedChains, c.chainId),
+        isEvmChain(multiProvider, c.chainId) &&
+        !isPiChain(multiProvider, scrapedChains, c.chainId) &&
+        !isUnscrapedDbChain(multiProvider, c.chainId),
     );
     const mainnets = scrapedEvmChains.filter((c) => !c.isTestnet);
     const testnets = scrapedEvmChains.filter((c) => !!c.isTestnet);
