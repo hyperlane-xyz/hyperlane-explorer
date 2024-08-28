@@ -3,6 +3,7 @@ import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
+import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 
 import { postgresByteaToString } from './encoding';
@@ -22,29 +23,35 @@ import {
 
 export function parseMessageStubResult(
   multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
 ): MessageStub[] {
   if (!data || !Object.keys(data).length) return [];
   return Object.values(data)
     .flat()
-    .map((m) => parseMessageStub(multiProvider, m))
+    .map((m) => parseMessageStub(multiProvider, scrapedChains, m))
     .filter((m): m is MessageStub => !!m)
     .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
 export function parseMessageQueryResult(
   multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
   data: MessagesQueryResult | undefined,
 ): Message[] {
   if (!data || !Object.keys(data).length) return [];
   return Object.values(data)
     .flat()
-    .map((m) => parseMessage(multiProvider, m))
+    .map((m) => parseMessage(multiProvider, scrapedChains, m))
     .filter((m): m is Message => !!m)
     .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
-function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): MessageStub | null {
+function parseMessageStub(
+  multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
+  m: MessageStubEntry,
+): MessageStub | null {
   try {
     const destinationDomainId = m.destination_domain_id;
     let destinationChainId =
@@ -54,7 +61,8 @@ function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): Me
       destinationChainId = destinationDomainId;
     }
     const isPiMsg =
-      isPiChain(multiProvider, m.origin_chain_id) || isPiChain(multiProvider, destinationChainId);
+      isPiChain(multiProvider, scrapedChains, m.origin_chain_id) ||
+      isPiChain(multiProvider, scrapedChains, destinationChainId);
 
     return {
       status: getMessageStatus(m),
@@ -87,9 +95,13 @@ function parseMessageStub(multiProvider: MultiProvider, m: MessageStubEntry): Me
   }
 }
 
-function parseMessage(multiProvider: MultiProvider, m: MessageEntry): Message | null {
+function parseMessage(
+  multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
+  m: MessageEntry,
+): Message | null {
   try {
-    const stub = parseMessageStub(multiProvider, m);
+    const stub = parseMessageStub(multiProvider, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
 
     const body = postgresByteaToString(m.message_body ?? '');

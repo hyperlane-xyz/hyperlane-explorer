@@ -5,11 +5,12 @@ import { useMemo, useState } from 'react';
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { arrayToObject } from '@hyperlane-xyz/utils';
 
+import { useScrapedChains } from '../../features/chains/queries/useScrapedChains';
 import {
   getChainDisplayName,
   isEvmChain,
   isPiChain,
-  isUnscrapedEvmChain,
+  isUnscrapedDbChain,
 } from '../../features/chains/utils';
 import GearIcon from '../../images/icons/gear.svg';
 import { useMultiProvider } from '../../store';
@@ -87,22 +88,23 @@ function ChainMultiSelector({
   onChangeValue: (value: string | null) => void;
   position?: string;
 }) {
+  const { scrapedChains } = useScrapedChains();
   const multiProvider = useMultiProvider();
   const { chains, mainnets, testnets } = useMemo(() => {
     const chains = Object.values(multiProvider.metadata);
     // Filtering to EVM is necessary to prevent errors until cosmos support is added
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
-    const coreEvmChains = chains.filter(
+    const scrapedEvmChains = chains.filter(
       (c) =>
         isEvmChain(multiProvider, c.chainId) &&
-        !isPiChain(multiProvider, c.chainId) &&
-        !isUnscrapedEvmChain(multiProvider, c.chainId),
+        !isPiChain(multiProvider, scrapedChains, c.chainId) &&
+        !isUnscrapedDbChain(multiProvider, c.chainId),
     );
-    const mainnets = coreEvmChains.filter((c) => !c.isTestnet);
-    const testnets = coreEvmChains.filter((c) => !!c.isTestnet);
+    const mainnets = scrapedEvmChains.filter((c) => !c.isTestnet);
+    const testnets = scrapedEvmChains.filter((c) => !!c.isTestnet);
     // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
-    return { chains: coreEvmChains, mainnets, testnets };
-  }, [multiProvider]);
+    return { chains: scrapedEvmChains, mainnets, testnets };
+  }, [multiProvider, scrapedChains]);
 
   // Need local state as buffer before user hits apply
   const [checkedChains, setCheckedChains] = useState(

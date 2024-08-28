@@ -8,6 +8,7 @@ import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { ChainConfig } from '../../chains/chainConfig';
+import { useScrapedChains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
@@ -30,8 +31,10 @@ export function usePiChainMessageSearchQuery({
   piQueryType?: PiQueryType;
   pause: boolean;
 }) {
+  const { scrapedChains } = useScrapedChains();
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
+
   const { isLoading, isError, data } = useQuery({
     queryKey: [
       'usePiChainMessageSearchQuery',
@@ -51,7 +54,9 @@ export function usePiChainMessageSearchQuery({
       const query = { input: ensure0x(sanitizedInput) };
       const allChains = Object.values(multiProvider.metadata);
       const piChains = allChains.filter(
-        (c) => isEvmChain(multiProvider, c.chainId) && isPiChain(multiProvider, c.chainId),
+        (c) =>
+          isEvmChain(multiProvider, c.chainId) &&
+          isPiChain(multiProvider, scrapedChains, c.chainId),
       );
       try {
         const results = await Promise.allSettled(

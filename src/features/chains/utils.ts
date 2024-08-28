@@ -1,11 +1,12 @@
-import { CoreChain, CoreChains, IRegistry } from '@hyperlane-xyz/registry';
+import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
-import { unscrapedEvmChains } from '../../consts/config';
+import { unscrapedChainsInDb } from '../../consts/config';
 import { Environment } from '../../consts/environments';
 
 import { ChainConfig } from './chainConfig';
+import { DomainsEntry } from './queries/fragments';
 
 export async function getMailboxAddress(
   chainName: string,
@@ -35,9 +36,15 @@ export function getChainEnvironment(multiProvider: MultiProvider, chainIdOrName:
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
-export function isPiChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
+// Is a 'Permisionless Interop' chain (i.e. one not deployed and scraped by Abacus Works)
+export function isPiChain(
+  multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
+  chainIdOrName: number | string,
+) {
   const chainName = multiProvider.tryGetChainName(chainIdOrName);
-  return !chainName || !CoreChains.includes(chainName as CoreChain);
+  // Note: .trim() because one chain name in the DB has a trailing \n char for some reason
+  return !chainName || !scrapedChains.find((chain) => chain.name.trim() === chainName);
 }
 
 export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
@@ -45,8 +52,8 @@ export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number |
   return protocol === ProtocolType.Ethereum;
 }
 
-// TODO: Remove once we fetch CoreChains dynamically from the DB https://github.com/hyperlane-xyz/hyperlane-explorer/issues/74
-export function isUnscrapedEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
+// TODO: Remove once all chains in the DB are scraped
+export function isUnscrapedDbChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const chainName = multiProvider.tryGetChainName(chainIdOrName);
-  return chainName && unscrapedEvmChains.includes(chainName as CoreChain);
+  return chainName && unscrapedChainsInDb.includes(chainName);
 }

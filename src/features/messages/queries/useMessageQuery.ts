@@ -6,6 +6,7 @@ import { isAddressEvm, isValidTransactionHashEvm } from '@hyperlane-xyz/utils';
 import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useInterval } from '../../../utils/useInterval';
+import { useScrapedChains } from '../../chains/queries/useScrapedChains';
 
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
@@ -29,6 +30,8 @@ export function useMessageSearchQuery(
   startTimeFilter: number | null,
   endTimeFilter: number | null,
 ) {
+  const { scrapedChains } = useScrapedChains();
+
   const hasInput = !!sanitizedInput;
   const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput, true) : true;
 
@@ -54,8 +57,8 @@ export function useMessageSearchQuery(
   // Parse results
   const multiProvider = useMultiProvider();
   const messageList = useMemo(
-    () => parseMessageStubResult(multiProvider, data),
-    [multiProvider, data],
+    () => parseMessageStubResult(multiProvider, scrapedChains, data),
+    [multiProvider, scrapedChains, data],
   );
   const isMessagesFound = messageList.length > 0;
 
@@ -77,6 +80,8 @@ export function useMessageSearchQuery(
 }
 
 export function useMessageQuery({ messageId, pause }: { messageId: string; pause: boolean }) {
+  const { scrapedChains } = useScrapedChains();
+
   // Assemble GraphQL Query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
 
@@ -90,8 +95,8 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   // Parse results
   const multiProvider = useMultiProvider();
   const messageList = useMemo(
-    () => parseMessageQueryResult(multiProvider, data),
-    [multiProvider, data],
+    () => parseMessageQueryResult(multiProvider, scrapedChains, data),
+    [multiProvider, scrapedChains, data],
   );
   const isMessageFound = messageList.length > 0;
   const message = isMessageFound ? messageList[0] : null;
