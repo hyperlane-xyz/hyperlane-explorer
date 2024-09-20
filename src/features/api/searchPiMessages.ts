@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { GithubRegistry } from '@hyperlane-xyz/registry';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
+import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';
 import { tryParseChainConfig } from '../chains/chainConfig';
 import {
@@ -31,7 +32,7 @@ export async function handler(req: NextApiRequest): Promise<ApiHandlerResult<Api
   try {
     logger.debug('Attempting to search for PI messages:', query);
     const multiProvider = new MultiProvider({ [chainConfig.name]: chainConfig });
-    const registry = new GithubRegistry();
+    const registry = new GithubRegistry({ proxyUrl: config.githubProxy });
     // TODO consider supporting block/time/chain filters here
     const messages = await fetchMessagesFromPiChain(chainConfig, query, multiProvider, registry);
     logger.debug(`Found ${messages.length} PI messages`);

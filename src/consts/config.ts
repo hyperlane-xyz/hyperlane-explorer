@@ -7,6 +7,7 @@ interface Config {
   version: string | null;
   apiUrl: string;
   explorerApiKeys: Record<string, string>;
+  githubProxy?: string;
 }
 
 export const config: Config = Object.freeze({
@@ -14,6 +15,7 @@ export const config: Config = Object.freeze({
   version,
   apiUrl: 'https://explorer4.hasura.app/v1/graphql',
   explorerApiKeys,
+  githubProxy: 'https://proxy.hyperlane.xyz',
 });
 
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts

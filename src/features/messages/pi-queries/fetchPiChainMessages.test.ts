@@ -1,6 +1,7 @@
 import { GithubRegistry, chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 
+import { config } from '../../../consts/config';
 import { Message, MessageStatus } from '../../../types';
 import { ChainConfig } from '../../chains/chainConfig';
 
@@ -64,7 +65,7 @@ const sepoliaMessage: Message = {
 };
 
 describe('fetchMessagesFromPiChain', () => {
-  const registry = new GithubRegistry();
+  const registry = new GithubRegistry({ proxyUrl: config.githubProxy });
   it('Fetches messages using explorer for tx hash', async () => {
     const messages = await fetchMessagesFromPiChain(
       sepoliaConfigWithExplorer,
