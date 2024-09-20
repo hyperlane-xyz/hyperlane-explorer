@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 
+import { config } from './consts/config';
 import { ChainConfig } from './features/chains/chainConfig';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { logger } from './utils/logger';
@@ -40,7 +41,7 @@ export const useStore = create<AppState>()(
       setMultiProvider: (multiProvider: MultiProvider) => {
         set({ multiProvider });
       },
-      registry: new GithubRegistry(),
+      registry: new GithubRegistry({ proxyUrl: config.githubProxy }),
       setRegistry: (registry: IRegistry) => {
         set({ registry });
       },
