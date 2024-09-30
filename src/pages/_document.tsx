@@ -1,6 +1,7 @@
 import { Head, Html, Main, NextScript } from 'next/document';
 
 import { links } from '../consts/links';
+import { MAIN_FONT } from '../styles/fonts';
 
 export default function Document() {
   return (
@@ -40,7 +41,7 @@ export default function Document() {
           content="The official interchain explorer for the Hyperlane protocol and network."
         />
       </Head>
-      <body className="text-black">
+      <body className={`${MAIN_FONT.variable} font-sans text-black`}>
         <Main />
         <NextScript />
       </body>

@@ -315,7 +315,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
           <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle is reverting, try debugging it with `}
             <a
-              className={`${styles.textLink} any:text-blue-500`}
+              className={`${styles.textLink} all:text-blue-500`}
               href={links.tenderlySimDocs}
               target="_blank"
               rel="noopener noreferrer"

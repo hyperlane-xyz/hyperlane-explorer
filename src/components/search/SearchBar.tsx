@@ -20,7 +20,7 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   };
 
   return (
-    <div className="p-1 flex items-center bg-white w-full rounded-full ring ring-blue-400 hover:ring-blue-200 transition-all duration-500">
+    <div className="p-1 flex items-center bg-white w-full rounded-full transition-all duration-500">
       <input
         value={value}
         onChange={onChange}

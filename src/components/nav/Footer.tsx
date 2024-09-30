@@ -11,7 +11,6 @@ import { Color } from '../../styles/Color';
 import { Discord } from '../icons/Discord';
 import { Github } from '../icons/Github';
 import { HyperlaneLogo } from '../icons/HyperlaneLogo';
-import { Medium } from '../icons/Medium';
 import { Twitter } from '../icons/Twitter';
 
 const footerLinks1 = [
@@ -34,7 +33,6 @@ const footerLinks3 = [
   { title: 'Twitter', url: links.twitter, external: true, icon: <Twitter fill="#fff" /> },
   { title: 'Discord', url: links.discord, external: true, icon: <Discord fill="#fff" /> },
   { title: 'Github', url: links.github, external: true, icon: <Github fill="#fff" /> },
-  { title: 'Blog', url: links.blog, external: true, icon: <Medium fill="#fff" /> },
 ];
 
 export function Footer() {
@@ -51,12 +49,12 @@ export function Footer() {
       <div className="px-8 py-5 bg-pink-500">
         <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
           <div className="flex items-center justify-center">
-            <div className="ml-2 w-16 sm:w-20 h-16 sm:h-20">
-              <HyperlaneLogo fill={Color.White} />
+            <div className="ml-2 w-14 sm:w-16 h-14 sm:h-16">
+              <HyperlaneLogo fill={Color.white} />
             </div>
             <div className="text-xl sm:text-2xl font-medium ml-6 space-y-1 ">
-              <div>Go Interchain</div>
-              <div>With Hyperlane</div>
+              <div>Go interchain</div>
+              <div>with Hyperlane</div>
             </div>
             {/* <div className="absolute">
             <div className="hidden sm:block">
@@ -102,7 +100,7 @@ export function Footer() {
                     target={item.external ? '_blank' : '_self'}
                     href={item.url}
                   >
-                    {item?.icon && <div className="mr-4 w-6">{item?.icon}</div>}
+                    {item?.icon && <div className="mr-4 w-5">{item?.icon}</div>}
                     <div className="">{item.title}</div>
                   </Link>
                 </li>
@@ -116,6 +114,6 @@ export function Footer() {
 }
 
 const styles = {
-  linkCol: 'flex flex-col gap-3',
+  linkCol: 'flex flex-col gap-2',
   linkItem: 'flex items-center capitalize text-decoration-none hover:underline underline-offset-2',
 };

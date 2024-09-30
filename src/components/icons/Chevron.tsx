@@ -40,7 +40,7 @@ function _ChevronIcon({ width, height, direction, color, classes }: Props) {
       <path
         d="M1 1l6 6 6-6"
         strokeWidth="2"
-        stroke={color || Color.Black}
+        stroke={color || Color.black}
         fill="none"
         fillRule="evenodd"
         strokeLinecap="round"
@@ -90,7 +90,7 @@ function _HyperlaneChevron({ width, height, direction, color, classes }: Props) 
     >
       <path
         d="M6.3 1h61.3a20 20 0 0 1 18.7 13L140 158.3a5 5 0 0 1 0 3.4l-.3.9-53.5 147.2A20 20 0 0 1 67.4 323H6.2a5 5 0 0 1-4.7-6.6l55.2-158.1L1.7 7.7A5 5 0 0 1 6.2 1Z"
-        fill={color || Color.Blue}
+        fill={color || Color.blue}
       ></path>
     </svg>
   );
@@ -124,7 +124,7 @@ function _HyperlaneWideChevron({ width, height, direction, color, classes }: Pro
       width={width}
       height={height}
       className={`${directionClass} ${classes}`}
-      fill={color || Color.Blue}
+      fill={color || Color.blue}
     >
       <path d="M4.4 0h53c7.2 0 13.7 3 16.2 7.7l46.5 85.1a2 2 0 0 1 0 2l-.2.5-46.3 87c-2.5 4.6-9 7.7-16.3 7.7h-53c-3 0-5-2-4-4L48 92.9.4 4c-1-2 1-4 4-4Z" />
     </svg>

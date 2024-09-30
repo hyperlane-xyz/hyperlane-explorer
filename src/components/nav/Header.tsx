@@ -35,7 +35,7 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-500 ${
+      className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-300 ${
         animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
       }`}
     >
@@ -46,9 +46,9 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'scale-90'
             } transition-all ease-in-out duration-500`}
           >
-            <Image src={Logo} alt="" className="h-8 sm:h-10 w-auto" />
-            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-8 w-auto mt-1 ml-3" />
-            <Image src={Explorer} alt="Explorer" className="h-7 sm:h-8 w-auto mt-1 ml-2.5" />
+            <Image src={Logo} alt="" className="h-7 sm:h-8 w-auto" />
+            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-6 w-auto mt-1 ml-3" />
+            <Image src={Explorer} alt="Explorer" className="h-5 sm:h-6 w-auto mt-1 ml-2.5" />
           </div>
         </Link>
         <nav
@@ -127,21 +127,21 @@ function DropdownButton({ isOpen }: { isOpen: boolean }) {
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.White}
+        color={Color.white}
         classes="transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.White}
+        color={Color.white}
         classes="-mt-1 transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
         direction={isOpen ? 'n' : 's'}
-        color={Color.White}
+        color={Color.white}
         classes="-mt-1 transition-all"
       />
     </div>
@@ -169,7 +169,7 @@ function MobileNavLink({
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[2px] transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[3px] transition-all',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-blue-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };

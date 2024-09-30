@@ -10,7 +10,7 @@ export function Modal({
   close,
   maxWidth,
   children,
-}: PropsWithChildren<{ isOpen: boolean; title: string; close: () => void; maxWidth?: string }>) {
+}: PropsWithChildren<{ isOpen: boolean; title?: string; close: () => void; maxWidth?: string }>) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-30" onClose={close}>
@@ -42,9 +42,11 @@ export function Modal({
                   maxWidth || 'max-w-xs'
                 } max-h-[90vh] transform overflow-auto rounded-xl bg-white px-4 py-4 text-left shadow-lg transition-all`}
               >
-                <Dialog.Title as="h3" className="font-medium text-blue-500">
-                  {title}
-                </Dialog.Title>
+                {!!title && (
+                  <Dialog.Title as="h3" className="font-medium text-blue-500">
+                    {title}
+                  </Dialog.Title>
+                )}
                 {children}
                 <div className="absolute right-3 top-3">
                   <IconButton

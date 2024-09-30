@@ -43,10 +43,10 @@ function getHeadTitle(pathName: string) {
 
 const styles = {
   container: {
-    backgroundImage: 'url(/images/lines-bg-top.svg)',
-    backgroundSize: '94vw',
+    backgroundImage: 'url(/images/background.svg)',
+    backgroundSize: 'cover',
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center 80px',
+    backgroundPosition: 'center',
   },
   main: {
     width: 'min(900px,96vw)',
