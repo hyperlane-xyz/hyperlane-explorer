@@ -7,8 +7,8 @@ import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql
 
 import '@hyperlane-xyz/widgets/styles.css';
 
+import { AppLayout } from '../AppLayout';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
-import { AppLayout } from '../components/layout/AppLayout';
 import { config } from '../consts/config';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
 import { MAIN_FONT } from '../styles/fonts';

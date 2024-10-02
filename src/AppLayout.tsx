@@ -3,8 +3,8 @@ import { PropsWithChildren } from 'react';
 
 import { toTitleCase } from '@hyperlane-xyz/utils';
 
-import { Footer } from '../nav/Footer';
-import { Header } from '../nav/Header';
+import { Footer } from './components/nav/Footer';
+import { Header } from './components/nav/Header';
 
 interface Props {
   pathName: string;
@@ -25,7 +25,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         {/* <InfoBanner /> */}
         <Header pathName={pathName} />
         <div className="max-w-5xl mx-auto grow">
-          <main style={styles.main} className="relative min-h-full pt-3 z-20">
+          <main style={styles.main} className="relative min-h-full pt-3">
             {children}
           </main>
         </div>

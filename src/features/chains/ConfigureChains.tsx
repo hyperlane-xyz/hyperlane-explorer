@@ -1,13 +1,13 @@
 import { ChangeEventHandler, useState } from 'react';
 
 import { ChainName } from '@hyperlane-xyz/sdk';
+import { Modal } from '@hyperlane-xyz/widgets';
 
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { XIconButton } from '../../components/buttons/XIconButton';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
-import { Modal } from '../../components/layout/Modal';
 import { docLinks } from '../../consts/links';
 import { useMultiProvider } from '../../store';
 
@@ -123,12 +123,7 @@ export function ConfigureChains() {
       <SolidButton classes="mt-4 mb-2 py-0.5 w-full" onClick={() => setShowAddChainModal(true)}>
         Add custom chain
       </SolidButton>
-      <Modal
-        isOpen={showAddChainModal}
-        close={closeModal}
-        title="Add Custom Chain"
-        maxWidth="max-w-xl"
-      >
+      <Modal isOpen={showAddChainModal} close={closeModal} panelClassname="max-w-lg p-4 sm:p-5">
         <p className="mt-2 font-light">
           Input a chain metadata config including core contract addresses to enable exploration of
           that chain. See{' '}

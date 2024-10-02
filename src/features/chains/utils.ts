@@ -2,7 +2,6 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
-import { unscrapedChainsInDb } from '../../consts/config';
 import { Environment } from '../../consts/environments';
 
 import { ChainConfig } from './chainConfig';
@@ -50,10 +49,4 @@ export function isPiChain(
 export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const protocol = multiProvider.tryGetProtocol(chainIdOrName);
   return protocol === ProtocolType.Ethereum;
-}
-
-// TODO: Remove once all chains in the DB are scraped
-export function isUnscrapedDbChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
-  const chainName = multiProvider.tryGetChainName(chainIdOrName);
-  return chainName && unscrapedChainsInDb.includes(chainName);
 }

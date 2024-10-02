@@ -2,13 +2,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
+import { DropdownMenu } from '@hyperlane-xyz/widgets';
+
 import { docLinks, links } from '../../consts/links';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
 import { HyperlaneWideChevron } from '../icons/Chevron';
-import { DropdownMenu } from '../layout/Dropdown';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
@@ -35,7 +36,7 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-300 ${
+      className={`z-10 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-300 ${
         animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
       }`}
     >
@@ -81,38 +82,36 @@ export function Header({ pathName }: { pathName: string }) {
         {/* Dropdown menu, used on mobile */}
         <div className="relative flex item-center sm:hidden mr-2">
           <DropdownMenu
-            ButtonContent={DropdownButton}
-            buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
-            buttonTitle="Options"
+            button={<DropdownButton />}
+            buttonClassname="hover:opacity-80 active:opacity-70 transition-all"
             menuItems={[
-              (c: Fn) => (
-                <MobileNavLink href="/" closeDropdown={c} key="Home">
+              ({ close }) => (
+                <MobileNavLink href="/" closeDropdown={close} key="Home">
                   Home
                 </MobileNavLink>
               ),
-              (c: Fn) => (
-                <MobileNavLink href="/settings" closeDropdown={c} key="Settings">
+              ({ close }) => (
+                <MobileNavLink href="/settings" closeDropdown={close} key="Settings">
                   Settings
                 </MobileNavLink>
               ),
-              // (c: Fn) => (
+              //  ({ close }) => (
               //   <MobileNavLink href="/api" closeDropdown={c} key="API">
               //     API
               //   </MobileNavLink>
               // ),
-              (c: Fn) => (
-                <MobileNavLink href={docLinks.home} closeDropdown={c} key="Docs">
+              ({ close }) => (
+                <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
                   Docs
                 </MobileNavLink>
               ),
-              (c: Fn) => (
-                <MobileNavLink href={links.home} closeDropdown={c} key="About">
+              ({ close }) => (
+                <MobileNavLink href={links.home} closeDropdown={close} key="About">
                   About
                 </MobileNavLink>
               ),
             ]}
-            menuClasses="pt-8 px-8"
-            isFullscreen={true}
+            menuClassname="!left-0 !right-0 py-7 px-8 bg-blue-500"
           />
         </div>
       </div>
@@ -120,27 +119,27 @@ export function Header({ pathName }: { pathName: string }) {
   );
 }
 
-function DropdownButton({ isOpen }: { isOpen: boolean }) {
+function DropdownButton() {
   return (
     <div className="px-4 py-1 flex flex-col items-center border border-white bg-pink-500 rounded-lg">
       <HyperlaneWideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
+        direction="s"
         color={Color.white}
         classes="transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
+        direction="s"
         color={Color.white}
         classes="-mt-1 transition-all"
       />
       <HyperlaneWideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
+        direction="s"
         color={Color.white}
         classes="-mt-1 transition-all"
       />
@@ -162,7 +161,7 @@ function MobileNavLink({
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-2xl font-medium text-white capitalize">{children}</span>
+      <span className="text-xl font-medium text-white capitalize">{children}</span>
     </Link>
   );
 }

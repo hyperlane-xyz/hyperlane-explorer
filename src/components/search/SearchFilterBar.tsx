@@ -1,27 +1,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
-import { arrayToObject } from '@hyperlane-xyz/utils';
+import { ChainSearchMenu, Modal, Popover } from '@hyperlane-xyz/widgets';
 
-import { useScrapedChains } from '../../features/chains/queries/useScrapedChains';
-import {
-  getChainDisplayName,
-  isEvmChain,
-  isPiChain,
-  isUnscrapedDbChain,
-} from '../../features/chains/utils';
+import { useScrapedEvmChains } from '../../features/chains/queries/useScrapedChains';
 import GearIcon from '../../images/icons/gear.svg';
 import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
-import { ChainLogo } from '../icons/ChainLogo';
 import { ChevronIcon } from '../icons/Chevron';
-import { CheckBox } from '../input/Checkbox';
 import { DatetimeField } from '../input/DatetimeField';
-import { DropdownModal } from '../layout/Dropdown';
 
 interface Props {
   originChain: string | null;
@@ -46,14 +37,14 @@ export function SearchFilterBar({
 }: Props) {
   return (
     <div className="flex items-center space-x-2 md:space-x-4">
-      <ChainMultiSelector
+      <ChainSelector
         text="Origin"
         header="Origin Chains"
         value={originChain}
         onChangeValue={onChangeOrigin}
         position="-right-32"
       />
-      <ChainMultiSelector
+      <ChainSelector
         text="Destination"
         header="Destination Chains"
         value={destinationChain}
@@ -75,7 +66,7 @@ export function SearchFilterBar({
   );
 }
 
-function ChainMultiSelector({
+function ChainSelector({
   text,
   header,
   value,
@@ -88,173 +79,41 @@ function ChainMultiSelector({
   onChangeValue: (value: string | null) => void;
   position?: string;
 }) {
-  const { scrapedChains } = useScrapedChains();
   const multiProvider = useMultiProvider();
-  const { chains, mainnets, testnets } = useMemo(() => {
-    const chains = Object.values(multiProvider.metadata);
-    // Filtering to EVM is necessary to prevent errors until cosmos support is added
-    // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
-    const scrapedEvmChains = chains.filter(
-      (c) =>
-        isEvmChain(multiProvider, c.chainId) &&
-        !isPiChain(multiProvider, scrapedChains, c.chainId) &&
-        !isUnscrapedDbChain(multiProvider, c.chainId),
-    );
-    const mainnets = scrapedEvmChains.filter((c) => !c.isTestnet);
-    const testnets = scrapedEvmChains.filter((c) => !!c.isTestnet);
-    // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
-    return { chains: scrapedEvmChains, mainnets, testnets };
-  }, [multiProvider, scrapedChains]);
+  const { chains } = useScrapedEvmChains(multiProvider);
 
-  // Need local state as buffer before user hits apply
-  const [checkedChains, setCheckedChains] = useState(
-    value
-      ? arrayToObject(value.split(','))
-      : arrayToObject(chains.map((c) => c.chainId.toString())),
-  );
+  // const [checkedChain, setCheckedChain] = useState<ChainId|null>(value);
 
-  const hasAnyUncheckedChain = (chains: ChainMetadata[]) => {
-    for (const c of chains) {
-      if (!checkedChains[c.chainId]) return true;
-    }
-    return false;
+  const onClickChain = (c: ChainMetadata) => {
+    // setCheckedChain(c.chainId);
+    onChangeValue(c.chainId.toString());
   };
 
-  const onToggle = (chainId: string | number) => {
-    return (checked: boolean) => {
-      if (!hasAnyUncheckedChain(chains)) {
-        // If none are unchecked, uncheck all except this one
-        setCheckedChains({ [chainId]: true });
-      } else {
-        setCheckedChains({ ...checkedChains, [chainId]: checked });
-      }
-    };
-  };
-
-  const onToggleSection = (chains: ChainMetadata[]) => {
-    return () => {
-      const chainIds = chains.map((c) => c.chainId.toString());
-      if (hasAnyUncheckedChain(chains)) {
-        // If some are unchecked, check all
-        setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, true) });
-      } else {
-        // If none are unchecked, uncheck all
-        setCheckedChains({ ...checkedChains, ...arrayToObject(chainIds, false) });
-      }
-    };
-  };
-
-  const onToggleAll = () => {
-    setCheckedChains(arrayToObject(chains.map((c) => c.chainId.toString())));
-  };
-
-  const onToggleNone = () => {
-    setCheckedChains({});
-  };
-
-  const onClickApply = (closeDropdown?: () => void) => {
-    const checkedList = Object.keys(checkedChains).filter((c) => !!checkedChains[c]);
-    if (checkedList.length === 0 || checkedList.length === chains.length) {
-      // Use null value, indicating to filter needed
-      onChangeValue(null);
-    } else {
-      onChangeValue(checkedList.join(','));
-    }
-    if (closeDropdown) closeDropdown();
+  const [showModal, setShowModal] = useState(false);
+  const closeModal = () => {
+    setShowModal(false);
   };
 
   return (
-    <DropdownModal
-      buttonContent={
-        <>
-          <span className="text-white font-medium py-px">{text}</span>
-          <ChevronIcon
-            direction="s"
-            width={9}
-            height={5}
-            classes="ml-2 opacity-80"
-            color={Color.White}
-          />
-        </>
-      }
-      buttonClasses="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
-      modalContent={(closeDropdown) => (
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-blue-500">{header}</h3>
-            <div className="flex mr-4">
-              <TextButton classes="text-sm font-medium text-pink-500" onClick={onToggleAll}>
-                All
-              </TextButton>
-              <TextButton classes="ml-3.5 text-sm font-medium text-pink-500" onClick={onToggleNone}>
-                None
-              </TextButton>
-            </div>
-          </div>
-          <div className="mt-2.5 flex space-x-2">
-            <div className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100">
-              <div className="pb-1.5">
-                <CheckBox
-                  checked={!hasAnyUncheckedChain(mainnets)}
-                  onToggle={onToggleSection(mainnets)}
-                  name="mainnet-chains"
-                >
-                  <h4 className="ml-2 text-gray-800">Mainnet Chains</h4>
-                </CheckBox>
-              </div>
-              {mainnets.map((c) => (
-                <CheckBox
-                  key={c.name}
-                  checked={!!checkedChains[c.chainId]}
-                  onToggle={onToggle(c.chainId)}
-                  name={c.name}
-                >
-                  <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2 font-light">
-                      {getChainDisplayName(multiProvider, c.chainId, true)}
-                    </span>
-                    <ChainLogo chainId={c.chainId} size={12} background={false} />
-                  </div>
-                </CheckBox>
-              ))}
-            </div>
-            <div className="flex flex-col overflow-x-hidden overflow-y-auto max-h-100">
-              <div className="pb-1.5">
-                <CheckBox
-                  checked={!hasAnyUncheckedChain(testnets)}
-                  onToggle={onToggleSection(testnets)}
-                  name="testnet-chains"
-                >
-                  <h4 className="ml-2 text-gray-800">Testnet Chains</h4>
-                </CheckBox>
-              </div>
-              {testnets.map((c) => (
-                <CheckBox
-                  key={c.name}
-                  checked={!!checkedChains[c.chainId]}
-                  onToggle={onToggle(c.chainId)}
-                  name={c.name}
-                >
-                  <div className="py-0.5 ml-2 text-sm flex items-center">
-                    <span className="mr-2 font-light">
-                      {getChainDisplayName(multiProvider, c.chainId, true)}
-                    </span>
-                    <ChainLogo chainId={c.chainId} size={12} background={false} />
-                  </div>
-                </CheckBox>
-              ))}
-            </div>
-          </div>
-          <SolidButton
-            classes="mt-2.5 text-sm px-2 py-1 w-full"
-            onClick={() => onClickApply(closeDropdown)}
-          >
-            Apply
-          </SolidButton>
-        </div>
-      )}
-      modalClasses={`w-88 ${position || 'right-0'}`}
-    />
+    <>
+      <button
+        type="button"
+        className="text-sm sm:min-w-[5.8rem] px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
+        onClick={() => setShowModal(!showModal)}
+      >
+        <span className="text-white font-medium py-px">{text}</span>
+        <ChevronIcon
+          direction="s"
+          width={9}
+          height={5}
+          classes="ml-2 opacity-80"
+          color={Color.white}
+        />
+      </button>
+      <Modal isOpen={showModal} close={closeModal} panelClassname="max-w-lg p-4 sm:p-5">
+        <ChainSearchMenu chainMetadata={chains} onClickChain={onClickChain} />
+      </Modal>
+    </>
   );
 }
 
@@ -285,8 +144,8 @@ function DatetimeSelector({
   };
 
   return (
-    <DropdownModal
-      buttonContent={
+    <Popover
+      button={
         <>
           <span className="text-white font-medium py-px px-2">Time</span>
           <ChevronIcon
@@ -294,12 +153,14 @@ function DatetimeSelector({
             width={9}
             height={5}
             classes="ml-2 opacity-80"
-            color={Color.White}
+            color={Color.white}
           />
         </>
       }
-      buttonClasses="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
-      modalContent={(closeDropdown) => (
+      buttonClassname="text-sm px-1 sm:px-2.5 py-0.5 flex items-center justify-center rounded-full bg-pink-500 hover:opacity-80 active:opacity-70 transition-all"
+      panelClassname="w-60"
+    >
+      {({ close }) => (
         <div className="p-4" key="date-time-selector">
           <div className="flex items-center justify-between">
             <h3 className="text-blue-500 font-medium">Time Range</h3>
@@ -315,15 +176,11 @@ function DatetimeSelector({
             <h4 className="mt-3 mb-1 text-gray-500 text-sm font-medium">End Time</h4>
             <DatetimeField timestamp={endTime} onChange={setEndTime} />
           </div>
-          <SolidButton
-            classes="mt-4 text-sm px-2 py-1 w-full"
-            onClick={() => onClickApply(closeDropdown)}
-          >
+          <SolidButton classes="mt-4 text-sm px-2 py-1 w-full" onClick={() => onClickApply(close)}>
             Apply
           </SolidButton>
         </div>
       )}
-      modalClasses="w-60 -right-8"
-    />
+    </Popover>
   );
 }
