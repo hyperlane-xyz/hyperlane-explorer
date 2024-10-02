@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useEffect, useState } from 'react';
+import { PropsWithChildren } from 'react';
 
 import { DropdownMenu } from '@hyperlane-xyz/widgets';
 
@@ -9,6 +9,7 @@ import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
+import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { HyperlaneWideChevron } from '../icons/Chevron';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
@@ -16,18 +17,7 @@ const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   // For dynamic sizing on scroll
-  const [animateHeader, setAnimateHeader] = useState(false);
-  useEffect(() => {
-    const listener = () => {
-      if (window.scrollY > 100) {
-        setAnimateHeader(true);
-      } else setAnimateHeader(false);
-    };
-    window.addEventListener('scroll', listener);
-    return () => {
-      window.removeEventListener('scroll', listener);
-    };
-  }, []);
+  const animateHeader = useScrollThresholdListener(100);
 
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
