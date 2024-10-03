@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { DropdownMenu } from '@hyperlane-xyz/widgets';
+import { DropdownMenu, WideChevron } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
@@ -10,7 +10,6 @@ import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
-import { HyperlaneWideChevron } from '../icons/Chevron';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
@@ -112,26 +111,26 @@ export function Header({ pathName }: { pathName: string }) {
 function DropdownButton() {
   return (
     <div className="px-4 py-1 flex flex-col items-center border border-white bg-pink-500 rounded-lg">
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
         direction="s"
         color={Color.white}
-        classes="transition-all"
+        className="transition-all"
       />
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
         direction="s"
         color={Color.white}
-        classes="-mt-1 transition-all"
+        className="-mt-1 transition-all"
       />
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
         direction="s"
         color={Color.white}
-        classes="-mt-1 transition-all"
+        className="-mt-1 transition-all"
       />
     </div>
   );

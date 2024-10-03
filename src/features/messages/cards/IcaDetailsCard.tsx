@@ -31,7 +31,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-blue-500 font-medium text-md mr-2">ICA Details</h3>
-          <HelpIcon size={16} text="Extra information for messages from/to Interchain Accounts." />
+          <HelpIcon text="Extra information for messages from/to Interchain Accounts." />
         </div>
       </div>
       {decodeResult ? (

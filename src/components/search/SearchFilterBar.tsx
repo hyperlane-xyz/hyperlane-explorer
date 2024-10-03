@@ -6,6 +6,7 @@ import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import {
   ChainSearchMenu,
+  ChevronIcon,
   GearIcon,
   IconButton,
   Modal,
@@ -19,7 +20,6 @@ import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
-import { ChevronIcon } from '../icons/Chevron';
 import { DatetimeField } from '../input/DatetimeField';
 
 interface Props {
@@ -101,7 +101,7 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'text-sm sm:min-w-[5.8rem] px-1.5 sm:px-2.5 py-1 flex items-center justify-center font-medium rounded-full border border-pink-500 hover:opacity-80 active:opacity-70 transition-all',
+          'text-sm sm:min-w-[5.8rem] px-1.5 sm:px-2.5 py-1 flex items-center justify-center font-medium rounded-lg border border-pink-500 hover:opacity-80 active:opacity-70 transition-all',
           value ? 'bg-pink-500 text-white pr-7 sm:pr-8' : 'text-pink-500',
         )}
         onClick={() => setShowModal(!showModal)}
@@ -112,7 +112,7 @@ function ChainSelector({
             direction="s"
             width={9}
             height={5}
-            classes="ml-2 opacity-80"
+            className="ml-2 opacity-80"
             color={Color.pink}
           />
         )}
@@ -174,14 +174,14 @@ function DatetimeSelector({
                 direction="s"
                 width={9}
                 height={5}
-                classes="ml-2 opacity-80"
+                className="ml-2 opacity-80"
                 color={Color.pink}
               />
             )}
           </>
         }
         buttonClassname={clsx(
-          'text-sm px-2 sm:px-3 py-1 flex items-center justify-center font-medium border border-pink-500 rounded-full hover:opacity-80 active:opacity-70 transition-all',
+          'text-sm px-2 sm:px-3 py-1 flex items-center justify-center font-medium border border-pink-500 rounded-lg hover:opacity-80 active:opacity-70 transition-all',
           hasValue ? ' bg-pink-500 text-white pr-7 sm:pr-8' : 'text-pink-500',
         )}
         panelClassname="w-60"

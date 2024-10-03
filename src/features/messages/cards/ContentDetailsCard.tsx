@@ -73,10 +73,7 @@ export function ContentDetailsCard({
         <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="text-blue-500 font-medium text-md mr-2">Message Details</h3>
-          <HelpIcon
-            size={16}
-            text="Immutable information about the message itself such as its contents."
-          />
+          <HelpIcon text="Immutable information about the message itself such as its contents." />
         </div>
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-4">

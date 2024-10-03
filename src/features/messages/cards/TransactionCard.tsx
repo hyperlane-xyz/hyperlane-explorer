@@ -182,7 +182,7 @@ function TransactionCard({
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-blue-500 font-medium text-md mr-2">{title}</h3>
-          <HelpIcon size={16} text={helpText} />
+          <HelpIcon text={helpText} />
         </div>
       </div>
       {children}

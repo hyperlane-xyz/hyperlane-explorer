@@ -1,8 +1,7 @@
 import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
 
-import SearchIcon from '../../images/icons/search.svg';
-import { IconButton } from '../buttons/IconButton';
+import { IconButton, SearchIcon } from '@hyperlane-xyz/widgets';
 
 interface FormValues {
   search: string;
@@ -31,13 +30,9 @@ export function MiniSearchBar() {
             className="w-32 focus:w-64 py-2 px-2.5 h-8 text-sm font-light placeholder:text-gray-600 rounded-full focus:outline-none transition-[width] ease-in-out duration-500"
           />
           <div className="h-8 w-8 flex items-center justify-center rounded-full bg-pink-500">
-            <IconButton
-              type="submit"
-              imgSrc={SearchIcon}
-              width={14}
-              height={14}
-              title="Search"
-            ></IconButton>
+            <IconButton type="submit" title="Search">
+              <SearchIcon width={14} height={14} />
+            </IconButton>
           </div>
         </div>
       </Form>

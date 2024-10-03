@@ -2,15 +2,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { HyperlaneLogo } from '@hyperlane-xyz/widgets';
+
 import { docLinks, links } from '../../consts/links';
-// import FooterLine from '../../images/backgrounds/footer-line-desktop.svg';
-// import FooterLineMobile from '../../images/backgrounds/footer-line-mobile.svg';
 import FooterBg from '../../images/backgrounds/footer-bg.svg';
 import FooterTopBorder from '../../images/backgrounds/footer-top-border.svg';
 import { Color } from '../../styles/Color';
 import { Discord } from '../icons/Discord';
 import { Github } from '../icons/Github';
-import { HyperlaneLogo } from '../icons/HyperlaneLogo';
 import { Twitter } from '../icons/Twitter';
 
 const footerLinks1 = [
@@ -50,20 +49,12 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
           <div className="flex items-center justify-center">
             <div className="ml-2 w-14 sm:w-16 h-14 sm:h-16">
-              <HyperlaneLogo fill={Color.white} />
+              <HyperlaneLogo color={Color.white} />
             </div>
             <div className="text-xl sm:text-2xl font-medium ml-6 space-y-1 ">
               <div>Go interchain</div>
               <div>with Hyperlane</div>
             </div>
-            {/* <div className="absolute">
-            <div className="hidden sm:block">
-              <Image src={FooterLine} alt="" />
-            </div>
-            <div className="sm:hidden">
-              <Image src={FooterLineMobile} alt="" />
-            </div>
-          </div> */}
           </div>
           <nav className="flex text-lg font-medium">
             <ul className={`${styles.linkCol} mr-14`}>

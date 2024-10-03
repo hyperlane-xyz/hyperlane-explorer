@@ -1,11 +1,10 @@
 import { ChangeEventHandler, useState } from 'react';
 
 import { ChainName } from '@hyperlane-xyz/sdk';
-import { Modal } from '@hyperlane-xyz/widgets';
+import { IconButton, Modal, XIcon } from '@hyperlane-xyz/widgets';
 
 import { CopyButton } from '../../components/buttons/CopyButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
-import { XIconButton } from '../../components/buttons/XIconButton';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { Card } from '../../components/layout/Card';
 import { docLinks } from '../../consts/links';
@@ -110,11 +109,9 @@ export function ConfigureChains() {
                 {chain.blockExplorers?.[0]?.url || 'Unknown'}
               </td>
               <td>
-                <XIconButton
-                  onClick={() => onClickRemoveChain(chain.name)}
-                  title="Remove"
-                  size={10}
-                />
+                <IconButton onClick={() => onClickRemoveChain(chain.name)} title="Remove">
+                  <XIcon width={10} height={10} />
+                </IconButton>
               </td>
             </tr>
           ))}
