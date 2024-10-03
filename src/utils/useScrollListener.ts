@@ -8,22 +8,26 @@ export function useScrollThresholdListener(threshold: number, debounce = 500) {
     let timeoutId: NodeJS.Timeout | null;
 
     const listener = () => {
+      const handleScroll = () => {
+        if (window.scrollY > threshold && !isAboveThreshold) {
+          setIsAbove(true);
+          setIsDebouncing(true);
+        } else if (window.scrollY <= threshold && isAboveThreshold) {
+          setIsAbove(false);
+          setIsDebouncing(true);
+        }
+      };
+
       if (isDebouncing) {
         if (!timeoutId) {
           setTimeout(() => {
             setIsDebouncing(false);
             timeoutId = null;
+            handleScroll();
           }, debounce);
         }
-        return;
-      }
-
-      if (window.scrollY > threshold && !isAboveThreshold) {
-        setIsAbove(true);
-        setIsDebouncing(true);
-      } else if (window.scrollY <= threshold && isAboveThreshold) {
-        setIsAbove(false);
-        setIsDebouncing(true);
+      } else {
+        handleScroll();
       }
     };
 
