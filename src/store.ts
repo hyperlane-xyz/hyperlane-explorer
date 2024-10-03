@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { config } from './consts/config';
 import { ChainConfig } from './features/chains/chainConfig';
@@ -91,5 +92,15 @@ async function buildMultiProvider(registry: IRegistry, customChainConfigs: Chain
   // TODO improve interface so this pre-cache isn't required
   await registry.listRegistryContent();
   const registryChainMetadata = await registry.getMetadata();
-  return new MultiProvider({ ...registryChainMetadata, ...customChainConfigs });
+  // TODO have the registry do this automatically
+  const metadataWithLogos = await promiseObjAll(
+    objMap(
+      registryChainMetadata,
+      async (chainName, metadata): Promise<ChainMetadata> => ({
+        ...metadata,
+        logoURI: (await registry.getChainLogoUri(chainName)) || undefined,
+      }),
+    ),
+  );
+  return new MultiProvider({ ...metadataWithLogos, ...customChainConfigs });
 }

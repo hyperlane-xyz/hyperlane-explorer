@@ -2189,6 +2189,7 @@ __metadata:
     autoprefixer: "npm:^10.4.15"
     bignumber.js: "npm:^9.1.2"
     buffer: "npm:^6.0.3"
+    clsx: "npm:^2.1.1"
     eslint: "npm:^8.41.0"
     eslint-config-next: "npm:^13.4.19"
     eslint-config-prettier: "npm:^8.8.0"
@@ -5679,7 +5680,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clsx@npm:^2.0.0":
+"clsx@npm:^2.0.0, clsx@npm:^2.1.1":
   version: 2.1.1
   resolution: "clsx@npm:2.1.1"
   checksum: cdfb57fa6c7649bbff98d9028c2f0de2f91c86f551179541cf784b1cfdc1562dcb951955f46d54d930a3879931a980e32a46b598acaea274728dbe068deca919

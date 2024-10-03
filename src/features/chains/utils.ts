@@ -23,9 +23,9 @@ export function getChainDisplayName(
   chainOrDomainId?: ChainId | DomainId,
   shortName = false,
   fallbackToId = true,
-) {
+): string {
   const metadata = multiProvider.tryGetChainMetadata(chainOrDomainId || 0);
-  if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId : 'Unknown';
+  if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId.toString() : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return toTitleCase(displayName || metadata.displayName || metadata.name);
 }

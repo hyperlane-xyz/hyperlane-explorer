@@ -42,7 +42,7 @@ export function useScrapedEvmChains(multiProvider: MultiProvider) {
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
     const scrapedEvmChains = objFilter(
       multiProvider.metadata,
-      (chainName, chainMetadata): chainMetadata is ChainMetadata =>
+      (_, chainMetadata): chainMetadata is ChainMetadata =>
         isEvmChain(multiProvider, chainMetadata.chainId) &&
         !isPiChain(multiProvider, scrapedChains, chainMetadata.chainId) &&
         !isUnscrapedDbChain(multiProvider, chainMetadata.chainId),
