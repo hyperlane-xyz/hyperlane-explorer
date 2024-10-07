@@ -1,5 +1,4 @@
 import clsx from 'clsx';
-import Link from 'next/link';
 import { useState } from 'react';
 
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
@@ -7,7 +6,6 @@ import { trimToLength } from '@hyperlane-xyz/utils';
 import {
   ChainSearchMenu,
   ChevronIcon,
-  GearIcon,
   IconButton,
   Modal,
   Popover,
@@ -16,7 +14,7 @@ import {
 
 import { useScrapedEvmChains } from '../../features/chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useMultiProvider } from '../../store';
+import { useMultiProvider, useStore } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
@@ -57,11 +55,6 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
-      <Link href="/settings" title="View explorer settings" className="hidden sm:block">
-        <div className="active:opacity-90 hover:rotate-90 transition-all">
-          <GearIcon color={Color.pink} height={18} width={18} />
-        </div>
-      </Link>
     </div>
   );
 }
@@ -77,6 +70,10 @@ function ChainSelector({
 }) {
   const multiProvider = useMultiProvider();
   const { chains } = useScrapedEvmChains(multiProvider);
+  const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
+    chainMetadataOverrides: s.chainMetadataOverrides,
+    setChainMetadataOverrides: s.setChainMetadataOverrides,
+  }));
 
   const [showModal, setShowModal] = useState(false);
   const closeModal = () => {
@@ -121,9 +118,15 @@ function ChainSelector({
       <Modal
         isOpen={showModal}
         close={closeModal}
-        panelClassname="p-4 sm:p-5 max-w-lg min-h-[50vh]"
+        panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]"
       >
-        <ChainSearchMenu chainMetadata={chains} onClickChain={onClickChain} />
+        <ChainSearchMenu
+          chainMetadata={chains}
+          onClickChain={onClickChain}
+          overrideChainMetadata={chainMetadataOverrides}
+          onChangeOverrideMetadata={setChainMetadataOverrides}
+          showAddChainButton={true}
+        />
       </Modal>
     </div>
   );

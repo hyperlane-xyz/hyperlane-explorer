@@ -36,12 +36,13 @@ export function useScrapedChains() {
 
 export function useScrapedEvmChains(multiProvider: MultiProvider) {
   const { scrapedChains, isFetching, isError } = useScrapedChains();
+  const chainMetadata = useStore((s) => s.chainMetadata);
 
   const { chains } = useMemo(() => {
     // Filtering to EVM is necessary to prevent errors until cosmos support is added
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
     const scrapedEvmChains = objFilter(
-      multiProvider.metadata,
+      chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
         isEvmChain(multiProvider, chainMetadata.chainId) &&
         !isPiChain(multiProvider, scrapedChains, chainMetadata.chainId) &&

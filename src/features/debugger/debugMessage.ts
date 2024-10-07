@@ -10,7 +10,7 @@ import {
   InterchainGasPaymaster__factory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -22,7 +22,6 @@ import {
 
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
-import type { ChainConfig } from '../chains/chainConfig';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
@@ -36,7 +35,7 @@ const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
 export async function debugMessage(
   multiProvider: MultiProvider,
   registry: IRegistry,
-  customChainConfigs: ChainMap<ChainConfig>,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   {
     msgId,
     nonce,
@@ -73,7 +72,7 @@ export async function debugMessage(
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
 
-  const destMailbox = await getMailboxAddress(destName, customChainConfigs, registry);
+  const destMailbox = await getMailboxAddress(destName, overrideChainMetadata, registry);
   if (!destMailbox)
     throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
 

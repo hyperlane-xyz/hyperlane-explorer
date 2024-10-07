@@ -18,7 +18,7 @@ export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetc
               <Spinner />
             </div>
             <div className="mt-4 text-center font-light leading-loose text-gray-700">
-              {isPiFetching ? 'Searching custom chains for messages' : 'Searching for messages'}
+              {isPiFetching ? 'Searching override chains for messages' : 'Searching for messages'}
             </div>
           </div>
         </div>

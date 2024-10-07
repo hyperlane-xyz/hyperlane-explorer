@@ -1,18 +1,17 @@
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 
-import { ChainConfig } from './chainConfig';
 import { DomainsEntry } from './queries/fragments';
 
 export async function getMailboxAddress(
   chainName: string,
-  customChainConfigs: ChainMap<ChainConfig>,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata<{ mailbox?: string }>>>,
   registry: IRegistry,
 ) {
-  if (customChainConfigs[chainName]?.mailbox) return customChainConfigs[chainName].mailbox;
+  if (overrideChainMetadata[chainName]?.mailbox) return overrideChainMetadata[chainName].mailbox;
   const addresses = await registry.getChainAddresses(chainName);
   if (addresses?.mailbox) return addresses.mailbox;
   else return undefined;

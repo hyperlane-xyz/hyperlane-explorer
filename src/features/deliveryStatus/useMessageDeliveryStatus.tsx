@@ -5,11 +5,10 @@ import { toast } from 'react-toastify';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 
-import { useReadyMultiProvider, useRegistry } from '../../store';
+import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
-import { useChainConfigs } from '../chains/useChainConfigs';
 import { isEvmChain } from '../chains/utils';
 
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
@@ -21,7 +20,7 @@ export function useMessageDeliveryStatus({
   message: Message;
   enabled: boolean;
 }) {
-  const chainConfigs = useChainConfigs();
+  const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
 
@@ -46,7 +45,7 @@ export function useMessageDeliveryStatus({
       const deliverStatus = await fetchDeliveryStatus(
         multiProvider,
         registry,
-        chainConfigs,
+        chainMetadataOverrides,
         message,
       );
 
