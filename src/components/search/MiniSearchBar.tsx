@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 
 import { IconButton, SearchIcon } from '@hyperlane-xyz/widgets';
 
+import { Color } from '../../styles/Color';
+
 interface FormValues {
   search: string;
 }
@@ -31,7 +33,7 @@ export function MiniSearchBar() {
           />
           <div className="h-8 w-8 flex items-center justify-center rounded-full bg-pink-500">
             <IconButton type="submit" title="Search">
-              <SearchIcon width={14} height={14} />
+              <SearchIcon width={14} height={14} color={Color.white} />
             </IconButton>
           </div>
         </div>

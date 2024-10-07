@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { isFirefox } from './browser';
+
 export function useScrollThresholdListener(threshold: number, debounce = 500) {
   const [isAboveThreshold, setIsAbove] = useState(false);
   const [isDebouncing, setIsDebouncing] = useState(false);
@@ -8,6 +10,9 @@ export function useScrollThresholdListener(threshold: number, debounce = 500) {
     let timeoutId: NodeJS.Timeout | null;
 
     const listener = () => {
+      // TODO find a way to make this animation smooth in Firefox
+      if (isFirefox()) return;
+
       const handleScroll = () => {
         if (window.scrollY > threshold && !isAboveThreshold) {
           setIsAbove(true);
