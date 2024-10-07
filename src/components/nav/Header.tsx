@@ -25,7 +25,7 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`z-10 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-300 ${
+      className={`z-10 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-200 ${
         animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
       }`}
     >
