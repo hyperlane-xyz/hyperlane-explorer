@@ -2,7 +2,7 @@ import { isAddress } from '@hyperlane-xyz/utils';
 
 import { adjustToUtcTime } from '../../../utils/time';
 
-import { stringToPostgresBytea } from './encoding';
+import { searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
 
 /**
@@ -47,7 +47,7 @@ export function buildMessageQuery(
   } else {
     throw new Error(`Invalid id type: ${idType}`);
   }
-  const variables = { identifier: stringToPostgresBytea(idValue) };
+  const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
   const query = `
   query ($identifier: bytea!) @cached(ttl: 5) {
@@ -78,7 +78,7 @@ export function buildMessageSearchQuery(
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
-    search: hasInput ? stringToPostgresBytea(searchInput) : undefined,
+    search: hasInput ? searchValueToPostgresBytea(searchInput) : undefined,
     originChains,
     destinationChains,
     startTime,
@@ -93,8 +93,8 @@ export function buildMessageSearchQuery(
       `q${i}: message_view(
     where: {
       _and: [
-        ${originFilter ? '{origin_chain_id: {_in: $originChains}},' : ''}
-        ${destFilter ? '{destination_chain_id: {_in: $destinationChains}},' : ''}
+        ${originFilter ? '{origin_domain_id: {_in: $originChains}},' : ''}
+        ${destFilter ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
         ${whereClause}
@@ -107,7 +107,7 @@ export function buildMessageSearchQuery(
     }`,
   );
 
-  const query = `query ($search: bytea, $originChains: [bigint!], $destinationChains: [bigint!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
+  const query = `query ($search: bytea, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
     ${queries.join('\n')}
   }`;
   return { query, variables };

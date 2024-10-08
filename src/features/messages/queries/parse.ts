@@ -6,7 +6,7 @@ import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 
-import { postgresByteaToString } from './encoding';
+import { postgresByteaToAddress, postgresByteaToString } from './encoding';
 import {
   MessageEntry,
   MessageStubEntry,
@@ -53,12 +53,14 @@ function parseMessageStub(
   m: MessageStubEntry,
 ): MessageStub | null {
   try {
-    const destinationDomainId = m.destination_domain_id;
-    let destinationChainId =
-      m.destination_chain_id || multiProvider.tryGetChainId(destinationDomainId);
+    const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
+    const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
+    let destinationChainId = m.destination_chain_id || destinationMetadata?.chainId;
     if (!destinationChainId) {
-      logger.debug(`No chainId known for domain ${destinationDomainId}. Using domain as chainId`);
-      destinationChainId = destinationDomainId;
+      logger.debug(
+        `No chainId known for domain ${m.destination_domain_id}. Using domain as chainId`,
+      );
+      destinationChainId = m.destination_domain_id;
     }
     const isPiMsg =
       isPiChain(multiProvider, scrapedChains, m.origin_chain_id) ||
@@ -69,22 +71,22 @@ function parseMessageStub(
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,
-      sender: postgresByteaToString(m.sender),
-      recipient: postgresByteaToString(m.recipient),
+      sender: postgresByteaToAddress(m.sender, originMetadata),
+      recipient: postgresByteaToAddress(m.recipient, destinationMetadata),
       originChainId: m.origin_chain_id,
       originDomainId: m.origin_domain_id,
       destinationChainId,
-      destinationDomainId,
+      destinationDomainId: m.destination_domain_id,
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToString(m.origin_tx_hash),
-        from: postgresByteaToString(m.origin_tx_sender),
+        from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
       },
       destination: m.is_delivered
         ? {
             timestamp: parseTimestampString(m.delivery_occurred_at!),
             hash: postgresByteaToString(m.destination_tx_hash!),
-            from: postgresByteaToString(m.destination_tx_sender!),
+            from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -104,6 +106,9 @@ function parseMessage(
     const stub = parseMessageStub(multiProvider, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
 
+    const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
+    const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
+
     const body = postgresByteaToString(m.message_body ?? '');
     const decodedBody = tryUtf8DecodeBytes(body);
 
@@ -115,9 +120,9 @@ function parseMessage(
         ...stub.origin,
         blockHash: postgresByteaToString(m.origin_block_hash),
         blockNumber: m.origin_block_height,
-        mailbox: postgresByteaToString(m.origin_mailbox),
+        mailbox: postgresByteaToAddress(m.origin_mailbox, originMetadata),
         nonce: m.origin_tx_nonce,
-        to: postgresByteaToString(m.origin_tx_recipient),
+        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
         gasLimit: m.origin_tx_gas_limit,
         gasPrice: m.origin_tx_gas_price,
         effectiveGasPrice: m.origin_tx_effective_gas_price,
@@ -131,9 +136,9 @@ function parseMessage(
             ...stub.destination,
             blockHash: postgresByteaToString(m.destination_block_hash!),
             blockNumber: m.destination_block_height!,
-            mailbox: postgresByteaToString(m.destination_mailbox!),
+            mailbox: postgresByteaToAddress(m.destination_mailbox!, destinationMetadata),
             nonce: m.destination_tx_nonce!,
-            to: postgresByteaToString(m.destination_tx_recipient!),
+            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
             gasLimit: m.destination_tx_gas_limit!,
             gasPrice: m.destination_tx_gas_price!,
             effectiveGasPrice: m.destination_tx_effective_gas_price!,

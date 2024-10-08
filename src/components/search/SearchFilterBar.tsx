@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
 
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, getDomainId } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import {
   ChainSearchMenu,
@@ -12,7 +12,7 @@ import {
   XIcon,
 } from '@hyperlane-xyz/widgets';
 
-import { useScrapedEvmChains } from '../../features/chains/queries/useScrapedChains';
+import { useScrapedChains } from '../../features/chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider, useStore } from '../../store';
 import { Color } from '../../styles/Color';
@@ -69,7 +69,7 @@ function ChainSelector({
   onChangeValue: (value: string | null) => void;
 }) {
   const multiProvider = useMultiProvider();
-  const { chains } = useScrapedEvmChains(multiProvider);
+  const { chains } = useScrapedChains(multiProvider);
   const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
     chainMetadataOverrides: s.chainMetadataOverrides,
     setChainMetadataOverrides: s.setChainMetadataOverrides,
@@ -81,7 +81,7 @@ function ChainSelector({
   };
 
   const onClickChain = (c: ChainMetadata) => {
-    onChangeValue(c.chainId.toString());
+    onChangeValue(getDomainId(c).toString());
     closeModal();
   };
 

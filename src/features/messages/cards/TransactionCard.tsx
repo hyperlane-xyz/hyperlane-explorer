@@ -121,38 +121,30 @@ export function DestinationTransactionCard({
         </div>
       </DeliveryStatus>
     );
-  } else if (status === MessageStatus.Pending) {
-    if (isDestinationEvmChain) {
-      content = (
-        <DeliveryStatus>
-          <div className="flex flex-col items-center">
-            <div>Delivery to destination chain still in progress.</div>
-            {isPiMsg && (
-              <div className="mt-2 text-sm max-w-xs">
-                Please ensure a relayer is running for this chain.
-              </div>
-            )}
-            <Spinner classes="my-4 scale-75" />
-            <CallDataModal debugResult={debugResult} />
-          </div>
-        </DeliveryStatus>
-      );
-    } else {
-      content = (
-        <DeliveryStatus>
-          <div>Sorry, delivery information is currently available for only EVM-type chains.</div>
-          <div className="mt-2 text-sm pb-4">Support for other protocols is coming soon.</div>
-        </DeliveryStatus>
-      );
-    }
+  } else if (status === MessageStatus.Pending && isDestinationEvmChain) {
+    content = (
+      <DeliveryStatus>
+        <div className="flex flex-col items-center">
+          <div>Delivery to destination chain still in progress.</div>
+          {isPiMsg && (
+            <div className="mt-2 text-sm max-w-xs">
+              Please ensure a relayer is running for this chain.
+            </div>
+          )}
+          <Spinner classes="my-4 scale-75" />
+          <CallDataModal debugResult={debugResult} />
+        </div>
+      </DeliveryStatus>
+    );
   } else {
     content = (
       <DeliveryStatus>
-        <div>{`Delivery to status is currently unknown. ${
-          isPiMsg
+        <div>Delivery to status is currently unknown.</div>
+        <div className="mt-2 text-sm pb-4">
+          {isPiMsg
             ? 'Please ensure your chain config is correct and check back later.'
-            : 'Please check again later'
-        }`}</div>
+            : 'Please check again later'}
+        </div>
       </DeliveryStatus>
     );
   }

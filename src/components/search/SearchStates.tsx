@@ -76,7 +76,7 @@ export function SearchInvalidError({
       show={show}
       imgSrc={SearchOffIcon}
       text={`Sorry, that search input is not valid. Please try ${
-        allowAddress ? 'an account addresses or ' : ''
+        allowAddress ? 'an account address or ' : ''
       }a transaction hash like 0xABC123...`}
       imgWidth={70}
     />

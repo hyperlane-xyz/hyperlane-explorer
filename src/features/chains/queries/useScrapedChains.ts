@@ -6,51 +6,50 @@ import { objFilter } from '@hyperlane-xyz/utils';
 
 import { unscrapedChainsInDb } from '../../../consts/config';
 import { useStore } from '../../../store';
-import { isEvmChain, isPiChain } from '../utils';
+import { isPiChain } from '../utils';
 
 import { DOMAINS_QUERY, DomainsEntry } from './fragments';
 
-export function useScrapedChains() {
-  const { scrapedChains, setScrapedChains } = useStore((s) => ({
-    scrapedChains: s.scrapedChains,
-    setScrapedChains: s.setScrapedChains,
+export function useScrapedDomains() {
+  const { scrapedDomains, setScrapedDomains } = useStore((s) => ({
+    scrapedDomains: s.scrapedDomains,
+    setScrapedDomains: s.setScrapedDomains,
   }));
 
   const [result] = useQuery<{ domain: Array<DomainsEntry> }>({
     query: DOMAINS_QUERY,
-    pause: !!scrapedChains?.length,
+    pause: !!scrapedDomains?.length,
   });
   const { data, fetching: isFetching, error } = result;
 
   useEffect(() => {
     if (!data) return;
-    setScrapedChains(data.domain);
-  }, [data, error, setScrapedChains]);
+    setScrapedDomains(data.domain);
+  }, [data, error, setScrapedDomains]);
 
   return {
-    scrapedChains,
+    scrapedDomains,
     isFetching,
     isError: !!error,
   };
 }
 
-export function useScrapedEvmChains(multiProvider: MultiProvider) {
-  const { scrapedChains, isFetching, isError } = useScrapedChains();
+export function useScrapedChains(multiProvider: MultiProvider) {
+  const { scrapedDomains, isFetching, isError } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
 
   const { chains } = useMemo(() => {
     // Filtering to EVM is necessary to prevent errors until cosmos support is added
     // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
-    const scrapedEvmChains = objFilter(
+    const scrapedChains = objFilter(
       chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
-        isEvmChain(multiProvider, chainMetadata.chainId) &&
-        !isPiChain(multiProvider, scrapedChains, chainMetadata.chainId) &&
+        !isPiChain(multiProvider, scrapedDomains, chainMetadata.chainId) &&
         !isUnscrapedDbChain(multiProvider, chainMetadata.chainId),
     );
     // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
-    return { chains: scrapedEvmChains };
-  }, [multiProvider, scrapedChains]);
+    return { chains: scrapedChains };
+  }, [multiProvider, scrapedDomains]);
 
   return { chains, isFetching, isError };
 }
