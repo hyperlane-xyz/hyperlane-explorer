@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
+import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
 import { Modal, useModal } from '@hyperlane-xyz/widgets';
 
 import { Spinner } from '../../../components/animations/Spinner';
@@ -202,12 +202,14 @@ function TransactionDetails({
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
+  const protocol = multiProvider.tryGetProtocol(domainId) || ProtocolType.Ethereum;
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
+  const formattedHash = protocol === ProtocolType.Cosmos ? strip0x(hash) : hash;
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
-      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash })
+      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash: formattedHash })
       : null;
 
   return (
