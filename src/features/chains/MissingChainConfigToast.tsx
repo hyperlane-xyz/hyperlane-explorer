@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export function MissingChainConfigToast({
   domainId,
   chainId,
@@ -14,10 +12,7 @@ export function MissingChainConfigToast({
     : 'unknown message chain';
   return (
     <div>
-      <span>{`No chain config found for ${errorDesc}. `}</span>
-      <Link href="/settings" className="underline">
-        Add a config
-      </Link>
+      <span>{`No chain config found for ${errorDesc}. You can add a config in the origin/destination chain selector.`}</span>
     </div>
   );
 }

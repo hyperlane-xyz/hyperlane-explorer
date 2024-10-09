@@ -3,18 +3,11 @@ import { useState } from 'react';
 
 import { ChainMetadata, getDomainId } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
-import {
-  ChainSearchMenu,
-  ChevronIcon,
-  IconButton,
-  Modal,
-  Popover,
-  XIcon,
-} from '@hyperlane-xyz/widgets';
+import { ChevronIcon, IconButton, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 
-import { useScrapedChains } from '../../features/chains/queries/useScrapedChains';
+import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useMultiProvider, useStore } from '../../store';
+import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
@@ -68,30 +61,21 @@ function ChainSelector({
   value: ChainId | null;
   onChangeValue: (value: string | null) => void;
 }) {
-  const multiProvider = useMultiProvider();
-  const { chains } = useScrapedChains(multiProvider);
-  const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
-    chainMetadataOverrides: s.chainMetadataOverrides,
-    setChainMetadataOverrides: s.setChainMetadataOverrides,
-  }));
+  const { isOpen, open, close } = useModal();
 
-  const [showModal, setShowModal] = useState(false);
-  const closeModal = () => {
-    setShowModal(false);
-  };
+  const multiProvider = useMultiProvider();
+  const chainName = value
+    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
+    : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
     onChangeValue(getDomainId(c).toString());
-    closeModal();
+    close();
   };
 
   const onClear = () => {
     onChangeValue(null);
   };
-
-  const chainName = value
-    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
-    : undefined;
 
   return (
     <div className="relative">
@@ -101,7 +85,7 @@ function ChainSelector({
           'text-sm sm:min-w-[5.8rem] px-1.5 sm:px-2.5 py-1 flex items-center justify-center font-medium rounded-lg border border-pink-500 hover:opacity-80 active:opacity-70 transition-all',
           value ? 'bg-pink-500 text-white pr-7 sm:pr-8' : 'text-pink-500',
         )}
-        onClick={() => setShowModal(!showModal)}
+        onClick={open}
       >
         <span>{chainName || text} </span>
         {!value && (
@@ -115,19 +99,7 @@ function ChainSelector({
         )}
       </button>
       {value && <ClearButton onClick={onClear} />}
-      <Modal
-        isOpen={showModal}
-        close={closeModal}
-        panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]"
-      >
-        <ChainSearchMenu
-          chainMetadata={chains}
-          onClickChain={onClickChain}
-          overrideChainMetadata={chainMetadataOverrides}
-          onChangeOverrideMetadata={setChainMetadataOverrides}
-          showAddChainButton={true}
-        />
-      </Modal>
+      <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />
     </div>
   );
 }
