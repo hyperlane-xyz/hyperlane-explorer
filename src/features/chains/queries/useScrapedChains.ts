@@ -39,15 +39,12 @@ export function useScrapedChains(multiProvider: MultiProvider) {
   const chainMetadata = useStore((s) => s.chainMetadata);
 
   const { chains } = useMemo(() => {
-    // Filtering to EVM is necessary to prevent errors until cosmos support is added
-    // https://github.com/hyperlane-xyz/hyperlane-explorer/issues/61
     const scrapedChains = objFilter(
       chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
         !isPiChain(multiProvider, scrapedDomains, chainMetadata.chainId) &&
         !isUnscrapedDbChain(multiProvider, chainMetadata.chainId),
     );
-    // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
     return { chains: scrapedChains };
   }, [multiProvider, chainMetadata, scrapedDomains]);
 
