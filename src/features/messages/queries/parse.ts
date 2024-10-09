@@ -31,7 +31,9 @@ export function parseMessageStubResult(
     .flat()
     .map((m) => parseMessageStub(multiProvider, scrapedChains, m))
     .filter((m): m is MessageStub => !!m)
-    .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
+    .sort((a, b) => b.origin.timestamp - a.origin.timestamp)
+    .filter((m) => Date.now() - m.origin.timestamp < 1000 * 60 * 60) // filter out messages older than 1 hour
+    .slice(0, 20);
 }
 
 export function parseMessageQueryResult(
