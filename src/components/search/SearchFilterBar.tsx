@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
 
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, getDomainId } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, IconButton, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 
@@ -69,7 +69,7 @@ function ChainSelector({
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
-    onChangeValue(c.chainId.toString());
+    onChangeValue(getDomainId(c).toString());
     close();
   };
 

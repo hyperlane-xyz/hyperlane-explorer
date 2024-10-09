@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
+import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
 import { Modal, useModal } from '@hyperlane-xyz/widgets';
 
 import { Spinner } from '../../../components/animations/Spinner';
@@ -127,38 +127,30 @@ export function DestinationTransactionCard({
         <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
       </>
     );
-  } else if (status === MessageStatus.Pending) {
-    if (isDestinationEvmChain) {
-      content = (
-        <DeliveryStatus>
-          <div className="flex flex-col items-center">
-            <div>Delivery to destination chain still in progress.</div>
-            {isPiMsg && (
-              <div className="mt-2 text-sm max-w-xs">
-                Please ensure a relayer is running for this chain.
-              </div>
-            )}
-            <Spinner classes="my-4 scale-75" />
-            <CallDataModal debugResult={debugResult} />
-          </div>
-        </DeliveryStatus>
-      );
-    } else {
-      content = (
-        <DeliveryStatus>
-          <div>Sorry, delivery information is currently available for only EVM-type chains.</div>
-          <div className="mt-2 text-sm pb-4">Support for other protocols is coming soon.</div>
-        </DeliveryStatus>
-      );
-    }
+  } else if (status === MessageStatus.Pending && isDestinationEvmChain) {
+    content = (
+      <DeliveryStatus>
+        <div className="flex flex-col items-center">
+          <div>Delivery to destination chain still in progress.</div>
+          {isPiMsg && (
+            <div className="mt-2 text-sm max-w-xs">
+              Please ensure a relayer is running for this chain.
+            </div>
+          )}
+          <Spinner classes="my-4 scale-75" />
+          <CallDataModal debugResult={debugResult} />
+        </div>
+      </DeliveryStatus>
+    );
   } else {
     content = (
       <DeliveryStatus>
-        <div>{`Delivery to status is currently unknown. ${
-          isPiMsg
+        <div>Delivery to status is currently unknown.</div>
+        <div className="mt-2 text-sm pb-4">
+          {isPiMsg
             ? 'Please ensure your chain config is correct and check back later.'
-            : 'Please check again later'
-        }`}</div>
+            : 'Please check again later'}
+        </div>
       </DeliveryStatus>
     );
   }
@@ -210,12 +202,14 @@ function TransactionDetails({
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
+  const protocol = multiProvider.tryGetProtocol(domainId) || ProtocolType.Ethereum;
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
+  const formattedHash = protocol === ProtocolType.Cosmos ? strip0x(hash) : hash;
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
-      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash })
+      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash: formattedHash })
       : null;
 
   return (

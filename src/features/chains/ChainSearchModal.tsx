@@ -3,7 +3,7 @@ import { ChainSearchMenu, Modal } from '@hyperlane-xyz/widgets';
 
 import { useMultiProvider, useStore } from '../../store';
 
-import { useScrapedEvmChains } from './queries/useScrapedChains';
+import { useScrapedChains } from './queries/useScrapedChains';
 
 export function ChainSearchModal({
   isOpen,
@@ -17,7 +17,7 @@ export function ChainSearchModal({
   showAddChainMenu?: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { chains } = useScrapedEvmChains(multiProvider);
+  const { chains } = useScrapedChains(multiProvider);
   const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
     chainMetadataOverrides: s.chainMetadataOverrides,
     setChainMetadataOverrides: s.setChainMetadataOverrides,

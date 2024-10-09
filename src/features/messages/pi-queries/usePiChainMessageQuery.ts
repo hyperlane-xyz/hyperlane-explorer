@@ -7,7 +7,7 @@ import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
-import { useScrapedChains } from '../../chains/queries/useScrapedChains';
+import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 
@@ -30,7 +30,7 @@ export function usePiChainMessageSearchQuery({
   piQueryType?: PiQueryType;
   pause: boolean;
 }) {
-  const { scrapedChains } = useScrapedChains();
+  const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
 

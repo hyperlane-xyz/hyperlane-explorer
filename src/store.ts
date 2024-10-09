@@ -15,8 +15,8 @@ const PERSIST_STATE_VERSION = 2;
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
-  scrapedChains: Array<DomainsEntry>;
-  setScrapedChains: (chains: Array<DomainsEntry>) => void;
+  scrapedDomains: Array<DomainsEntry>;
+  setScrapedDomains: (chains: Array<DomainsEntry>) => void;
   chainMetadata: ChainMap<ChainMetadata>;
   setChainMetadata: (metadata: ChainMap<ChainMetadata>) => void;
   chainMetadataOverrides: ChainMap<Partial<ChainMetadata>>;
@@ -32,8 +32,8 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      scrapedChains: [],
-      setScrapedChains: (chains: Array<DomainsEntry>) => set({ scrapedChains: chains }),
+      scrapedDomains: [],
+      setScrapedDomains: (domains: Array<DomainsEntry>) => set({ scrapedDomains: domains }),
       chainMetadata: {},
       setChainMetadata: (metadata: ChainMap<ChainMetadata>) => set({ chainMetadata: metadata }),
       chainMetadataOverrides: {},
