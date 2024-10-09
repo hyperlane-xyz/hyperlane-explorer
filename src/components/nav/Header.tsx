@@ -63,9 +63,6 @@ export function Header({ pathName }: { pathName: string }) {
           >
             Docs
           </a>
-          {/* <Link href="/settings" className={navLinkClass('/settings')}>
-            Settings
-          </Link> */}
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
@@ -79,11 +76,6 @@ export function Header({ pathName }: { pathName: string }) {
                   Home
                 </MobileNavLink>
               ),
-              // ({ close }) => (
-              // <MobileNavLink href="/settings" closeDropdown={close} key="Settings">
-              //   Settings
-              // </MobileNavLink>
-              // ),
               //  ({ close }) => (
               //   <MobileNavLink href="/api" closeDropdown={c} key="API">
               //     API

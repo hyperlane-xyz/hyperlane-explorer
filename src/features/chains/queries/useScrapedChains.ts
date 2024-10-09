@@ -50,7 +50,7 @@ export function useScrapedEvmChains(multiProvider: MultiProvider) {
     );
     // Return only evmChains because of graphql only accept query non-evm chains (with bigint type not string)
     return { chains: scrapedEvmChains };
-  }, [multiProvider, scrapedChains]);
+  }, [multiProvider, chainMetadata, scrapedChains]);
 
   return { chains, isFetching, isError };
 }

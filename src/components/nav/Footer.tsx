@@ -36,15 +36,15 @@ export function Footer() {
     <footer className="text-white px-8 pt-14 pb-5 bg-gradient-to-b from-transparent to-black/40">
       <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
         <div className="flex items-center justify-center">
-          <div className="ml-2 w-14 sm:w-16 h-14 sm:h-16">
+          <div className="ml-2 w-12 sm:w-14 h-12 sm:h-14">
             <HyperlaneLogo color={Color.white} />
           </div>
-          <div className="text-xl sm:text-2xl font-medium ml-6 space-y-1 ">
+          <div className="text-lg sm:text-xl font-medium ml-6 space-y-1 ">
             <div>Go interchain</div>
             <div>with Hyperlane</div>
           </div>
         </div>
-        <nav className="flex text-lg font-medium">
+        <nav className="flex font-medium">
           <ul className={`${styles.linkCol} mr-14`}>
             {footerLinks1.map((item) => (
               <li className="" key={item.title}>
