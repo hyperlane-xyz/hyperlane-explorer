@@ -2,23 +2,25 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProvider, mergeChainMetadataMap } from '@hyperlane-xyz/sdk';
+import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { config } from './consts/config';
-import { ChainConfig } from './features/chains/chainConfig';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
-const PERSIST_STATE_VERSION = 1;
+const PERSIST_STATE_VERSION = 2;
 
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 interface AppState {
   scrapedChains: Array<DomainsEntry>;
   setScrapedChains: (chains: Array<DomainsEntry>) => void;
-  chainConfigs: ChainMap<ChainConfig>;
-  setChainConfigs: (configs: ChainMap<ChainConfig>) => void;
+  chainMetadata: ChainMap<ChainMetadata>;
+  setChainMetadata: (metadata: ChainMap<ChainMetadata>) => void;
+  chainMetadataOverrides: ChainMap<Partial<ChainMetadata>>;
+  setChainMetadataOverrides: (overrides?: ChainMap<Partial<ChainMetadata> | undefined>) => void;
   multiProvider: MultiProvider;
   setMultiProvider: (mp: MultiProvider) => void;
   registry: IRegistry;
@@ -32,13 +34,20 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       scrapedChains: [],
       setScrapedChains: (chains: Array<DomainsEntry>) => set({ scrapedChains: chains }),
-      chainConfigs: {},
-      setChainConfigs: async (configs: ChainMap<ChainConfig>) => {
-        const multiProvider = await buildMultiProvider(get().registry, configs);
-        set({ chainConfigs: configs, multiProvider });
+      chainMetadata: {},
+      setChainMetadata: (metadata: ChainMap<ChainMetadata>) => set({ chainMetadata: metadata }),
+      chainMetadataOverrides: {},
+      setChainMetadataOverrides: async (
+        overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
+      ) => {
+        logger.debug('Setting chain overrides in store');
+        const { multiProvider } = await buildMultiProvider(get().registry, overrides);
+        const filtered = objFilter(overrides, (_, metadata) => !!metadata);
+        set({ chainMetadataOverrides: filtered, multiProvider });
       },
       multiProvider: new MultiProvider({}),
       setMultiProvider: (multiProvider: MultiProvider) => {
+        logger.debug('Setting multiProvider in store');
         set({ multiProvider });
       },
       registry: new GithubRegistry({ proxyUrl: config.githubProxy }),
@@ -51,7 +60,7 @@ export const useStore = create<AppState>()(
     {
       name: 'hyperlane', // name in storage
       version: PERSIST_STATE_VERSION,
-      partialize: (state) => ({ chainConfigs: state.chainConfigs }), // fields to persist
+      partialize: (state) => ({ chainMetadataOverrides: state.chainMetadataOverrides }), // fields to persist
       onRehydrateStorage: () => {
         logger.debug('Rehydrating state');
         return (state, error) => {
@@ -59,9 +68,10 @@ export const useStore = create<AppState>()(
             logger.error('Error during hydration', error);
             return;
           }
-          buildMultiProvider(state.registry, state.chainConfigs)
-            .then((mp) => {
-              state.setMultiProvider(mp);
+          buildMultiProvider(state.registry, state.chainMetadataOverrides)
+            .then(({ metadata, multiProvider }) => {
+              state.setChainMetadata(metadata);
+              state.setMultiProvider(multiProvider);
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
@@ -83,13 +93,28 @@ export function useMultiProvider() {
 // otherwise returns undefined
 export function useReadyMultiProvider() {
   const multiProvider = useMultiProvider();
-  if (multiProvider.getKnownChainNames().length === 0) return undefined;
+  if (!multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
 }
 
-async function buildMultiProvider(registry: IRegistry, customChainConfigs: ChainMap<ChainConfig>) {
+async function buildMultiProvider(
+  registry: IRegistry,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
+) {
+  logger.debug('Building new MultiProvider from registry');
   // TODO improve interface so this pre-cache isn't required
   await registry.listRegistryContent();
   const registryChainMetadata = await registry.getMetadata();
-  return new MultiProvider({ ...registryChainMetadata, ...customChainConfigs });
+  // TODO have the registry do this automatically
+  const metadataWithLogos = await promiseObjAll(
+    objMap(
+      registryChainMetadata,
+      async (chainName, metadata): Promise<ChainMetadata> => ({
+        ...metadata,
+        logoURI: (await registry.getChainLogoUri(chainName)) || undefined,
+      }),
+    ),
+  );
+  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
+  return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
 }

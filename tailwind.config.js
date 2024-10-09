@@ -6,12 +6,12 @@ module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     fontFamily: {
-      sans: ['Neue Haas Grotesk', 'Helvetica', 'sans-serif'],
+      sans: ['var(--font-main)'],
       serif: ['Garamond', 'serif'],
       mono: ['Courier New', 'monospace'],
     },
     screens: {
-      any: '1px',
+      all: '1px',
       xs: '480px',
       ...defaultTheme.screens,
     },
@@ -19,6 +19,7 @@ module.exports = {
       colors: {
         black: '#010101',
         white: '#ffffff',
+        gray: {...defaultTheme.colors.gray, 150: '#EBEDF0', 250: '#404040', 350: '#6B6B6B'},
         blue: {
           50: '#E6EDF9',
           100: '#CDDCF4',

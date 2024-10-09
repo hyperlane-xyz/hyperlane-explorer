@@ -1,9 +1,8 @@
 import { GithubRegistry, chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { config } from '../../../consts/config';
 import { Message, MessageStatus } from '../../../types';
-import { ChainConfig } from '../../chains/chainConfig';
 
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
@@ -15,7 +14,10 @@ jest.setTimeout(30000);
 
 const sepoliaMailbox = chainAddresses.sepolia.mailbox;
 const sepoliaIgp = chainAddresses.sepolia.interchainGasPaymaster;
-const sepoliaConfigWithExplorer: ChainConfig = {
+const sepoliaConfigWithExplorer: ChainMetadata<{
+  mailbox: string;
+  interchainGasPaymaster: string;
+}> = {
   ...chainMetadata.sepolia,
   mailbox: sepoliaMailbox,
   interchainGasPaymaster: sepoliaIgp,
@@ -165,6 +167,6 @@ describe('fetchMessagesFromPiChain', () => {
   });
 });
 
-function createMP(config: ChainConfig) {
+function createMP(config: ChainMetadata) {
   return new MultiProvider({ ...chainMetadata, sepolia: config });
 }

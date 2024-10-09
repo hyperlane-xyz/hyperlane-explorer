@@ -1,22 +1,26 @@
 import { memo } from 'react';
 
-import Question from '../../images/icons/question-circle.svg';
-import { IconButton } from '../buttons/IconButton';
+import { IconButton, QuestionMarkIcon } from '@hyperlane-xyz/widgets';
 
-function _HelpIcon({ text, size = 20 }: { text: string; size?: number }) {
+import { Color } from '../../styles/Color';
+
+function _HelpIcon({ text, size = 16 }: { text: string; size?: number }) {
+  const tooltipProps = {
+    'data-tooltip-content': text,
+    'data-tooltip-id': 'root-tooltip',
+    'data-tooltip-place': 'top-start',
+  };
   return (
+    // @ts-ignore allow pass-thru tooltip props
     <IconButton
-      imgSrc={Question}
       title="Help"
       width={size}
       height={size}
-      classes="opacity-50"
-      passThruProps={{
-        'data-tooltip-content': text,
-        'data-tooltip-id': 'root-tooltip',
-        'data-tooltip-place': 'top-start',
-      }}
-    />
+      className="border border-gray-400 rounded-full p-px"
+      {...tooltipProps}
+    >
+      <QuestionMarkIcon height={size} width={size} color={Color.lightGray} className="opacity-50" />
+    </IconButton>
   );
 }
 

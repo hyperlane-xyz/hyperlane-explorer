@@ -7,11 +7,11 @@ import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql
 
 import '@hyperlane-xyz/widgets/styles.css';
 
+import { AppLayout } from '../AppLayout';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
-import { AppLayout } from '../components/layout/AppLayout';
 import { config } from '../consts/config';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
-import '../styles/fonts.css';
+import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
 import { useIsSsr } from '../utils/ssr';
 
@@ -35,19 +35,23 @@ export default function App({ Component, router, pageProps }: AppProps) {
     return <div></div>;
   }
 
+  // Note, the font definition is required both here and in _document.tsx
+  // Otherwise Next.js will not load the font
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={reactQueryClient}>
-        <UrqlProvider value={urqlClient}>
-          <ChainConfigSyncer>
-            <AppLayout pathName={router.pathname}>
-              <Component {...pageProps} />
-            </AppLayout>
-          </ChainConfigSyncer>
-        </UrqlProvider>
-      </QueryClientProvider>
-      <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
-      <Tooltip id="root-tooltip" className="z-50" />
-    </ErrorBoundary>
+    <div className={`${MAIN_FONT.variable} font-sans text-black`}>
+      <ErrorBoundary>
+        <QueryClientProvider client={reactQueryClient}>
+          <UrqlProvider value={urqlClient}>
+            <ChainConfigSyncer>
+              <AppLayout pathName={router.pathname}>
+                <Component {...pageProps} />
+              </AppLayout>
+            </ChainConfigSyncer>
+          </UrqlProvider>
+        </QueryClientProvider>
+        <ToastContainer transition={Zoom} position={toast.POSITION.BOTTOM_RIGHT} limit={2} />
+        <Tooltip id="root-tooltip" className="z-50" />
+      </ErrorBoundary>
+    </div>
   );
 }

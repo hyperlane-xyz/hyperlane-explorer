@@ -1,32 +1,22 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useEffect, useState } from 'react';
+import { PropsWithChildren } from 'react';
+
+import { DropdownMenu, WideChevron } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
-import { HyperlaneWideChevron } from '../icons/Chevron';
-import { DropdownMenu } from '../layout/Dropdown';
+import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   // For dynamic sizing on scroll
-  const [animateHeader, setAnimateHeader] = useState(false);
-  useEffect(() => {
-    const listener = () => {
-      if (window.scrollY > 100) {
-        setAnimateHeader(true);
-      } else setAnimateHeader(false);
-    };
-    window.addEventListener('scroll', listener);
-    return () => {
-      window.removeEventListener('scroll', listener);
-    };
-  }, []);
+  const animateHeader = useScrollThresholdListener(100);
 
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
@@ -35,7 +25,7 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`z-30 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-500 ${
+      className={`z-10 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-200 ${
         animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
       }`}
     >
@@ -46,9 +36,9 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'scale-90'
             } transition-all ease-in-out duration-500`}
           >
-            <Image src={Logo} alt="" className="h-8 sm:h-10 w-auto" />
-            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-8 w-auto mt-1 ml-3" />
-            <Image src={Explorer} alt="Explorer" className="h-7 sm:h-8 w-auto mt-1 ml-2.5" />
+            <Image src={Logo} alt="" className="h-7 sm:h-8 w-auto" />
+            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-6 w-auto mt-1 ml-3" />
+            <Image src={Explorer} alt="Explorer" className="h-5 sm:h-6 w-auto mt-1 ml-2.5" />
           </div>
         </Link>
         <nav
@@ -73,46 +63,36 @@ export function Header({ pathName }: { pathName: string }) {
           >
             Docs
           </a>
-          <Link href="/settings" className={navLinkClass('/settings')}>
-            Settings
-          </Link>
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
         <div className="relative flex item-center sm:hidden mr-2">
           <DropdownMenu
-            ButtonContent={DropdownButton}
-            buttonClasses="hover:opacity-80 active:opacity-70 transition-all"
-            buttonTitle="Options"
+            button={<DropdownButton />}
+            buttonClassname="hover:opacity-80 active:opacity-70 transition-all"
             menuItems={[
-              (c: Fn) => (
-                <MobileNavLink href="/" closeDropdown={c} key="Home">
+              ({ close }) => (
+                <MobileNavLink href="/" closeDropdown={close} key="Home">
                   Home
                 </MobileNavLink>
               ),
-              (c: Fn) => (
-                <MobileNavLink href="/settings" closeDropdown={c} key="Settings">
-                  Settings
-                </MobileNavLink>
-              ),
-              // (c: Fn) => (
+              //  ({ close }) => (
               //   <MobileNavLink href="/api" closeDropdown={c} key="API">
               //     API
               //   </MobileNavLink>
               // ),
-              (c: Fn) => (
-                <MobileNavLink href={docLinks.home} closeDropdown={c} key="Docs">
+              ({ close }) => (
+                <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
                   Docs
                 </MobileNavLink>
               ),
-              (c: Fn) => (
-                <MobileNavLink href={links.home} closeDropdown={c} key="About">
+              ({ close }) => (
+                <MobileNavLink href={links.home} closeDropdown={close} key="About">
                   About
                 </MobileNavLink>
               ),
             ]}
-            menuClasses="pt-8 px-8"
-            isFullscreen={true}
+            menuClassname="!left-0 !right-0 py-7 px-8 bg-blue-500"
           />
         </div>
       </div>
@@ -120,29 +100,29 @@ export function Header({ pathName }: { pathName: string }) {
   );
 }
 
-function DropdownButton({ isOpen }: { isOpen: boolean }) {
+function DropdownButton() {
   return (
     <div className="px-4 py-1 flex flex-col items-center border border-white bg-pink-500 rounded-lg">
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
-        color={Color.White}
-        classes="transition-all"
+        direction="s"
+        color={Color.white}
+        className="transition-all"
       />
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
-        color={Color.White}
-        classes="-mt-1 transition-all"
+        direction="s"
+        color={Color.white}
+        className="-mt-1 transition-all"
       />
-      <HyperlaneWideChevron
+      <WideChevron
         width={10}
         height={14}
-        direction={isOpen ? 'n' : 's'}
-        color={Color.White}
-        classes="-mt-1 transition-all"
+        direction="s"
+        color={Color.white}
+        className="-mt-1 transition-all"
       />
     </div>
   );
@@ -162,14 +142,14 @@ function MobileNavLink({
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-2xl font-medium text-white capitalize">{children}</span>
+      <span className="text-xl font-medium text-white capitalize">{children}</span>
     </Link>
   );
 }
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[2px] transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[3px] transition-all',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-blue-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };

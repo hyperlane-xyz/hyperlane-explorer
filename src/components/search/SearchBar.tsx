@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import { ChangeEvent } from 'react';
 
+import { IconButton, XIcon } from '@hyperlane-xyz/widgets';
+
 import SearchIcon from '../../images/icons/search.svg';
-import XIcon from '../../images/icons/x.svg';
 import { Spinner } from '../animations/Spinner';
-import { IconButton } from '../buttons/IconButton';
 
 interface Props {
   value: string;
@@ -20,7 +20,7 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   };
 
   return (
-    <div className="p-1 flex items-center bg-white w-full rounded-full ring ring-blue-400 hover:ring-blue-200 transition-all duration-500">
+    <div className="p-1 flex items-center bg-white w-full rounded-full transition-all duration-500">
       <input
         value={value}
         onChange={onChange}
@@ -36,14 +36,9 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
         )}
         {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
         {!isFetching && value && (
-          <IconButton
-            imgSrc={XIcon}
-            title="Clear search"
-            width={16}
-            height={16}
-            onClick={() => onChange(null)}
-            classes="invert"
-          />
+          <IconButton title="Clear search" onClick={() => onChange(null)}>
+            <XIcon width={16} height={16} color="white" />
+          </IconButton>
         )}
       </div>
     </div>

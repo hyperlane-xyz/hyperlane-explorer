@@ -1,19 +1,17 @@
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
-import { unscrapedChainsInDb } from '../../consts/config';
 import { Environment } from '../../consts/environments';
 
-import { ChainConfig } from './chainConfig';
 import { DomainsEntry } from './queries/fragments';
 
 export async function getMailboxAddress(
   chainName: string,
-  customChainConfigs: ChainMap<ChainConfig>,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata<{ mailbox?: string }>>>,
   registry: IRegistry,
 ) {
-  if (customChainConfigs[chainName]?.mailbox) return customChainConfigs[chainName].mailbox;
+  if (overrideChainMetadata[chainName]?.mailbox) return overrideChainMetadata[chainName].mailbox;
   const addresses = await registry.getChainAddresses(chainName);
   if (addresses?.mailbox) return addresses.mailbox;
   else return undefined;
@@ -24,9 +22,9 @@ export function getChainDisplayName(
   chainOrDomainId?: ChainId | DomainId,
   shortName = false,
   fallbackToId = true,
-) {
+): string {
   const metadata = multiProvider.tryGetChainMetadata(chainOrDomainId || 0);
-  if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId : 'Unknown';
+  if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId.toString() : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return toTitleCase(displayName || metadata.displayName || metadata.name);
 }
@@ -50,10 +48,4 @@ export function isPiChain(
 export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
   const protocol = multiProvider.tryGetProtocol(chainIdOrName);
   return protocol === ProtocolType.Ethereum;
-}
-
-// TODO: Remove once all chains in the DB are scraped
-export function isUnscrapedDbChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
-  const chainName = multiProvider.tryGetChainName(chainIdOrName);
-  return chainName && unscrapedChainsInDb.includes(chainName);
 }

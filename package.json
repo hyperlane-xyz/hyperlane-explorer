@@ -1,18 +1,18 @@
 {
   "name": "@hyperlane-xyz/explorer",
   "description": "An interchain explorer for the Hyperlane protocol and network.",
-  "version": "3.13.0",
+  "version": "5.4.0",
   "author": "J M Rossy",
   "dependencies": {
-    "@headlessui/react": "^1.7.17",
-    "@hyperlane-xyz/registry": "4.3.6",
-    "@hyperlane-xyz/sdk": "5.2.1",
-    "@hyperlane-xyz/utils": "5.2.1",
-    "@hyperlane-xyz/widgets": "5.2.1",
-    "@metamask/jazzicon": "https://github.com/jmrossy/jazzicon#7a8df28974b4e81129bfbe3cab76308b889032a6",
+    "@headlessui/react": "^2.1.8",
+    "@hyperlane-xyz/registry": "4.6.0",
+    "@hyperlane-xyz/sdk": "5.5.0",
+    "@hyperlane-xyz/utils": "5.5.0",
+    "@hyperlane-xyz/widgets": "5.5.0",
     "@tanstack/react-query": "^5.35.5",
     "bignumber.js": "^9.1.2",
     "buffer": "^6.0.3",
+    "clsx": "^2.1.1",
     "ethers": "^5.7.2",
     "formik": "^2.2.9",
     "graphql": "^16.6.0",
@@ -23,9 +23,9 @@
     "react-toastify": "^9.1.1",
     "react-tooltip": "^5.26.3",
     "urql": "^3.0.3",
-    "yaml": "^2.4.2",
+    "yaml": "^2.4.5",
     "zod": "^3.21.2",
-    "zustand": "4.3.8"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
@@ -42,7 +42,7 @@
     "jest": "^29.6.3",
     "postcss": "^8.4.21",
     "prettier": "^2.8.4",
-    "tailwindcss": "^3.3.3",
+    "tailwindcss": "^3.4.13",
     "ts-node": "^10.9.1",
     "typescript": "^5.5.4"
   },

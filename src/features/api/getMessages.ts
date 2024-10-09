@@ -1,6 +1,8 @@
 import { Client } from '@urql/core';
 import type { NextApiRequest } from 'next';
 
+import { Result, failure, success } from '@hyperlane-xyz/utils';
+
 import { API_GRAPHQL_QUERY_LIMIT } from '../../consts/api';
 import { logger } from '../../utils/logger';
 import { sanitizeString } from '../../utils/string';
@@ -8,15 +10,12 @@ import { MessageIdentifierType, buildMessageQuery } from '../messages/queries/bu
 import { MessagesQueryResult } from '../messages/queries/fragments';
 import { parseMessageQueryResult } from '../messages/queries/parse';
 
-import { ApiHandlerResult, ApiMessage, toApiMessage } from './types';
-import { failureResult, getMultiProvider, getScrapedChains, successResult } from './utils';
+import { ApiMessage, toApiMessage } from './types';
+import { getMultiProvider, getScrapedChains } from './utils';
 
-export async function handler(
-  req: NextApiRequest,
-  client: Client,
-): Promise<ApiHandlerResult<ApiMessage[]>> {
+export async function handler(req: NextApiRequest, client: Client): Promise<Result<ApiMessage[]>> {
   const identifierParam = parseQueryParams(req);
-  if (!identifierParam) return failureResult('No message identifier param provided');
+  if (!identifierParam) return failure('No message identifier param provided');
 
   logger.debug('Attempting to find messages matching:', identifierParam);
   const { query, variables } = buildMessageQuery(
@@ -30,7 +29,7 @@ export async function handler(
   const scrapedChains = await getScrapedChains(client);
 
   const messages = parseMessageQueryResult(multiProvider, scrapedChains, result.data);
-  return successResult(messages.map(toApiMessage));
+  return success(messages.map(toApiMessage));
 }
 
 // TODO replace with Zod

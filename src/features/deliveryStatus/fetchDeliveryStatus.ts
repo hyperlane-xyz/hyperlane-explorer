@@ -2,13 +2,12 @@ import { constants } from 'ethers';
 
 import { IMailbox__factory } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
-import type { ChainConfig } from '../chains/chainConfig';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
@@ -23,11 +22,11 @@ import {
 export async function fetchDeliveryStatus(
   multiProvider: MultiProvider,
   registry: IRegistry,
-  customChainConfigs: ChainMap<ChainConfig>,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.getChainName(message.destinationChainId);
-  const destMailboxAddr = await getMailboxAddress(destName, customChainConfigs, registry);
+  const destMailboxAddr = await getMailboxAddress(destName, overrideChainMetadata, registry);
   if (!destMailboxAddr)
     throw new Error(
       `Cannot check delivery status, no mailbox address provided for chain ${destName}`,
@@ -68,7 +67,7 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const debugResult = await debugMessage(multiProvider, registry, customChainConfigs, message);
+    const debugResult = await debugMessage(multiProvider, registry, overrideChainMetadata, message);
     const messageStatus =
       debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending

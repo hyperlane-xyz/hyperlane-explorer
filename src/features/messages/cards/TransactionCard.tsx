@@ -1,19 +1,19 @@
 import BigNumber from 'bignumber.js';
-import Link from 'next/link';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
+import { Modal, useModal } from '@hyperlane-xyz/widgets';
 
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
-import { Modal } from '../../../components/layout/Modal';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
 import { MessageStatus, MessageTx } from '../../../types';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
+import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
@@ -70,6 +70,8 @@ export function DestinationTransactionCard({
 
   const isDestinationEvmChain = isEvmChain(multiProvider, chainId);
 
+  const { isOpen, open, close } = useModal();
+
   let content: ReactNode;
   if (transaction) {
     content = (
@@ -104,22 +106,26 @@ export function DestinationTransactionCard({
     );
   } else if (!hasChainConfig) {
     content = (
-      <DeliveryStatus>
-        <div className="flex flex-col items-center">
-          <div>Delivery status is unknown.</div>
-          <div className="mt-2 text-sm max-w-xs">
-            Permissionless Interoperability (PI) chains require a config.
+      <>
+        <DeliveryStatus>
+          <div className="flex flex-col items-center">
+            <div>Delivery status is unknown.</div>
+            <div className="mt-2 text-sm max-w-xs">
+              Permissionless Interoperability (PI) chains require a config.
+            </div>
+            <div className="mt-2 mb-6 text-sm max-w-xs">
+              Please{' '}
+              <button className="underline underline-offset-2" onClick={open}>
+                add metadata
+              </button>{' '}
+              for this chain.
+            </div>
+            <CallDataModal debugResult={debugResult} />
           </div>
-          <div className="mt-2 mb-6 text-sm max-w-xs">
-            Please{' '}
-            <Link href="/settings" className="underline underline-offset-2">
-              add a config
-            </Link>{' '}
-            for this chain.
-          </div>
-          <CallDataModal debugResult={debugResult} />
-        </div>
-      </DeliveryStatus>
+        </DeliveryStatus>
+        {/* TODO get modal to auto-close after adding chain metadata */}
+        <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
+      </>
     );
   } else if (status === MessageStatus.Pending) {
     if (isDestinationEvmChain) {
@@ -182,7 +188,7 @@ function TransactionCard({
         </div>
         <div className="flex items-center pb-1">
           <h3 className="text-blue-500 font-medium text-md mr-2">{title}</h3>
-          <HelpIcon size={16} text={helpText} />
+          <HelpIcon text={helpText} />
         </div>
       </div>
       {children}
@@ -305,17 +311,12 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
       <button onClick={() => setIsOpen(true)} className={`mt-5 ${styles.textLink}`}>
         View calldata details
       </button>
-      <Modal
-        isOpen={isOpen}
-        title="Message Delivery Calldata"
-        close={() => setIsOpen(false)}
-        maxWidth="max-w-sm sm:max-w-md"
-      >
+      <Modal isOpen={isOpen} close={() => setIsOpen(false)} panelClassname="max-w-lg p-4 sm:p-5">
         <div className="mt-2 flex flex-col space-y-3.5">
           <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle is reverting, try debugging it with `}
             <a
-              className={`${styles.textLink} any:text-blue-500`}
+              className={`${styles.textLink} all:text-blue-500`}
               href={links.tenderlySimDocs}
               target="_blank"
               rel="noopener noreferrer"

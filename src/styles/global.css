@@ -34,6 +34,10 @@ select:focus {
   outline: none;
 }
 
+:focus-visible {
+  outline: none;
+}
+
 /*
 Background 
 ==========
@@ -65,6 +69,19 @@ body {
 @media only screen and (max-width: 767px) {
   ::-webkit-scrollbar {
     width: 0;
+  }
+}
+
+/* Tailwind extension to hide scrollbar */
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }
 

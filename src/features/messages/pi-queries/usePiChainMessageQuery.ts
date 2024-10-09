@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 
 import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
-import { ChainConfig } from '../../chains/chainConfig';
 import { useScrapedChains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
@@ -16,8 +15,8 @@ import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPi
 
 const MESSAGE_SEARCH_TIMEOUT = 10_000; // 10s
 
-// Query 'Permissionless Interoperability (PI)' chains using custom
-// chain configs in store state
+// Query 'Permissionless Interoperability (PI)' chains using
+// override chain metadata in store state
 export function usePiChainMessageSearchQuery({
   sanitizedInput,
   startTimeFilter,
@@ -113,7 +112,7 @@ export function usePiChainMessageQuery({
 }
 
 async function fetchMessages(
-  chainConfig: ChainConfig,
+  chainMetadata: ChainMetadata,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
   registry: IRegistry,
@@ -122,13 +121,13 @@ async function fetchMessages(
   let messages: Message[];
   try {
     messages = await timeout(
-      fetchMessagesFromPiChain(chainConfig, query, multiProvider, registry, queryType),
+      fetchMessagesFromPiChain(chainMetadata, query, multiProvider, registry, queryType),
       MESSAGE_SEARCH_TIMEOUT,
       'message search timeout',
     );
     return messages;
   } catch (error) {
-    logger.debug('Error fetching PI messages for chain:', chainConfig.name, error);
+    logger.debug('Error fetching PI messages for chain:', chainMetadata.name, error);
     throw error;
   }
 }

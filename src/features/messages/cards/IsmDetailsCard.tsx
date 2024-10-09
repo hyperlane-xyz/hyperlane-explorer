@@ -22,10 +22,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
         <Image src={ShieldLock} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="text-blue-500 font-medium text-md mr-2">Interchain Security Modules</h3>
-          <HelpIcon
-            size={16}
-            text="Details about the Interchain Security Modules (ISM) that must verify this message."
-          />
+          <HelpIcon text="Details about the Interchain Security Modules (ISM) that must verify this message." />
         </div>
       </div>
       <p className="text-sm font-light">
