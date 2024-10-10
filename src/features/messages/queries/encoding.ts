@@ -4,6 +4,7 @@ import {
   bytesToProtocolAddress,
   ensure0x,
   isAddress,
+  isAddressEvm,
   strip0x,
 } from '@hyperlane-xyz/utils';
 
@@ -19,7 +20,7 @@ export function postgresByteaToString(byteString: string): string {
 }
 
 export function addressToPostgresBytea(address: Address): string {
-  const hexString = addressToByteHexString(address);
+  const hexString = isAddressEvm(address) ? address : addressToByteHexString(address);
   return stringToPostgresBytea(hexString);
 }
 
