@@ -16,7 +16,7 @@ function _HelpIcon({ text, size = 16 }: { text: string; size?: number }) {
       title="Help"
       width={size}
       height={size}
-      className="border border-gray-400 rounded-full p-px"
+      className="rounded-full border border-gray-400 p-px"
       {...tooltipProps}
     >
       <QuestionMarkIcon height={size} width={size} color={Color.lightGray} className="opacity-50" />

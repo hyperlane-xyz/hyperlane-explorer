@@ -33,13 +33,13 @@ const footerLinks3 = [
 
 export function Footer() {
   return (
-    <footer className="text-white px-8 pt-14 pb-5 bg-gradient-to-b from-transparent to-black/40">
-      <div className="flex flex-col sm:flex-row gap-10 items-center justify-between">
+    <footer className="bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
+      <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
-          <div className="ml-2 w-12 sm:w-14 h-12 sm:h-14">
+          <div className="ml-2 h-12 w-12 sm:h-14 sm:w-14">
             <HyperlaneLogo color={Color.white} />
           </div>
-          <div className="text-lg sm:text-xl font-medium ml-6 space-y-1 ">
+          <div className="ml-6 space-y-1 text-lg font-medium sm:text-xl">
             <div>Go interchain</div>
             <div>with Hyperlane</div>
           </div>
@@ -58,7 +58,7 @@ export function Footer() {
               </li>
             ))}
           </ul>
-          <ul className={`${styles.linkCol}  mr-14`}>
+          <ul className={`${styles.linkCol} mr-14`}>
             {footerLinks2.map((item) => (
               <li key={item.title}>
                 <Link

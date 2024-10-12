@@ -4,9 +4,9 @@ import { Card } from '../components/layout/Card';
 
 const ApiDocs: NextPage = () => {
   return (
-    <div className="mt-4 mb-2 px-2 sm:px-6 lg:pr-14 w-full">
+    <div className="mb-2 mt-4 w-full px-2 sm:px-6 lg:pr-14">
       <Card>
-        <h2 className="mt-1 text-lg text-blue-500 font-medium">
+        <h2 className="mt-1 text-lg font-medium text-blue-500">
           Explorer APIs - Overview and documentation
         </h2>
         <p className="mt-3 font-light">
@@ -16,14 +16,14 @@ const ApiDocs: NextPage = () => {
           The APIs are currently available free of charge and without authentication required.
         </p>
 
-        <h3 className="mt-5 text-blue-500 font-medium">Example Request</h3>
-        <div className="mt-2 bg-gray-50 rounded-xl p-2.5 text-sm overflow-auto">
+        <h3 className="mt-5 font-medium text-blue-500">Example Request</h3>
+        <div className="mt-2 overflow-auto rounded-xl bg-gray-50 p-2.5 text-sm">
           <pre>
             <code>{exampleRequest}</code>
           </pre>
         </div>
-        <h3 className="mt-5 text-blue-500 font-medium">Example Response</h3>
-        <div className="mt-2 bg-gray-50 rounded-xl p-2.5 text-sm overflow-auto">
+        <h3 className="mt-5 font-medium text-blue-500">Example Response</h3>
+        <div className="mt-2 overflow-auto rounded-xl bg-gray-50 p-2.5 text-sm">
           <pre>
             <code>{exampleResponse}</code>
           </pre>
@@ -53,7 +53,7 @@ const ApiDocs: NextPage = () => {
             Action:<code className="ml-2">get-status</code>, Parameter (1 required):
           </h5>
           <ul className="mt-1 pl-3">
-            <div className="text-gray-500 italic">Same as get-messages above</div>
+            <div className="italic text-gray-500">Same as get-messages above</div>
           </ul>
           <h5 className="mt-2 text-gray-600">
             Action:<code className="ml-2">search-messages</code>, Parameter (1 required):

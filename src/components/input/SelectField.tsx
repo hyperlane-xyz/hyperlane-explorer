@@ -19,7 +19,7 @@ export function SelectField(props: Props) {
 
   return (
     <select
-      className={`px-2 py-1 text-sm font-light border border-gray-400 rounded bg-transparent invalid:text-gray-400 ${
+      className={`rounded border border-gray-400 bg-transparent px-2 py-1 text-sm font-light invalid:text-gray-400 ${
         classes || ''
       }`}
       {...passThruProps}

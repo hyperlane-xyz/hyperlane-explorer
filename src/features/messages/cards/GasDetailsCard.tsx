@@ -70,11 +70,11 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     }, [decimals, message, igpPayments]);
 
   return (
-    <Card className="w-full space-y-4 relative">
+    <Card className="relative w-full space-y-4">
       <div className="flex items-center justify-between">
         <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
-          <h3 className="text-blue-500 font-medium text-md mr-2">Interchain Gas Payments</h3>
+          <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Gas Payments</h3>
           <HelpIcon text="Amounts paid to the Interchain Gas Paymaster for message delivery." />
         </div>
       </div>
@@ -84,12 +84,12 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           href={docLinks.gas}
           target="_blank"
           rel="noopener noreferrer"
-          className="cursor-pointer text-blue-500 hover:text-blue-400 active:text-blue-300 transition-all"
+          className="cursor-pointer text-blue-500 transition-all hover:text-blue-400 active:text-blue-300"
         >
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <div className="flex flex-wrap gap-x-4 gap-y-4 mr-36">
+      <div className="mr-36 flex flex-wrap gap-x-4 gap-y-4">
         <KeyValueRow
           label="Payment count:"
           labelWidth="w-28"
@@ -124,11 +124,11 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         />
       </div>
       {!!paymentsWithAddr.length && (
-        <div className="md:pt-2 pb-8 md:pb-6">
+        <div className="pb-8 md:pb-6 md:pt-2">
           <IgpPaymentsTable payments={paymentsWithAddr} />
         </div>
       )}
-      <div className="absolute right-2 bottom-2">
+      <div className="absolute bottom-2 right-2">
         <RadioButtons
           options={unitOptions}
           selected={decimals}
@@ -142,7 +142,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
 
 function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contract: Address }> }) {
   return (
-    <table className="rounded border-collapse overflow-hidden">
+    <table className="border-collapse overflow-hidden rounded">
       <thead>
         <tr>
           <th className={style.th}>IGP Address</th>

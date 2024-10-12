@@ -93,11 +93,11 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Failing) {
     content = (
       <DeliveryStatus>
-        <div className="text-sm text-gray-800 leading-relaxed">{`Delivery to destination chain seems to be failing ${
+        <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
           debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
         }`}</div>
         {!!debugResult?.description && (
-          <div className="mt-5 text-sm text-gray-800 text-center leading-relaxed break-words">
+          <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
             {debugResult.description}
           </div>
         )}
@@ -110,10 +110,10 @@ export function DestinationTransactionCard({
         <DeliveryStatus>
           <div className="flex flex-col items-center">
             <div>Delivery status is unknown.</div>
-            <div className="mt-2 text-sm max-w-xs">
+            <div className="mt-2 max-w-xs text-sm">
               Permissionless Interoperability (PI) chains require a config.
             </div>
-            <div className="mt-2 mb-6 text-sm max-w-xs">
+            <div className="mb-6 mt-2 max-w-xs text-sm">
               Please{' '}
               <button className="underline underline-offset-2" onClick={open}>
                 add metadata
@@ -133,7 +133,7 @@ export function DestinationTransactionCard({
         <div className="flex flex-col items-center">
           <div>Delivery to destination chain still in progress.</div>
           {isPiMsg && (
-            <div className="mt-2 text-sm max-w-xs">
+            <div className="mt-2 max-w-xs text-sm">
               Please ensure a relayer is running for this chain.
             </div>
           )}
@@ -146,7 +146,7 @@ export function DestinationTransactionCard({
     content = (
       <DeliveryStatus>
         <div>Delivery to status is currently unknown.</div>
-        <div className="mt-2 text-sm pb-4">
+        <div className="mt-2 pb-4 text-sm">
           {isPiMsg
             ? 'Please ensure your chain config is correct and check back later.'
             : 'Please check again later'}
@@ -173,13 +173,13 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
   return (
-    <Card className="flex flex-col flex-1 min-w-fit space-y-3">
+    <Card className="flex min-w-fit flex-1 flex-col space-y-3">
       <div className="flex items-center justify-between">
-        <div className="relative -top-px -left-0.5">
+        <div className="relative -left-0.5 -top-px">
           <ChainLogo chainId={chainId} />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-blue-500 font-medium text-md mr-2">{title}</h3>
+          <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
           <HelpIcon text={helpText} />
         </div>
       </div>
@@ -289,7 +289,7 @@ function TransactionDetails({
 function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
   return (
     <>
-      <div className="pb-2 flex-1 flex flex-col items-center justify-center text-gray-700 font-light text-center">
+      <div className="flex flex-1 flex-col items-center justify-center pb-2 text-center font-light text-gray-700">
         <div className="max-w-sm">{children}</div>
       </div>
     </>

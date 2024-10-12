@@ -4,5 +4,5 @@ interface Props {
 
 export function HrDivider(props: Props) {
   const { classes } = props;
-  return <hr className={`w-full h-px border-none bg-gray-300 ${classes}`} />;
+  return <hr className={`h-px w-full border-none bg-gray-300 ${classes}`} />;
 }

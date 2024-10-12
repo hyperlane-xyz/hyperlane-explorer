@@ -20,11 +20,11 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
       </Head>
       <div
         style={styles.container}
-        className="relative w-full min-w-screen h-full min-h-screen flex flex-col justify-between bg-blue-500"
+        className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between bg-blue-500"
       >
         {/* <InfoBanner /> */}
         <Header pathName={pathName} />
-        <div className="max-w-5xl mx-auto grow">
+        <div className="mx-auto max-w-5xl grow">
           <main style={styles.main} className="relative min-h-full pt-3">
             {children}
           </main>

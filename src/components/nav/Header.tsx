@@ -25,8 +25,8 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`z-10 sticky top-0 px-2 sm:px-6 lg:px-12 w-full bg-blue-500 transition-all ease-in-out duration-200 ${
-        animateHeader ? 'py-1 border-b border-white' : 'py-4 sm:py-5'
+      className={`sticky top-0 z-10 w-full bg-blue-500 px-2 transition-all duration-200 ease-in-out sm:px-6 lg:px-12 ${
+        animateHeader ? 'border-b border-white py-1' : 'py-4 sm:py-5'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -34,15 +34,15 @@ export function Header({ pathName }: { pathName: string }) {
           <div
             className={`flex items-center ${
               animateHeader && 'scale-90'
-            } transition-all ease-in-out duration-500`}
+            } transition-all duration-500 ease-in-out`}
           >
-            <Image src={Logo} alt="" className="h-7 sm:h-8 w-auto" />
-            <Image src={Name} alt="Hyperlane" className="hidden sm:block h-6 w-auto mt-1 ml-3" />
-            <Image src={Explorer} alt="Explorer" className="h-5 sm:h-6 w-auto mt-1 ml-2.5" />
+            <Image src={Logo} alt="" className="h-7 w-auto sm:h-8" />
+            <Image src={Name} alt="Hyperlane" className="ml-3 mt-1 hidden h-6 w-auto sm:block" />
+            <Image src={Explorer} alt="Explorer" className="ml-2.5 mt-1 h-5 w-auto sm:h-6" />
           </div>
         </Link>
         <nav
-          className={`hidden sm:flex sm:space-x-8 sm:items-center ${
+          className={`hidden sm:flex sm:items-center sm:space-x-8 ${
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
@@ -66,7 +66,7 @@ export function Header({ pathName }: { pathName: string }) {
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
-        <div className="relative flex item-center sm:hidden mr-2">
+        <div className="item-center relative mr-2 flex sm:hidden">
           <DropdownMenu
             button={<DropdownButton />}
             buttonClassname="hover:opacity-80 active:opacity-70 transition-all"
@@ -102,7 +102,7 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="px-4 py-1 flex flex-col items-center border border-white bg-pink-500 rounded-lg">
+    <div className="flex flex-col items-center rounded-lg border border-white bg-pink-500 px-4 py-1">
       <WideChevron
         width={10}
         height={14}
@@ -137,12 +137,12 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="py-4 pl-3 flex items-center cursor-pointer hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[2px] transition-all"
+      className="flex cursor-pointer items-center py-4 pl-3 decoration-pink-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
       onClick={closeDropdown}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-xl font-medium text-white capitalize">{children}</span>
+      <span className="text-xl font-medium capitalize text-white">{children}</span>
     </Link>
   );
 }

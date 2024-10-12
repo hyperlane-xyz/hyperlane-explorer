@@ -12,9 +12,9 @@ export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetc
     // Absolute position for overlaying cross-fade
     <div className="absolute left-0 right-0 top-10">
       <Fade show={show}>
-        <div className="flex justify-center my-10">
-          <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
-            <div className="flex items-center justify-center scale-90">
+        <div className="my-10 flex justify-center">
+          <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
+            <div className="flex scale-90 items-center justify-center">
               <Spinner />
             </div>
             <div className="mt-4 text-center font-light leading-loose text-gray-700">
@@ -42,8 +42,8 @@ export function SearchError({
     // Absolute position for overlaying cross-fade
     <div className="absolute left-0 right-0 top-10">
       <Fade show={show}>
-        <div className="flex justify-center my-10">
-          <div className="flex flex-col items-center justify-center max-w-md px-3 py-5">
+        <div className="my-10 flex justify-center">
+          <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
             <Image src={imgSrc} width={imgWidth} className="opacity-80" alt="" />
             <div className="mt-4 text-center font-light leading-loose text-gray-700">{text}</div>
           </div>

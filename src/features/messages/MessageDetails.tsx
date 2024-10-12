@@ -99,8 +99,8 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   return (
     <>
-      <Card className="flex items-center justify-between px-1 rounded-full">
-        <h2 className="text-blue-500 font-medium">{`${
+      <Card className="flex items-center justify-between rounded-full px-1">
+        <h2 className="font-medium text-blue-500">{`${
           isIcaMsg ? 'ICA ' : ''
         } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
           multiProvider,
@@ -113,7 +113,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           isError={isError}
         />
       </Card>
-      <div className="flex flex-wrap items-stretch justify-between mt-3 md:mt-4 gap-3 md:gap-4">
+      <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
         <OriginTransactionCard
           chainId={originChainId}
           domainId={originDomainId}
@@ -170,7 +170,7 @@ function StatusHeader({
   let icon: React.ReactNode;
   if (isFetching) {
     icon = (
-      <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+      <div className="flex h-7 w-7 items-center justify-center overflow-hidden">
         <div className="scale-[35%]">
           <Spinner />
         </div>
@@ -185,7 +185,7 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="text-blue-500 font-medium lg mr-3">{text}</h3>
+      <h3 className="lg mr-3 font-medium text-blue-500">{text}</h3>
       {icon}
     </div>
   );

@@ -25,11 +25,11 @@ export function MessageTable({
   const multiProvider = useMultiProvider();
 
   return (
-    <table className="w-full mb-1">
+    <table className="mb-1 w-full">
       <thead>
         <tr className="border-b border-gray-100">
-          <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
-          <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
+          <th className={`${styles.header} pl-3 xs:text-left sm:pl-6`}>Origin</th>
+          <th className={`${styles.header} pl-1 xs:text-left sm:pl-2`}>Destination</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
           <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
@@ -40,7 +40,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer hover:bg-pink-50 active:bg-pink-100 border-b border-blue-50 last:border-0 ${
+            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
@@ -96,7 +96,7 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
       </LinkCell>
       {statusIcon && (
         <LinkCell id={msgId} base64={base64} tdClasses="w-0">
-          <span className="absolute right-4 top-1/2 transform -translate-y-1/2">
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 transform">
             <Image
               src={statusIcon}
               width={18}

@@ -26,11 +26,11 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
   return (
     <Card className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <div className="relative -top-px -left-0.5">
+        <div className="relative -left-0.5 -top-px">
           <Image src={AccountStar} width={28} height={28} alt="" className="opacity-80" />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="text-blue-500 font-medium text-md mr-2">ICA Details</h3>
+          <h3 className="mr-2 text-md font-medium text-blue-500">ICA Details</h3>
           <HelpIcon text="Extra information for messages from/to Interchain Accounts." />
         </div>
       </div>
@@ -51,10 +51,10 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
               icaAddress
                 ? icaAddress
                 : isFetching
-                ? 'Finding address...'
-                : isError
-                ? 'Error finding address'
-                : 'Unknown address'
+                  ? 'Finding address...'
+                  : isError
+                    ? 'Error finding address'
+                    : 'Unknown address'
             }
             displayWidth="w-60 sm:w-80"
             showCopy={true}
@@ -66,7 +66,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
                 <label className="text-sm text-gray-500">{`Function call ${i + 1} of ${
                   decodeResult.calls.length
                 }:`}</label>
-                <div className="mt-2 pl-4 border-l-2 border-gray-400 space-y-2.5">
+                <div className="mt-2 space-y-2.5 border-l-2 border-gray-400 pl-4">
                   <KeyValueRow
                     label="Destination address:"
                     labelWidth="w-32"
@@ -94,7 +94,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
           )}
         </>
       ) : (
-        <div className="py-4 text-red-500 italic">
+        <div className="py-4 italic text-red-500">
           Unable to decode ICA message body, no details currently available.
         </div>
       )}
