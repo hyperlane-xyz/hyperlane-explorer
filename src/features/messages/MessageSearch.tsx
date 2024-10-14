@@ -80,9 +80,9 @@ export function MessageSearch() {
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, or message id"
       />
-      <Card className="relative w-full min-h-[38rem] mt-4" padding="">
-        <div className="px-2 pt-3.5 pb-3 sm:px-4 md:px-5 flex items-center justify-between">
-          <h2 className="w-min sm:w-fit pl-0.5 text-blue-500 font-medium">
+      <Card className="relative mt-4 min-h-[38rem] w-full" padding="">
+        <div className="flex items-center justify-between px-2 pb-3 pt-3.5 sm:px-4 md:px-5">
+          <h2 className="w-min pl-0.5 font-medium text-blue-500 sm:w-fit">
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
           <SearchFilterBar

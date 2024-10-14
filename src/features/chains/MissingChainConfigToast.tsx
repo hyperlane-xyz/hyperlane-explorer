@@ -8,8 +8,8 @@ export function MissingChainConfigToast({
   const errorDesc = chainId
     ? `chain ID: ${chainId}`
     : domainId
-    ? `domain ID: ${domainId}`
-    : 'unknown message chain';
+      ? `domain ID: ${domainId}`
+      : 'unknown message chain';
   return (
     <div>
       <span>{`No chain config found for ${errorDesc}. You can add a config in the origin/destination chain selector.`}</span>

@@ -25,7 +25,7 @@ export function useMessageDeliveryStatus({
   const registry = useRegistry();
 
   const { data, error, isFetching } = useQuery({
-    queryKey: ['messageDeliveryStatus', message, !!multiProvider],
+    queryKey: ['messageDeliveryStatus', message, !!multiProvider, registry, chainMetadataOverrides],
     queryFn: async () => {
       if (!multiProvider || message.status == MessageStatus.Delivered) {
         return { message };

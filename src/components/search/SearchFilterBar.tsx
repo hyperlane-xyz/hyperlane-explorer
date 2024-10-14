@@ -82,8 +82,8 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'text-sm sm:min-w-[5.8rem] px-1.5 sm:px-2.5 py-1 flex items-center justify-center font-medium rounded-lg border border-pink-500 hover:opacity-80 active:opacity-70 transition-all',
-          value ? 'bg-pink-500 text-white pr-7 sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded-lg border border-pink-500 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          value ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
         )}
         onClick={open}
       >
@@ -156,15 +156,15 @@ function DatetimeSelector({
           </>
         }
         buttonClassname={clsx(
-          'text-sm px-2 sm:px-3 py-1 flex items-center justify-center font-medium border border-pink-500 rounded-lg hover:opacity-80 active:opacity-70 transition-all',
-          hasValue ? ' bg-pink-500 text-white pr-7 sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded-lg border border-pink-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
         )}
         panelClassname="w-60"
       >
         {({ close }) => (
           <div className="p-4" key="date-time-selector">
             <div className="flex items-center justify-between">
-              <h3 className="text-blue-500 font-medium">Time Range</h3>
+              <h3 className="font-medium text-blue-500">Time Range</h3>
               <div className="flex pt-1">
                 <TextButton classes="text-sm font-medium text-pink-500" onClick={onClickClear}>
                   Clear
@@ -172,9 +172,9 @@ function DatetimeSelector({
               </div>
             </div>
             <div className="flex flex-col">
-              <h4 className="mt-3 mb-1 text-gray-500 text-sm font-medium">Start Time</h4>
+              <h4 className="mb-1 mt-3 text-sm font-medium text-gray-500">Start Time</h4>
               <DatetimeField timestamp={startTime} onChange={setStartTime} />
-              <h4 className="mt-3 mb-1 text-gray-500 text-sm font-medium">End Time</h4>
+              <h4 className="mb-1 mt-3 text-sm font-medium text-gray-500">End Time</h4>
               <DatetimeField timestamp={endTime} onChange={setEndTime} />
             </div>
             <SolidButton
@@ -194,7 +194,7 @@ function DatetimeSelector({
 function ClearButton({ onClick }: { onClick: () => void }) {
   return (
     <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-      <IconButton onClick={onClick} className="bg-pink-300 p-1.5 rounded-full">
+      <IconButton onClick={onClick} className="rounded-full bg-pink-300 p-1.5">
         <XIcon color="white" height={9} width={9} />
       </IconButton>
     </div>

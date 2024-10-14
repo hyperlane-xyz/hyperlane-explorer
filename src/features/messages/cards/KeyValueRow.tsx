@@ -29,9 +29,9 @@ export function KeyValueRow({
   return (
     <div className={`flex items-center pl-px font-light ${classes}`}>
       <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div className={`text-sm ml-1 truncate ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
+      <div className={`ml-1 truncate text-sm ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
         <span>{!useFallbackVal ? display : 'Unknown'}</span>
-        {subDisplay && !useFallbackVal && <span className="text-xs ml-2">{subDisplay}</span>}
+        {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
       </div>
       {showCopy && !useFallbackVal && (
         <CopyButton copyValue={display} width={13} height={13} classes="ml-1.5" />
