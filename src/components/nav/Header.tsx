@@ -25,14 +25,14 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`sticky top-0 z-10 w-full bg-blue-500 px-2 transition-all duration-200 ease-in-out will-change-[border,padding] sm:px-6 lg:px-12 ${
+      className={`sticky top-0 z-10 w-full bg-blue-500 px-2 transition-all duration-200 ease-in-out will-change-[border,padding,transform] sm:px-6 lg:px-12 ${
         animateHeader ? 'border-b border-white py-1' : 'py-4 sm:py-5'
       }`}
     >
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <div
-            className={`flex items-center will-change-transform ${
+            className={`flex items-center ${
               animateHeader && 'scale-90'
             } transition-all duration-500 ease-in-out`}
             style={{
