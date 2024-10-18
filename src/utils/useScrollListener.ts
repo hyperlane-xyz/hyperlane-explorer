@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function useScrollThresholdListener(threshold: number, debounceTime = 500) {
+export function useScrollThresholdListener(threshold: number, debounceTime = 200) {
   const [isAboveThreshold, setIsAbove] = useState(false);
   const [isDebouncing, setIsDebouncing] = useState(false);
+
+  const timeoutId = useRef<null | NodeJS.Timeout>(null);
 
   const handleScroll = useCallback(() => {
     if (isDebouncing) return; // Skip handling scroll when disabled
@@ -16,24 +18,23 @@ export function useScrollThresholdListener(threshold: number, debounceTime = 500
     }
   }, [threshold, isAboveThreshold, isDebouncing]);
 
+  const debouncedHandleScroll = debounce(handleScroll, 20);
+
   useEffect(() => {
-    const debouncedHandleScroll = debounce(handleScroll, 30);
-
-    if (!isDebouncing) {
-      window.addEventListener('scroll', debouncedHandleScroll);
-    } else {
-      // Disabling scroll completly if it stills debouncing to prevent looping
-      const timeoutId = setTimeout(() => {
+    if (isDebouncing && !timeoutId.current) {
+      timeoutId.current = setTimeout(() => {
         setIsDebouncing(false);
+        timeoutId.current = null;
       }, debounceTime);
-
-      return () => clearTimeout(timeoutId);
     }
+
+    window.addEventListener('scroll', debouncedHandleScroll);
 
     return () => {
       window.removeEventListener('scroll', debouncedHandleScroll);
+      if (timeoutId.current) clearTimeout(timeoutId.current);
     };
-  }, [handleScroll, isDebouncing, debounceTime]);
+  }, [debouncedHandleScroll, isDebouncing, debounceTime]);
 
   return isAboveThreshold;
 }

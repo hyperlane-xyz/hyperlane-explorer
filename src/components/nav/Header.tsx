@@ -31,6 +31,8 @@ export function Header({ pathName }: { pathName: string }) {
     >
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center">
+          {/* We are adding a minimal rotation here to trick the browser to go into hardware acceleration mode
+            this will this little animation smoother, specially for Firefox*/}
           <div
             className={`flex items-center ${
               animateHeader && 'rotate-[0.01deg] scale-90'
