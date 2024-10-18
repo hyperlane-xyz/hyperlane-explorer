@@ -28,7 +28,7 @@ export function useScrollThresholdListener(threshold: number, debounceTime = 200
       }, debounceTime);
     }
 
-    window.addEventListener('scroll', debouncedHandleScroll);
+    window.addEventListener('scroll', debouncedHandleScroll, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', debouncedHandleScroll);
