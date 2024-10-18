@@ -1,47 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { isFirefox } from './browser';
-
-export function useScrollThresholdListener(threshold: number, debounce = 500) {
+export function useScrollThresholdListener(threshold: number, debounceTime = 200) {
   const [isAboveThreshold, setIsAbove] = useState(false);
   const [isDebouncing, setIsDebouncing] = useState(false);
 
+  const timeoutId = useRef<null | NodeJS.Timeout>(null);
+
+  const handleScroll = useCallback(() => {
+    if (isDebouncing) return; // Skip handling scroll when disabled
+
+    if (window.scrollY > threshold && !isAboveThreshold) {
+      setIsAbove(true);
+      setIsDebouncing(true);
+    } else if (window.scrollY <= threshold && isAboveThreshold) {
+      setIsAbove(false);
+      setIsDebouncing(true);
+    }
+  }, [threshold, isAboveThreshold, isDebouncing]);
+
+  const debouncedHandleScroll = debounce(handleScroll, 20);
+
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null;
+    if (isDebouncing && !timeoutId.current) {
+      timeoutId.current = setTimeout(() => {
+        setIsDebouncing(false);
+        timeoutId.current = null;
+      }, debounceTime);
+    }
 
-    const listener = () => {
-      // TODO find a way to make this animation smooth in Firefox
-      if (isFirefox()) return;
+    window.addEventListener('scroll', debouncedHandleScroll, { passive: true });
 
-      const handleScroll = () => {
-        if (window.scrollY > threshold && !isAboveThreshold) {
-          setIsAbove(true);
-          setIsDebouncing(true);
-        } else if (window.scrollY <= threshold && isAboveThreshold) {
-          setIsAbove(false);
-          setIsDebouncing(true);
-        }
-      };
-
-      if (isDebouncing) {
-        if (!timeoutId) {
-          setTimeout(() => {
-            setIsDebouncing(false);
-            timeoutId = null;
-            handleScroll();
-          }, debounce);
-        }
-      } else {
-        handleScroll();
-      }
-    };
-
-    window.addEventListener('scroll', listener, { passive: true });
     return () => {
-      window.removeEventListener('scroll', listener);
-      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('scroll', debouncedHandleScroll);
+      if (timeoutId.current) clearTimeout(timeoutId.current);
     };
-  }, [threshold, debounce, isAboveThreshold, isDebouncing]);
+  }, [debouncedHandleScroll, isDebouncing, debounceTime]);
 
   return isAboveThreshold;
+}
+
+function debounce(fn: () => void, delay: number) {
+  let timeoutId: number;
+  return function () {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = window.setTimeout(fn, delay);
+  };
 }
