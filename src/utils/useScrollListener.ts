@@ -1,19 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { isFirefox } from './browser';
-
-export function useScrollThresholdListener(threshold: number, debounce = 500) {
+export function useScrollThresholdListener(threshold: number, debounce = 300) {
   const [isAboveThreshold, setIsAbove] = useState(false);
   const [isDebouncing, setIsDebouncing] = useState(false);
 
+  const timeoutId = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null;
-
     const listener = () => {
-      // TODO find a way to make this animation smooth in Firefox
-      if (isFirefox()) return;
-
       const handleScroll = () => {
+        if (isDebouncing) return;
+
         if (window.scrollY > threshold && !isAboveThreshold) {
           setIsAbove(true);
           setIsDebouncing(true);
@@ -24,10 +21,10 @@ export function useScrollThresholdListener(threshold: number, debounce = 500) {
       };
 
       if (isDebouncing) {
-        if (!timeoutId) {
-          setTimeout(() => {
+        if (!timeoutId.current) {
+          timeoutId.current = setTimeout(() => {
             setIsDebouncing(false);
-            timeoutId = null;
+            timeoutId.current = null;
             handleScroll();
           }, debounce);
         }
@@ -39,7 +36,7 @@ export function useScrollThresholdListener(threshold: number, debounce = 500) {
     window.addEventListener('scroll', listener, { passive: true });
     return () => {
       window.removeEventListener('scroll', listener);
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId.current) clearTimeout(timeoutId.current);
     };
   }, [threshold, debounce, isAboveThreshold, isDebouncing]);
 
