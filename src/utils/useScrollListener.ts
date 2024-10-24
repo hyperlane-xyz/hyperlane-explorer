@@ -11,6 +11,7 @@ export function useScrollThresholdListener(threshold: number, debounce = 300) {
       const handleScroll = () => {
         if (isDebouncing) return;
 
+        timeoutId.current = null;
         if (window.scrollY > threshold && !isAboveThreshold) {
           setIsAbove(true);
           setIsDebouncing(true);
@@ -24,7 +25,6 @@ export function useScrollThresholdListener(threshold: number, debounce = 300) {
         if (!timeoutId.current) {
           timeoutId.current = setTimeout(() => {
             setIsDebouncing(false);
-            timeoutId.current = null;
             handleScroll();
           }, debounce);
         }
