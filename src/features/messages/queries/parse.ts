@@ -26,12 +26,7 @@ export function parseMessageStubResult(
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
 ): MessageStub[] {
-  if (!data || !Object.keys(data).length) return [];
-  return Object.values(data)
-    .flat()
-    .map((m) => parseMessageStub(multiProvider, scrapedChains, m))
-    .filter((m): m is MessageStub => !!m)
-    .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
+  return queryResult(multiProvider, scrapedChains, data, parseMessageStub);
 }
 
 export function parseMessageQueryResult(
@@ -39,12 +34,23 @@ export function parseMessageQueryResult(
   scrapedChains: DomainsEntry[],
   data: MessagesQueryResult | undefined,
 ): Message[] {
+  return queryResult(multiProvider, scrapedChains, data, parseMessage);
+}
+
+function queryResult<D, M extends MessageStub>(
+  multiProvider: MultiProvider,
+  scrapedChains: DomainsEntry[],
+  data: Record<string, D[]> | undefined,
+  parseFn: (multiProvider: MultiProvider, scrapedChains: DomainsEntry[], data: D) => M | null,
+) {
   if (!data || !Object.keys(data).length) return [];
-  return Object.values(data)
-    .flat()
-    .map((m) => parseMessage(multiProvider, scrapedChains, m))
-    .filter((m): m is Message => !!m)
-    .sort((a, b) => b.origin.timestamp - a.origin.timestamp);
+  return deduplicateMessageList(
+    Object.values(data)
+      .flat()
+      .map((d) => parseFn(multiProvider, scrapedChains, d))
+      .filter((m): m is M => !!m)
+      .sort((a, b) => b.origin.timestamp - a.origin.timestamp),
+  );
 }
 
 function parseMessageStub(
@@ -170,4 +176,12 @@ function getMessageStatus(m: MessageEntry | MessageStubEntry) {
     // TODO consider gas and failure conditions here
     return MessageStatus.Pending;
   }
+}
+
+function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
+  const map = new Map();
+  for (const item of messages) {
+    map.set(item.id, item);
+  }
+  return Array.from(map.values());
 }
