@@ -5,9 +5,9 @@
   "author": "J M Rossy",
   "dependencies": {
     "@headlessui/react": "^2.1.8",
-    "@hyperlane-xyz/registry": "4.10.0",
-    "@hyperlane-xyz/sdk": "5.6.0",
-    "@hyperlane-xyz/utils": "5.6.0",
+    "@hyperlane-xyz/registry": "5.1.0",
+    "@hyperlane-xyz/sdk": "5.7.0",
+    "@hyperlane-xyz/utils": "5.7.0",
     "@hyperlane-xyz/widgets": "5.7.0",
     "@tanstack/react-query": "^5.35.5",
     "bignumber.js": "^9.1.2",
