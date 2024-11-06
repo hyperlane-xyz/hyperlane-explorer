@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-import { DropdownMenu, WideChevron } from '@hyperlane-xyz/widgets';
+import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
@@ -105,21 +105,21 @@ export function Header({ pathName }: { pathName: string }) {
 function DropdownButton() {
   return (
     <div className="flex flex-col items-center rounded-lg border border-white bg-pink-500 px-4 py-1">
-      <WideChevron
+      <WideChevronIcon
         width={10}
         height={14}
         direction="s"
         color={Color.white}
         className="transition-all"
       />
-      <WideChevron
+      <WideChevronIcon
         width={10}
         height={14}
         direction="s"
         color={Color.white}
         className="-mt-1 transition-all"
       />
-      <WideChevron
+      <WideChevronIcon
         width={10}
         height={14}
         direction="s"

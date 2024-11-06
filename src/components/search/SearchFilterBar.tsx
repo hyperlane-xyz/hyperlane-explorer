@@ -3,7 +3,14 @@ import { useState } from 'react';
 
 import { ChainMetadata, getDomainId } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
-import { ChevronIcon, IconButton, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
+import {
+  ChevronIcon,
+  DatetimeField,
+  IconButton,
+  Popover,
+  XIcon,
+  useModal,
+} from '@hyperlane-xyz/widgets';
 
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
@@ -11,7 +18,6 @@ import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
-import { DatetimeField } from '../input/DatetimeField';
 
 interface Props {
   originChain: string | null;

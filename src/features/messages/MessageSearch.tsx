@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { Fade } from '../../components/animations/Fade';
+import { Fade } from '@hyperlane-xyz/widgets';
+
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
 import { SearchFilterBar } from '../../components/search/SearchFilterBar';

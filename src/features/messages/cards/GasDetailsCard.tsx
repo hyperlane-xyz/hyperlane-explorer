@@ -4,9 +4,9 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
 import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
+import { Tooltip } from '@hyperlane-xyz/widgets';
 
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
-import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { docLinks } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
@@ -75,7 +75,13 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Gas Payments</h3>
-          <HelpIcon text="Amounts paid to the Interchain Gas Paymaster for message delivery." />
+          <Tooltip
+            content="Amounts paid to the Interchain Gas Paymaster for message delivery."
+            id="gas-info"
+            size={16}
+            className="hover:scale-105 hover:opacity-70"
+            data-tooltip-place="top-start"
+          />
         </div>
       </div>
       <p className="text-sm font-light">

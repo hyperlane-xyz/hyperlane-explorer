@@ -1,8 +1,8 @@
 import Image from 'next/image';
 
 import { isNullish } from '@hyperlane-xyz/utils';
+import { Tooltip } from '@hyperlane-xyz/widgets';
 
-import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { docLinks } from '../../../consts/links';
 import ShieldLock from '../../../images/icons/shield-lock.svg';
@@ -22,7 +22,13 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
         <Image src={ShieldLock} width={24} height={24} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Security Modules</h3>
-          <HelpIcon text="Details about the Interchain Security Modules (ISM) that must verify this message." />
+          <Tooltip
+            id="ism-info"
+            content="Details about the Interchain Security Modules (ISM) that must verify this message."
+            size={16}
+            className="hover:scale-105 hover:opacity-70"
+            data-tooltip-place="top-start"
+          />
         </div>
       </div>
       <p className="text-sm font-light">

@@ -3,11 +3,10 @@ import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
-import { Modal, useModal } from '@hyperlane-xyz/widgets';
+import { Modal, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 
 import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { HelpIcon } from '../../../components/icons/HelpIcon';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
@@ -180,7 +179,13 @@ function TransactionCard({
         </div>
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
-          <HelpIcon text={helpText} />
+          <Tooltip
+            id="transaction-info"
+            content={helpText}
+            size={16}
+            className="hover:scale-105 hover:opacity-70"
+            data-tooltip-place="top-start"
+          />
         </div>
       </div>
       {children}
