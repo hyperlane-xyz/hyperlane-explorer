@@ -3,9 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
+import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 
-import { HelpIcon } from '../../../components/icons/HelpIcon';
-import { SelectField } from '../../../components/input/SelectField';
 import { Card } from '../../../components/layout/Card';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
@@ -73,7 +72,13 @@ export function ContentDetailsCard({
         <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">Message Details</h3>
-          <HelpIcon text="Immutable information about the message itself such as its contents." />
+          <Tooltip
+            id="message-info"
+            content="Immutable information about the message itself such as its contents."
+            size={16}
+            className="hover:scale-105 hover:opacity-70"
+            data-tooltip-place="top-start"
+          />
         </div>
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-4">

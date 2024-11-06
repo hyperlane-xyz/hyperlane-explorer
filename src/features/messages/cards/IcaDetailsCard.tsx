@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import { useMemo } from 'react';
 
-import { HelpIcon } from '../../../components/icons/HelpIcon';
+import { Tooltip } from '@hyperlane-xyz/widgets';
+
 import { Card } from '../../../components/layout/Card';
 import AccountStar from '../../../images/icons/account-star.svg';
 import { Message } from '../../../types';
@@ -31,7 +32,13 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
         </div>
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">ICA Details</h3>
-          <HelpIcon text="Extra information for messages from/to Interchain Accounts." />
+          <Tooltip
+            id="ica-info"
+            content="Extra information for messages from/to Interchain Accounts."
+            size={16}
+            className="hover:scale-105 hover:opacity-70"
+            data-tooltip-place="top-start"
+          />
         </div>
       </div>
       {decodeResult ? (
