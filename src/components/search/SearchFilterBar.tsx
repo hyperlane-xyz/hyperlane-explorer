@@ -64,14 +64,13 @@ function ChainSelector({
   onChangeValue,
 }: {
   text: string;
-  value: ChainId | null;
+  value: string | null;
   onChangeValue: (value: string | null) => void;
 }) {
   const { isOpen, open, close } = useModal();
 
   const multiProvider = useMultiProvider();
 
-  // TODO: chain selector should use domainId
   const chainRawName = value ? multiProvider.getChainName(value) : undefined;
   const chainName = chainRawName
     ? trimToLength(getChainDisplayName(multiProvider, chainRawName, true), 12)
