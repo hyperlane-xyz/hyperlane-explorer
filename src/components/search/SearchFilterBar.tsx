@@ -70,8 +70,11 @@ function ChainSelector({
   const { isOpen, open, close } = useModal();
 
   const multiProvider = useMultiProvider();
-  const chainName = value
-    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
+
+  // TODO: chain selector should use domainId
+  const chainRawName = value ? multiProvider.getChainName(value) : undefined;
+  const chainName = chainRawName
+    ? trimToLength(getChainDisplayName(multiProvider, chainRawName, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
