@@ -36,7 +36,7 @@ export enum PiQueryType {
   MsgId = 'msgId',
 }
 
-/* Pseudo-code for the fetch algo below: 
+/* Pseudo-code for the fetch algo below:
 ========================================
 searchForMessages(input):
   for chain of piChains:
@@ -53,7 +53,7 @@ searchForMessages(input):
       if tx is found:
         logs = tx.logs where topic0 is Dispatch or Process
         if logs are found return logs.map( l => l.message )
-      else tx is not found:   
+      else tx is not found:
         // input may be a message ID
         logs = dataSource.getLogs() where:
           contract is mailbox
@@ -112,10 +112,10 @@ async function fetchLogsForAddress(
   multiProvider: MultiProvider,
   registry: IRegistry,
 ): Promise<ExtendedLog[]> {
-  const { chainId } = chainMetadata;
+  const { domainId } = chainMetadata;
   const address = query.input;
-  logger.debug(`Fetching logs for address ${address} on chain ${chainId}`);
-  const mailbox = await resolveMailbox(chainMetadata, multiProvider, registry);
+  logger.debug(`Fetching logs for address ${address} on chain ${domainId}`);
+  const mailbox = await resolveMailbox(chainMetadata, registry);
   if (!mailbox) return [];
   const dispatchTopic = addressToBytes32(address);
 
@@ -127,23 +127,23 @@ async function fetchLogsForAddress(
       // [processTopic0, null, null, dispatchTopic],
     ],
     mailbox,
-    chainId,
+    domainId!,
     query,
     multiProvider,
   );
 }
 
 async function fetchLogsForTxHash(
-  { chainId }: ChainMetadata,
+  { domainId }: ChainMetadata,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {
   const txHash = query.input;
-  logger.debug(`Fetching logs for txHash ${txHash} on chain ${chainId}`);
-  const provider = multiProvider.getProvider(chainId);
+  logger.debug(`Fetching logs for txHash ${txHash} on chain ${domainId}`);
+  const provider = multiProvider.getProvider(domainId!);
   const txReceipt = await provider.getTransactionReceipt(txHash);
   if (txReceipt) {
-    logger.debug(`Tx receipt found from provider for chain ${chainId}`);
+    logger.debug(`Tx receipt found from provider for chain ${domainId}`);
     const block = await tryFetchBlockFromProvider(provider, txReceipt.blockNumber);
     return txReceipt.logs.map((l) => ({
       ...l,
@@ -152,7 +152,7 @@ async function fetchLogsForTxHash(
       to: txReceipt.to,
     }));
   } else {
-    logger.debug(`Tx hash not found from provider for chain ${chainId}`);
+    logger.debug(`Tx hash not found from provider for chain ${domainId}`);
     return [];
   }
 }
@@ -163,10 +163,10 @@ async function fetchLogsForMsgId(
   multiProvider: MultiProvider,
   registry: IRegistry,
 ): Promise<ExtendedLog[]> {
-  const { chainId } = chainMetadata;
+  const { domainId } = chainMetadata;
   const msgId = query.input;
-  logger.debug(`Fetching logs for msgId ${msgId} on chain ${chainId}`);
-  const mailbox = await resolveMailbox(chainMetadata, multiProvider, registry);
+  logger.debug(`Fetching logs for msgId ${msgId} on chain ${domainId}`);
+  const mailbox = await resolveMailbox(chainMetadata, registry);
   if (!mailbox) return [];
   const topic1 = msgId;
   const logs: ExtendedLog[] = await fetchLogsFromProvider(
@@ -175,7 +175,7 @@ async function fetchLogsForMsgId(
       // [processIdTopic0, topic1],
     ],
     mailbox,
-    chainId,
+    domainId!,
     query,
     multiProvider,
   );
@@ -194,11 +194,11 @@ async function fetchLogsForMsgId(
 async function fetchLogsFromProvider(
   topics: Array<Array<string | null>>,
   contractAddr: Address,
-  chainId: ChainId,
+  domainId: DomainId,
   query: PiMessageQuery,
   multiProvider: MultiProvider,
 ): Promise<ExtendedLog[]> {
-  const provider = multiProvider.getProvider(chainId);
+  const provider = multiProvider.getProvider(domainId);
 
   let { fromBlock, toBlock } = query;
   fromBlock ||= (await provider.getBlockNumber()) - PI_MESSAGE_LOG_CHECK_BLOCK_RANGE;
@@ -316,15 +316,15 @@ async function tryFetchIgpGasPayments(
   chainMetadata: ChainMetadata<{ interchainGasPaymaster?: Address }>,
   multiProvider: MultiProvider,
 ): Promise<Message> {
-  const { chainId, interchainGasPaymaster } = chainMetadata;
+  const { domainId, interchainGasPaymaster } = chainMetadata;
   if (!interchainGasPaymaster || !isValidAddress(interchainGasPaymaster)) {
-    logger.warn('No IGP address found for chain:', chainId);
+    logger.warn('No IGP address found for chain:', domainId);
     return message;
   }
 
   const igp = IInterchainGasPaymaster__factory.connect(
     interchainGasPaymaster,
-    multiProvider.getProvider(chainId),
+    multiProvider.getProvider(domainId!),
   );
   const filter = igp.filters.GasPayment(message.msgId);
   const matchedEvents = (await igp.queryFilter(filter)) || [];
@@ -346,11 +346,10 @@ async function tryFetchIgpGasPayments(
 
 async function resolveMailbox(
   chainMetadata: ChainMetadata<{ mailbox?: Address }>,
-  multiProvider: MultiProvider,
   registry: IRegistry,
 ) {
   if (chainMetadata.mailbox) return chainMetadata.mailbox;
-  const chainName = multiProvider.getChainName(chainMetadata.chainId);
+  const chainName = chainMetadata.name;
   const chainAddresses = await registry.getChainAddresses(chainName);
   const mailbox = chainAddresses?.mailbox;
   if (!mailbox) logger.debug(`No mailbox address found for chain ${chainName}`);

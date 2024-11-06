@@ -61,16 +61,10 @@ function parseMessageStub(
   try {
     const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
-    let destinationChainId = m.destination_chain_id || destinationMetadata?.chainId;
-    if (!destinationChainId) {
-      logger.debug(
-        `No chainId known for domain ${m.destination_domain_id}. Using domain as chainId`,
-      );
-      destinationChainId = m.destination_domain_id;
-    }
+
     const isPiMsg =
-      isPiChain(multiProvider, scrapedChains, m.origin_chain_id) ||
-      isPiChain(multiProvider, scrapedChains, destinationChainId);
+      isPiChain(multiProvider, scrapedChains, m.origin_domain_id) ||
+      isPiChain(multiProvider, scrapedChains, m.destination_domain_id);
 
     return {
       status: getMessageStatus(m),
@@ -81,7 +75,7 @@ function parseMessageStub(
       recipient: postgresByteaToAddress(m.recipient, destinationMetadata),
       originChainId: m.origin_chain_id,
       originDomainId: m.origin_domain_id,
-      destinationChainId,
+      destinationChainId: m.destination_chain_id,
       destinationDomainId: m.destination_domain_id,
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),

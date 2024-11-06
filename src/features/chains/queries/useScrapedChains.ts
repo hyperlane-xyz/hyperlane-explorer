@@ -42,8 +42,8 @@ export function useScrapedChains(multiProvider: MultiProvider) {
     const scrapedChains = objFilter(
       chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
-        !isPiChain(multiProvider, scrapedDomains, chainMetadata.chainId) &&
-        !isUnscrapedDbChain(multiProvider, chainMetadata.chainId),
+        !isPiChain(multiProvider, scrapedDomains, chainMetadata.domainId!) &&
+        !isUnscrapedDbChain(multiProvider, chainMetadata.domainId!),
     );
     return { chains: scrapedChains };
   }, [multiProvider, chainMetadata, scrapedDomains]);
@@ -52,7 +52,7 @@ export function useScrapedChains(multiProvider: MultiProvider) {
 }
 
 // TODO: Remove once all chains in the DB are scraped
-export function isUnscrapedDbChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
-  const chainName = multiProvider.tryGetChainName(chainIdOrName);
+export function isUnscrapedDbChain(multiProvider: MultiProvider, domainId: DomainId) {
+  const chainName = multiProvider.tryGetChainName(domainId);
   return chainName && unscrapedChainsInDb.includes(chainName);
 }

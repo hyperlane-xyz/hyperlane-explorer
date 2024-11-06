@@ -19,18 +19,18 @@ export async function getMailboxAddress(
 
 export function getChainDisplayName(
   multiProvider: MultiProvider,
-  chainOrDomainId?: ChainId | DomainId,
+  chainName?: string,
   shortName = false,
   fallbackToId = true,
 ): string {
-  const metadata = multiProvider.tryGetChainMetadata(chainOrDomainId || 0);
-  if (!metadata) return fallbackToId && chainOrDomainId ? chainOrDomainId.toString() : 'Unknown';
+  const metadata = multiProvider.tryGetChainMetadata(chainName || 0);
+  if (!metadata) return fallbackToId && chainName ? chainName : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return toTitleCase(displayName || metadata.displayName || metadata.name);
 }
 
-export function getChainEnvironment(multiProvider: MultiProvider, chainIdOrName: number | string) {
-  const isTestnet = multiProvider.tryGetChainMetadata(chainIdOrName)?.isTestnet;
+export function getChainEnvironment(multiProvider: MultiProvider, domainId: DomainId) {
+  const isTestnet = multiProvider.tryGetChainMetadata(domainId)?.isTestnet;
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
@@ -38,14 +38,14 @@ export function getChainEnvironment(multiProvider: MultiProvider, chainIdOrName:
 export function isPiChain(
   multiProvider: MultiProvider,
   scrapedChains: DomainsEntry[],
-  chainIdOrName: number | string,
+  domainId: DomainId,
 ) {
-  const chainName = multiProvider.tryGetChainName(chainIdOrName);
+  const chainName = multiProvider.tryGetChainName(domainId);
   // Note: .trim() because one chain name in the DB has a trailing \n char for some reason
   return !chainName || !scrapedChains.find((chain) => chain.name.trim() === chainName);
 }
 
-export function isEvmChain(multiProvider: MultiProvider, chainIdOrName: number | string) {
-  const protocol = multiProvider.tryGetProtocol(chainIdOrName);
+export function isEvmChain(multiProvider: MultiProvider, domainId: DomainId) {
+  const protocol = multiProvider.tryGetProtocol(domainId);
   return protocol === ProtocolType.Ethereum;
 }

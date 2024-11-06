@@ -22,12 +22,12 @@ export interface ExplorerQueryResponse<R> {
 
 async function queryExplorer<P>(
   multiProvider: MultiProvider,
-  chainId: ChainId,
+  domainId: DomainId,
   params: URLSearchParams,
   useKey = false,
 ) {
-  const baseUrl = multiProvider.tryGetExplorerApiUrl(chainId);
-  if (!baseUrl) throw new Error(`No valid URL found for explorer for chain ${chainId}`);
+  const baseUrl = multiProvider.tryGetExplorerApiUrl(domainId);
+  if (!baseUrl) throw new Error(`No valid URL found for explorer for chain ${domainId}`);
 
   const url = new URL(baseUrl);
   for (const [key, val] of params.entries()) {
@@ -35,8 +35,8 @@ async function queryExplorer<P>(
   }
 
   if (useKey) {
-    const apiKey = config.explorerApiKeys[chainId];
-    if (!apiKey) throw new Error(`No API key for explorer for chain ${chainId}`);
+    const apiKey = config.explorerApiKeys[domainId];
+    if (!apiKey) throw new Error(`No API key for explorer for chain ${domainId}`);
     url.searchParams.set('apikey', apiKey);
   }
 
@@ -85,13 +85,13 @@ export interface ExplorerLogEntry {
 
 export async function queryExplorerForLogs(
   multiProvider: MultiProvider,
-  chainId: ChainId,
+  domainId: DomainId,
   params: string,
   useKey = false,
 ): Promise<ExplorerLogEntry[]> {
   const logs = await queryExplorer<ExplorerLogEntry[]>(
     multiProvider,
-    chainId,
+    domainId,
     new URLSearchParams(params),
     useKey,
   );
@@ -127,7 +127,7 @@ export function toProviderLog(log: ExplorerLogEntry): ExtendedLog {
 
 export async function queryExplorerForTx(
   multiProvider: MultiProvider,
-  chainId: ChainId,
+  domainId: DomainId,
   txHash: string,
   useKey = false,
 ) {
@@ -138,7 +138,7 @@ export async function queryExplorerForTx(
   });
   const tx = await queryExplorer<providers.TransactionResponse>(
     multiProvider,
-    chainId,
+    domainId,
     params,
     useKey,
   );
@@ -152,7 +152,7 @@ export async function queryExplorerForTx(
 
 export async function queryExplorerForTxReceipt(
   multiProvider: MultiProvider,
-  chainId: ChainId,
+  domainId: DomainId,
   txHash: string,
   useKey = false,
 ) {
@@ -163,7 +163,7 @@ export async function queryExplorerForTxReceipt(
   });
   const tx = await queryExplorer<providers.TransactionReceipt>(
     multiProvider,
-    chainId,
+    domainId,
     params,
     useKey,
   );
@@ -177,7 +177,7 @@ export async function queryExplorerForTxReceipt(
 
 export async function queryExplorerForBlock(
   multiProvider: MultiProvider,
-  chainId: ChainId,
+  domainId: DomainId,
   blockNumber?: number | string,
   useKey = false,
 ) {
@@ -187,7 +187,7 @@ export async function queryExplorerForBlock(
     tag: blockNumber?.toString() || 'latest',
     boolean: 'false',
   });
-  const block = await queryExplorer<providers.Block>(multiProvider, chainId, params, useKey);
+  const block = await queryExplorer<providers.Block>(multiProvider, domainId, params, useKey);
   if (!block || BigNumber.from(block.number).lte(0)) {
     const msg = 'Invalid block result';
     logger.error(msg, JSON.stringify(block), params);

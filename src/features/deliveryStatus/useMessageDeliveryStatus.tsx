@@ -31,12 +31,11 @@ export function useMessageDeliveryStatus({
         return { message };
       }
 
-      const { id, originChainId, originDomainId, destinationChainId, destinationDomainId } =
-        message;
+      const { id, originDomainId, destinationDomainId } = message;
 
       if (
-        !checkChain(multiProvider, originChainId, originDomainId) ||
-        !checkChain(multiProvider, destinationChainId, destinationDomainId)
+        !checkChain(multiProvider, originDomainId) ||
+        !checkChain(multiProvider, destinationDomainId)
       ) {
         return { message };
       }
@@ -93,13 +92,13 @@ export function useMessageDeliveryStatus({
   };
 }
 
-function checkChain(multiProvider: MultiProvider, chainId: ChainId, domainId: number) {
-  if (!multiProvider.hasChain(chainId)) {
-    toast.error(<MissingChainConfigToast chainId={chainId} domainId={domainId} />);
+function checkChain(multiProvider: MultiProvider, domainId: number) {
+  if (!multiProvider.hasChain(domainId)) {
+    toast.error(<MissingChainConfigToast domainId={domainId} />);
     return false;
   }
-  if (!isEvmChain(multiProvider, chainId)) {
-    logger.debug('Skipping delivery status check for non-EVM chain:', chainId);
+  if (!isEvmChain(multiProvider, domainId)) {
+    logger.debug('Skipping delivery status check for non-EVM chain:', domainId);
     return false;
   }
   return true;

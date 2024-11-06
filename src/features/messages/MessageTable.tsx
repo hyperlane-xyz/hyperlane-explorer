@@ -53,7 +53,7 @@ export function MessageTable({
 }
 
 export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: MultiProvider }) {
-  const { msgId, status, sender, recipient, originChainId, destinationChainId, origin } = message;
+  const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
   let statusIcon = undefined;
   let statusTitle = '';
@@ -67,15 +67,20 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
 
+  const originChainName = mp.getChainName(originDomainId);
+  const destinationChainName = mp.getChainName(destinationDomainId);
+
   return (
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
-        <ChainLogo chainId={originChainId} size={20} />
-        <div className={styles.chainName}>{getChainDisplayName(mp, originChainId, true)}</div>
+        <ChainLogo chainName={originChainName} size={20} />
+        <div className={styles.chainName}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 ">
-        <ChainLogo chainId={destinationChainId} size={20} />
-        <div className={styles.chainName}>{getChainDisplayName(mp, destinationChainId, true)}</div>
+        <ChainLogo chainName={destinationChainName} size={20} />
+        <div className={styles.chainName}>
+          {getChainDisplayName(mp, destinationChainName, true)}
+        </div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(sender) || 'Invalid Address'}

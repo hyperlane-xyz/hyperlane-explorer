@@ -73,17 +73,8 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     enabled: isMessageFound,
   });
 
-  const {
-    msgId,
-    status,
-    originChainId,
-    destinationChainId,
-    originDomainId,
-    destinationDomainId,
-    origin,
-    destination,
-    isPiMsg,
-  } = message;
+  const { msgId, status, originDomainId, destinationDomainId, origin, destination, isPiMsg } =
+    message;
 
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
@@ -91,11 +82,14 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   const showTimeline =
     !isPiMsg &&
-    isEvmChain(multiProvider, originChainId) &&
-    isEvmChain(multiProvider, destinationChainId);
+    isEvmChain(multiProvider, originDomainId) &&
+    isEvmChain(multiProvider, destinationDomainId);
 
   // Banner color setter
   useDynamicBannerColor(isFetching, status, isMessageFound, isError || isPiError);
+
+  const originChainName = multiProvider.getChainName(originDomainId);
+  const destinationChainName = multiProvider.getChainName(destinationDomainId);
 
   return (
     <>
@@ -104,7 +98,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           isIcaMsg ? 'ICA ' : ''
         } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
           multiProvider,
-          destinationChainId,
+          destinationChainName,
         )}`}</h2>
         <StatusHeader
           messageStatus={status}
@@ -115,13 +109,13 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
       </Card>
       <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
         <OriginTransactionCard
-          chainId={originChainId}
+          chainName={originChainName}
           domainId={originDomainId}
           transaction={origin}
           blur={blur}
         />
         <DestinationTransactionCard
-          chainId={destinationChainId}
+          chainName={destinationChainName}
           domainId={destinationDomainId}
           status={status}
           transaction={destination}

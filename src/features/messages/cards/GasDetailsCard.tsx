@@ -27,7 +27,7 @@ interface Props {
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const multiProvider = useMultiProvider();
   const unitOptions = useMemo(() => {
-    const originMetadata = multiProvider.tryGetChainMetadata(message.originChainId);
+    const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     return [
       { value: 18, display: toTitleCase(nativeCurrencyName) },

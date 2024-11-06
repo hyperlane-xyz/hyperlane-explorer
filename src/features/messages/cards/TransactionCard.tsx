@@ -21,20 +21,20 @@ import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
-  chainId,
+  chainName,
   domainId,
   transaction,
   blur,
 }: {
-  chainId: ChainId;
+  chainName: string;
   domainId: DomainId;
   transaction: MessageTx;
   blur: boolean;
 }) {
   return (
-    <TransactionCard chainId={chainId} title="Origin Transaction" helpText={helpText.origin}>
+    <TransactionCard chainName={chainName} title="Origin Transaction" helpText={helpText.origin}>
       <TransactionDetails
-        chainId={chainId}
+        chainName={chainName}
         domainId={domainId}
         transaction={transaction}
         blur={blur}
@@ -44,7 +44,7 @@ export function OriginTransactionCard({
 }
 
 export function DestinationTransactionCard({
-  chainId,
+  chainName,
   domainId,
   status,
   transaction,
@@ -54,7 +54,7 @@ export function DestinationTransactionCard({
   isPiMsg,
   blur,
 }: {
-  chainId: ChainId;
+  chainName: string;
   domainId: DomainId;
   status: MessageStatus;
   transaction?: MessageTx;
@@ -65,9 +65,9 @@ export function DestinationTransactionCard({
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const hasChainConfig = !!multiProvider.tryGetChainMetadata(chainId);
+  const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
 
-  const isDestinationEvmChain = isEvmChain(multiProvider, chainId);
+  const isDestinationEvmChain = isEvmChain(multiProvider, domainId);
 
   const { isOpen, open, close } = useModal();
 
@@ -75,9 +75,9 @@ export function DestinationTransactionCard({
   if (transaction) {
     content = (
       <TransactionDetails
-        transaction={transaction}
-        chainId={chainId}
+        chainName={chainName}
         domainId={domainId}
+        transaction={transaction}
         duration={duration}
         blur={blur}
       />
@@ -156,7 +156,7 @@ export function DestinationTransactionCard({
 
   return (
     <TransactionCard
-      chainId={chainId}
+      chainName={chainName}
       title="Destination Transaction"
       helpText={helpText.destination}
     >
@@ -166,16 +166,16 @@ export function DestinationTransactionCard({
 }
 
 function TransactionCard({
-  chainId,
+  chainName,
   title,
   helpText,
   children,
-}: PropsWithChildren<{ chainId: ChainId; title: string; helpText: string }>) {
+}: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
   return (
     <Card className="flex min-w-fit flex-1 flex-col space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -left-0.5 -top-px">
-          <ChainLogo chainId={chainId} />
+          <ChainLogo chainName={chainName} />
         </div>
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
@@ -194,13 +194,13 @@ function TransactionCard({
 }
 
 function TransactionDetails({
-  chainId,
+  chainName,
   domainId,
   transaction,
   duration,
   blur,
 }: {
-  chainId: ChainId;
+  chainName: string;
   domainId: DomainId;
   transaction: MessageTx;
   duration?: string;
@@ -214,13 +214,13 @@ function TransactionDetails({
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
-      ? multiProvider.tryGetExplorerTxUrl(chainId, { hash: formattedHash })
+      ? multiProvider.tryGetExplorerTxUrl(chainName, { hash: formattedHash })
       : null;
 
   return (
     <>
       <ChainDescriptionRow
-        chainId={chainId}
+        chainName={chainName}
         domainId={domainId}
         multiProvider={multiProvider}
         blur={blur}
@@ -337,20 +337,23 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
 }
 
 function ChainDescriptionRow({
-  chainId,
+  chainName,
   domainId,
   multiProvider,
   blur,
 }: {
-  chainId: ChainId;
+  chainName: string;
   domainId: DomainId;
   multiProvider: MultiProvider;
   blur: boolean;
 }) {
-  const idString = chainId && chainId !== domainId ? `${chainId} / ${domainId}` : `${domainId}`;
+  const idString =
+    chainName && chainName !== multiProvider.tryGetChainName(domainId)
+      ? `${chainName} / ${domainId}`
+      : `${domainId}`;
   const chainDescription = `${getChainDisplayName(
     multiProvider,
-    domainId,
+    chainName,
     false,
     false,
   )} (${idString})`;

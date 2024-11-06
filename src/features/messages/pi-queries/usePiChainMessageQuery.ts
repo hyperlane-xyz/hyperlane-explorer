@@ -54,8 +54,9 @@ export function usePiChainMessageSearchQuery({
       const allChains = Object.values(multiProvider.metadata);
       const piChains = allChains.filter(
         (c) =>
-          isEvmChain(multiProvider, c.chainId) &&
-          isPiChain(multiProvider, scrapedChains, c.chainId),
+          c.domainId !== undefined &&
+          isEvmChain(multiProvider, c.domainId) &&
+          isPiChain(multiProvider, scrapedChains, c.domainId),
       );
       try {
         const results = await Promise.allSettled(
