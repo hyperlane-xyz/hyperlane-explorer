@@ -127,7 +127,7 @@ async function fetchLogsForAddress(
       // [processTopic0, null, null, dispatchTopic],
     ],
     mailbox,
-    domainId!,
+    domainId,
     query,
     multiProvider,
   );
@@ -140,7 +140,7 @@ async function fetchLogsForTxHash(
 ): Promise<ExtendedLog[]> {
   const txHash = query.input;
   logger.debug(`Fetching logs for txHash ${txHash} on chain ${name} (${domainId})`);
-  const provider = multiProvider.getProvider(domainId!);
+  const provider = multiProvider.getProvider(domainId);
   const txReceipt = await provider.getTransactionReceipt(txHash);
   if (txReceipt) {
     logger.debug(`Tx receipt found from provider for chain ${name} (${domainId})`);
@@ -175,7 +175,7 @@ async function fetchLogsForMsgId(
       // [processIdTopic0, topic1],
     ],
     mailbox,
-    domainId!,
+    domainId,
     query,
     multiProvider,
   );
@@ -324,7 +324,7 @@ async function tryFetchIgpGasPayments(
 
   const igp = IInterchainGasPaymaster__factory.connect(
     interchainGasPaymaster,
-    multiProvider.getProvider(domainId!),
+    multiProvider.getProvider(domainId),
   );
   const filter = igp.filters.GasPayment(message.msgId);
   const matchedEvents = (await igp.queryFilter(filter)) || [];

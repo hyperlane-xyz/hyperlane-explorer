@@ -42,8 +42,8 @@ export function useScrapedChains(multiProvider: MultiProvider) {
     const scrapedChains = objFilter(
       chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
-        !isPiChain(multiProvider, scrapedDomains, chainMetadata.domainId!) &&
-        !isUnscrapedDbChain(multiProvider, chainMetadata.domainId!),
+        !isPiChain(multiProvider, scrapedDomains, chainMetadata.domainId) &&
+        !isUnscrapedDbChain(multiProvider, chainMetadata.domainId),
     );
     return { chains: scrapedChains };
   }, [multiProvider, chainMetadata, scrapedDomains]);
