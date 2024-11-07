@@ -88,8 +88,8 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   // Banner color setter
   useDynamicBannerColor(isFetching, status, isMessageFound, isError || isPiError);
 
-  const originChainName = multiProvider.getChainName(originDomainId);
-  const destinationChainName = multiProvider.getChainName(destinationDomainId);
+  const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
+  const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
 
   return (
     <>

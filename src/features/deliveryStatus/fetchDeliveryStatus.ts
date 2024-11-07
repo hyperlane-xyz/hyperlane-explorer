@@ -25,7 +25,11 @@ export async function fetchDeliveryStatus(
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
-  const destName = multiProvider.getChainName(message.destinationDomainId);
+  const destName = multiProvider.tryGetChainName(message.destinationDomainId);
+  if (!destName)
+    throw new Error(
+      `Cannot check delivery status, no chain name provided for domain ${message.destinationDomainId}`,
+    );
   const destMailboxAddr = await getMailboxAddress(destName, overrideChainMetadata, registry);
   if (!destMailboxAddr)
     throw new Error(

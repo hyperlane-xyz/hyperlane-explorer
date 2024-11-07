@@ -67,8 +67,8 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
 
-  const originChainName = mp.getChainName(originDomainId);
-  const destinationChainName = mp.getChainName(destinationDomainId);
+  const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
+  const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
 
   return (
     <>
