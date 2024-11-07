@@ -71,9 +71,9 @@ function ChainSelector({
 
   const multiProvider = useMultiProvider();
 
-  const chainRawName = value ? multiProvider.getChainName(value) : undefined;
-  const chainName = chainRawName
-    ? trimToLength(getChainDisplayName(multiProvider, chainRawName, true), 12)
+  const chainName = value ? multiProvider.getChainName(value) : undefined;
+  const chainDisplayName = chainName
+    ? trimToLength(getChainDisplayName(multiProvider, chainName, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
@@ -95,7 +95,7 @@ function ChainSelector({
         )}
         onClick={open}
       >
-        <span>{chainName || text} </span>
+        <span>{chainDisplayName || text} </span>
         {!value && (
           <ChevronIcon
             direction="s"
