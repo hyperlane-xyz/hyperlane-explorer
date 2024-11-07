@@ -64,14 +64,16 @@ function ChainSelector({
   onChangeValue,
 }: {
   text: string;
-  value: ChainId | null;
+  value: string | null;
   onChangeValue: (value: string | null) => void;
 }) {
   const { isOpen, open, close } = useModal();
 
   const multiProvider = useMultiProvider();
-  const chainName = value
-    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
+
+  const chainName = value ? multiProvider.getChainName(value) : undefined;
+  const chainDisplayName = chainName
+    ? trimToLength(getChainDisplayName(multiProvider, chainName, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
@@ -93,7 +95,7 @@ function ChainSelector({
         )}
         onClick={open}
       >
-        <span>{chainName || text} </span>
+        <span>{chainDisplayName || text} </span>
         {!value && (
           <ChevronIcon
             direction="s"

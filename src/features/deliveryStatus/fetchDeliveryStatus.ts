@@ -25,7 +25,7 @@ export async function fetchDeliveryStatus(
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   message: Message,
 ): Promise<MessageDeliveryStatusResponse> {
-  const destName = multiProvider.getChainName(message.destinationChainId);
+  const destName = multiProvider.getChainName(message.destinationDomainId);
   const destMailboxAddr = await getMailboxAddress(destName, overrideChainMetadata, registry);
   if (!destMailboxAddr)
     throw new Error(
@@ -41,7 +41,7 @@ export async function fetchDeliveryStatus(
   if (isDelivered) {
     const txDetails = await fetchTransactionDetails(
       multiProvider,
-      message.destinationChainId,
+      message.destinationDomainId,
       transactionHash,
     );
     // If a delivery (aka process) tx is found, mark as success
@@ -85,8 +85,8 @@ async function checkIsMessageDelivered(
   message: Message,
   mailboxAddr: Address,
 ) {
-  const { msgId, destinationChainId } = message;
-  const provider = multiProvider.getProvider(destinationChainId);
+  const { msgId, destinationDomainId } = message;
+  const provider = multiProvider.getProvider(destinationDomainId);
   const mailbox = IMailbox__factory.connect(mailboxAddr, provider);
 
   // Try finding logs first as they have more info
@@ -114,9 +114,13 @@ async function checkIsMessageDelivered(
   return { isDelivered };
 }
 
-function fetchTransactionDetails(multiProvider: MultiProvider, chainId: ChainId, txHash?: string) {
+function fetchTransactionDetails(
+  multiProvider: MultiProvider,
+  domainId: DomainId,
+  txHash?: string,
+) {
   if (!txHash) return null;
   logger.debug(`Searching for transaction details for ${txHash}`);
-  const provider = multiProvider.getProvider(chainId);
+  const provider = multiProvider.getProvider(domainId);
   return provider.getTransaction(txHash);
 }
