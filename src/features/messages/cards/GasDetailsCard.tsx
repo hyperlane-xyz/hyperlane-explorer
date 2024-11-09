@@ -26,12 +26,10 @@ interface Props {
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const multiProvider = useMultiProvider();
-
   const unitOptions = useMemo(() => {
     const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
-
     return [
       { value: nativeDecimals, display: toTitleCase(nativeCurrencyName) },
       { value: 9, display: 'Gwei' },
@@ -187,7 +185,6 @@ function computeAvgGasPrice(
     const gasBN = new BigNumber(gasAmount);
     const paymentBN = new BigNumber(payment);
     if (gasBN.isZero() || paymentBN.isZero()) return null;
-
     const wei = paymentBN.div(gasBN).toFixed(0);
     const formatted = utils.formatUnits(wei, decimals).toString();
     return { wei, formatted };
