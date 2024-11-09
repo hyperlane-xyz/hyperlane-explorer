@@ -179,7 +179,7 @@ function computeAvgGasPrice(
     const gasBN = new BigNumber(gasAmount);
     const paymentBN = new BigNumber(payment);
     if (gasBN.isZero() || paymentBN.isZero()) return null;
-    const wei = paymentBN.div(gasAmount).toFixed(0);
+    const wei = paymentBN.div(gasBN).toFixed(0);
     const formatted = utils.formatUnits(wei, decimals).toString();
     return { wei, formatted };
   } catch (error) {
