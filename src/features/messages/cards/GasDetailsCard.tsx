@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
@@ -26,17 +26,25 @@ interface Props {
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const multiProvider = useMultiProvider();
+
   const unitOptions = useMemo(() => {
     const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
+    const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
+
     return [
-      { value: 18, display: toTitleCase(nativeCurrencyName) },
+      { value: nativeDecimals, display: toTitleCase(nativeCurrencyName) },
       { value: 9, display: 'Gwei' },
       { value: 0, display: 'Wei' },
     ];
   }, [message, multiProvider]);
 
-  const [decimals, setDecimals] = useState(unitOptions[0].value);
+  const [decimals, setDecimals] = useState<number>(unitOptions[0].value);
+
+  // Update `decimals` after the component mounts to ensure it matches the initial `unitOptions` value
+  useEffect(() => {
+    setDecimals(unitOptions[0].value);
+  }, [unitOptions]);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
@@ -179,6 +187,7 @@ function computeAvgGasPrice(
     const gasBN = new BigNumber(gasAmount);
     const paymentBN = new BigNumber(payment);
     if (gasBN.isZero() || paymentBN.isZero()) return null;
+
     const wei = paymentBN.div(gasBN).toFixed(0);
     const formatted = utils.formatUnits(wei, decimals).toString();
     return { wei, formatted };
