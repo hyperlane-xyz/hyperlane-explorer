@@ -5,7 +5,7 @@ import { strip0x } from '@hyperlane-xyz/utils';
 const alphanumericRgex = /[^a-zA-Z0-9]/gi;
 export function sanitizeString(str: string) {
   if (!str || typeof str !== 'string') return '';
-  return str.replaceAll(alphanumericRgex, '').toLowerCase();
+  return str.replaceAll(alphanumericRgex, '');
 }
 
 export function tryUtf8DecodeBytes(value: string, fatal = true) {
