@@ -1,18 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
-import {
-  isAddress,
-  isValidTransactionHashCosmos,
-  isValidTransactionHashEvm,
-} from '@hyperlane-xyz/utils';
-
 import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useInterval } from '../../../utils/useInterval';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
+import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
 import { parseMessageQueryResult, parseMessageStubResult } from './parse';
 
@@ -21,13 +16,9 @@ const MSG_AUTO_REFRESH_DELAY = 10_000; // 10s
 const LATEST_QUERY_LIMIT = 100;
 const SEARCH_QUERY_LIMIT = 50;
 
-export function isValidSearchQuery(input: string, allowAddress?: boolean) {
+export function isValidSearchQuery(input: string) {
   if (!input) return false;
-  return !!(
-    isValidTransactionHashEvm(input) ||
-    isValidTransactionHashCosmos(input) ||
-    (allowAddress && isAddress(input))
-  );
+  return !!searchValueToPostgresBytea(input);
 }
 
 export function useMessageSearchQuery(
@@ -40,7 +31,7 @@ export function useMessageSearchQuery(
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
 
   const hasInput = !!sanitizedInput;
-  const isValidInput = hasInput ? isValidSearchQuery(sanitizedInput, true) : true;
+  const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(
