@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
@@ -37,12 +37,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     ];
   }, [message, multiProvider]);
 
-  const [decimals, setDecimals] = useState<number>(unitOptions[0].value);
-
-  // Update `decimals` after the component mounts to ensure it matches the initial `unitOptions` value
-  useEffect(() => {
-    setDecimals(unitOptions[0].value);
-  }, [unitOptions]);
+  const [decimals, setDecimals] = useState<number>(9);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
