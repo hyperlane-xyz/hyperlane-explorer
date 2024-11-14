@@ -1,10 +1,16 @@
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import {
   addressToByteHexString,
+  base58ToBuffer,
+  bufferToBase58,
   bytesToProtocolAddress,
   ensure0x,
   isAddress,
   isAddressEvm,
+  isValidTransactionHashCosmos,
+  isValidTransactionHashEvm,
+  isValidTransactionHashSealevel,
+  ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
 
@@ -34,7 +40,33 @@ export function postgresByteaToAddress(
   return bytesToProtocolAddress(addressBytes, chainMetadata.protocol, chainMetadata.bech32Prefix);
 }
 
-export function searchValueToPostgresBytea(input: string): string {
-  if (isAddress(input)) return addressToPostgresBytea(input);
-  else return stringToPostgresBytea(input);
+export function postgresByteaToTxHash(
+  byteString: string,
+  chainMetadata: ChainMetadata | null | undefined,
+): string {
+  const hexString = postgresByteaToString(byteString);
+  // Return hex string for protocols other than Sealevel
+  if (chainMetadata?.protocol !== ProtocolType.Sealevel) return hexString;
+  const bytes = Buffer.from(strip0x(hexString), 'hex');
+  return bufferToBase58(bytes);
+}
+
+export function searchValueToPostgresBytea(input: string): string | undefined {
+  if (!input) return undefined;
+  try {
+    if (isAddress(input)) {
+      return addressToPostgresBytea(input);
+    }
+    if (isValidTransactionHashEvm(input) || isValidTransactionHashCosmos(input)) {
+      return stringToPostgresBytea(input);
+    }
+    if (isValidTransactionHashSealevel(input)) {
+      const bytes = base58ToBuffer(input);
+      return stringToPostgresBytea(bytes.toString('hex'));
+    }
+    return undefined;
+  } catch (error) {
+    // Search input couldn't be decoded and recoded properly
+    return undefined;
+  }
 }

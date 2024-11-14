@@ -46,7 +46,7 @@ export function usePiChainMessageSearchQuery({
     ],
     queryFn: async () => {
       const hasInput = !!sanitizedInput;
-      const isValidInput = isValidSearchQuery(sanitizedInput, true);
+      const isValidInput = isValidSearchQuery(sanitizedInput);
       if (pause || !multiProvider || !hasInput || !isValidInput) return [];
       logger.debug('Starting PI Chain message search for:', sanitizedInput);
       // TODO handle time-based filters here

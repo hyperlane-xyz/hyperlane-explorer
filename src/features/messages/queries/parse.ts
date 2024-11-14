@@ -6,7 +6,7 @@ import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 
-import { postgresByteaToAddress, postgresByteaToString } from './encoding';
+import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
 import {
   MessageEntry,
   MessageStubEntry,
@@ -79,13 +79,13 @@ function parseMessageStub(
       destinationDomainId: m.destination_domain_id,
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),
-        hash: postgresByteaToString(m.origin_tx_hash),
+        hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
       },
       destination: m.is_delivered
         ? {
             timestamp: parseTimestampString(m.delivery_occurred_at!),
-            hash: postgresByteaToString(m.destination_tx_hash!),
+            hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
             from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
           }
         : undefined,

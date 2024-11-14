@@ -71,14 +71,12 @@ export function buildMessageSearchQuery(
   limit: number,
   useStub = false,
 ) {
-  const hasInput = !!searchInput;
-
   const originChains = originFilter ? originFilter.split(',') : undefined;
   const destinationChains = destFilter ? destFilter.split(',') : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
-    search: hasInput ? searchValueToPostgresBytea(searchInput) : undefined,
+    search: searchValueToPostgresBytea(searchInput),
     originChains,
     destinationChains,
     startTime,
