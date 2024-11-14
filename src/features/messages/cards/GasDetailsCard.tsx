@@ -37,7 +37,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     ];
   }, [message, multiProvider]);
 
-  const [decimals, setDecimals] = useState<number>(9);
+  const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
