@@ -35,9 +35,6 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
           <Tooltip
             id="ica-info"
             content="Extra information for messages from/to Interchain Accounts."
-            size={16}
-            className="hover:scale-105 hover:opacity-70"
-            data-tooltip-place="top-start"
           />
         </div>
       </div>
