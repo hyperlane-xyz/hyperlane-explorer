@@ -1,4 +1,5 @@
-// TODO de-dupe file with widgets lib
+// TODO de-dupe this file with widgets lib's utils/explorers.ts
+// The widgets lib doesn't export those yet, need to fix that first.
 import { BigNumber, providers } from 'ethers';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
