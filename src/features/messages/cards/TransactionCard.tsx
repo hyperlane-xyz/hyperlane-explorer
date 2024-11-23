@@ -137,7 +137,9 @@ export function DestinationTransactionCard({
               Please ensure a relayer is running for this chain.
             </div>
           )}
-          <SpinnerIcon className="my-4 scale-75" />
+          <div className="mt-6 flex items-center justify-center">
+            <SpinnerIcon width={40} height={40} />
+          </div>
           <CallDataModal debugResult={debugResult} />
         </div>
       </DeliveryStatus>

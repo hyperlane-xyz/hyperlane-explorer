@@ -17,7 +17,7 @@ export function CodeBlock({ value }: { value: string }) {
         copyValue={value}
         width={13}
         height={13}
-        className="absolute right-2 top-2 opacity-70"
+        className="absolute right-2 top-2 opacity-50"
       />
     </div>
   );
