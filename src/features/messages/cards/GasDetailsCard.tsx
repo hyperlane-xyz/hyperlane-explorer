@@ -3,7 +3,7 @@ import { utils } from 'ethers';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
-import { fromWei, toTitleCase } from '@hyperlane-xyz/utils';
+import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
@@ -12,7 +12,6 @@ import { docLinks } from '../../../consts/links';
 import FuelPump from '../../../images/icons/fuel-pump.svg';
 import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
-import { BigNumberMax } from '../../../utils/big-number';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
 
@@ -61,8 +60,12 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       );
       let numPayments = paymentsWithAddr.length;
 
-      totalGasAmount = BigNumberMax(totalGasAmount, new BigNumber(message.totalGasAmount || 0));
-      totalPaymentWei = BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0));
+      totalGasAmount = new BigNumber(
+        BigNumberMax(totalGasAmount, new BigNumber(message.totalGasAmount || 0)),
+      );
+      totalPaymentWei = new BigNumber(
+        BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0)),
+      );
       numPayments = Math.max(numPayments, message.numPayments || 0);
 
       const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();

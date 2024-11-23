@@ -1,4 +1,4 @@
-import { CopyButton } from '../../../components/buttons/CopyButton';
+import { CopyButton } from '@hyperlane-xyz/widgets';
 
 export function LabelAndCodeBlock({ label, value }: { label: string; value: string }) {
   return (
@@ -17,7 +17,7 @@ export function CodeBlock({ value }: { value: string }) {
         copyValue={value}
         width={13}
         height={13}
-        classes="absolute top-2 right-2 opacity-70"
+        className="absolute right-2 top-2 opacity-50"
       />
     </div>
   );

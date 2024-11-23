@@ -1,14 +1,15 @@
+// TODO de-dupe this file with widgets lib's utils/explorers.ts
+// The widgets lib doesn't export those yet, need to fix that first.
 import { BigNumber, providers } from 'ethers';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { sleep } from '@hyperlane-xyz/utils';
+import { fetchWithTimeout, sleep } from '@hyperlane-xyz/utils';
 
 import { config } from '../consts/config';
 import type { ExtendedLog } from '../types';
 
 import { logger } from './logger';
 import { toDecimalNumber, tryToDecimalNumber } from './number';
-import { fetchWithTimeout } from './timeout';
 
 const BLOCK_EXPLORER_RATE_LIMIT = 6000; // once every 6 seconds
 // Used for crude rate-limiting of explorer queries without API keys
@@ -53,7 +54,7 @@ async function executeQuery<P>(url: URL) {
       if (waitTime > 0) await sleep(waitTime);
     }
 
-    const response = await fetchWithTimeout(url);
+    const response = await fetchWithTimeout(url.toString());
     if (!response.ok) {
       throw new Error(`Fetch response not okay: ${response.status}`);
     }

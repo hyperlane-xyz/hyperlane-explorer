@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Fade } from '@hyperlane-xyz/widgets';
+import { Fade, useDebounce } from '@hyperlane-xyz/widgets';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -12,7 +12,6 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useReadyMultiProvider } from '../../store';
-import useDebounce from '../../utils/debounce';
 import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
 

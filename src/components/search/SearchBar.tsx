@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import { ChangeEvent } from 'react';
 
-import { IconButton, XIcon } from '@hyperlane-xyz/widgets';
+import { IconButton, SpinnerIcon, XIcon } from '@hyperlane-xyz/widgets';
 
 import SearchIcon from '../../images/icons/search.svg';
-import { Spinner } from '../animations/Spinner';
+import { Color } from '../../styles/Color';
 
 interface Props {
   value: string;
@@ -29,11 +29,7 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
         className="h-10 flex-1 rounded-full p-1 font-light placeholder:text-gray-600 focus:outline-none sm:h-12 sm:px-4 md:px-5"
       />
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-500 sm:h-12 sm:w-12">
-        {isFetching && (
-          <div className="scale-[30%] sm:scale-[35%]">
-            <Spinner classes="invert" />
-          </div>
-        )}
+        {isFetching && <SpinnerIcon color={Color.white} width={26} height={26} />}
         {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
         {!isFetching && value && (
           <IconButton title="Clear search" onClick={() => onChange(null)}>

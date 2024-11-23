@@ -1,12 +1,11 @@
 import Image from 'next/image';
 
-import { Fade } from '@hyperlane-xyz/widgets';
+import { Fade, SpinnerIcon } from '@hyperlane-xyz/widgets';
 
 import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import SearchOffIcon from '../../images/icons/search-off.svg';
 import ShrugIcon from '../../images/icons/shrug.svg';
-import { Spinner } from '../animations/Spinner';
 
 export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetching?: boolean }) {
   return (
@@ -15,8 +14,8 @@ export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetc
       <Fade show={show}>
         <div className="my-10 flex justify-center">
           <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
-            <div className="flex scale-90 items-center justify-center">
-              <Spinner />
+            <div className="flex items-center justify-center">
+              <SpinnerIcon width={40} height={40} />
             </div>
             <div className="mt-4 text-center font-light leading-loose text-gray-700">
               {isPiFetching ? 'Searching override chains for messages' : 'Searching for messages'}

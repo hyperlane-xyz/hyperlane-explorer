@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 
-import { Spinner } from '../../components/animations/Spinner';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
@@ -14,6 +13,7 @@ import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 
+import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
@@ -164,10 +164,8 @@ function StatusHeader({
   let icon: React.ReactNode;
   if (isFetching) {
     icon = (
-      <div className="flex h-7 w-7 items-center justify-center overflow-hidden">
-        <div className="scale-[35%]">
-          <Spinner />
-        </div>
+      <div className="flex items-center justify-center">
+        <SpinnerIcon width={20} height={20} />
       </div>
     );
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {

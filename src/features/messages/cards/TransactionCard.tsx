@@ -3,9 +3,8 @@ import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
-import { Modal, Tooltip, useModal } from '@hyperlane-xyz/widgets';
+import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 
-import { Spinner } from '../../../components/animations/Spinner';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
@@ -86,7 +85,9 @@ export function DestinationTransactionCard({
     content = (
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
-        <Spinner classes="mt-4 scale-75" />
+        <div className="mt-6 flex items-center justify-center">
+          <SpinnerIcon width={40} height={40} />
+        </div>
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Failing) {
@@ -136,7 +137,9 @@ export function DestinationTransactionCard({
               Please ensure a relayer is running for this chain.
             </div>
           )}
-          <Spinner classes="my-4 scale-75" />
+          <div className="mt-6 flex items-center justify-center">
+            <SpinnerIcon width={40} height={40} />
+          </div>
           <CallDataModal debugResult={debugResult} />
         </div>
       </DeliveryStatus>
