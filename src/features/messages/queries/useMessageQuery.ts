@@ -3,9 +3,9 @@ import { useQuery } from 'urql';
 
 import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
-import { useInterval } from '../../../utils/useInterval';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
+import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
