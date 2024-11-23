@@ -179,13 +179,7 @@ function TransactionCard({
         </div>
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
-          <Tooltip
-            id="transaction-info"
-            content={helpText}
-            size={16}
-            className="hover:scale-105 hover:opacity-70"
-            data-tooltip-place="top-start"
-          />
+          <Tooltip id="transaction-info" content={helpText} />
         </div>
       </div>
       {children}

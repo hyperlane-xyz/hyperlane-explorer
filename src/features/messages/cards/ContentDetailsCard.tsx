@@ -75,9 +75,6 @@ export function ContentDetailsCard({
           <Tooltip
             id="message-info"
             content="Immutable information about the message itself such as its contents."
-            size={16}
-            className="hover:scale-105 hover:opacity-70"
-            data-tooltip-place="top-start"
           />
         </div>
       </div>

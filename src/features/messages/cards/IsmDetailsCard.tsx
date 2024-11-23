@@ -25,9 +25,6 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
           <Tooltip
             id="ism-info"
             content="Details about the Interchain Security Modules (ISM) that must verify this message."
-            size={16}
-            className="hover:scale-105 hover:opacity-70"
-            data-tooltip-place="top-start"
           />
         </div>
       </div>
