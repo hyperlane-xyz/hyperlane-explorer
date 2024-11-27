@@ -29,6 +29,7 @@ export function ContentDetailsCard({
     recipient,
     body,
     decodedBody,
+    warpRouteDetails,
   },
   blur,
 }: Props) {
@@ -105,6 +106,39 @@ export function ContentDetailsCard({
           blurValue={blur}
         />
       </div>
+      {warpRouteDetails && (
+        <>
+          <div className="mt-2 border-t border-gray-200 pt-4">
+            <h4 className="mb-3 text-sm font-medium text-gray-500">Warp Route Details:</h4>
+            <div className="flex flex-wrap gap-x-6 gap-y-4">
+              <KeyValueRow
+                label="Token:"
+                labelWidth="w-16"
+                display={warpRouteDetails.token}
+                displayWidth="w-64 sm:w-80"
+                showCopy={true}
+                blurValue={blur}
+              />
+              <KeyValueRow
+                label="Amount:"
+                labelWidth="w-16"
+                display={warpRouteDetails.amount}
+                displayWidth="w-64 sm:w-80"
+                showCopy={true}
+                blurValue={blur}
+              />
+              <KeyValueRow
+                label="Fee Paid:"
+                labelWidth="w-16"
+                display={warpRouteDetails.totalPayment}
+                displayWidth="w-64 sm:w-80"
+                showCopy={true}
+                blurValue={blur}
+              />
+            </div>
+          </div>
+        </>
+      )}
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Message Content:</label>

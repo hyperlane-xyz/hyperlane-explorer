@@ -14,6 +14,8 @@ import {
   MessagesStubQueryResult,
 } from './fragments';
 
+import { parseWarpRouteDetails } from '../../../utils/token';
+
 /**
  * ========================
  * RESULT PARSING UTILITIES
@@ -111,6 +113,12 @@ function parseMessage(
 
     const body = postgresByteaToString(m.message_body ?? '');
     const decodedBody = tryUtf8DecodeBytes(body);
+    const warpRouteDetails = parseWarpRouteDetails(
+      body,
+      { to: m.origin_tx_recipient, from: m.origin_tx_sender },
+      { totalPayment: m.total_payment },
+      originMetadata
+    );
 
     return {
       ...stub,
@@ -151,6 +159,7 @@ function parseMessage(
       totalGasAmount: m.total_gas_amount.toString(),
       totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
+      warpRouteDetails: warpRouteDetails ?? undefined,
     };
   } catch (error) {
     logger.error('Error parsing message', error);
