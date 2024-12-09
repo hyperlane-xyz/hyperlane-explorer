@@ -13,7 +13,7 @@ export function tryUtf8DecodeBytes(value: string, fatal = true) {
   try {
     const decoder = new TextDecoder('utf-8', { fatal });
     return decoder.decode(Buffer.from(strip0x(value), 'hex'));
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }

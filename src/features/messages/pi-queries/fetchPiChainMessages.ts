@@ -237,7 +237,7 @@ async function tryFetchBlockFromProvider(provider: providers.Provider, blockNum:
     logger.debug('Fetching block details for blockNum:', blockNum);
     const block = await provider.getBlock(blockNum);
     return block;
-  } catch (error) {
+  } catch {
     logger.debug('Could not fetch block details for blockNum:', blockNum);
     return null;
   }
@@ -257,7 +257,7 @@ function logToMessage(
   try {
     logDesc = mailbox.parseLog(log);
     if (logDesc.name.toLowerCase() !== 'dispatch') return null;
-  } catch (error) {
+  } catch {
     // Probably not a message log, ignore
     return null;
   }
