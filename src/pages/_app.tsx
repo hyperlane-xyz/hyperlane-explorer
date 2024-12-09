@@ -31,7 +31,6 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration
   const isSsr = useIsSsr();
-
   if (isSsr) {
     return <div></div>;
   }
