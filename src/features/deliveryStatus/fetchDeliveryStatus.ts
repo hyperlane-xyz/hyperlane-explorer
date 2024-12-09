@@ -1,6 +1,6 @@
 import { constants } from 'ethers';
 
-import { IMailbox__factory } from '@hyperlane-xyz/core';
+import { IMailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 
@@ -91,7 +91,7 @@ async function checkIsMessageDelivered(
 ) {
   const { msgId, destinationDomainId } = message;
   const provider = multiProvider.getProvider(destinationDomainId);
-  const mailbox = IMailbox__factory.connect(mailboxAddr, provider);
+  const mailbox = MailboxFactory.connect(mailboxAddr, provider);
 
   // Try finding logs first as they have more info
   try {

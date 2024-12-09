@@ -1,6 +1,9 @@
 import { BigNumber, constants, ethers, providers } from 'ethers';
 
-import { IInterchainGasPaymaster__factory, Mailbox__factory } from '@hyperlane-xyz/core';
+import {
+  IInterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
+  Mailbox__factory as MailboxFactory,
+} from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 import {
@@ -18,7 +21,7 @@ import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { logger } from '../../../utils/logger';
 
-const mailbox = Mailbox__factory.createInterface();
+const mailbox = MailboxFactory.createInterface();
 const dispatchTopic0 = mailbox.getEventTopic('Dispatch');
 const dispatchIdTopic0 = mailbox.getEventTopic('DispatchId');
 // const processTopic0 = mailbox.getEventTopic('Process');
@@ -237,7 +240,7 @@ async function tryFetchBlockFromProvider(provider: providers.Provider, blockNum:
     logger.debug('Fetching block details for blockNum:', blockNum);
     const block = await provider.getBlock(blockNum);
     return block;
-  } catch (error) {
+  } catch {
     logger.debug('Could not fetch block details for blockNum:', blockNum);
     return null;
   }
@@ -257,7 +260,7 @@ function logToMessage(
   try {
     logDesc = mailbox.parseLog(log);
     if (logDesc.name.toLowerCase() !== 'dispatch') return null;
-  } catch (error) {
+  } catch {
     // Probably not a message log, ignore
     return null;
   }
@@ -322,7 +325,7 @@ async function tryFetchIgpGasPayments(
     return message;
   }
 
-  const igp = IInterchainGasPaymaster__factory.connect(
+  const igp = InterchainGasPaymasterFactory.connect(
     interchainGasPaymaster,
     multiProvider.getProvider(domainId),
   );

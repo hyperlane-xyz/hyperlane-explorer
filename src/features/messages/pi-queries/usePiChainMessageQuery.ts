@@ -68,7 +68,7 @@ export function usePiChainMessageSearchQuery({
           )
           .map((result) => result.value)
           .flat();
-      } catch (e) {
+      } catch {
         logger.debug('No PI messages found for query:', sanitizedInput);
         return [];
       }
