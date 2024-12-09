@@ -3,11 +3,11 @@
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
 import {
-  IInterchainSecurityModule__factory,
-  IMailbox__factory,
-  IMessageRecipient__factory,
-  IMultisigIsm__factory,
-  InterchainGasPaymaster__factory,
+  InterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
+  IInterchainSecurityModule__factory as InterchainSecurityModuleFactory,
+  IMailbox__factory as MailboxFactory,
+  IMessageRecipient__factory as MessageRecipientFactory,
+  IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
@@ -146,7 +146,7 @@ async function debugMessageDelivery(
   senderBytes: string,
   body: string,
 ) {
-  const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
+  const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
     originDomain,
     senderBytes,
@@ -206,7 +206,7 @@ async function checkMultisigIsmEmpty(
   destMailbox: Address,
   destProvider: Provider,
 ) {
-  const mailbox = IMailbox__factory.connect(destMailbox, destProvider);
+  const mailbox = MailboxFactory.connect(destMailbox, destProvider);
   const ismAddress = await mailbox.recipientIsm(recipientAddr);
   if (!isValidAddress(ismAddress)) {
     logger.error(
@@ -214,7 +214,7 @@ async function checkMultisigIsmEmpty(
     );
     throw new Error('Recipient ISM is not a valid address');
   }
-  const ism = IInterchainSecurityModule__factory.connect(ismAddress, destProvider);
+  const ism = InterchainSecurityModuleFactory.connect(ismAddress, destProvider);
   const moduleType = await ism.moduleType();
 
   const ismDetails = { ismAddress, moduleType };
@@ -222,7 +222,7 @@ async function checkMultisigIsmEmpty(
     return { ismDetails };
   }
 
-  const multisigIsm = IMultisigIsm__factory.connect(ismAddress, destProvider);
+  const multisigIsm = MultisigIsmFactory.connect(ismAddress, destProvider);
   const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
 
   if (!validators?.length) {
@@ -298,7 +298,7 @@ async function tryCheckIgpGasFunded(
 }
 
 async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
-  const igpInterface = InterchainGasPaymaster__factory.createInterface();
+  const igpInterface = InterchainGasPaymasterFactory.createInterface();
   const paymentFragment = igpInterface.getEvent('GasPayment');
   const paymentTopics = igpInterface.encodeFilterTopics(paymentFragment.name, [messageId]);
   const paymentLogs = (await provider.getLogs({ topics: paymentTopics })) || [];
@@ -332,7 +332,7 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
   try {
     // scan bytecode for handle function selector
     const bytecode = await provider.getCode(recipientAddress);
-    const msgRecipientInterface = IMessageRecipient__factory.createInterface();
+    const msgRecipientInterface = MessageRecipientFactory.createInterface();
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
     return bytecode.includes(strip0x(handleSignature));

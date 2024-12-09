@@ -14,6 +14,7 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 });
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default [
   {
     ignores: [
@@ -24,7 +25,6 @@ export default [
       '**/postcss.config.js',
       '**/next.config.js',
       '**/tailwind.config.js',
-      '**/sentry.*',
     ],
   },
   ...compat.extends(
@@ -56,12 +56,18 @@ export default [
     },
 
     rules: {
+      camelcase: ['error'],
+      'guard-for-in': ['error'],
+      'import/no-cycle': ['error'],
+      'import/no-self-import': ['error'],
       'no-console': ['warn'],
       'no-eval': ['error'],
       'no-ex-assign': ['error'],
       'no-extra-boolean-cast': ['error'],
       'no-constant-condition': ['off'],
-      'guard-for-in': ['error'],
+      'no-multiple-empty-lines': ['error'],
+      'jsx-a11y/alt-text': ['off'],
+
       '@typescript-eslint/ban-ts-comment': ['off'],
       '@typescript-eslint/explicit-module-boundary-types': ['off'],
       '@typescript-eslint/no-explicit-any': ['off'],
@@ -77,7 +83,6 @@ export default [
         },
       ],
 
-      'jsx-a11y/alt-text': ['off'],
       '@next/next/no-img-element': ['off'],
     },
   },
