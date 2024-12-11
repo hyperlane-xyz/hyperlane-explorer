@@ -5,6 +5,7 @@ import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
+import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -21,6 +22,11 @@ export function isValidSearchQuery(input: string) {
   return !!searchValueToPostgresBytea(input);
 }
 
+export function isValidDomainId(domainId: string | null, multiProvider: MultiProvider) {
+  if (!domainId) return false;
+  return !!multiProvider.tryGetDomainId(domainId);
+}
+
 export function useMessageSearchQuery(
   sanitizedInput: string,
   originChainFilter: string | null,
@@ -29,15 +35,20 @@ export function useMessageSearchQuery(
   endTimeFilter: number | null,
 ) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
+  const multiProvider = useMultiProvider();
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
+  // validating filters
+  const isValidOrigin = isValidDomainId(originChainFilter, multiProvider);
+  const isValidDestination = isValidDomainId(destinationChainFilter, multiProvider);
+
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
-    originChainFilter,
-    destinationChainFilter,
+    isValidOrigin ? originChainFilter : null,
+    isValidDestination ? destinationChainFilter : null,
     startTimeFilter,
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
@@ -53,7 +64,6 @@ export function useMessageSearchQuery(
   const { data, fetching: isFetching, error } = result;
 
   // Parse results
-  const multiProvider = useMultiProvider();
   const unfilteredMessageList = useMemo(
     () => parseMessageStubResult(multiProvider, scrapedChains, data),
     [multiProvider, scrapedChains, data],
@@ -90,6 +100,8 @@ export function useMessageSearchQuery(
     hasRun: !!data,
     isMessagesFound,
     messageList,
+    isValidOrigin,
+    isValidDestination,
   };
 }
 

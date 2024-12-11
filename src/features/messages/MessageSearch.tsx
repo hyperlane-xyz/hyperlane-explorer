@@ -12,7 +12,7 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useReadyMultiProvider } from '../../store';
-import { useQueryParam, useSyncQueryParam } from '../../utils/queryParams';
+import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
@@ -20,33 +20,54 @@ import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuer
 import { useMessageSearchQuery } from './queries/useMessageQuery';
 
 const QUERY_SEARCH_PARAM = 'search';
+const QUERY_ORIGIN_PARAM = 'origin';
+const QUERY_DESTINATION_PARAM = 'destination';
+// const QUERY_ORIGIN_PARAM = 'origin'
 
 export function MessageSearch() {
   // Chain metadata
   const multiProvider = useReadyMultiProvider();
 
+  // query params
+  const [defaultSearchQuery, defaultOriginQuery, defaultDestinationQuery] = useMultipleQueryParams([
+    QUERY_SEARCH_PARAM,
+    QUERY_ORIGIN_PARAM,
+    QUERY_DESTINATION_PARAM,
+  ]);
+
   // Search text input
-  const defaultSearchQuery = useQueryParam(QUERY_SEARCH_PARAM);
   const [searchInput, setSearchInput] = useState(defaultSearchQuery);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const hasInput = !!debouncedSearchInput;
   const sanitizedInput = sanitizeString(debouncedSearchInput);
 
   // Filter state
-  const [originChainFilter, setOriginChainFilter] = useState<string | null>(null);
-  const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(null);
+  const [originChainFilter, setOriginChainFilter] = useState<string | null>(
+    defaultOriginQuery || null,
+  );
+  const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(
+    defaultDestinationQuery || null,
+  );
   const [startTimeFilter, setStartTimeFilter] = useState<number | null>(null);
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
 
   // GraphQL query and results
-  const { isValidInput, isError, isFetching, hasRun, messageList, isMessagesFound } =
-    useMessageSearchQuery(
-      sanitizedInput,
-      originChainFilter,
-      destinationChainFilter,
-      startTimeFilter,
-      endTimeFilter,
-    );
+  const {
+    isValidInput,
+    isValidOrigin,
+    isValidDestination,
+    isError,
+    isFetching,
+    hasRun,
+    messageList,
+    isMessagesFound,
+  } = useMessageSearchQuery(
+    sanitizedInput,
+    originChainFilter,
+    destinationChainFilter,
+    startTimeFilter,
+    endTimeFilter,
+  );
 
   // Run permissionless interop chains query if needed
   const {
@@ -70,7 +91,11 @@ export function MessageSearch() {
   const messageListResult = isMessagesFound ? messageList : piMessageList;
 
   // Keep url in sync
-  useSyncQueryParam(QUERY_SEARCH_PARAM, isValidInput ? sanitizedInput : '');
+  useSyncQueryParam({
+    [QUERY_SEARCH_PARAM]: isValidInput ? sanitizedInput : '',
+    [QUERY_ORIGIN_PARAM]: (isValidOrigin && originChainFilter) || '',
+    [QUERY_DESTINATION_PARAM]: (isValidDestination && destinationChainFilter) || '',
+  });
 
   return (
     <>
