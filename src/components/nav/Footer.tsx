@@ -23,7 +23,7 @@ const footerLinks2 = [
 ];
 
 const footerLinks3 = [
-  { title: 'Twitter', url: links.twitter, external: true, icon: <TwitterIcon color="#fff" /> },
+  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color="#fff" /> },
   { title: 'Discord', url: links.discord, external: true, icon: <DiscordIcon color="#fff" /> },
   { title: 'Github', url: links.github, external: true, icon: <GithubIcon color="#fff" /> },
 ];
