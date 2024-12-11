@@ -18,10 +18,7 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
     const value = event?.target?.value || '';
     onChangeValue(value);
   };
-
-  const iconStyle =
-    'flex h-10 w-10 items-center justify-center rounded-full bg-pink-600 sm:h-12 sm:w-12';
-
+  
   return (
     <div className="flex w-full items-center rounded-full bg-white p-1 transition-all duration-500">
       <input
@@ -56,3 +53,4 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
     </div>
   );
 }
+const iconStyle = 'flex h-10 w-10 items-center justify-center rounded-full bg-pink-600 sm:h-12 sm:w-12';
