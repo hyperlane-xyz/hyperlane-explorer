@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Fade, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -15,6 +15,7 @@ import { useReadyMultiProvider } from '../../store';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
 import { sanitizeString } from '../../utils/string';
 
+import { tryToDecimalNumber } from '../../utils/number';
 import { MessageTable } from './MessageTable';
 import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
@@ -22,17 +23,26 @@ import { useMessageSearchQuery } from './queries/useMessageQuery';
 const QUERY_SEARCH_PARAM = 'search';
 const QUERY_ORIGIN_PARAM = 'origin';
 const QUERY_DESTINATION_PARAM = 'destination';
-// const QUERY_ORIGIN_PARAM = 'origin'
+const QUERY_START_TIME_PARAM = 'startTime';
+const QUERY_END_TIME_PARAM = 'endTime';
 
 export function MessageSearch() {
   // Chain metadata
   const multiProvider = useReadyMultiProvider();
 
   // query params
-  const [defaultSearchQuery, defaultOriginQuery, defaultDestinationQuery] = useMultipleQueryParams([
+  const [
+    defaultSearchQuery,
+    defaultOriginQuery,
+    defaultDestinationQuery,
+    defaultStartTime,
+    defaultEndTime,
+  ] = useMultipleQueryParams([
     QUERY_SEARCH_PARAM,
     QUERY_ORIGIN_PARAM,
     QUERY_DESTINATION_PARAM,
+    QUERY_START_TIME_PARAM,
+    QUERY_END_TIME_PARAM,
   ]);
 
   // Search text input
@@ -48,8 +58,12 @@ export function MessageSearch() {
   const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(
     defaultDestinationQuery || null,
   );
-  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(null);
-  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(null);
+  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(
+    tryToDecimalNumber(defaultStartTime),
+  );
+  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(
+    tryToDecimalNumber(defaultEndTime),
+  );
 
   // GraphQL query and results
   const {
@@ -93,9 +107,18 @@ export function MessageSearch() {
   // Keep url in sync
   useSyncQueryParam({
     [QUERY_SEARCH_PARAM]: isValidInput ? sanitizedInput : '',
-    [QUERY_ORIGIN_PARAM]: (isValidOrigin && originChainFilter) || '',
-    [QUERY_DESTINATION_PARAM]: (isValidDestination && destinationChainFilter) || '',
+    [QUERY_ORIGIN_PARAM]: originChainFilter || '',
+    [QUERY_DESTINATION_PARAM]: destinationChainFilter || '',
+    [QUERY_START_TIME_PARAM]: startTimeFilter !== null ? String(startTimeFilter) : '',
+    [QUERY_END_TIME_PARAM]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
+
+  // For the cases where the URL param for origin and destination chain is not valid
+  // This will reset the chain picker to null instead of having a empty selected chain
+  useEffect(() => {
+    if (!isValidOrigin) setOriginChainFilter(null);
+    if (!isValidDestination) setDestinationChainFilter(null);
+  }, [isValidOrigin, isValidDestination]);
 
   return (
     <>
