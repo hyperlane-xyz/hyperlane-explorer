@@ -24,6 +24,7 @@ import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
+import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
@@ -83,6 +84,7 @@ export async function debugMessage(
     recipient,
     senderBytes,
     body,
+    destName,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   else details.calldataDetails = deliveryResult.calldataDetails;
@@ -144,6 +146,7 @@ async function debugMessageDelivery(
   recipient: Address,
   senderBytes: string,
   body: string,
+  destName: string,
 ) {
   const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
@@ -180,6 +183,14 @@ async function debugMessageDelivery(
     //     calldataDetails,
     //   };
     // }
+
+    if (debugIgnoredChains.includes(destName)) {
+      return {
+        status: MessageDebugStatus.MessageNotDelivered,
+        description: 'Message not delivered, there may be an error',
+        calldataDetails,
+      };
+    }
 
     const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
     if (icaCallErr) {
