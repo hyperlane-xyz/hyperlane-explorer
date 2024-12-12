@@ -41,8 +41,9 @@ export function useMessageSearchQuery(
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
   // validating filters
-  const isValidOrigin = isValidDomainId(originChainFilter, multiProvider);
-  const isValidDestination = isValidDomainId(destinationChainFilter, multiProvider);
+  const isValidOrigin = !originChainFilter || isValidDomainId(originChainFilter, multiProvider);
+  const isValidDestination =
+    !destinationChainFilter || isValidDomainId(destinationChainFilter, multiProvider);
 
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(

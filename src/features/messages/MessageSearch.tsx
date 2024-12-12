@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Fade, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -6,6 +6,7 @@ import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
 import { SearchFilterBar } from '../../components/search/SearchFilterBar';
 import {
+  SearchChainError,
   SearchEmptyError,
   SearchFetching,
   SearchInvalidError,
@@ -20,11 +21,13 @@ import { MessageTable } from './MessageTable';
 import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
 
-const QUERY_SEARCH_PARAM = 'search';
-const QUERY_ORIGIN_PARAM = 'origin';
-const QUERY_DESTINATION_PARAM = 'destination';
-const QUERY_START_TIME_PARAM = 'startTime';
-const QUERY_END_TIME_PARAM = 'endTime';
+enum MESSAGE_QUERY_PARAMS {
+  SEARCH = 'search',
+  ORIGIN = 'origin',
+  DESTINATION = 'destination',
+  START_TIME = 'startTime',
+  END_TIME = 'endTime',
+}
 
 export function MessageSearch() {
   // Chain metadata
@@ -38,11 +41,11 @@ export function MessageSearch() {
     defaultStartTime,
     defaultEndTime,
   ] = useMultipleQueryParams([
-    QUERY_SEARCH_PARAM,
-    QUERY_ORIGIN_PARAM,
-    QUERY_DESTINATION_PARAM,
-    QUERY_START_TIME_PARAM,
-    QUERY_END_TIME_PARAM,
+    MESSAGE_QUERY_PARAMS.SEARCH,
+    MESSAGE_QUERY_PARAMS.ORIGIN,
+    MESSAGE_QUERY_PARAMS.DESTINATION,
+    MESSAGE_QUERY_PARAMS.START_TIME,
+    MESSAGE_QUERY_PARAMS.END_TIME,
   ]);
 
   // Search text input
@@ -106,19 +109,12 @@ export function MessageSearch() {
 
   // Keep url in sync
   useSyncQueryParam({
-    [QUERY_SEARCH_PARAM]: isValidInput ? sanitizedInput : '',
-    [QUERY_ORIGIN_PARAM]: originChainFilter || '',
-    [QUERY_DESTINATION_PARAM]: destinationChainFilter || '',
-    [QUERY_START_TIME_PARAM]: startTimeFilter !== null ? String(startTimeFilter) : '',
-    [QUERY_END_TIME_PARAM]: endTimeFilter !== null ? String(endTimeFilter) : '',
+    [MESSAGE_QUERY_PARAMS.SEARCH]: isValidInput ? sanitizedInput : '',
+    [MESSAGE_QUERY_PARAMS.ORIGIN]: (isValidOrigin && originChainFilter) || '',
+    [MESSAGE_QUERY_PARAMS.DESTINATION]: (isValidDestination && destinationChainFilter) || '',
+    [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
+    [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
-
-  // For the cases where the URL param for origin and destination chain is not valid
-  // This will reset the chain picker to null instead of having a empty selected chain
-  useEffect(() => {
-    if (!isValidOrigin) setOriginChainFilter(null);
-    if (!isValidDestination) setDestinationChainFilter(null);
-  }, [isValidOrigin, isValidDestination]);
 
   return (
     <>
@@ -144,7 +140,16 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade show={!isAnyError && isValidInput && isAnyMessageFound && !!multiProvider}>
+        <Fade
+          show={
+            !isAnyError &&
+            isValidInput &&
+            isValidOrigin &&
+            isValidDestination &&
+            isAnyMessageFound &&
+            !!multiProvider
+          }
+        >
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
@@ -158,6 +163,7 @@ export function MessageSearch() {
         />
         <SearchUnknownError show={isAnyError && isValidInput} />
         <SearchInvalidError show={!isValidInput} allowAddress={true} />
+        <SearchChainError show={!isValidOrigin || !isValidDestination} />
       </Card>
     </>
   );

@@ -118,3 +118,14 @@ export function SearchUnknownError({ show }: { show: boolean }) {
     />
   );
 }
+
+export function SearchChainError({ show }: { show: boolean }) {
+  return (
+    <SearchError
+      show={show}
+      imgSrc={ErrorIcon}
+      text="Sorry, the origin or destination chain is invalid. Please try choosing another one or cleaning your filters."
+      imgWidth={70}
+    />
+  );
+}
