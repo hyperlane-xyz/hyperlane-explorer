@@ -186,8 +186,8 @@ async function debugMessageDelivery(
 
     if (debugIgnoredChains.includes(destName)) {
       return {
-        status: MessageDebugStatus.MessageNotDelivered,
-        description: 'Message not delivered, there may be an error',
+        status: null,
+        description: '',
         calldataDetails,
       };
     }
