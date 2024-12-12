@@ -39,16 +39,12 @@ export function useSyncQueryParam(params: Record<string, string>) {
       ),
     );
     Object.entries(params).forEach(([key, value]) => {
-      if (value) {
-        if (newQuery.get(key) !== value) {
-          newQuery.set(key, value);
-          hasChanged = true;
-        }
-      } else {
-        if (newQuery.has(key)) {
-          newQuery.delete(key);
-          hasChanged = true;
-        }
+      if (value && newQuery.get(key) !== value) {
+        newQuery.set(key, value);
+        hasChanged = true;
+      } else if (!value && newQuery.has(key)) {
+        newQuery.delete(key);
+        hasChanged = true;
       }
     });
     if (hasChanged) {
