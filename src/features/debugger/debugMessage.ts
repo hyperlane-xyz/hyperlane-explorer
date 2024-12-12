@@ -16,7 +16,6 @@ import {
   errorToString,
   formatMessage,
   isValidAddress,
-  strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
 
@@ -29,7 +28,7 @@ import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } fr
 
 type Provider = providers.Provider;
 
-const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
+// const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
 
 export async function debugMessage(
@@ -328,19 +327,19 @@ async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
   return { contractToPayments, contractToTotalGas, numPayments, numIGPs };
 }
 
-async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
-  try {
-    // scan bytecode for handle function selector
-    const bytecode = await provider.getCode(recipientAddress);
-    const msgRecipientInterface = MessageRecipientFactory.createInterface();
-    const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
-    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-    return bytecode.includes(strip0x(handleSignature));
-  } catch (error) {
-    logger.error('Error checking bytecode for handle fn', error);
-    return true;
-  }
-}
+// async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
+//   try {
+//     // scan bytecode for handle function selector
+//     const bytecode = await provider.getCode(recipientAddress);
+//     const msgRecipientInterface = MessageRecipientFactory.createInterface();
+//     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
+//     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
+//     return bytecode.includes(strip0x(handleSignature));
+//   } catch (error) {
+//     logger.error('Error checking bytecode for handle fn', error);
+//     return true;
+//   }
+// }
 
 async function tryDebugIcaMsg(
   sender: Address,
