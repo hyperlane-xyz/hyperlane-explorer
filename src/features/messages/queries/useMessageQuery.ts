@@ -24,7 +24,7 @@ export function isValidSearchQuery(input: string) {
 
 export function isValidDomainId(domainId: string | null, multiProvider: MultiProvider) {
   if (!domainId) return false;
-  return !!multiProvider.tryGetDomainId(domainId);
+  return multiProvider.hasChain(domainId);
 }
 
 export function useMessageSearchQuery(

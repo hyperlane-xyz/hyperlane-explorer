@@ -107,6 +107,15 @@ export function MessageSearch() {
   const isAnyMessageFound = isMessagesFound || isPiMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piMessageList;
 
+  // Show message list if there are no errors and filters are valid
+  const showMessageTable =
+    !isAnyError &&
+    isValidInput &&
+    isValidOrigin &&
+    isValidDestination &&
+    isAnyMessageFound &&
+    !!multiProvider;
+
   // Keep url in sync
   useSyncQueryParam({
     [MESSAGE_QUERY_PARAMS.SEARCH]: isValidInput ? sanitizedInput : '',
@@ -140,16 +149,7 @@ export function MessageSearch() {
             onChangeEndTimestamp={setEndTimeFilter}
           />
         </div>
-        <Fade
-          show={
-            !isAnyError &&
-            isValidInput &&
-            isValidOrigin &&
-            isValidDestination &&
-            isAnyMessageFound &&
-            !!multiProvider
-          }
-        >
+        <Fade show={showMessageTable}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching

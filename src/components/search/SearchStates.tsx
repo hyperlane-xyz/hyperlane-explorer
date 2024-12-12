@@ -124,7 +124,7 @@ export function SearchChainError({ show }: { show: boolean }) {
     <SearchError
       show={show}
       imgSrc={ErrorIcon}
-      text="Sorry, the origin or destination chain is invalid. Please try choosing another chain or cleaning your filters."
+      text="Sorry, either the origin or the destination chain is invalid. Please choose a different chain or clear your search filters."
       imgWidth={70}
     />
   );
