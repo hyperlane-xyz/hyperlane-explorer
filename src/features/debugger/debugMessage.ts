@@ -16,7 +16,6 @@ import {
   errorToString,
   formatMessage,
   isValidAddress,
-  strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
 
@@ -25,11 +24,12 @@ import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
+import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
 
-const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
+// const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
 
 export async function debugMessage(
@@ -84,6 +84,7 @@ export async function debugMessage(
     recipient,
     senderBytes,
     body,
+    destName,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   else details.calldataDetails = deliveryResult.calldataDetails;
@@ -145,6 +146,7 @@ async function debugMessageDelivery(
   recipient: Address,
   senderBytes: string,
   body: string,
+  destName: string,
 ) {
   const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
@@ -172,12 +174,20 @@ async function debugMessageDelivery(
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipient);
-    if (!bytecodeHasHandle) {
-      logger.info('Bytecode does not have function matching handle sig');
+    // const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipient);
+    // if (!bytecodeHasHandle) {
+    //   logger.info('Bytecode does not have function matching handle sig');
+    //   return {
+    //     status: MessageDebugStatus.RecipientNotHandler,
+    //     description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+    //     calldataDetails,
+    //   };
+    // }
+
+    if (debugIgnoredChains.includes(destName)) {
       return {
-        status: MessageDebugStatus.RecipientNotHandler,
-        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        status: null,
+        description: '',
         calldataDetails,
       };
     }
@@ -328,19 +338,19 @@ async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
   return { contractToPayments, contractToTotalGas, numPayments, numIGPs };
 }
 
-async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
-  try {
-    // scan bytecode for handle function selector
-    const bytecode = await provider.getCode(recipientAddress);
-    const msgRecipientInterface = MessageRecipientFactory.createInterface();
-    const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
-    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-    return bytecode.includes(strip0x(handleSignature));
-  } catch (error) {
-    logger.error('Error checking bytecode for handle fn', error);
-    return true;
-  }
-}
+// async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
+//   try {
+//     // scan bytecode for handle function selector
+//     const bytecode = await provider.getCode(recipientAddress);
+//     const msgRecipientInterface = MessageRecipientFactory.createInterface();
+//     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
+//     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
+//     return bytecode.includes(strip0x(handleSignature));
+//   } catch (error) {
+//     logger.error('Error checking bytecode for handle fn', error);
+//     return true;
+//   }
+// }
 
 async function tryDebugIcaMsg(
   sender: Address,
