@@ -12,7 +12,6 @@ import { AppLayout } from '../AppLayout';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { config } from '../consts/config';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
-import '../styles/custom.css';
 import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
 

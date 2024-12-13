@@ -1,4 +1,0 @@
-/* Fix for tooltips breaking layout on mobile devices (<526px width). */
-
-
-@media (max-width: 526px) {#gas-info, #transaction-info, #message-info{max-width: calc(100% - 10px);}}
