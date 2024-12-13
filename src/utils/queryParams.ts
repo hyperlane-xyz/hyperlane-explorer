@@ -15,28 +15,47 @@ export function getQueryParamString(query: ParsedUrlQuery, key: string, defaultV
 // Use query param form URL
 export function useQueryParam(key: string, defaultVal = '') {
   const router = useRouter();
+
   return getQueryParamString(router.query, key, defaultVal);
 }
 
+export function useMultipleQueryParams(keys: string[]) {
+  const router = useRouter();
+
+  return keys.map((key) => {
+    return getQueryParamString(router.query, key);
+  });
+}
+
 // Keep value in sync with query param in URL
-export function useSyncQueryParam(key: string, value = '') {
+export function useSyncQueryParam(params: Record<string, string>) {
   const router = useRouter();
   const { pathname, query } = router;
   useEffect(() => {
+    let hasChanged = false;
     const newQuery = new URLSearchParams(
       Object.fromEntries(
         Object.entries(query).filter((kv): kv is [string, string] => typeof kv[0] === 'string'),
       ),
     );
-    if (value) newQuery.set(key, value);
-    else newQuery.delete(key);
-    const path = `${pathname}?${newQuery.toString()}`;
-    router
-      .replace(path, undefined, { shallow: true })
-      .catch((e) => logger.error('Error shallow updating url', e));
+    Object.entries(params).forEach(([key, value]) => {
+      if (value && newQuery.get(key) !== value) {
+        newQuery.set(key, value);
+        hasChanged = true;
+      } else if (!value && newQuery.has(key)) {
+        newQuery.delete(key);
+        hasChanged = true;
+      }
+    });
+    if (hasChanged) {
+      const path = `${pathname}?${newQuery.toString()}`;
+      router
+        .replace(path, undefined, { shallow: true })
+        .catch((e) => logger.error('Error shallow updating URL', e));
+    }
     // Must exclude router for next.js shallow routing, otherwise links break:
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, value]);
+  }, [params]);
 }
 
 // Circumventing Next's router.replace method here because
