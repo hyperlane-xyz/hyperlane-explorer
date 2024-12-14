@@ -194,12 +194,10 @@ async function debugMessageDelivery(
       destProvider,
       recipient,
     );
-    if (proxyImplementationContract) {
       const bytecodeHasHandle = await tryCheckBytecodeHandle(
         destProvider,
-        proxyImplementationContract,
-      );
-
+        proxyImplementationContract || recipient,
+      )
       if (!bytecodeHasHandle) {
         logger.info('Bytecode does not have function matching handle sig');
         return {
