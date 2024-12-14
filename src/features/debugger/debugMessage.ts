@@ -194,18 +194,17 @@ async function debugMessageDelivery(
       destProvider,
       recipient,
     );
-      const bytecodeHasHandle = await tryCheckBytecodeHandle(
-        destProvider,
-        proxyImplementationContract || recipient,
-      )
-      if (!bytecodeHasHandle) {
-        logger.info('Bytecode does not have function matching handle sig');
-        return {
-          status: MessageDebugStatus.RecipientNotHandler,
-          description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
-          calldataDetails,
-        };
-      }
+    const bytecodeHasHandle = await tryCheckBytecodeHandle(
+      destProvider,
+      proxyImplementationContract || recipient,
+    );
+    if (!bytecodeHasHandle) {
+      logger.info('Bytecode does not have function matching handle sig');
+      return {
+        status: MessageDebugStatus.RecipientNotHandler,
+        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        calldataDetails,
+      };
     }
 
     const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
