@@ -10,12 +10,20 @@ import {
   IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
+import {
+  ChainMap,
+  ChainMetadata,
+  MAILBOX_VERSION,
+  MultiProvider,
+  isProxy,
+  proxyImplementation,
+} from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
   formatMessage,
   isValidAddress,
+  strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
 
@@ -29,7 +37,7 @@ import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } fr
 
 type Provider = providers.Provider;
 
-// const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
+const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
 
 export async function debugMessage(
@@ -174,22 +182,32 @@ async function debugMessageDelivery(
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    // const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipient);
-    // if (!bytecodeHasHandle) {
-    //   logger.info('Bytecode does not have function matching handle sig');
-    //   return {
-    //     status: MessageDebugStatus.RecipientNotHandler,
-    //     description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
-    //     calldataDetails,
-    //   };
-    // }
-
     if (debugIgnoredChains.includes(destName)) {
       return {
         status: null,
         description: '',
         calldataDetails,
       };
+    }
+
+    const proxyImplementationContract = await tryGetProxyImplementationContract(
+      destProvider,
+      recipient,
+    );
+    if (proxyImplementationContract) {
+      const bytecodeHasHandle = await tryCheckBytecodeHandle(
+        destProvider,
+        proxyImplementationContract,
+      );
+
+      if (!bytecodeHasHandle) {
+        logger.info('Bytecode does not have function matching handle sig');
+        return {
+          status: MessageDebugStatus.RecipientNotHandler,
+          description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+          calldataDetails,
+        };
+      }
     }
 
     const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
@@ -338,19 +356,31 @@ async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
   return { contractToPayments, contractToTotalGas, numPayments, numIGPs };
 }
 
-// async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
-//   try {
-//     // scan bytecode for handle function selector
-//     const bytecode = await provider.getCode(recipientAddress);
-//     const msgRecipientInterface = MessageRecipientFactory.createInterface();
-//     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
-//     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
-//     return bytecode.includes(strip0x(handleSignature));
-//   } catch (error) {
-//     logger.error('Error checking bytecode for handle fn', error);
-//     return true;
-//   }
-// }
+async function tryGetProxyImplementationContract(provider: Provider, recipientAddress: string) {
+  try {
+    const isProxyContract = await isProxy(provider, recipientAddress);
+    if (!isProxyContract) return undefined;
+
+    return await proxyImplementation(provider, recipientAddress);
+  } catch (error) {
+    logger.error('Error trying to check proxy contract', error);
+    return undefined;
+  }
+}
+
+async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
+  try {
+    // scan bytecode for handle function selector
+    const bytecode = await provider.getCode(recipientAddress);
+    const msgRecipientInterface = MessageRecipientFactory.createInterface();
+    const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
+    const handleSignature = msgRecipientInterface.getSighash(handleFunction);
+    return bytecode.includes(strip0x(handleSignature));
+  } catch (error) {
+    logger.error('Error checking bytecode for handle fn', error);
+    return true;
+  }
+}
 
 async function tryDebugIcaMsg(
   sender: Address,
