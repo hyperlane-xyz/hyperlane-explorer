@@ -202,7 +202,7 @@ async function debugMessageDelivery(
       logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
-        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Error: ${errorReason}`,
         calldataDetails,
       };
     }
