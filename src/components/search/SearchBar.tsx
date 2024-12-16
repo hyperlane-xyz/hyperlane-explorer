@@ -28,15 +28,30 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
         placeholder={placeholder}
         className="h-10 flex-1 rounded-full p-1 font-light placeholder:text-gray-600 focus:outline-none sm:h-12 sm:px-4 md:px-5"
       />
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-500 sm:h-12 sm:w-12">
-        {isFetching && <SpinnerIcon color={Color.white} width={26} height={26} />}
-        {!isFetching && !value && <Image src={SearchIcon} width={20} height={20} alt="" />}
-        {!isFetching && value && (
-          <IconButton title="Clear search" onClick={() => onChange(null)}>
+
+      {isFetching && (
+        <div className={iconStyle}>
+          <SpinnerIcon color={Color.white} width={26} height={26} />
+        </div>
+      )}
+      {!isFetching && !value && (
+        <div className={iconStyle}>
+          <Image src={SearchIcon} width={20} height={20} alt="" />
+        </div>
+      )}
+      {!isFetching && value && (
+        <div className={`${iconStyle} bg-pink-600 duration-500 hover:bg-blue-500 sm:h-12 sm:w-12`}>
+          <IconButton
+            title="Clear search"
+            className="h-full w-full rounded-full"
+            onClick={() => onChange(null)}
+          >
             <XIcon width={16} height={16} color="white" />
           </IconButton>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+const iconStyle =
+  'flex h-10 w-10 items-center justify-center rounded-full bg-pink-600 sm:h-12 sm:w-12';
