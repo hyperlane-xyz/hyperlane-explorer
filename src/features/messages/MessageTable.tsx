@@ -96,12 +96,12 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
       >
         {shortenAddress(origin.hash)}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated} tdClasses="pr-5">
+      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
-      {statusIcon && (
-        <LinkCell id={msgId} base64={base64} tdClasses="w-0">
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 transform">
+      <LinkCell id={msgId} base64={base64} tdClasses="w-8">
+        {statusIcon && (
+          <span>
             <Image
               src={statusIcon}
               width={18}
@@ -111,8 +111,8 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
               className="pt-px"
             />
           </span>
-        </LinkCell>
-      )}
+        )}
+      </LinkCell>
     </>
   );
 }
