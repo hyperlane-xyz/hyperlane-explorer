@@ -96,12 +96,12 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
       >
         {shortenAddress(origin.hash)}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated} tdClasses="pr-5">
+      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="w-8">
         {statusIcon && (
-          <span className="-translate-y-1/2 transform">
+          <span>
             <Image
               src={statusIcon}
               width={18}
