@@ -102,19 +102,32 @@ async function buildMultiProvider(
   overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
 ) {
   logger.debug('Building new MultiProvider from registry');
-  // TODO improve interface so this pre-cache isn't required
+  
+  // TODO: Improve interface so this pre-cache isn't required
+  // Ensure the registry content is up to date before fetching metadata
   await registry.listRegistryContent();
+  
+  // Fetch the chain metadata from the registry
   const registryChainMetadata = await registry.getMetadata();
-  // TODO have the registry do this automatically
+  
+  // TODO: Have the registry automatically fetch logos to streamline the process
   const metadataWithLogos = await promiseObjAll(
     objMap(
       registryChainMetadata,
       async (chainName, metadata): Promise<ChainMetadata> => ({
         ...metadata,
+        // Fetch the logo URI for the chain, if available; default to undefined if not
         logoURI: (await registry.getChainLogoUri(chainName)) || undefined,
       }),
     ),
   );
+
+  // Merge the fetched metadata with any overridden metadata provided
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
-  return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
+  
+  // Return both the enriched metadata and a new instance of MultiProvider
+  return { 
+    metadata: metadataWithLogos, 
+    multiProvider: new MultiProvider(mergedMetadata) 
+  };
 }
