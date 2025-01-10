@@ -9,7 +9,7 @@ import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
-import { debugMessage } from '../debugger/debugMessage';
+import { buildMetadata, debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 
 import {
@@ -72,6 +72,9 @@ export async function fetchDeliveryStatus(
     return result;
   } else {
     const debugResult = await debugMessage(multiProvider, registry, overrideChainMetadata, message);
+
+    await buildMetadata(multiProvider, registry, message);
+
     const messageStatus =
       debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending

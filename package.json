@@ -6,9 +6,9 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@hyperlane-xyz/registry": "6.1.0",
-    "@hyperlane-xyz/sdk": "7.1.0",
-    "@hyperlane-xyz/utils": "7.1.0",
-    "@hyperlane-xyz/widgets": "7.1.0",
+    "@hyperlane-xyz/sdk": "8.0.0",
+    "@hyperlane-xyz/utils": "8.0.0",
+    "@hyperlane-xyz/widgets": "8.0.0",
     "@tanstack/react-query": "^5.62.3",
     "bignumber.js": "^9.1.2",
     "buffer": "^6.0.3",

@@ -39,3 +39,21 @@ export enum IsmModuleTypes {
   LEGACY_MULTISIG,
   MULTISIG,
 }
+
+export type ParsedMessage = {
+  version: number;
+  nonce: number;
+  origin: number;
+  originChain?: string;
+  sender: string;
+  destination: number;
+  destinationChain?: string;
+  recipient: string;
+  body: string;
+};
+
+export type DispatchedMessage = {
+  id: string;
+  message: string;
+  parsed: ParsedMessage;
+};

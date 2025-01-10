@@ -73,7 +73,7 @@ export function useMessageDeliveryStatus({
     },
     retry: false,
     refetchInterval: (query) =>
-      query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
+      query.state.data?.message.status === MessageStatus.Delivered ? false : 100_000_000,
     enabled,
   });
 

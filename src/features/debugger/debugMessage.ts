@@ -11,11 +11,16 @@ import {
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import {
+  BaseMetadataBuilder,
   ChainMap,
   ChainMetadata,
+  ChainName,
+  EvmHookReader,
+  EvmIsmReader,
+  HyperlaneCore,
+  isProxy,
   MAILBOX_VERSION,
   MultiProvider,
-  isProxy,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
 import {
@@ -32,8 +37,15 @@ import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
+// import { BaseMetadataBuilder } from '@hyperlane-xyz/sdk/dist/ism/metadata/builder';
 import { debugIgnoredChains } from '../../consts/config';
-import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
+import {
+  DispatchedMessage,
+  GasPayment,
+  IsmModuleTypes,
+  MessageDebugResult,
+  MessageDebugStatus,
+} from './types';
 
 type Provider = providers.Provider;
 
@@ -453,4 +465,103 @@ function noErrorFound(): MessageDebugResult {
     status: MessageDebugStatus.NoErrorsFound,
     description: 'Message may just need more time to be processed',
   };
+}
+
+async function getIsmConfig(
+  chain: ChainName,
+  ism: Address,
+  multiProvider: MultiProvider,
+  messageContext?: DispatchedMessage,
+) {
+  const evmIsmReader = new EvmIsmReader(multiProvider, chain, undefined, messageContext);
+
+  try {
+    const config = await evmIsmReader.deriveIsmConfig(ism);
+
+    if (!config) {
+      throw new Error(`ISM config not found for ${ism}`);
+    }
+
+    return config;
+  } catch (err) {
+    console.log('failed');
+    throw new Error(`ISM config not found for ${ism}. ${err}`);
+  }
+}
+
+async function getRecipientIsmConfig(
+  core: HyperlaneCore,
+  multiProvider: MultiProvider,
+  message: DispatchedMessage,
+) {
+  const destinationChain = core.getDestination(message);
+  const ism = await core.getRecipientIsmAddress(message);
+
+  return getIsmConfig(destinationChain, ism, multiProvider);
+}
+
+async function getHookConfig(
+  chain: ChainName,
+  hook: Address,
+  multiProvider: MultiProvider,
+  messageContext?: DispatchedMessage,
+) {
+  const evmHookReader = new EvmHookReader(multiProvider, chain, undefined, messageContext);
+  const config = await evmHookReader.deriveHookConfig(hook);
+
+  if (!config) {
+    throw new Error(`Hook config not found for ${hook}`);
+  }
+
+  return config;
+}
+
+async function getSenderHookConfig(
+  core: HyperlaneCore,
+  multiProvider: MultiProvider,
+  message: DispatchedMessage,
+) {
+  const originChain = core.getOrigin(message);
+  const hook = await core.getSenderHookAddress(message);
+  return getHookConfig(originChain, hook, multiProvider, message);
+}
+
+export async function buildMetadata(
+  multiProvider: MultiProvider,
+  registry: IRegistry,
+  message: Message,
+) {
+  const chainAddresses = await registry.getAddresses();
+
+  console.log(message);
+  if (chainAddresses) {
+    try {
+      const core = HyperlaneCore.fromAddressesMap(chainAddresses, multiProvider);
+      const originChainName = multiProvider.getChainName(message.originChainId);
+
+      const provider = multiProvider.getProvider(originChainName);
+      const dispatchTx = await provider.getTransactionReceipt(message.origin.hash);
+
+      const dispatchedMessage = core.getDispatchedMessages(dispatchTx)[0];
+
+      const [hookConfig, ismConfig] = await Promise.all([
+        getSenderHookConfig(core, multiProvider, dispatchedMessage),
+        getRecipientIsmConfig(core, multiProvider, dispatchedMessage),
+      ]);
+
+      const metadataBuilder = new BaseMetadataBuilder(core);
+
+      const errorMsg = await metadataBuilder.build({
+        hook: hookConfig,
+        ism: ismConfig,
+        message: dispatchedMessage,
+        dispatchTx,
+      });
+
+      console.log('Error msg', errorMsg);
+    } catch (error) {
+      console.log('Failed');
+      console.log(error);
+    }
+  }
 }
