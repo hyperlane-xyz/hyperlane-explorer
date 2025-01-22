@@ -82,6 +82,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           <Tooltip
             content="Amounts paid to the Interchain Gas Paymaster for message delivery."
             id="gas-info"
+            data-tooltip-class-name="max-w-[calc(100%-10px)] sm:max-w-[526px]"
           />
         </div>
       </div>

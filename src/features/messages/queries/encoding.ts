@@ -65,7 +65,7 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
       return stringToPostgresBytea(bytes.toString('hex'));
     }
     return undefined;
-  } catch (error) {
+  } catch {
     // Search input couldn't be decoded and recoded properly
     return undefined;
   }

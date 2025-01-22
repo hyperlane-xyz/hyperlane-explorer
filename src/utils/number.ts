@@ -5,7 +5,7 @@ import { logger } from './logger';
 export function tryToDecimalNumber(value: BigNumberish) {
   try {
     return BigNumber.from(value.toString()).toNumber();
-  } catch (error) {
+  } catch {
     logger.debug(`Error parsing hex number ${value}`);
     return null;
   }

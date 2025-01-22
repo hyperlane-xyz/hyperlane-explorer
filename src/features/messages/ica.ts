@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BigNumber, providers, utils } from 'ethers';
 import { useMemo } from 'react';
 
-import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
+import { InterchainAccountRouter__factory as InterchainAccountRouterFactory } from '@hyperlane-xyz/core';
 import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 
 import { useReadyMultiProvider } from '../../store';
@@ -83,7 +83,7 @@ export async function tryFetchIcaAddress(
     if (!ICA_ADDRESS) return null;
     logger.debug('Fetching Ica address', originDomainId, sender);
 
-    const icaContract = InterchainAccountRouter__factory.connect(ICA_ADDRESS, provider);
+    const icaContract = InterchainAccountRouterFactory.connect(ICA_ADDRESS, provider);
     const icaAddress = await icaContract['getInterchainAccount(uint32,address)'](
       originDomainId,
       sender,

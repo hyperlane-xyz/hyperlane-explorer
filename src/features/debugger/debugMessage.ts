@@ -3,14 +3,21 @@
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
 import {
-  IInterchainSecurityModule__factory,
-  IMailbox__factory,
-  IMessageRecipient__factory,
-  IMultisigIsm__factory,
-  InterchainGasPaymaster__factory,
+  InterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
+  IInterchainSecurityModule__factory as InterchainSecurityModuleFactory,
+  IMailbox__factory as MailboxFactory,
+  IMessageRecipient__factory as MessageRecipientFactory,
+  IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
+import {
+  ChainMap,
+  ChainMetadata,
+  MAILBOX_VERSION,
+  MultiProvider,
+  isProxy,
+  proxyImplementation,
+} from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -25,6 +32,7 @@ import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 
+import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
@@ -84,6 +92,7 @@ export async function debugMessage(
     recipient,
     senderBytes,
     body,
+    destName,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   else details.calldataDetails = deliveryResult.calldataDetails;
@@ -145,8 +154,9 @@ async function debugMessageDelivery(
   recipient: Address,
   senderBytes: string,
   body: string,
+  destName: string,
 ) {
-  const recipientContract = IMessageRecipient__factory.connect(recipient, destProvider);
+  const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
     originDomain,
     senderBytes,
@@ -172,12 +182,27 @@ async function debugMessageDelivery(
     const errorReason = extractReasonString(err);
     logger.debug(errorReason);
 
-    const bytecodeHasHandle = await tryCheckBytecodeHandle(destProvider, recipient);
+    if (debugIgnoredChains.includes(destName)) {
+      return {
+        status: null,
+        description: '',
+        calldataDetails,
+      };
+    }
+
+    const proxyImplementationContract = await tryGetProxyImplementationContract(
+      destProvider,
+      recipient,
+    );
+    const bytecodeHasHandle = await tryCheckBytecodeHandle(
+      destProvider,
+      proxyImplementationContract || recipient,
+    );
     if (!bytecodeHasHandle) {
       logger.info('Bytecode does not have function matching handle sig');
       return {
         status: MessageDebugStatus.RecipientNotHandler,
-        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Check that recipient is not a proxy. Error: ${errorReason}`,
+        description: `Recipient contract should have handle function of signature: ${HANDLE_FUNCTION_SIG}. Error: ${errorReason}`,
         calldataDetails,
       };
     }
@@ -206,7 +231,7 @@ async function checkMultisigIsmEmpty(
   destMailbox: Address,
   destProvider: Provider,
 ) {
-  const mailbox = IMailbox__factory.connect(destMailbox, destProvider);
+  const mailbox = MailboxFactory.connect(destMailbox, destProvider);
   const ismAddress = await mailbox.recipientIsm(recipientAddr);
   if (!isValidAddress(ismAddress)) {
     logger.error(
@@ -214,7 +239,7 @@ async function checkMultisigIsmEmpty(
     );
     throw new Error('Recipient ISM is not a valid address');
   }
-  const ism = IInterchainSecurityModule__factory.connect(ismAddress, destProvider);
+  const ism = InterchainSecurityModuleFactory.connect(ismAddress, destProvider);
   const moduleType = await ism.moduleType();
 
   const ismDetails = { ismAddress, moduleType };
@@ -222,7 +247,7 @@ async function checkMultisigIsmEmpty(
     return { ismDetails };
   }
 
-  const multisigIsm = IMultisigIsm__factory.connect(ismAddress, destProvider);
+  const multisigIsm = MultisigIsmFactory.connect(ismAddress, destProvider);
   const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
 
   if (!validators?.length) {
@@ -298,7 +323,7 @@ async function tryCheckIgpGasFunded(
 }
 
 async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
-  const igpInterface = InterchainGasPaymaster__factory.createInterface();
+  const igpInterface = InterchainGasPaymasterFactory.createInterface();
   const paymentFragment = igpInterface.getEvent('GasPayment');
   const paymentTopics = igpInterface.encodeFilterTopics(paymentFragment.name, [messageId]);
   const paymentLogs = (await provider.getLogs({ topics: paymentTopics })) || [];
@@ -328,11 +353,23 @@ async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
   return { contractToPayments, contractToTotalGas, numPayments, numIGPs };
 }
 
+async function tryGetProxyImplementationContract(provider: Provider, recipientAddress: string) {
+  try {
+    const isProxyContract = await isProxy(provider, recipientAddress);
+    if (!isProxyContract) return undefined;
+
+    return await proxyImplementation(provider, recipientAddress);
+  } catch (error) {
+    logger.error('Error trying to check proxy contract', error);
+    return undefined;
+  }
+}
+
 async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: string) {
   try {
     // scan bytecode for handle function selector
     const bytecode = await provider.getCode(recipientAddress);
-    const msgRecipientInterface = IMessageRecipient__factory.createInterface();
+    const msgRecipientInterface = MessageRecipientFactory.createInterface();
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
     return bytecode.includes(strip0x(handleSignature));
