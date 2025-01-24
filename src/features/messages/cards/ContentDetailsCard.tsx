@@ -75,7 +75,6 @@ export function ContentDetailsCard({
           <Tooltip
             id="message-info"
             content="Immutable information about the message itself such as its contents."
-            data-tooltip-class-name="max-w-[calc(100%-10px)] sm:max-w-[526px]"
           />
         </div>
       </div>
