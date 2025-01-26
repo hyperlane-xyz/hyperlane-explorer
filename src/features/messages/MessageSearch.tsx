@@ -150,17 +150,7 @@ export function MessageSearch() {
               endTimestamp={endTimeFilter}
               onChangeEndTimestamp={setEndTimeFilter}
             />
-            <IconButton
-              onClick={refetch}
-              className="h-7 w-7 rounded-lg bg-pink-500"
-              disabled={isAnyFetching}
-            >
-              {isAnyFetching ? (
-                <SpinnerIcon color="white" height={16} width={16} />
-              ) : (
-                <RefreshIcon color="white" height={20} width={20} />
-              )}
-            </IconButton>
+            <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
         <Fade show={showMessageTable}>
@@ -180,5 +170,17 @@ export function MessageSearch() {
         <SearchChainError show={(!isValidOrigin || !isValidDestination) && isValidInput} />
       </Card>
     </>
+  );
+}
+
+function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <IconButton onClick={onClick} className="rounded-lg bg-pink-500 p-1" disabled={loading}>
+      {loading ? (
+        <SpinnerIcon color="white" height={16} width={16} />
+      ) : (
+        <RefreshIcon color="white" height={20} width={20} />
+      )}
+    </IconButton>
   );
 }
