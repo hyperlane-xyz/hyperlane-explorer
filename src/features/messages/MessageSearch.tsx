@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Fade, useDebounce } from '@hyperlane-xyz/widgets';
+import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -78,6 +78,7 @@ export function MessageSearch() {
     hasRun,
     messageList,
     isMessagesFound,
+    refetch,
   } = useMessageSearchQuery(
     sanitizedInput,
     originChainFilter,
@@ -138,16 +139,19 @@ export function MessageSearch() {
           <h2 className="w-min pl-0.5 font-medium text-blue-500 sm:w-fit">
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
-          <SearchFilterBar
-            originChain={originChainFilter}
-            onChangeOrigin={setOriginChainFilter}
-            destinationChain={destinationChainFilter}
-            onChangeDestination={setDestinationChainFilter}
-            startTimestamp={startTimeFilter}
-            onChangeStartTimestamp={setStartTimeFilter}
-            endTimestamp={endTimeFilter}
-            onChangeEndTimestamp={setEndTimeFilter}
-          />
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <SearchFilterBar
+              originChain={originChainFilter}
+              onChangeOrigin={setOriginChainFilter}
+              destinationChain={destinationChainFilter}
+              onChangeDestination={setDestinationChainFilter}
+              startTimestamp={startTimeFilter}
+              onChangeStartTimestamp={setStartTimeFilter}
+              endTimestamp={endTimeFilter}
+              onChangeEndTimestamp={setEndTimeFilter}
+            />
+            <RefreshButton loading={isAnyFetching} onClick={refetch} />
+          </div>
         </div>
         <Fade show={showMessageTable}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
@@ -166,5 +170,13 @@ export function MessageSearch() {
         <SearchChainError show={(!isValidOrigin || !isValidDestination) && isValidInput} />
       </Card>
     </>
+  );
+}
+
+function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <IconButton onClick={onClick} className="rounded-lg bg-pink-500 p-1" disabled={loading}>
+      <RefreshIcon color="white" height={20} width={20} />
+    </IconButton>
   );
 }

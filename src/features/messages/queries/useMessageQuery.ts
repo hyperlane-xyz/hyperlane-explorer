@@ -103,6 +103,7 @@ export function useMessageSearchQuery(
     messageList,
     isValidOrigin,
     isValidDestination,
+    refetch: reExecutor,
   };
 }
 
