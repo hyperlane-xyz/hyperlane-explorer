@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Fade, IconButton, RefreshIcon, SpinnerIcon, useDebounce } from '@hyperlane-xyz/widgets';
+import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -176,11 +176,7 @@ export function MessageSearch() {
 function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   return (
     <IconButton onClick={onClick} className="rounded-lg bg-pink-500 p-1" disabled={loading}>
-      {loading ? (
-        <SpinnerIcon color="white" height={16} width={16} />
-      ) : (
-        <RefreshIcon color="white" height={20} width={20} />
-      )}
+      <RefreshIcon color="white" height={20} width={20} />
     </IconButton>
   );
 }
