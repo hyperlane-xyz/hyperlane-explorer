@@ -2,7 +2,14 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
+import {
+  bytesToProtocolAddress,
+  fromHexString,
+  parseWarpRouteMessage,
+  ProtocolType,
+  toTitleCase,
+  trimToLength,
+} from '@hyperlane-xyz/utils';
 
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
@@ -90,6 +97,26 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
+
+  // test
+  // const originP = multiProvider.getProtocol(originChainName);
+  // const destinationP = multiProvider.getProtocol(destinationChainName);
+
+  // console.log('originP', originP);
+  // console.log('destinationP', destinationP);
+
+  const p = parseWarpRouteMessage(message.body);
+  console.log('message', message);
+
+  console.log('decodedBody', message.decodedBody);
+
+  console.log('p', p);
+
+  const address = fromHexString(
+    '0x66911d2f076377987f1156c8c036306926433a99f6b63a457c229b005b913f8a',
+  );
+  const bye = bytesToProtocolAddress(address, ProtocolType.Sealevel);
+  console.log('normalized address', bye);
 
   return (
     <>
