@@ -105,18 +105,12 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   // console.log('originP', originP);
   // console.log('destinationP', destinationP);
 
-  const p = parseWarpRouteMessage(message.body);
+  const parsed = parseWarpRouteMessage(message.body);
   console.log('message', message);
 
-  console.log('decodedBody', message.decodedBody);
-
-  console.log('p', p);
-
-  const address = fromHexString(
-    '0x66911d2f076377987f1156c8c036306926433a99f6b63a457c229b005b913f8a',
-  );
-  const bye = bytesToProtocolAddress(address, ProtocolType.Sealevel);
-  console.log('normalized address', bye);
+  console.log('p', parsed);
+  const address = fromHexString('');
+  const bytes = bytesToProtocolAddress(address, ProtocolType.Sealevel);
 
   return (
     <>
