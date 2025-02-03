@@ -53,10 +53,17 @@ export interface Message extends MessageStub {
   totalGasAmount?: string;
   totalPayment?: string;
   numPayments?: number;
+  warpRouteDetails?: WarpRouteDetails;
 }
 
 export interface ExtendedLog extends providers.Log {
   timestamp?: number;
   from?: Address;
   to?: Address;
+}
+
+export interface WarpRouteDetails {
+  token: string;
+  amount: string;
+  totalPayment: string;
 }
