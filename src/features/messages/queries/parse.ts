@@ -72,19 +72,19 @@ export function parseWarpRouteDetails(
       totalPayment,
       originMetadata,
       destinationMetadata,
-      sender,
       recipient,
     } = message;
 
     if (!body || !originMetadata || !destinationMetadata) return undefined;
 
-    const originTokenSymbol = getTokenSymbolFromWarpRouteMap(originMetadata, sender, warpRouteMap);
+    const originTokenSymbol = getTokenSymbolFromWarpRouteMap(originMetadata, to, warpRouteMap);
     const destinationTokenSymbol = getTokenSymbolFromWarpRouteMap(
       destinationMetadata,
       recipient,
       warpRouteMap,
     );
 
+    // If token symbols are not found with the addresses, it means the message is not a warp route transfer
     if (!originTokenSymbol || !destinationTokenSymbol) return undefined;
 
     const parsedMessage = parseWarpRouteMessage(body);
@@ -92,9 +92,7 @@ export function parseWarpRouteDetails(
 
     return {
       amount: fromWei(parsedMessage.amount.toString(), originMetadata.nativeToken?.decimals || 18),
-      totalPayment: totalPayment
-        ? fromWei(totalPayment, originMetadata.nativeToken?.decimals || 18)
-        : 'Unknown',
+      totalPayment: fromWei(totalPayment, originMetadata.nativeToken?.decimals || 18),
       endRecipient: address,
       originTokenAddress: to,
       originTokenSymbol: originTokenSymbol,

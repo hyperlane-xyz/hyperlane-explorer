@@ -48,7 +48,7 @@ export function WarpTransferDetailCard({ message, blur }: Props) {
           label="Symbol:"
           labelWidth="w-20"
           display={warpRouteDetails.originTokenSymbol}
-          displayWidth="w-64 sm:w-40"
+          displayWidth="w-64 sm:w-48"
           blurValue={blur}
         />
         <KeyValueRow
@@ -63,7 +63,7 @@ export function WarpTransferDetailCard({ message, blur }: Props) {
           label="Symbol:"
           labelWidth="w-20"
           display={warpRouteDetails.destinationTokenSymbol}
-          displayWidth="w-64 sm:w-40"
+          displayWidth="w-64 sm:w-48"
           blurValue={blur}
         />
         <KeyValueRow
@@ -78,7 +78,7 @@ export function WarpTransferDetailCard({ message, blur }: Props) {
           label="Fee paid:"
           labelWidth="w-20"
           display={warpRouteDetails.totalPayment}
-          displayWidth="w-64 sm:w-40"
+          displayWidth="w-64 sm:w-48"
           blurValue={blur}
         />
         <KeyValueRow
