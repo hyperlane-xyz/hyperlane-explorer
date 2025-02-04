@@ -1,17 +1,24 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 
-import { Message, MessageStatus, MessageStub } from '../../../types';
+import {
+  Message,
+  MessageStatus,
+  MessageStub,
+  WarpRouteDetails,
+  WarpRouteMap,
+} from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 
+import { fromWei, objKeys, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
 import {
   MessageEntry,
-  MessageStubEntry,
   MessagesQueryResult,
   MessagesStubQueryResult,
+  MessageStubEntry,
 } from './fragments';
 
 /**
@@ -35,6 +42,69 @@ export function parseMessageQueryResult(
   data: MessagesQueryResult | undefined,
 ): Message[] {
   return queryResult(multiProvider, scrapedChains, data, parseMessage);
+}
+
+function getTokenSymbolFromWarpRouteMap(
+  chainMetadata: ChainMetadata,
+  address: Address,
+  warpRouteMap: WarpRouteMap,
+) {
+  const { name } = chainMetadata;
+
+  if (objKeys(warpRouteMap).includes(name)) {
+    const chain = warpRouteMap[name];
+    if (objKeys(chain).includes(address)) {
+      return chain[address];
+    }
+  }
+
+  return undefined;
+}
+
+export function parseWarpRouteDetails(
+  message: Message,
+  warpRouteMap: WarpRouteMap,
+): WarpRouteDetails | undefined {
+  try {
+    const {
+      body,
+      origin: { to },
+      totalPayment,
+      originMetadata,
+      destinationMetadata,
+      sender,
+      recipient,
+    } = message;
+
+    if (!body || !originMetadata || !destinationMetadata) return undefined;
+
+    const originTokenSymbol = getTokenSymbolFromWarpRouteMap(originMetadata, sender, warpRouteMap);
+    const destinationTokenSymbol = getTokenSymbolFromWarpRouteMap(
+      destinationMetadata,
+      recipient,
+      warpRouteMap,
+    );
+
+    if (!originTokenSymbol || !destinationTokenSymbol) return undefined;
+
+    const parsedMessage = parseWarpRouteMessage(body);
+    const address = postgresByteaToAddress(parsedMessage.recipient, destinationMetadata);
+
+    return {
+      amount: fromWei(parsedMessage.amount.toString(), originMetadata.nativeToken?.decimals || 18),
+      totalPayment: totalPayment
+        ? fromWei(totalPayment, originMetadata.nativeToken?.decimals || 18)
+        : 'Unknown',
+      endRecipient: address,
+      originTokenAddress: to,
+      originTokenSymbol: originTokenSymbol,
+      destinationTokenAddress: recipient,
+      destinationTokenSymbol: destinationTokenSymbol,
+    };
+  } catch (err) {
+    logger.error('Error parsing warp route details:', err);
+    return undefined;
+  }
 }
 
 function queryResult<D, M extends MessageStub>(
@@ -90,6 +160,8 @@ function parseMessageStub(
           }
         : undefined,
       isPiMsg,
+      originMetadata,
+      destinationMetadata,
     };
   } catch (error) {
     logger.error('Error parsing message stub', error);
@@ -151,6 +223,8 @@ function parseMessage(
       totalGasAmount: m.total_gas_amount.toString(),
       totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
+      originMetadata,
+      destinationMetadata,
     };
   } catch (error) {
     logger.error('Error parsing message', error);

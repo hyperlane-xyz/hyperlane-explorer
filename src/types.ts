@@ -1,3 +1,4 @@
+import { ChainMetadata, ChainName } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -43,6 +44,8 @@ export interface MessageStub {
   origin: MessageTxStub;
   destination?: MessageTxStub;
   isPiMsg?: boolean;
+  originMetadata: ChainMetadata | null;
+  destinationMetadata: ChainMetadata | null;
 }
 
 export interface Message extends MessageStub {
@@ -60,3 +63,15 @@ export interface ExtendedLog extends providers.Log {
   from?: Address;
   to?: Address;
 }
+
+export interface WarpRouteDetails {
+  amount: string;
+  totalPayment: string;
+  endRecipient: string;
+  originTokenAddress: string;
+  originTokenSymbol: string;
+  destinationTokenAddress: string;
+  destinationTokenSymbol: string;
+}
+
+export type WarpRouteMap = Record<ChainName, Record<Address, string>>;

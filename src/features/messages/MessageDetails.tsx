@@ -2,14 +2,7 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import {
-  bytesToProtocolAddress,
-  fromHexString,
-  parseWarpRouteMessage,
-  ProtocolType,
-  toTitleCase,
-  trimToLength,
-} from '@hyperlane-xyz/utils';
+import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
@@ -27,6 +20,7 @@ import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { IsmDetailsCard } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
+import { WarpTransferDetailCard } from './cards/WarpTransferDetailCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
@@ -98,20 +92,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
 
-  // test
-  // const originP = multiProvider.getProtocol(originChainName);
-  // const destinationP = multiProvider.getProtocol(destinationChainName);
-
-  // console.log('originP', originP);
-  // console.log('destinationP', destinationP);
-
-  const parsed = parseWarpRouteMessage(message.body);
-  console.log('message', message);
-
-  console.log('p', parsed);
-  const address = fromHexString('');
-  const bytes = bytesToProtocolAddress(address, ProtocolType.Sealevel);
-
   return (
     <>
       <Card className="flex items-center justify-between rounded-full px-1">
@@ -148,6 +128,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
         />
         {showTimeline && <TimelineCard message={message} blur={blur} />}
         <ContentDetailsCard message={message} blur={blur} />
+        <WarpTransferDetailCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}

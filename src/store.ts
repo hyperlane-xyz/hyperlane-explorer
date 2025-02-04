@@ -7,6 +7,7 @@ import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { config } from './consts/config';
 import { DomainsEntry } from './features/chains/queries/fragments';
+import { WarpRouteMap } from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -27,6 +28,8 @@ interface AppState {
   setRegistry: (registry: IRegistry) => void;
   bannerClassName: string;
   setBanner: (className: string) => void;
+  warpRouteMap: WarpRouteMap;
+  setWarpRouteMap: (warpRouteMap: WarpRouteMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -56,6 +59,10 @@ export const useStore = create<AppState>()(
       },
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
+      warpRouteMap: {},
+      setWarpRouteMap: (warpRouteMap: WarpRouteMap) => {
+        set({ warpRouteMap });
+      },
     }),
     {
       name: 'hyperlane', // name in storage
@@ -75,6 +82,9 @@ export const useStore = create<AppState>()(
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
+          buildWarpRouteMap(state.registry).then((warpRouteMap) => {
+            state.setWarpRouteMap(warpRouteMap);
+          });
         };
       },
     },
@@ -117,4 +127,21 @@ async function buildMultiProvider(
   );
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
   return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
+}
+
+export async function buildWarpRouteMap(registry: IRegistry): Promise<WarpRouteMap> {
+  try {
+    const warpRoutes = await registry.getWarpRoutes();
+    return Object.values(warpRoutes).reduce((acc, { tokens }) => {
+      tokens.forEach(({ chainName, addressOrDenom, symbol }) => {
+        if (!acc[chainName]) {
+          acc[chainName] = {};
+        }
+        acc[chainName][addressOrDenom] = symbol;
+      });
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
 }
