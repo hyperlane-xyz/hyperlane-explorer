@@ -44,8 +44,8 @@ export interface MessageStub {
   origin: MessageTxStub;
   destination?: MessageTxStub;
   isPiMsg?: boolean;
-  originMetadata: ChainMetadata | null;
-  destinationMetadata: ChainMetadata | null;
+  originMetadata?: ChainMetadata | null;
+  destinationMetadata?: ChainMetadata | null;
 }
 
 export interface Message extends MessageStub {
