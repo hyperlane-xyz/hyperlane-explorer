@@ -99,7 +99,7 @@ async function checkIsMessageDelivered(
     const fromBlock = (await provider.getBlockNumber()) - DELIVERY_LOG_CHECK_BLOCK_RANGE;
     const logs = await mailbox.queryFilter(mailbox.filters.ProcessId(msgId), fromBlock, 'latest');
     if (logs?.length) {
-      logger.debug(`Found process log for ${msgId}}`);
+      logger.debug(`Found process log for ${msgId}`);
       const log = logs[0]; // Should only be 1 log per message delivery
       return {
         isDelivered: true,

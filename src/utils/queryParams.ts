@@ -12,7 +12,7 @@ export function getQueryParamString(query: ParsedUrlQuery, key: string, defaultV
   else return defaultVal;
 }
 
-// Use query param form URL
+// Use query param from URL
 export function useQueryParam(key: string, defaultVal = '') {
   const router = useRouter();
 

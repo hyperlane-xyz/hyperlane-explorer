@@ -34,7 +34,7 @@ export function getChainEnvironment(multiProvider: MultiProvider, domainId: Doma
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
-// Is a 'Permisionless Interop' chain (i.e. one not deployed and scraped by Abacus Works)
+// Is a 'Permissionless Interop' chain (i.e. one not deployed and scraped by Abacus Works)
 export function isPiChain(
   multiProvider: MultiProvider,
   scrapedChains: DomainsEntry[],
