@@ -16,10 +16,10 @@ interface Props {
 }
 
 export function WarpTransferDetailCard({ message, blur }: Props) {
-  const { warpRouteMap } = useStore((s) => ({
-    warpRouteMap: s.warpRouteMap,
+  const { warpRouteChainAddressMap } = useStore((s) => ({
+    warpRouteChainAddressMap: s.warpRouteChainAddressMap,
   }));
-  const warpRouteDetails = parseWarpRouteDetails(message, warpRouteMap);
+  const warpRouteDetails = parseWarpRouteDetails(message, warpRouteChainAddressMap);
 
   if (!warpRouteDetails) return null;
 

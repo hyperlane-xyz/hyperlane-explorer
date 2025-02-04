@@ -7,7 +7,7 @@ import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { config } from './consts/config';
 import { DomainsEntry } from './features/chains/queries/fragments';
-import { WarpRouteMap } from './types';
+import { WarpRouteChainAddressMap } from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -28,8 +28,8 @@ interface AppState {
   setRegistry: (registry: IRegistry) => void;
   bannerClassName: string;
   setBanner: (className: string) => void;
-  warpRouteMap: WarpRouteMap;
-  setWarpRouteMap: (warpRouteMap: WarpRouteMap) => void;
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -59,9 +59,9 @@ export const useStore = create<AppState>()(
       },
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
-      warpRouteMap: {},
-      setWarpRouteMap: (warpRouteMap: WarpRouteMap) => {
-        set({ warpRouteMap });
+      warpRouteChainAddressMap: {},
+      setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMapMap) => {
+        set({ warpRouteChainAddressMap });
       },
     }),
     {
@@ -82,8 +82,8 @@ export const useStore = create<AppState>()(
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
-          buildWarpRouteMap(state.registry).then((warpRouteMap) => {
-            state.setWarpRouteMap(warpRouteMap);
+          buildWarpRouteChainAddressMap(state.registry).then((warpRouteChainAddressMap) => {
+            state.setWarpRoutChainAddresseMap(warpRouteChainAddressMap);
           });
         };
       },
@@ -129,7 +129,9 @@ async function buildMultiProvider(
   return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
 }
 
-export async function buildWarpRouteMap(registry: IRegistry): Promise<WarpRouteMap> {
+export async function buildWarpRouteChainAddressMap(
+  registry: IRegistry,
+): Promise<WarpRouteChainAddressMap> {
   try {
     const warpRoutes = await registry.getWarpRoutes();
     return Object.values(warpRoutes).reduce((acc, { tokens }) => {

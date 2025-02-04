@@ -4,8 +4,8 @@ import {
   Message,
   MessageStatus,
   MessageStub,
+  WarpRouteChainAddressMap,
   WarpRouteDetails,
-  WarpRouteMap,
 } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
@@ -44,15 +44,14 @@ export function parseMessageQueryResult(
   return queryResult(multiProvider, scrapedChains, data, parseMessage);
 }
 
-function getTokenSymbolFromWarpRouteMap(
+function getTokenSymbolFromWarpRouteChainAddressMap(
   chainMetadata: ChainMetadata,
   address: Address,
-  warpRouteMap: WarpRouteMap,
+  warpRouteChainAddressMap: WarpRouteChainAddressMap,
 ) {
   const { name } = chainMetadata;
-
-  if (objKeys(warpRouteMap).includes(name)) {
-    const chain = warpRouteMap[name];
+  if (objKeys(warpRouteChainAddressMap).includes(name)) {
+    const chain = warpRouteChainAddressMap[name];
     if (objKeys(chain).includes(address)) {
       return chain[address];
     }
@@ -63,7 +62,7 @@ function getTokenSymbolFromWarpRouteMap(
 
 export function parseWarpRouteDetails(
   message: Message,
-  warpRouteMap: WarpRouteMap,
+  warpRouteChainAddressMap: WarpRouteChainAddressMap,
 ): WarpRouteDetails | undefined {
   try {
     const {
@@ -77,11 +76,15 @@ export function parseWarpRouteDetails(
 
     if (!body || !originMetadata || !destinationMetadata) return undefined;
 
-    const originTokenSymbol = getTokenSymbolFromWarpRouteMap(originMetadata, to, warpRouteMap);
-    const destinationTokenSymbol = getTokenSymbolFromWarpRouteMap(
+    const originTokenSymbol = getTokenSymbolFromWarpRouteChainAddressMap(
+      originMetadata,
+      to,
+      warpRouteChainAddressMap,
+    );
+    const destinationTokenSymbol = getTokenSymbolFromWarpRouteChainAddressMap(
       destinationMetadata,
       recipient,
-      warpRouteMap,
+      warpRouteChainAddressMap,
     );
 
     // If token symbols are not found with the addresses, it means the message is not a warp route transfer

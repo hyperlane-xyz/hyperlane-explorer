@@ -1,4 +1,4 @@
-import { ChainMetadata, ChainName } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -74,4 +74,4 @@ export interface WarpRouteDetails {
   destinationTokenSymbol: string;
 }
 
-export type WarpRouteMap = Record<ChainName, Record<Address, string>>;
+export type WarpRouteChainAddressMap = ChainMap<Record<Address, string>>;
