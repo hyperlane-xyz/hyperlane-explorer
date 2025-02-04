@@ -60,7 +60,7 @@ export const useStore = create<AppState>()(
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
       warpRouteChainAddressMap: {},
-      setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMapMap) => {
+      setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
         set({ warpRouteChainAddressMap });
       },
     }),
