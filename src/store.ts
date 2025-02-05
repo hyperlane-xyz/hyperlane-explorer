@@ -1,10 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
+import { GithubRegistry, IRegistry, warpRouteConfigs } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProvider, mergeChainMetadataMap } from '@hyperlane-xyz/sdk';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
-
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { WarpRouteChainAddressMap } from './types';
@@ -82,9 +80,7 @@ export const useStore = create<AppState>()(
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
-          buildWarpRouteChainAddressMap(state.registry).then((warpRouteChainAddressMap) => {
-            state.setWarpRoutChainAddresseMap(warpRouteChainAddressMap);
-          });
+          state.setWarpRoutChainAddresseMap(buildWarpRouteChainAddressMap());
         };
       },
     },
@@ -129,21 +125,16 @@ async function buildMultiProvider(
   return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
 }
 
-export async function buildWarpRouteChainAddressMap(
-  registry: IRegistry,
-): Promise<WarpRouteChainAddressMap> {
-  try {
-    const warpRoutes = await registry.getWarpRoutes();
-    return Object.values(warpRoutes).reduce((acc, { tokens }) => {
-      tokens.forEach(({ chainName, addressOrDenom, symbol }) => {
-        if (!acc[chainName]) {
-          acc[chainName] = {};
-        }
-        acc[chainName][addressOrDenom] = symbol;
-      });
-      return acc;
-    }, {});
-  } catch {
-    return {};
-  }
+// TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
+export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
+  return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
+    tokens.forEach((token) => {
+      const { chainName, addressOrDenom } = token;
+      if (!acc[chainName]) {
+        acc[chainName] = {};
+      }
+      acc[chainName][addressOrDenom] = token;
+    });
+    return acc;
+  }, {});
 }

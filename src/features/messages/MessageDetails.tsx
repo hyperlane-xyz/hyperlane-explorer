@@ -127,8 +127,8 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           blur={blur}
         />
         {showTimeline && <TimelineCard message={message} blur={blur} />}
-        <ContentDetailsCard message={message} blur={blur} />
         <WarpTransferDetailCard message={message} blur={blur} />
+        <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}

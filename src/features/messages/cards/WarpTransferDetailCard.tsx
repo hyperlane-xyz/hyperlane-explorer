@@ -9,10 +9,10 @@ import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
-import { useStore } from '../../../store';
+import { useMultiProvider, useStore } from '../../../store';
 import { Message, WarpRouteChainAddressMap, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
-import { getTokenSymbolFromWarpRouteChainAddressMap } from '../../../utils/token';
+import { getTokenFromWarpRouteChainAddressMap } from '../../../utils/token';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
@@ -21,16 +21,21 @@ interface Props {
 }
 
 export function WarpTransferDetailCard({ message, blur }: Props) {
-  const { warpRouteChainAddressMap, multiProvider } = useStore((s) => ({
+  const multiProvider = useMultiProvider();
+  const { warpRouteChainAddressMap } = useStore((s) => ({
     warpRouteChainAddressMap: s.warpRouteChainAddressMap,
-    multiProvider: s.multiProvider,
   }));
   const warpRouteDetails = parseWarpRouteDetails(message, warpRouteChainAddressMap, multiProvider);
 
   if (!warpRouteDetails) return null;
 
-  const { amount, destinationTokenAddress, endRecipient, originTokenAddress, originTokenSymbol } =
-    warpRouteDetails;
+  const {
+    amount,
+    destinationTokenAddress,
+    transferRecipient,
+    originTokenAddress,
+    originTokenSymbol,
+  } = warpRouteDetails;
 
   return (
     <Card className="w-full space-y-4">
@@ -69,11 +74,10 @@ export function WarpTransferDetailCard({ message, blur }: Props) {
           showCopy={true}
           blurValue={blur}
         />
-
         <KeyValueRow
-          label="End recipient:"
+          label="Transfer recipient:"
           labelWidth="w-20 sm:w-32"
-          display={endRecipient}
+          display={transferRecipient}
           displayWidth="w-64 sm:w-96"
           blurValue={blur}
           showCopy
@@ -102,20 +106,20 @@ export function parseWarpRouteDetails(
 
     if (!body || !originMetadata || !destinationMetadata) return undefined;
 
-    const originTokenSymbol = getTokenSymbolFromWarpRouteChainAddressMap(
+    const originToken = getTokenFromWarpRouteChainAddressMap(
       originMetadata,
       to,
       warpRouteChainAddressMap,
     );
-    const destinationTokenSymbol = getTokenSymbolFromWarpRouteChainAddressMap(
+    const destinationToken = getTokenFromWarpRouteChainAddressMap(
       destinationMetadata,
       recipient,
       warpRouteChainAddressMap,
     );
 
-    // If token symbols are not found with the addresses, it means the message
+    // If tokens are not found with the addresses, it means the message
     // is not a warp transfer between tokens known to the registry
-    if (!originTokenSymbol || !destinationTokenSymbol) return undefined;
+    if (!originToken || !destinationToken) return undefined;
 
     const parsedMessage = parseWarpRouteMessage(body);
     const bytes = fromHexString(parsedMessage.recipient);
@@ -126,12 +130,12 @@ export function parseWarpRouteDetails(
     );
 
     return {
-      amount: fromWei(parsedMessage.amount.toString(), originMetadata.nativeToken?.decimals || 18),
-      endRecipient: address,
+      amount: fromWei(parsedMessage.amount.toString(), originToken.decimals || 18),
+      transferRecipient: address,
       originTokenAddress: to,
-      originTokenSymbol: originTokenSymbol,
+      originTokenSymbol: originToken.symbol,
       destinationTokenAddress: recipient,
-      destinationTokenSymbol: destinationTokenSymbol,
+      destinationTokenSymbol: destinationToken.symbol,
     };
   } catch (err) {
     logger.error('Error parsing warp route details:', err);
