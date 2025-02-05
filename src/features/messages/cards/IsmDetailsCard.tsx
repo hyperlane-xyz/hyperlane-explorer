@@ -1,8 +1,6 @@
-import Image from 'next/image';
-
 import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
-
+import Image from 'next/image';
 import { Card } from '../../../components/layout/Card';
 import { docLinks } from '../../../consts/links';
 import ShieldLock from '../../../images/icons/shield-lock.svg';

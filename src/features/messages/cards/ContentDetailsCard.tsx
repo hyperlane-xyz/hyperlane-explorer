@@ -1,16 +1,13 @@
-import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
-
 import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
-
+import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
-
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 

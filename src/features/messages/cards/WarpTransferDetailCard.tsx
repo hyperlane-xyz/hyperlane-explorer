@@ -1,12 +1,9 @@
-import Image from 'next/image';
-
 import { Tooltip } from '@hyperlane-xyz/widgets';
-
+import Image from 'next/image';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
-import { Message } from '../../../types';
-
 import { useStore } from '../../../store';
+import { Message } from '../../../types';
 import { parseWarpRouteDetails } from '../queries/parse';
 import { KeyValueRow } from './KeyValueRow';
 

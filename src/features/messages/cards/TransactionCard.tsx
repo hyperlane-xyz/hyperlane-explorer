@@ -1,10 +1,8 @@
-import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useState } from 'react';
-
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
-
+import BigNumber from 'bignumber.js';
+import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
@@ -15,7 +13,6 @@ import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-
 import { LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 

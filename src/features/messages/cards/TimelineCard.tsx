@@ -1,5 +1,4 @@
 import { MessageTimeline, useMessageStage } from '@hyperlane-xyz/widgets';
-
 import { Card } from '../../../components/layout/Card';
 import { Message } from '../../../types';
 
