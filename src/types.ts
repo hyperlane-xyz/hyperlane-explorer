@@ -1,4 +1,4 @@
-import { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMap } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -44,8 +44,6 @@ export interface MessageStub {
   origin: MessageTxStub;
   destination?: MessageTxStub;
   isPiMsg?: boolean;
-  originMetadata?: ChainMetadata | null;
-  destinationMetadata?: ChainMetadata | null;
 }
 
 export interface Message extends MessageStub {
@@ -66,7 +64,6 @@ export interface ExtendedLog extends providers.Log {
 
 export interface WarpRouteDetails {
   amount: string;
-  totalPayment: string;
   endRecipient: string;
   originTokenAddress: string;
   originTokenSymbol: string;
