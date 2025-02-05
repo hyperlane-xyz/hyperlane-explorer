@@ -1,3 +1,4 @@
+import { ChainMap, TokenArgs } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -60,3 +61,14 @@ export interface ExtendedLog extends providers.Log {
   from?: Address;
   to?: Address;
 }
+
+export interface WarpRouteDetails {
+  amount: string;
+  transferRecipient: string;
+  originTokenAddress: string;
+  originTokenSymbol: string;
+  destinationTokenAddress: string;
+  destinationTokenSymbol: string;
+}
+
+export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgs>>;

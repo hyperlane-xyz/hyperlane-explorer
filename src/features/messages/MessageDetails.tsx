@@ -1,9 +1,8 @@
+import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
+import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
-
-import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
-
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
@@ -12,14 +11,13 @@ import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
-
-import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { IsmDetailsCard } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
+import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
@@ -126,6 +124,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           blur={blur}
         />
         {showTimeline && <TimelineCard message={message} blur={blur} />}
+        <WarpTransferDetailsCard message={message} blur={blur} />
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}

@@ -1,17 +1,15 @@
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
-
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
 import {
   MessageEntry,
-  MessageStubEntry,
   MessagesQueryResult,
   MessagesStubQueryResult,
+  MessageStubEntry,
 } from './fragments';
 
 /**

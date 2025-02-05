@@ -1,12 +1,11 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
+import { GithubRegistry, IRegistry, warpRouteConfigs } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProvider, mergeChainMetadataMap } from '@hyperlane-xyz/sdk';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
-
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
 import { DomainsEntry } from './features/chains/queries/fragments';
+import { WarpRouteChainAddressMap } from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -27,6 +26,8 @@ interface AppState {
   setRegistry: (registry: IRegistry) => void;
   bannerClassName: string;
   setBanner: (className: string) => void;
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -56,6 +57,10 @@ export const useStore = create<AppState>()(
       },
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
+      warpRouteChainAddressMap: {},
+      setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
+        set({ warpRouteChainAddressMap });
+      },
     }),
     {
       name: 'hyperlane', // name in storage
@@ -75,6 +80,7 @@ export const useStore = create<AppState>()(
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
+          state.setWarpRoutChainAddresseMap(buildWarpRouteChainAddressMap());
         };
       },
     },
@@ -117,4 +123,16 @@ async function buildMultiProvider(
   );
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
   return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
+}
+
+// TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
+export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
+  return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
+    tokens.forEach((token) => {
+      const { chainName, addressOrDenom } = token;
+      acc[chainName] ||= {};
+      acc[chainName][addressOrDenom] = token;
+    });
+    return acc;
+  }, {});
 }

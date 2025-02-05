@@ -1,8 +1,6 @@
+import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useMemo } from 'react';
-
-import { Tooltip } from '@hyperlane-xyz/widgets';
-
 import { Card } from '../../../components/layout/Card';
 import AccountStar from '../../../images/icons/account-star.svg';
 import { Message } from '../../../types';

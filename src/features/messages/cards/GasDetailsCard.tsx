@@ -1,11 +1,9 @@
+import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
+import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-
-import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
-import { Tooltip } from '@hyperlane-xyz/widgets';
-
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { Card } from '../../../components/layout/Card';
 import { docLinks } from '../../../consts/links';
