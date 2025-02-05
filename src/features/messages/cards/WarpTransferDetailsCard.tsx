@@ -20,7 +20,7 @@ interface Props {
   blur: boolean;
 }
 
-export function WarpTransferDetailCard({ message, blur }: Props) {
+export function WarpTransferDetailsCard({ message, blur }: Props) {
   const multiProvider = useMultiProvider();
   const { warpRouteChainAddressMap } = useStore((s) => ({
     warpRouteChainAddressMap: s.warpRouteChainAddressMap,
