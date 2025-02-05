@@ -130,9 +130,7 @@ export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
-      if (!acc[chainName]) {
-        acc[chainName] = {};
-      }
+      acc[chainName] ||= {};
       acc[chainName][addressOrDenom] = token;
     });
     return acc;
