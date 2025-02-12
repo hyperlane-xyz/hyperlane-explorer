@@ -126,9 +126,6 @@ export function MessageSearch() {
     [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
 
-  console.log('isValidOrigin', isValidOrigin);
-  console.log('isValidDestination', isValidDestination);
-
   return (
     <>
       <SearchBar
