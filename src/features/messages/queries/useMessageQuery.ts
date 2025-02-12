@@ -5,7 +5,6 @@ import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -20,11 +19,6 @@ const SEARCH_QUERY_LIMIT = 50;
 export function isValidSearchQuery(input: string) {
   if (!input) return false;
   return !!searchValueToPostgresBytea(input);
-}
-
-export function isValidDomainId(domainId: string | null, multiProvider: MultiProvider) {
-  if (!domainId) return false;
-  return multiProvider.hasChain(domainId);
 }
 
 export function useMessageSearchQuery(
