@@ -77,7 +77,7 @@ export function ContentDetailsCard({
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-4">
         <KeyValueRow
-          label="Identifer:"
+          label="Identifier:"
           labelWidth="w-16"
           display={msgId}
           displayWidth="w-64 sm:w-80"
