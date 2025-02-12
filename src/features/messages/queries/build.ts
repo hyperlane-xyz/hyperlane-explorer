@@ -64,15 +64,15 @@ export function buildMessageQuery(
 
 export function buildMessageSearchQuery(
   searchInput: string,
-  originFilter: string | null,
-  destFilter: string | null,
+  originFilter: number | null,
+  destFilter: number | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
   limit: number,
   useStub = false,
 ) {
-  const originChains = originFilter ? originFilter.split(',') : undefined;
-  const destinationChains = destFilter ? destFilter.split(',') : undefined;
+  const originChains = originFilter ? originFilter.toString().split(',') : undefined;
+  const destinationChains = destFilter ? destFilter.toString().split(',') : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {

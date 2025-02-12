@@ -40,16 +40,21 @@ export function useMessageSearchQuery(
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
+  // Get chains domainId
+  const originDomainId = originChainFilter ? multiProvider.tryGetDomainId(originChainFilter) : null;
+  const destDomainId = destinationChainFilter
+    ? multiProvider.tryGetDomainId(destinationChainFilter)
+    : null;
+
   // validating filters
-  const isValidOrigin = !originChainFilter || isValidDomainId(originChainFilter, multiProvider);
-  const isValidDestination =
-    !destinationChainFilter || isValidDomainId(destinationChainFilter, multiProvider);
+  const isValidOrigin = !originChainFilter || originDomainId !== null;
+  const isValidDestination = !destinationChainFilter || destDomainId !== null;
 
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
-    isValidOrigin ? originChainFilter : null,
-    isValidDestination ? destinationChainFilter : null,
+    isValidOrigin ? originDomainId : null,
+    isValidDestination ? destDomainId : null,
     startTimeFilter,
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
