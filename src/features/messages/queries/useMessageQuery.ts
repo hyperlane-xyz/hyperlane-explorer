@@ -5,7 +5,6 @@ import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -22,15 +21,10 @@ export function isValidSearchQuery(input: string) {
   return !!searchValueToPostgresBytea(input);
 }
 
-export function isValidDomainId(domainId: string | null, multiProvider: MultiProvider) {
-  if (!domainId) return false;
-  return multiProvider.hasChain(domainId);
-}
-
 export function useMessageSearchQuery(
   sanitizedInput: string,
-  originChainFilter: string | null,
-  destinationChainFilter: string | null,
+  originChainNameFilter: string | null,
+  destinationChainNameFilter: string | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
 ) {
@@ -40,16 +34,23 @@ export function useMessageSearchQuery(
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
+  // Get chains domainId
+  const originDomainId = originChainNameFilter
+    ? multiProvider.tryGetDomainId(originChainNameFilter)
+    : null;
+  const destDomainId = destinationChainNameFilter
+    ? multiProvider.tryGetDomainId(destinationChainNameFilter)
+    : null;
+
   // validating filters
-  const isValidOrigin = !originChainFilter || isValidDomainId(originChainFilter, multiProvider);
-  const isValidDestination =
-    !destinationChainFilter || isValidDomainId(destinationChainFilter, multiProvider);
+  const isValidOrigin = !originChainNameFilter || originDomainId !== null;
+  const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
 
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
-    isValidOrigin ? originChainFilter : null,
-    isValidDestination ? destinationChainFilter : null,
+    isValidOrigin ? originDomainId : null,
+    isValidDestination ? destDomainId : null,
     startTimeFilter,
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
@@ -73,8 +74,8 @@ export function useMessageSearchQuery(
   // Filter recent messages during DB backfilling period
   // TODO remove this once backfilling is complete
   const hasFilter = !!(
-    originChainFilter ||
-    destinationChainFilter ||
+    originChainNameFilter ||
+    destinationChainNameFilter ||
     startTimeFilter ||
     endTimeFilter
   );

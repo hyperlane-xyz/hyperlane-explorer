@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
 
-import { ChainMetadata, getDomainId } from '@hyperlane-xyz/sdk';
+import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import {
   ChevronIcon,
@@ -71,13 +71,12 @@ function ChainSelector({
 
   const multiProvider = useMultiProvider();
 
-  const chainName = value ? multiProvider.tryGetChainName(value) : undefined;
-  const chainDisplayName = chainName
-    ? trimToLength(getChainDisplayName(multiProvider, chainName, true), 12)
+  const chainDisplayName = value
+    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
-    onChangeValue(getDomainId(c).toString());
+    onChangeValue(c.name);
     close();
   };
 
