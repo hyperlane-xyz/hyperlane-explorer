@@ -71,12 +71,8 @@ export function buildMessageSearchQuery(
   limit: number,
   useStub = false,
 ) {
-  const originChains = originDomainIdFilter
-    ? originDomainIdFilter.toString().split(',')
-    : undefined;
-  const destinationChains = destDomainIdFilter
-    ? destDomainIdFilter.toString().split(',')
-    : undefined;
+  const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
+  const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
@@ -96,7 +92,7 @@ export function buildMessageSearchQuery(
     where: {
       _and: [
         ${originDomainIdFilter ? '{origin_domain_id: {_in: $originChains}},' : ''}
-        ${destinationChains ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
+        ${destDomainIdFilter ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
         ${whereClause}
