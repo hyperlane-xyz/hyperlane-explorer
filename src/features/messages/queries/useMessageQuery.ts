@@ -23,8 +23,8 @@ export function isValidSearchQuery(input: string) {
 
 export function useMessageSearchQuery(
   sanitizedInput: string,
-  originChainFilter: string | null,
-  destinationChainFilter: string | null,
+  originChainNameFilter: string | null,
+  destinationChainNameFilter: string | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
 ) {
@@ -35,14 +35,16 @@ export function useMessageSearchQuery(
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
 
   // Get chains domainId
-  const originDomainId = originChainFilter ? multiProvider.tryGetDomainId(originChainFilter) : null;
-  const destDomainId = destinationChainFilter
-    ? multiProvider.tryGetDomainId(destinationChainFilter)
+  const originDomainId = originChainNameFilter
+    ? multiProvider.tryGetDomainId(originChainNameFilter)
+    : null;
+  const destDomainId = destinationChainNameFilter
+    ? multiProvider.tryGetDomainId(destinationChainNameFilter)
     : null;
 
   // validating filters
-  const isValidOrigin = !originChainFilter || originDomainId !== null;
-  const isValidDestination = !destinationChainFilter || destDomainId !== null;
+  const isValidOrigin = !originChainNameFilter || originDomainId !== null;
+  const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
 
   // Assemble GraphQL query
   const { query, variables } = buildMessageSearchQuery(
@@ -72,8 +74,8 @@ export function useMessageSearchQuery(
   // Filter recent messages during DB backfilling period
   // TODO remove this once backfilling is complete
   const hasFilter = !!(
-    originChainFilter ||
-    destinationChainFilter ||
+    originChainNameFilter ||
+    destinationChainNameFilter ||
     startTimeFilter ||
     endTimeFilter
   );

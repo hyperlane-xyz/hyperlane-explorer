@@ -64,15 +64,19 @@ export function buildMessageQuery(
 
 export function buildMessageSearchQuery(
   searchInput: string,
-  originFilter: number | null,
-  destFilter: number | null,
+  originDomainIdFilter: number | null,
+  destDomainIdFilter: number | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
   limit: number,
   useStub = false,
 ) {
-  const originChains = originFilter ? originFilter.toString().split(',') : undefined;
-  const destinationChains = destFilter ? destFilter.toString().split(',') : undefined;
+  const originChains = originDomainIdFilter
+    ? originDomainIdFilter.toString().split(',')
+    : undefined;
+  const destinationChains = destDomainIdFilter
+    ? destDomainIdFilter.toString().split(',')
+    : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
   const variables = {
@@ -91,8 +95,8 @@ export function buildMessageSearchQuery(
       `q${i}: message_view(
     where: {
       _and: [
-        ${originFilter ? '{origin_domain_id: {_in: $originChains}},' : ''}
-        ${destFilter ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
+        ${originDomainIdFilter ? '{origin_domain_id: {_in: $originChains}},' : ''}
+        ${destinationChains ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
         ${whereClause}
