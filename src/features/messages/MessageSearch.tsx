@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -68,6 +69,9 @@ export function MessageSearch() {
     tryToDecimalNumber(defaultEndTime),
   );
 
+  // Router
+  const router = useRouter();
+
   // GraphQL query and results
   const {
     isValidInput,
@@ -125,6 +129,11 @@ export function MessageSearch() {
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
     [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
+
+  // Reset query input when Router to homepage (no params)
+  useEffect(() => {
+    if (router.asPath === '/') setSearchInput('');
+  }, [router.asPath]);
 
   return (
     <>
