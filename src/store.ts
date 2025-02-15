@@ -27,7 +27,7 @@ interface AppState {
   bannerClassName: string;
   setBanner: (className: string) => void;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
-  setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
+  setWarpRoutChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -58,7 +58,7 @@ export const useStore = create<AppState>()(
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
       warpRouteChainAddressMap: {},
-      setWarpRoutChainAddresseMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
+      setWarpRoutChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
         set({ warpRouteChainAddressMap });
       },
     }),
@@ -80,7 +80,7 @@ export const useStore = create<AppState>()(
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
-          state.setWarpRoutChainAddresseMap(buildWarpRouteChainAddressMap());
+          state.setWarpRoutChainAddressMap(buildWarpRouteChainAddressMap());
         };
       },
     },
