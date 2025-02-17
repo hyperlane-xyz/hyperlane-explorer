@@ -59,7 +59,7 @@ export function useSyncQueryParam(params: Record<string, string>) {
 }
 
 // Circumventing Next's router.replace method here because
-// it's async and causes race conditions btwn components.
+// it's async and causes race conditions between components.
 // This will only modify the url but not trigger any routing
 export function replacePathParam(key: string, val: string) {
   try {
