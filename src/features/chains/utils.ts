@@ -26,7 +26,7 @@ export function getChainDisplayName(
   const metadata = multiProvider.tryGetChainMetadata(chainName || 0);
   if (!metadata) return fallbackToId && chainName ? chainName : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
-  return toTitleCase(displayName || metadata.displayName || metadata.name);
+  return displayName || metadata.displayName || toTitleCase(metadata.name);
 }
 
 export function getChainEnvironment(multiProvider: MultiProvider, domainId: DomainId) {
