@@ -38,7 +38,7 @@ import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } fr
 type Provider = providers.Provider;
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
-const IGP_PAYMENT_CHECK_DELAY = 30_000; // 30 seconds
+const IGP_PAYMENT_CHECK_DELAY = 60_000; // 60 seconds
 
 export async function debugMessage(
   multiProvider: MultiProvider,
