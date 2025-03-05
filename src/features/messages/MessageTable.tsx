@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
@@ -23,6 +23,25 @@ export function MessageTable({
   isFetching: boolean;
 }) {
   const multiProvider = useMultiProvider();
+  const [newMessageIds, setNewMessageIds] = useState(new Set());
+  const prevMessageListRef = useRef<MessageStub[]>([]);
+
+  useEffect(() => {
+    if (messageList.length === 0) return;
+
+    const existingIds = new Set(prevMessageListRef.current.map((m) => m.id));
+    const newIds = messageList.filter((m) => !existingIds.has(m.id)).map((m) => m.id);
+
+    if (newIds.length > 0) {
+      setNewMessageIds(new Set(newIds));
+
+      setTimeout(() => {
+        setNewMessageIds(new Set());
+      }, 3000);
+    }
+
+    prevMessageListRef.current = messageList;
+  }, [messageList]);
 
   return (
     <table className="mb-1 w-full">
@@ -40,9 +59,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${
-              isFetching && 'blur-xs'
-            } transition-all duration-500`}
+            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${newMessageIds.has(m.id) ? 'animate-new-row bg-blue-100' : ''} ${isFetching && 'opacity-50'} transition-all duration-500`}
           >
             <MessageSummaryRow message={m} mp={multiProvider} />
           </tr>
