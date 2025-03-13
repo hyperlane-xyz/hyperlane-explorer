@@ -1,5 +1,5 @@
 import { isZeroish } from '@hyperlane-xyz/utils';
-import { CopyButton } from '@hyperlane-xyz/widgets';
+import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 
 interface Props {
   label: string;
@@ -11,6 +11,8 @@ interface Props {
   blurValue?: boolean;
   classes?: string;
   allowZeroish?: boolean;
+  link?: string | null;
+  copyButtonClasses?: string | null;
 }
 
 export function KeyValueRow({
@@ -23,6 +25,8 @@ export function KeyValueRow({
   blurValue,
   classes,
   allowZeroish = false,
+  link,
+  copyButtonClasses = '',
 }: Props) {
   const useFallbackVal = isZeroish(display) && !allowZeroish;
   return (
@@ -33,8 +37,22 @@ export function KeyValueRow({
         {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
       </div>
       {showCopy && !useFallbackVal && (
-        <CopyButton copyValue={display} width={13} height={13} className="ml-1.5 opacity-60" />
+        <CopyButton
+          copyValue={display}
+          width={13}
+          height={13}
+          className={`ml-1.5 opacity-60 ${copyButtonClasses}`}
+        />
       )}
+      {link && <LinkIcon href={link} />}
     </div>
+  );
+}
+
+function LinkIcon({ href }: { href: string }) {
+  return (
+    <a target="_blank" rel="noopener noreferrer" href={href}>
+      <BoxArrowIcon width={13} height={13} className="ml-1.5" />
+    </a>
   );
 }
