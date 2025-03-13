@@ -2,12 +2,14 @@ import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
+import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -26,10 +28,16 @@ export function ContentDetailsCard({
     recipient,
     body,
     decodedBody,
+    originChainId,
+    destinationChainId,
   },
   blur,
 }: Props) {
+  const multiProvider = useMultiProvider();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
+  const [senderBlockExplorerLink, setSenderBlockExplorerLink] = useState<string | null>(null);
+  const [recipientBlockExplorerLink, setRecipientBlockExplorerLink] = useState<string | null>(null);
+
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
   }, [decodedBody]);
@@ -63,6 +71,32 @@ export function ContentDetailsCard({
     }
   }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
+  const getExplorerLinks = useCallback(async () => {
+    const senderAddressLink = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      originChainId,
+      sender,
+    );
+    const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      destinationChainId,
+      recipient,
+    );
+    return { senderAddressLink, recipientAddressLink };
+  }, [destinationChainId, originChainId, multiProvider, sender, recipient]);
+
+  useEffect(() => {
+    getExplorerLinks()
+      .then(({ recipientAddressLink, senderAddressLink }) => {
+        setRecipientBlockExplorerLink(recipientAddressLink);
+        setSenderBlockExplorerLink(senderAddressLink);
+      })
+      .catch(() => {
+        setRecipientBlockExplorerLink(null);
+        setSenderBlockExplorerLink(null);
+      });
+  }, [getExplorerLinks]);
+
   return (
     <Card className="w-full space-y-4">
       <div className="flex items-center justify-between">
@@ -80,26 +114,29 @@ export function ContentDetailsCard({
           label="Identifier:"
           labelWidth="w-16"
           display={msgId}
-          displayWidth="w-64 sm:w-80"
+          displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
+          copyButtonClasses={senderBlockExplorerLink && 'sm:ml-6'}
         />
         <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
           label="Sender:"
           labelWidth="w-16"
           display={sender}
-          displayWidth="w-64 sm:w-80"
+          displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
+          link={senderBlockExplorerLink}
         />
         <KeyValueRow
           label="Recipient:"
           labelWidth="w-16"
           display={recipient}
-          displayWidth="w-64 sm:w-80"
+          displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
+          link={recipientBlockExplorerLink}
         />
       </div>
       <div>
