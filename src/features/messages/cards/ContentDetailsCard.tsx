@@ -12,6 +12,7 @@ import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
+import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
   message: Message;
@@ -35,8 +36,9 @@ export function ContentDetailsCard({
 }: Props) {
   const multiProvider = useMultiProvider();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
-  const [senderBlockExplorerLink, setSenderBlockExplorerLink] = useState<string | null>(null);
-  const [recipientBlockExplorerLink, setRecipientBlockExplorerLink] = useState<string | null>(null);
+  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
+    BlockExplorerAddressUrls | undefined
+  >(undefined);
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
@@ -71,7 +73,9 @@ export function ContentDetailsCard({
     }
   }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
-  const getExplorerLinks = useCallback(async () => {
+  const getBlockExplorerLinks = useCallback(async (): Promise<
+    BlockExplorerAddressUrls | undefined
+  > => {
     const senderAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       originChainId,
@@ -82,20 +86,14 @@ export function ContentDetailsCard({
       destinationChainId,
       recipient,
     );
-    return { senderAddressLink, recipientAddressLink };
+    return { sender: senderAddressLink, recipient: recipientAddressLink };
   }, [destinationChainId, originChainId, multiProvider, sender, recipient]);
 
   useEffect(() => {
-    getExplorerLinks()
-      .then(({ recipientAddressLink, senderAddressLink }) => {
-        setRecipientBlockExplorerLink(recipientAddressLink);
-        setSenderBlockExplorerLink(senderAddressLink);
-      })
-      .catch(() => {
-        setRecipientBlockExplorerLink(null);
-        setSenderBlockExplorerLink(null);
-      });
-  }, [getExplorerLinks]);
+    getBlockExplorerLinks()
+      .then((urls) => setBlockExplorerAddressUrls(urls))
+      .catch(() => setBlockExplorerAddressUrls(undefined));
+  }, [getBlockExplorerLinks]);
 
   return (
     <Card className="w-full space-y-4">
@@ -117,7 +115,7 @@ export function ContentDetailsCard({
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
-          copyButtonClasses={senderBlockExplorerLink && 'sm:ml-6'}
+          copyButtonClasses={blockExplorerAddressUrls?.sender && 'sm:ml-6'}
         />
         <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
@@ -127,7 +125,7 @@ export function ContentDetailsCard({
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
-          link={senderBlockExplorerLink}
+          link={blockExplorerAddressUrls?.sender}
         />
         <KeyValueRow
           label="Recipient:"
@@ -136,7 +134,7 @@ export function ContentDetailsCard({
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
-          link={recipientBlockExplorerLink}
+          link={blockExplorerAddressUrls?.recipient}
         />
       </div>
       <div>
