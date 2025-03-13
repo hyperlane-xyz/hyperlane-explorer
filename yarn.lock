@@ -2389,7 +2389,7 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^2.2.0"
-    "@hyperlane-xyz/registry": "npm:10.7.0"
+    "@hyperlane-xyz/registry": "npm:10.14.0"
     "@hyperlane-xyz/sdk": "npm:8.8.0"
     "@hyperlane-xyz/utils": "npm:8.8.0"
     "@hyperlane-xyz/widgets": "npm:8.8.0"
@@ -2432,13 +2432,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/registry@npm:10.7.0":
-  version: 10.7.0
-  resolution: "@hyperlane-xyz/registry@npm:10.7.0"
+"@hyperlane-xyz/registry@npm:10.14.0":
+  version: 10.14.0
+  resolution: "@hyperlane-xyz/registry@npm:10.14.0"
   dependencies:
     yaml: "npm:2.4.5"
     zod: "npm:^3.21.2"
-  checksum: 10/961f22cbb4474a7ca7945c232326c065fd7c7ef5b96f6dd2140c5cfc11bc93e6a32dcfdfc098aae2907d1408f04103bea839c6bd0022cac40152e82fa9f8e5bf
+  checksum: 10/d714150f4bcb2d427237712e8a867936681a6e30b3fd3d2f059315713fdb714a8bb1426db162e986a02c1094fc48bd8c335455887185b66f43a351ab44a0e1c7
   languageName: node
   linkType: hard
 
