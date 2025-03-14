@@ -171,7 +171,10 @@ export function parseWarpRouteDetails(
     );
 
     return {
-      amount: fromWei(parsedMessage.amount.toString(), originToken.decimals || 18),
+      amount: fromWei(
+        parsedMessage.amount.toString(),
+        Math.max(originToken.decimals, destinationToken.decimals) || 18,
+      ),
       transferRecipient: address,
       originTokenAddress: to,
       originTokenSymbol: originToken.symbol,
