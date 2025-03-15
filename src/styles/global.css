@@ -167,6 +167,24 @@ Common animations
   }
 }
 
+@keyframes newRowAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-new-row {
+  animation: newRowAppear 3s ease-out forwards;
+}
+
 /*
 Toasts
 ======
