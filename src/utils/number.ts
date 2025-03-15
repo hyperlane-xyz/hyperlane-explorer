@@ -13,6 +13,6 @@ export function tryToDecimalNumber(value: BigNumberish) {
 
 export function toDecimalNumber(value: BigNumberish) {
   const result = tryToDecimalNumber(value);
-  if (result === null || result === undefined) throw new Error(`Error parsing hex number ${value}`);
+  if (result == null) throw new Error(`Error parsing number ${value}`);
   return result;
 }
