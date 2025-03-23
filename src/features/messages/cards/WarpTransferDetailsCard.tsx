@@ -7,13 +7,16 @@ import {
 } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider, useStore } from '../../../store';
 import { Message, WarpRouteChainAddressMap, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../../utils/token';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { KeyValueRow } from './KeyValueRow';
+import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
   message: Message;
@@ -25,7 +28,42 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
   const { warpRouteChainAddressMap } = useStore((s) => ({
     warpRouteChainAddressMap: s.warpRouteChainAddressMap,
   }));
-  const warpRouteDetails = parseWarpRouteDetails(message, warpRouteChainAddressMap, multiProvider);
+  const warpRouteDetails = useMemo(
+    () => parseWarpRouteDetails(message, warpRouteChainAddressMap, multiProvider),
+    [message, warpRouteChainAddressMap, multiProvider],
+  );
+  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
+    BlockExplorerAddressUrls | undefined
+  >(undefined);
+
+  const getBlockExplorerLinks = useCallback(async (): Promise<
+    BlockExplorerAddressUrls | undefined
+  > => {
+    if (!warpRouteDetails) return undefined;
+
+    const originToken = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      message.originChainId,
+      warpRouteDetails.originTokenAddress,
+    );
+    const destinationToken = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      message.destinationChainId,
+      warpRouteDetails.destinationTokenAddress,
+    );
+    const transferRecipient = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      message.destinationChainId,
+      warpRouteDetails.transferRecipient,
+    );
+    return { destinationToken, originToken, transferRecipient };
+  }, [message, multiProvider, warpRouteDetails]);
+
+  useEffect(() => {
+    getBlockExplorerLinks()
+      .then((urls) => setBlockExplorerAddressUrls(urls))
+      .catch(() => setBlockExplorerAddressUrls(undefined));
+  }, [getBlockExplorerLinks]);
 
   if (!warpRouteDetails) return null;
 
@@ -63,16 +101,18 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
           labelWidth="w-20 sm:w-32"
           display={originTokenAddress}
           displayWidth="w-64 sm:w-96"
-          showCopy={true}
           blurValue={blur}
+          link={blockExplorerAddressUrls?.originToken}
+          showCopy
         />
         <KeyValueRow
           label="Destination token:"
           labelWidth="w-20 sm:w-32"
           display={destinationTokenAddress}
           displayWidth="w-64 sm:w-96"
-          showCopy={true}
           blurValue={blur}
+          link={blockExplorerAddressUrls?.destinationToken}
+          showCopy
         />
         <KeyValueRow
           label="Transfer recipient:"
@@ -80,6 +120,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
           display={transferRecipient}
           displayWidth="w-64 sm:w-96"
           blurValue={blur}
+          link={blockExplorerAddressUrls?.transferRecipient}
           showCopy
         />
       </div>
@@ -130,7 +171,10 @@ export function parseWarpRouteDetails(
     );
 
     return {
-      amount: fromWei(parsedMessage.amount.toString(), originToken.decimals || 18),
+      amount: fromWei(
+        parsedMessage.amount.toString(),
+        Math.max(originToken.decimals, destinationToken.decimals) || 18,
+      ),
       transferRecipient: address,
       originTokenAddress: to,
       originTokenSymbol: originToken.symbol,
