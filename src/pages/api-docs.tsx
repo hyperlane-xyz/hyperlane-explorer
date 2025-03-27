@@ -1,4 +1,4 @@
-import type { NextPage } from 'next';
+import type { GetServerSideProps, NextPage } from 'next';
 
 import { Card } from '../components/layout/Card';
 
@@ -82,6 +82,12 @@ function ParamItem({ name, desc }: { name: string; desc: string }) {
     </li>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    notFound: true,
+  };
+};
 
 const exampleRequest = `const baseUrl = 'https://explorer.hyperlane.xyz/api'
 const action = 'module=message&action=get-messages'
