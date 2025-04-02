@@ -69,6 +69,9 @@
   },
   "types": "dist/src/index.d.ts",
   "resolutions": {
-    "ethers": "^5.7"
+    "ethers": "^5.7",
+    "viem": "2.21.45",
+    "@solana/web3.js": "1.95.4",
+    "@solana/spl-token": "0.4.9"
   }
 }
