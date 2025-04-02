@@ -9,8 +9,8 @@
     "@hyperlane-xyz/sdk": "11.0.0",
     "@hyperlane-xyz/utils": "11.0.0",
     "@hyperlane-xyz/widgets": "11.0.0",
-    "@solana/spl-token": "^0.4.13",
-    "@solana/web3.js": "^1.98.0",
+    "@solana/spl-token": "0.4.9",
+    "@solana/web3.js": "1.95.4",
     "@tanstack/react-query": "^5.62.3",
     "bignumber.js": "^9.1.2",
     "buffer": "^6.0.3",
@@ -25,7 +25,7 @@
     "react-toastify": "^10.0.6",
     "react-tooltip": "^5.26.3",
     "urql": "^3.0.3",
-    "viem": "^2.24.3",
+    "viem": "2.21.45",
     "yaml": "^2.4.5",
     "zod": "^3.21.2",
     "zustand": "^4.5.5"
@@ -72,6 +72,9 @@
   },
   "types": "dist/src/index.d.ts",
   "resolutions": {
-    "ethers": "^5.7"
+    "ethers": "^5.7",
+    "viem": "2.21.45",
+    "@solana/web3.js": "1.95.4",
+    "@solana/spl-token": "0.4.9"
   }
 }
