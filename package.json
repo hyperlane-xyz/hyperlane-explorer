@@ -9,6 +9,7 @@
     "@hyperlane-xyz/sdk": "11.0.0",
     "@hyperlane-xyz/utils": "11.0.0",
     "@hyperlane-xyz/widgets": "11.0.0",
+    "@solana/buffer-layout": "4.0.1",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.4",
     "@tanstack/react-query": "^5.62.3",
@@ -20,6 +21,7 @@
     "graphql": "^16.6.0",
     "next": "^15.0.4",
     "nextjs-cors": "^2.1.2",
+    "ox": "^0.6.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-toastify": "^10.0.6",
@@ -74,6 +76,7 @@
   "resolutions": {
     "ethers": "^5.7",
     "viem": "2.21.45",
+    "@solana/buffer-layout": "4.0.1",
     "@solana/web3.js": "1.95.4",
     "@solana/spl-token": "0.4.9"
   }
