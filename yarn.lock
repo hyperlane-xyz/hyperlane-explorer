@@ -2955,6 +2955,7 @@ __metadata:
     "@hyperlane-xyz/sdk": "npm:12.0.0"
     "@hyperlane-xyz/utils": "npm:12.0.0"
     "@hyperlane-xyz/widgets": "npm:12.0.0"
+    "@solana/buffer-layout": "npm:^4.0.1"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
     "@tanstack/react-query": "npm:^5.62.3"
     "@types/jest": "npm:^29.5.3"

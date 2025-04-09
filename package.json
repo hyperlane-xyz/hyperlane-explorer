@@ -9,6 +9,7 @@
     "@hyperlane-xyz/sdk": "12.0.0",
     "@hyperlane-xyz/utils": "12.0.0",
     "@hyperlane-xyz/widgets": "12.0.0",
+    "@solana/buffer-layout": "^4.0.1",
     "@tanstack/react-query": "^5.62.3",
     "bignumber.js": "^9.1.2",
     "buffer": "^6.0.3",
