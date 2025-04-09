@@ -2956,6 +2956,7 @@ __metadata:
     "@hyperlane-xyz/utils": "npm:12.0.0"
     "@hyperlane-xyz/widgets": "npm:12.0.0"
     "@solana/buffer-layout": "npm:^4.0.1"
+    "@solana/buffer-layout-utils": "npm:^0.2.0"
     "@solana/spl-token": "npm:0.4.9"
     "@solana/web3.js": "npm:1.95.4"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
