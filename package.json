@@ -9,6 +9,7 @@
     "@hyperlane-xyz/sdk": "12.0.0",
     "@hyperlane-xyz/utils": "12.0.0",
     "@hyperlane-xyz/widgets": "12.0.0",
+    "@solana/buffer-layout": "^4.0.1",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.4",
     "@tanstack/react-query": "^5.62.3",
@@ -72,6 +73,7 @@
   "types": "dist/src/index.d.ts",
   "resolutions": {
     "ethers": "^5.7",
+    "@solana/buffer-layout": "^4.0.1",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.4"
   }

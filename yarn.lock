@@ -2955,6 +2955,7 @@ __metadata:
     "@hyperlane-xyz/sdk": "npm:12.0.0"
     "@hyperlane-xyz/utils": "npm:12.0.0"
     "@hyperlane-xyz/widgets": "npm:12.0.0"
+    "@solana/buffer-layout": "npm:^4.0.1"
     "@solana/spl-token": "npm:0.4.9"
     "@solana/web3.js": "npm:1.95.4"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
@@ -8128,15 +8129,6 @@ __metadata:
     bigint-buffer: "npm:^1.1.5"
     bignumber.js: "npm:^9.0.1"
   checksum: 10/720779f45843ef1947b735a8c3e7f948574f569d5359178d877d08178baa2878de799081c3922892194293f1cf26f205208e5fb20d3e0621f09b9e740f34ef72
-  languageName: node
-  linkType: hard
-
-"@solana/buffer-layout@npm:^4.0.0":
-  version: 4.0.0
-  resolution: "@solana/buffer-layout@npm:4.0.0"
-  dependencies:
-    buffer: "npm:~6.0.3"
-  checksum: 10/3a037b4499fd1128321d5918c63bd1a2ab9d84db7c01b13d1ff196a3f84ef6cdedad70f312777554344e86a5bde91ac8e09ebead67990516740d391aa5cedbfd
   languageName: node
   linkType: hard
 
