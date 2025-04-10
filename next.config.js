@@ -44,6 +44,25 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
+
+  modularizeImports: {
+    '@rainbow-me/rainbowkit': {
+      transform: '@rainbow-me/rainbowkit/{{member}}',
+      preventFullImport: true
+    },
+    '@hyperlane-xyz/sdk': {
+      transform: '@hyperlane-xyz/sdk/{{member}}',
+      preventFullImport: true
+    },
+    '@hyperlane-xyz/widgets': {
+      transform: '@hyperlane-xyz/widgets/{{member}}',
+      preventFullImport: true
+    }
+  },
+  
+  experimental: {
+    optimizePackageImports: ['@rainbow-me/rainbowkit', '@hyperlane-xyz/sdk', '@hyperlane-xyz/widgets']
+  }
 };
 
 module.exports = nextConfig;
