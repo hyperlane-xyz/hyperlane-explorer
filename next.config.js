@@ -44,6 +44,15 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
+
+  experimental: {
+    optimizePackageImports: [
+      '@hyperlane-xyz/registry',
+      '@hyperlane-xyz/sdk',
+      '@hyperlane-xyz/utils',
+      '@hyperlane-xyz/widgets',
+    ]
+  }
 };
 
 module.exports = nextConfig;

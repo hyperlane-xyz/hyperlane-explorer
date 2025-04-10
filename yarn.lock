@@ -2955,10 +2955,6 @@ __metadata:
     "@hyperlane-xyz/sdk": "npm:12.0.0"
     "@hyperlane-xyz/utils": "npm:12.0.0"
     "@hyperlane-xyz/widgets": "npm:12.0.0"
-    "@solana/buffer-layout": "npm:^4.0.1"
-    "@solana/buffer-layout-utils": "npm:^0.2.0"
-    "@solana/spl-token": "npm:0.4.9"
-    "@solana/web3.js": "npm:1.95.4"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
     "@tanstack/react-query": "npm:^5.62.3"
     "@types/jest": "npm:^29.5.3"
@@ -8133,7 +8129,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/buffer-layout@npm:^4.0.1":
+"@solana/buffer-layout@npm:^4.0.0, @solana/buffer-layout@npm:^4.0.1":
   version: 4.0.1
   resolution: "@solana/buffer-layout@npm:4.0.1"
   dependencies:
@@ -8258,9 +8254,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/spl-token@npm:0.4.9":
-  version: 0.4.9
-  resolution: "@solana/spl-token@npm:0.4.9"
+"@solana/spl-token@npm:^0.4.9":
+  version: 0.4.13
+  resolution: "@solana/spl-token@npm:0.4.13"
   dependencies:
     "@solana/buffer-layout": "npm:^4.0.0"
     "@solana/buffer-layout-utils": "npm:^0.2.0"
@@ -8268,8 +8264,8 @@ __metadata:
     "@solana/spl-token-metadata": "npm:^0.1.6"
     buffer: "npm:^6.0.3"
   peerDependencies:
-    "@solana/web3.js": ^1.95.3
-  checksum: 10/8df4eb4199eae9c1ea26f7d04170ca4bc7011e2b86155e8872000534d4aafc5bb270bba391b8bda1bc422251d9dc87357dee8c2abec588d2b9b4b7c041ed9490
+    "@solana/web3.js": ^1.95.5
+  checksum: 10/10fc6114cea33a496869c4f629b8729089d6a83c699d2f1589db1e32083abaa111bdc86ceaad30024f16eb778a113b62f6fe2538f8a4c18b5bdeac75e3eadffc
   languageName: node
   linkType: hard
 
@@ -8422,9 +8418,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/web3.js@npm:1.95.4":
-  version: 1.95.4
-  resolution: "@solana/web3.js@npm:1.95.4"
+"@solana/web3.js@npm:^1.32.0, @solana/web3.js@npm:^1.95.4":
+  version: 1.98.0
+  resolution: "@solana/web3.js@npm:1.98.0"
   dependencies:
     "@babel/runtime": "npm:^7.25.0"
     "@noble/curves": "npm:^1.4.2"
@@ -8441,7 +8437,7 @@ __metadata:
     node-fetch: "npm:^2.7.0"
     rpc-websockets: "npm:^9.0.2"
     superstruct: "npm:^2.0.2"
-  checksum: 10/353e04ac1110035ff108f16af4029c7a98f71cce841d45877c9bc4a354cdc58a051681603c92289b81e3dc5ef6b1567c6f866e4ba56a434db145e38a5a41d276
+  checksum: 10/b4d398c89a5007268b538b691b44c43b376dab59eb7e8acaa4c12a061812674a6e0b2802afb13e5f0ceacdb5102fb7bfb98d20743df0761f28b211aa37232b43
   languageName: node
   linkType: hard
 
