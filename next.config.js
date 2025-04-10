@@ -49,8 +49,7 @@ const nextConfig = {
     optimizePackageImports: [
       '@hyperlane-xyz/sdk', 
       '@hyperlane-xyz/widgets',
-      '@headlessui/react',
-      'viem',
+
     ]
   }
 
