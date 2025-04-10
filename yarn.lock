@@ -2951,10 +2951,12 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^2.2.0"
-    "@hyperlane-xyz/registry": "npm:13.1.0"
+    "@hyperlane-xyz/registry": "npm:13.3.0"
     "@hyperlane-xyz/sdk": "npm:12.0.0"
-    "@hyperlane-xyz/utils": "npm:11.0.0"
+    "@hyperlane-xyz/utils": "npm:12.0.0"
     "@hyperlane-xyz/widgets": "npm:12.0.0"
+    "@solana/buffer-layout": "npm:^4.0.1"
+    "@solana/buffer-layout-utils": "npm:^0.2.0"
     "@solana/spl-token": "npm:0.4.9"
     "@solana/web3.js": "npm:1.95.4"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
@@ -2997,13 +2999,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/registry@npm:13.1.0":
-  version: 13.1.0
-  resolution: "@hyperlane-xyz/registry@npm:13.1.0"
+"@hyperlane-xyz/registry@npm:13.3.0":
+  version: 13.3.0
+  resolution: "@hyperlane-xyz/registry@npm:13.3.0"
   dependencies:
     yaml: "npm:2.4.5"
     zod: "npm:^3.21.2"
-  checksum: 10/ca7098aac63ad78a7359aa6633de0d580a44d64af0bc7f2f4fbf015ee48beae357aa32c4452a7d47d3f67d68e4bb2df3ac180591cff8307a4215812a5454ac9e
+  checksum: 10/86ceecd011fa95efe1ad60ff8a2e58e256d726c675492f58d47a006257805d2c434e1054190f5245e0139071e7e740c4c36e6fd3167ea78cdebae69fa1ff5129
   languageName: node
   linkType: hard
 
@@ -3036,21 +3038,6 @@ __metadata:
     "@ethersproject/abi": "*"
     "@ethersproject/providers": "*"
   checksum: 10/41d2fc4a3179856f5f4131e6275172017fcd321ab29e3015b5ef9c7bfdb775212c23d2848dab9b3e9d8fec3c9b679606aa0dd5aa227d79b4b0375befabfe3c82
-  languageName: node
-  linkType: hard
-
-"@hyperlane-xyz/utils@npm:11.0.0":
-  version: 11.0.0
-  resolution: "@hyperlane-xyz/utils@npm:11.0.0"
-  dependencies:
-    "@cosmjs/encoding": "npm:^0.32.4"
-    "@solana/web3.js": "npm:^1.95.4"
-    bignumber.js: "npm:^9.1.1"
-    ethers: "npm:^5.7.2"
-    lodash-es: "npm:^4.17.21"
-    pino: "npm:^8.19.0"
-    yaml: "npm:2.4.5"
-  checksum: 10/1f605c1280b23877ff696a31d325c0869af4671f7b3658ae0a31c2359b971c970e180cb91257732cf23f239fc5e70f6b1bc9dd05d959b698a2599e466c04fca0
   languageName: node
   linkType: hard
 
@@ -8119,7 +8106,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/buffer-layout@npm:^4.0.0, @solana/buffer-layout@npm:^4.0.1":
+"@solana/buffer-layout@npm:^4.0.1":
   version: 4.0.1
   resolution: "@solana/buffer-layout@npm:4.0.1"
   dependencies:
