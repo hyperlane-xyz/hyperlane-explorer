@@ -31,8 +31,9 @@ export function useMessageSearchQuery(
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useMultiProvider();
   const { chains } = useScrapedChains(multiProvider);
-  const mainnetChains = Object.values(chains).filter((chain) => !chain.isTestnet);
-  console.log('mainnet', mainnetChains);
+  const mainnetDomainIds = Object.values(chains)
+    .filter((chain) => !chain.isTestnet)
+    .map((chain) => chain.domainId);
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
@@ -58,7 +59,7 @@ export function useMessageSearchQuery(
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
     true,
-    mainnetChains.map((chain) => chain.domainId),
+    mainnetDomainIds,
   );
 
   // Execute query
