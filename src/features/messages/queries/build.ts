@@ -70,6 +70,7 @@ export function buildMessageSearchQuery(
   endTimeFilter: number | null,
   limit: number,
   useStub = false,
+  mainnetDomainIds?: number[],
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
@@ -82,7 +83,28 @@ export function buildMessageSearchQuery(
     startTime,
     endTime,
   };
+  const hasFilters = !!(
+    originDomainIdFilter ||
+    destDomainIdFilter ||
+    startTimeFilter ||
+    endTimeFilter ||
+    searchInput
+  );
   const whereClauses = buildSearchWhereClauses(searchInput);
+  const originDomainWhereClause = buildDomainIdWhereClause(
+    originDomainIdFilter,
+    hasFilters,
+    'origin',
+    mainnetDomainIds,
+  );
+  const destinationDomainWhereClause = buildDomainIdWhereClause(
+    destDomainIdFilter,
+    hasFilters,
+    'destination',
+    mainnetDomainIds,
+  );
+
+  console.log('destinationDomainWhereClause', destinationDomainWhereClause);
 
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
@@ -91,8 +113,8 @@ export function buildMessageSearchQuery(
       `q${i}: message_view(
     where: {
       _and: [
-        ${originDomainIdFilter ? '{origin_domain_id: {_in: $originChains}},' : ''}
-        ${destDomainIdFilter ? '{destination_domain_id: {_in: $destinationChains}},' : ''}
+        ${originDomainWhereClause}
+        ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
         ${whereClause}
@@ -127,4 +149,20 @@ function buildSearchWhereClauses(searchInput: string) {
       `{destination_tx_hash: {_eq: $search}}`,
     ];
   }
+}
+
+function buildDomainIdWhereClause(
+  domainId: number | null,
+  hasFilters: boolean,
+  fieldName: 'origin' | 'destination',
+  mainnetDomainIds: number[] = [],
+) {
+  // if no filters are set, filter by mainnet chains to not display testnest messages for vanilla query
+  if (!hasFilters) return `{${fieldName}_domain_id: {_in: [${mainnetDomainIds}]}},`;
+
+  // if the domainId is set, filter by this domainId instead of mainnet domains
+  if (domainId) return `{${fieldName}_domain_id: {_in: $${fieldName}Chains}},`;
+
+  // if domainId is not set but there are other filters, remove condition of filtering by mainnet chains
+  return '';
 }

@@ -3,7 +3,7 @@ import { useQuery } from 'urql';
 
 import { useMultiProvider } from '../../../store';
 import { MessageStatus } from '../../../types';
-import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
+import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
 import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
@@ -30,6 +30,9 @@ export function useMessageSearchQuery(
 ) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useMultiProvider();
+  const { chains } = useScrapedChains(multiProvider);
+  const mainnetChains = Object.values(chains).filter((chain) => !chain.isTestnet);
+  console.log('mainnet', mainnetChains);
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
@@ -55,6 +58,7 @@ export function useMessageSearchQuery(
     endTimeFilter,
     hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
     true,
+    mainnetChains.map((chain) => chain.domainId),
   );
 
   // Execute query
