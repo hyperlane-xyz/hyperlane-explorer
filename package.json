@@ -1,7 +1,7 @@
 {
   "name": "@hyperlane-xyz/explorer",
   "description": "An interchain explorer for the Hyperlane protocol and network.",
-  "version": "7.1.0",
+  "version": "12.0.0",
   "author": "J M Rossy",
   "dependencies": {
     "@headlessui/react": "^2.2.0",
