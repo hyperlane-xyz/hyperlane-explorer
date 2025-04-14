@@ -104,8 +104,6 @@ export function buildMessageSearchQuery(
     mainnetDomainIds,
   );
 
-  console.log('destinationDomainWhereClause', destinationDomainWhereClause);
-
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
   const queries = whereClauses.map(
