@@ -144,7 +144,7 @@ export function DestinationTransactionCard({
   } else {
     content = (
       <DeliveryStatus>
-        <div>Delivery to status is currently unknown.</div>
+        <div>Delivery status is currently unknown.</div>
         <div className="mt-2 pb-4 text-sm">
           {isPiMsg
             ? 'Please ensure your chain config is correct and check back later.'
