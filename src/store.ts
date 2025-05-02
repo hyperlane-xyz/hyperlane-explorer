@@ -1,5 +1,11 @@
 import { GithubRegistry, IRegistry, warpRouteConfigs } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MultiProvider, mergeChainMetadataMap } from '@hyperlane-xyz/sdk';
+import {
+  ChainMap,
+  ChainMetadata,
+  ChainMetadataSchema,
+  MultiProvider,
+  mergeChainMetadataMap,
+} from '@hyperlane-xyz/sdk';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -121,8 +127,12 @@ async function buildMultiProvider(
       }),
     ),
   );
-  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
-  return { metadata: metadataWithLogos, multiProvider: new MultiProvider(mergedMetadata) };
+
+  const mergedMetadata = objFilter(
+    mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata),
+    (_, metadata): metadata is ChainMetadata => ChainMetadataSchema.safeParse(metadata).success,
+  );
+  return { metadata: mergedMetadata, multiProvider: new MultiProvider(mergedMetadata) };
 }
 
 // TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
