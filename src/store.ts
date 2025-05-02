@@ -130,7 +130,11 @@ async function buildMultiProvider(
 
   const mergedMetadata = objFilter(
     mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata),
-    (_, metadata): metadata is ChainMetadata => ChainMetadataSchema.safeParse(metadata).success,
+    (chain, metadata): metadata is ChainMetadata => {
+      const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
+      if (!parsedMetadata.success) logger.error(`Failed to parse metadata for ${chain}, skipping`);
+      return parsedMetadata.success;
+    },
   );
   return { metadata: mergedMetadata, multiProvider: new MultiProvider(mergedMetadata) };
 }
