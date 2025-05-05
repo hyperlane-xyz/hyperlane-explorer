@@ -1,20 +1,12 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-import {
-  bytesToProtocolAddress,
-  fromHexString,
-  fromWei,
-  parseWarpRouteMessage,
-} from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider, useStore } from '../../../store';
-import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../../types';
-import { logger } from '../../../utils/logger';
-import { getTokenFromWarpRouteChainAddressMap } from '../../../utils/token';
+import { Message } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { parseWarpRouteMessageDetails } from '../utils';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
@@ -29,7 +21,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
     warpRouteChainAddressMap: s.warpRouteChainAddressMap,
   }));
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteDetails(message, warpRouteChainAddressMap, multiProvider),
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
     [message, warpRouteChainAddressMap, multiProvider],
   );
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
@@ -126,63 +118,4 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
       </div>
     </Card>
   );
-}
-
-export function parseWarpRouteDetails(
-  message: Message | MessageStub,
-  warpRouteChainAddressMap: WarpRouteChainAddressMap,
-  multiProvider: MultiProvider,
-): WarpRouteDetails | undefined {
-  try {
-    const {
-      body,
-      origin: { to },
-      originDomainId,
-      destinationDomainId,
-      recipient,
-    } = message;
-
-    const originMetadata = multiProvider.tryGetChainMetadata(originDomainId);
-    const destinationMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
-
-    if (!body || !originMetadata || !destinationMetadata) return undefined;
-
-    const originToken = getTokenFromWarpRouteChainAddressMap(
-      originMetadata,
-      to,
-      warpRouteChainAddressMap,
-    );
-    const destinationToken = getTokenFromWarpRouteChainAddressMap(
-      destinationMetadata,
-      recipient,
-      warpRouteChainAddressMap,
-    );
-
-    // If tokens are not found with the addresses, it means the message
-    // is not a warp transfer between tokens known to the registry
-    if (!originToken || !destinationToken) return undefined;
-
-    const parsedMessage = parseWarpRouteMessage(body);
-    const bytes = fromHexString(parsedMessage.recipient);
-    const address = bytesToProtocolAddress(
-      bytes,
-      destinationMetadata.protocol,
-      destinationMetadata.bech32Prefix,
-    );
-
-    return {
-      amount: fromWei(
-        parsedMessage.amount.toString(),
-        Math.max(originToken.decimals, destinationToken.decimals) || 18,
-      ),
-      transferRecipient: address,
-      originTokenAddress: to,
-      originTokenSymbol: originToken.symbol,
-      destinationTokenAddress: recipient,
-      destinationTokenSymbol: destinationToken.symbol,
-    };
-  } catch (err) {
-    logger.error('Error parsing warp route details:', err);
-    return undefined;
-  }
 }

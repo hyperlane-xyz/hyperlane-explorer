@@ -1,10 +1,9 @@
+import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { shortenAddress } from '@hyperlane-xyz/utils';
+import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useMemo } from 'react';
-
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { shortenAddress } from '@hyperlane-xyz/utils';
-
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
@@ -12,10 +11,7 @@ import { useMultiProvider, useStore } from '../../store';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
-
-import { Tooltip } from '@hyperlane-xyz/widgets';
-import { parseWarpRouteDetails } from './cards/WarpTransferDetailsCard';
-import { serializeMessage } from './utils';
+import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 export function MessageTable({
   messageList,
@@ -88,7 +84,7 @@ export function MessageSummaryRow({
   const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteDetails(message, warpRouteChainAddressMap, mp),
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, mp),
     [message, warpRouteChainAddressMap, mp],
   );
 
