@@ -126,7 +126,7 @@ export function MessageSummaryRow({
           <Tooltip
             content="Unable to derive token from transfer. Message might not be a Hyperlane warp route token transfer."
             id="no-token-info"
-            tooltipClassName="sm:max-w-[550px]"
+            tooltipClassName="whitespace-normal break-words text-left"
           />
         )}
       </LinkCell>
