@@ -59,6 +59,7 @@ function parseMessageStub(
   try {
     const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
+    const body = postgresByteaToString(m.message_body ?? '');
 
     const isPiMsg =
       isPiChain(multiProvider, scrapedChains, m.origin_domain_id) ||
@@ -75,16 +76,19 @@ function parseMessageStub(
       originDomainId: m.origin_domain_id,
       destinationChainId: m.destination_chain_id,
       destinationDomainId: m.destination_domain_id,
+      body,
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
+        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
       },
       destination: m.is_delivered
         ? {
             timestamp: parseTimestampString(m.delivery_occurred_at!),
             hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
             from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
+            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -107,12 +111,10 @@ function parseMessage(
     const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
 
-    const body = postgresByteaToString(m.message_body ?? '');
-    const decodedBody = tryUtf8DecodeBytes(body);
+    const decodedBody = tryUtf8DecodeBytes(stub.body);
 
     return {
       ...stub,
-      body,
       decodedBody,
       origin: {
         ...stub.origin,
@@ -120,7 +122,6 @@ function parseMessage(
         blockNumber: m.origin_block_height,
         mailbox: postgresByteaToAddress(m.origin_mailbox, originMetadata),
         nonce: m.origin_tx_nonce,
-        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
         gasLimit: m.origin_tx_gas_limit,
         gasPrice: m.origin_tx_gas_price,
         effectiveGasPrice: m.origin_tx_effective_gas_price,
@@ -136,7 +137,6 @@ function parseMessage(
             blockNumber: m.destination_block_height!,
             mailbox: postgresByteaToAddress(m.destination_mailbox!, destinationMetadata),
             nonce: m.destination_tx_nonce!,
-            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
             gasLimit: m.destination_tx_gas_limit!,
             gasPrice: m.destination_tx_gas_price!,
             effectiveGasPrice: m.destination_tx_effective_gas_price!,

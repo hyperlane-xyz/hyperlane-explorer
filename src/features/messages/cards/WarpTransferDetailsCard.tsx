@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider, useStore } from '../../../store';
-import { Message, WarpRouteChainAddressMap, WarpRouteDetails } from '../../../types';
+import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../../utils/token';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
@@ -129,7 +129,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
 }
 
 export function parseWarpRouteDetails(
-  message: Message,
+  message: Message | MessageStub,
   warpRouteChainAddressMap: WarpRouteChainAddressMap,
   multiProvider: MultiProvider,
 ): WarpRouteDetails | undefined {

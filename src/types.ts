@@ -13,10 +13,10 @@ export interface MessageTxStub {
   timestamp: number;
   hash: string;
   from: Address;
+  to: Address;
 }
 
 export interface MessageTx extends MessageTxStub {
-  to: Address;
   blockHash: string;
   blockNumber: number;
   mailbox: Address;
@@ -44,10 +44,10 @@ export interface MessageStub {
   origin: MessageTxStub;
   destination?: MessageTxStub;
   isPiMsg?: boolean;
+  body: string;
 }
 
 export interface Message extends MessageStub {
-  body: string;
   decodedBody?: string;
   origin: MessageTx;
   destination?: MessageTx;
