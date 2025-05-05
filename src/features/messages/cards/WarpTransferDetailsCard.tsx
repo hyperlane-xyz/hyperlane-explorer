@@ -17,9 +17,7 @@ interface Props {
 
 export function WarpTransferDetailsCard({ message, blur }: Props) {
   const multiProvider = useMultiProvider();
-  const { warpRouteChainAddressMap } = useStore((s) => ({
-    warpRouteChainAddressMap: s.warpRouteChainAddressMap,
-  }));
+  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
     [message, warpRouteChainAddressMap, multiProvider],

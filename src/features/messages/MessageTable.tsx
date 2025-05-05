@@ -21,9 +21,7 @@ export function MessageTable({
   isFetching: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { warpRouteChainAddressMap } = useStore((s) => ({
-    warpRouteChainAddressMap: s.warpRouteChainAddressMap,
-  }));
+  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
 
   return (
     <table className="mb-1 w-full">
