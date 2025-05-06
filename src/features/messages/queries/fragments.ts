@@ -19,16 +19,18 @@ export const messageStubFragment = `
   origin_tx_id
   origin_tx_hash
   origin_tx_sender
+  origin_tx_recipient
   destination_chain_id
   destination_domain_id
   destination_tx_id
   destination_tx_hash
   destination_tx_sender
+  destination_tx_recipient
+  message_body
 `;
 
 export const messageDetailsFragment = `
 ${messageStubFragment}
-  message_body
   origin_block_hash
   origin_block_height
   origin_block_id
@@ -41,7 +43,6 @@ ${messageStubFragment}
   origin_tx_max_fee_per_gas
   origin_tx_max_priority_fee_per_gas
   origin_tx_nonce
-  origin_tx_recipient
   destination_block_hash
   destination_block_height
   destination_block_id
@@ -54,7 +55,6 @@ ${messageStubFragment}
   destination_tx_max_fee_per_gas
   destination_tx_max_priority_fee_per_gas
   destination_tx_nonce
-  destination_tx_recipient
   total_gas_amount
   total_payment
   num_payments
@@ -81,15 +81,17 @@ export interface MessageStubEntry {
   origin_tx_id: number; // database id
   origin_tx_hash: string; // binary e.g. \\x123
   origin_tx_sender: string; // binary e.g. \\x123
+  origin_tx_recipient: string; // binary e.g. \\x123
   destination_chain_id: number;
   destination_domain_id: number;
   destination_tx_id: number | null; // database id
   destination_tx_hash: string | null; // binary e.g. \\x123
   destination_tx_sender: string | null; // binary e.g. \\x123
+  destination_tx_recipient: string; // binary e.g. \\x123
+  message_body: string | null; // binary e.g. \\x123
 }
 
 export interface MessageEntry extends MessageStubEntry {
-  message_body: string | null; // binary e.g. \\x123
   origin_block_hash: string; // binary e.g. \\x123
   origin_block_height: number;
   origin_block_id: number; // database id
@@ -102,7 +104,6 @@ export interface MessageEntry extends MessageStubEntry {
   origin_tx_max_fee_per_gas: number;
   origin_tx_max_priority_fee_per_gas: number;
   origin_tx_nonce: number;
-  origin_tx_recipient: string; // binary e.g. \\x123
   destination_block_hash: string | null; // binary e.g. \\x123
   destination_block_height: number | null;
   destination_block_id: number | null; // database id
@@ -115,7 +116,6 @@ export interface MessageEntry extends MessageStubEntry {
   destination_tx_max_fee_per_gas: number | null;
   destination_tx_max_priority_fee_per_gas: number | null;
   destination_tx_nonce: number | null;
-  destination_tx_recipient: string; // binary e.g. \\x123
   total_gas_amount: number;
   total_payment: number;
   num_payments: number;

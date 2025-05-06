@@ -1,16 +1,13 @@
+import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
-
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { errorToString } from '@hyperlane-xyz/utils';
-
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
-
 import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
 export function useMessageDeliveryStatus({

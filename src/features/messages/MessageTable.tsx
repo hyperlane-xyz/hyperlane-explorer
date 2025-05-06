@@ -1,19 +1,17 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { PropsWithChildren } from 'react';
-
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
-
+import { Tooltip } from '@hyperlane-xyz/widgets';
+import Image from 'next/image';
+import Link from 'next/link';
+import { PropsWithChildren, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
-import { useMultiProvider } from '../../store';
-import { MessageStatus, MessageStub } from '../../types';
+import { useMultiProvider, useStore } from '../../store';
+import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
-
-import { serializeMessage } from './utils';
+import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 export function MessageTable({
   messageList,
@@ -23,6 +21,7 @@ export function MessageTable({
   isFetching: boolean;
 }) {
   const multiProvider = useMultiProvider();
+  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
 
   return (
     <table className="mb-1 w-full">
@@ -33,6 +32,7 @@ export function MessageTable({
           <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
           <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
           <th className={styles.header}>Time sent</th>
         </tr>
       </thead>
@@ -44,7 +44,11 @@ export function MessageTable({
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
-            <MessageSummaryRow message={m} mp={multiProvider} />
+            <MessageSummaryRow
+              message={m}
+              mp={multiProvider}
+              warpRouteChainAddressMap={warpRouteChainAddressMap}
+            />
           </tr>
         ))}
       </tbody>
@@ -52,7 +56,15 @@ export function MessageTable({
   );
 }
 
-export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: MultiProvider }) {
+export function MessageSummaryRow({
+  message,
+  mp,
+  warpRouteChainAddressMap,
+}: {
+  message: MessageStub;
+  mp: MultiProvider;
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+}) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
   let statusIcon = undefined;
@@ -69,6 +81,10 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
 
   const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
+  const warpRouteDetails = useMemo(
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, mp),
+    [message, warpRouteChainAddressMap, mp],
+  );
 
   return (
     <>
@@ -95,6 +111,22 @@ export function MessageSummaryRow({ message, mp }: { message: MessageStub; mp: M
         aClasses={styles.valueTruncated}
       >
         {shortenAddress(origin.hash)}
+      </LinkCell>
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        aClasses={styles.valueTruncated}
+        tdClasses="hidden sm:table-cell"
+      >
+        {warpRouteDetails ? (
+          warpRouteDetails.originTokenSymbol
+        ) : (
+          <Tooltip
+            content="Unable to derive token from transfer. Message might not be a Hyperlane warp route token transfer."
+            id="no-token-info"
+            tooltipClassName="whitespace-normal break-words text-left"
+          />
+        )}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(origin.timestamp)}
