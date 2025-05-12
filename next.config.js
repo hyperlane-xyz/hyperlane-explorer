@@ -4,6 +4,11 @@ const { version } = require('./package.json');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+const IMG_SRC_HOSTS = [
+  'https://raw.githubusercontent.com',
+  'https://cdn.jsdelivr.net/gh/hyperlane-xyz/hyperlane-registry@main/',
+];
+
 const securityHeaders = [
   {
     key: 'X-XSS-Protection',
@@ -25,7 +30,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: `default-src 'self'; script-src 'self'${
       isDev ? " 'unsafe-eval'" : ''
-    }; connect-src *; img-src 'self' data: https://raw.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
+    }; connect-src *; img-src 'self' data: ${IMG_SRC_HOSTS.join(' ')}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
   },
 ];
 
@@ -51,8 +56,8 @@ const nextConfig = {
       '@hyperlane-xyz/sdk',
       '@hyperlane-xyz/utils',
       '@hyperlane-xyz/widgets',
-    ]
-  }
+    ],
+  },
 };
 
 module.exports = nextConfig;

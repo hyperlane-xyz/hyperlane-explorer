@@ -10,6 +10,7 @@ export const links = {
     'https://docs.tenderly.co/simulations-and-forks/how-to-simulate-a-transaction/using-simulation-ui',
   brand:
     'https://www.figma.com/file/jC5NORmNDCl6WZgjIRwKX5/Hyperlane-Brand-Assets-%5BExternal%5D?type=design&node-id=0-1&t=6eez9F8gttV7L6VG-0',
+  imgPath: 'https://cdn.jsdelivr.net/gh/hyperlane-xyz/hyperlane-registry@main',
 };
 
 export const docLinks = {

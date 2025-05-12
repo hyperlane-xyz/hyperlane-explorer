@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import { TokenIcon } from '../../components/icons/TokenIcon';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
@@ -92,7 +93,7 @@ export function MessageSummaryRow({
         <ChainLogo chainName={originChainName} size={20} />
         <div className={styles.chainName}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 ">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
         <ChainLogo chainName={destinationChainName} size={20} />
         <div className={styles.chainName}>
           {getChainDisplayName(mp, destinationChainName, true)}
@@ -116,10 +117,13 @@ export function MessageSummaryRow({
         id={msgId}
         base64={base64}
         aClasses={styles.valueTruncated}
-        tdClasses="hidden sm:table-cell"
+        tdClasses="hidden sm:table-cell flex items-center"
       >
         {warpRouteDetails ? (
-          warpRouteDetails.originToken.symbol
+          <>
+            <TokenIcon token={warpRouteDetails.originToken} size={20} />
+            <div className={styles.chainName}>{warpRouteDetails.originToken.symbol}</div>
+          </>
         ) : (
           <Tooltip
             content="Unable to derive token from transfer. Message might not be a Hyperlane warp route token transfer."
