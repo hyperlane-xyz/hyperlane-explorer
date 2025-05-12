@@ -67,10 +67,8 @@ export function parseWarpRouteMessageDetails(
         Math.max(originToken.decimals, destinationToken.decimals) || 18,
       ),
       transferRecipient: address,
-      originTokenAddress: to,
-      originTokenSymbol: originToken.symbol,
-      destinationTokenAddress: recipient,
-      destinationTokenSymbol: destinationToken.symbol,
+      originToken: originToken,
+      destinationToken: destinationToken,
     };
   } catch (err) {
     logger.error(`Error parsing warp route details for ${message.id}:`, err);

@@ -119,7 +119,7 @@ export function MessageSummaryRow({
         tdClasses="hidden sm:table-cell"
       >
         {warpRouteDetails ? (
-          warpRouteDetails.originTokenSymbol
+          warpRouteDetails.originToken.symbol
         ) : (
           <Tooltip
             content="Unable to derive token from transfer. Message might not be a Hyperlane warp route token transfer."
