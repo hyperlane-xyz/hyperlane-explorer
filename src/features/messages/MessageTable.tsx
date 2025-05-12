@@ -91,13 +91,11 @@ export function MessageSummaryRow({
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
-        <div className={styles.chainName}>{getChainDisplayName(mp, originChainName, true)}</div>
+        <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
         <ChainLogo chainName={destinationChainName} size={20} />
-        <div className={styles.chainName}>
-          {getChainDisplayName(mp, destinationChainName, true)}
-        </div>
+        <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(sender) || 'Invalid Address'}
@@ -122,7 +120,7 @@ export function MessageSummaryRow({
         {warpRouteDetails ? (
           <>
             <TokenIcon token={warpRouteDetails.originToken} size={20} />
-            <div className={styles.chainName}>{warpRouteDetails.originToken.symbol}</div>
+            <div className={styles.iconText}>{warpRouteDetails.originToken.symbol}</div>
           </>
         ) : (
           <Tooltip
@@ -175,5 +173,5 @@ const styles = {
   header: 'text-sm text-blue-500 font-medium pt-2 pb-3 text-center',
   value: 'py-3.5 flex items-center justify-center text-sm text-center font-light px-1',
   valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center font-light truncate',
-  chainName: 'text-sm font-light ml-2',
+  iconText: 'text-sm font-light ml-2',
 };
