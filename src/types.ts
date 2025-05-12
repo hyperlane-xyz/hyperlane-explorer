@@ -65,10 +65,8 @@ export interface ExtendedLog extends providers.Log {
 export interface WarpRouteDetails {
   amount: string;
   transferRecipient: string;
-  originTokenAddress: string;
-  originTokenSymbol: string;
-  destinationTokenAddress: string;
-  destinationTokenSymbol: string;
+  originToken: TokenArgs;
+  destinationToken: TokenArgs;
 }
 
 export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgs>>;

@@ -34,19 +34,19 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
     const originToken = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       message.originChainId,
-      warpRouteDetails.originTokenAddress,
+      warpRouteDetails.originToken.addressOrDenom,
     );
     const destinationToken = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       message.destinationChainId,
-      warpRouteDetails.destinationTokenAddress,
+      warpRouteDetails.destinationToken.addressOrDenom,
     );
     const transferRecipient = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       message.destinationChainId,
       warpRouteDetails.transferRecipient,
     );
-    return { destinationToken, originToken, transferRecipient };
+    return { originToken, destinationToken, transferRecipient };
   }, [message, multiProvider, warpRouteDetails]);
 
   useEffect(() => {
@@ -57,13 +57,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
 
   if (!warpRouteDetails) return null;
 
-  const {
-    amount,
-    destinationTokenAddress,
-    transferRecipient,
-    originTokenAddress,
-    originTokenSymbol,
-  } = warpRouteDetails;
+  const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
 
   return (
     <Card className="w-full space-y-4">
@@ -81,7 +75,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
         <KeyValueRow
           label="Amount:"
           labelWidth="w-20 sm:w-32"
-          display={`${amount} ${originTokenSymbol}`}
+          display={`${amount} ${originToken.symbol}`}
           displayWidth="w-64 sm:w-96"
           blurValue={blur}
           showCopy
@@ -89,7 +83,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
         <KeyValueRow
           label="Origin token:"
           labelWidth="w-20 sm:w-32"
-          display={originTokenAddress}
+          display={originToken.addressOrDenom}
           displayWidth="w-64 sm:w-96"
           blurValue={blur}
           link={blockExplorerAddressUrls?.originToken}
@@ -98,7 +92,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
         <KeyValueRow
           label="Destination token:"
           labelWidth="w-20 sm:w-32"
-          display={destinationTokenAddress}
+          display={destinationToken.addressOrDenom}
           displayWidth="w-64 sm:w-96"
           blurValue={blur}
           link={blockExplorerAddressUrls?.destinationToken}
