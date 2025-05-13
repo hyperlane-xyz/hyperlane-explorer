@@ -114,7 +114,7 @@ export function MessageSummaryRow({
       <LinkCell
         id={msgId}
         base64={base64}
-        aClasses="flex items-center justify-center py-3.5"
+        aClasses={`flex items-center py-3.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
       >
         {warpRouteDetails ? (
