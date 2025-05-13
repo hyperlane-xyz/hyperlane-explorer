@@ -26,8 +26,7 @@ export function TokenIcon({ token, size = 32 }: Props) {
       {imageSrc && !fallbackToText ? (
         <img
           src={imageSrc}
-          width={size}
-          height={size}
+          className="h-full w-full"
           onError={() => setFallbackToText(true)}
           loading="lazy"
         />

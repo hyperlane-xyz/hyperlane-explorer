@@ -1,6 +1,5 @@
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
-import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useMemo } from 'react';
@@ -33,8 +32,8 @@ export function MessageTable({
           <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
           <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
-          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
           <th className={styles.header}>Time sent</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
         </tr>
       </thead>
       <tbody>
@@ -111,10 +110,13 @@ export function MessageSummaryRow({
       >
         {shortenAddress(origin.hash)}
       </LinkCell>
+      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
+        {getHumanReadableTimeString(origin.timestamp)}
+      </LinkCell>
       <LinkCell
         id={msgId}
         base64={base64}
-        aClasses="flex items-center justify-center py-3.5"
+        aClasses={`flex items-center py-3.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
       >
         {warpRouteDetails ? (
@@ -122,16 +124,7 @@ export function MessageSummaryRow({
             <TokenIcon token={warpRouteDetails.originToken} size={20} />
             <div className={styles.iconText}>{warpRouteDetails.originToken.symbol}</div>
           </>
-        ) : (
-          <Tooltip
-            content="Unable to derive token from transfer. Message might not be a Hyperlane warp route token transfer."
-            id="no-token-info"
-            tooltipClassName="whitespace-normal break-words text-left"
-          />
-        )}
-      </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
-        {getHumanReadableTimeString(origin.timestamp)}
+        ) : null}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="w-8">
         {statusIcon && (
