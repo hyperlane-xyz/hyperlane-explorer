@@ -1,7 +1,9 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { Card } from '../../../components/layout/Card';
+import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider, useStore } from '../../../store';
 import { Message } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
@@ -61,7 +63,11 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
   return (
     <Card className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <TokenIcon token={warpRouteDetails.originToken} size={28} />
+        {warpRouteDetails.originToken.logoURI ? (
+          <TokenIcon token={warpRouteDetails.originToken} size={28} />
+        ) : (
+          <Image src={SendMoney} width={28} height={28} alt="" className="opacity-80" />
+        )}
         <div className="flex items-center pb-1">
           <h3 className="mr-2 text-md font-medium text-blue-500">Warp Transfer Details</h3>
           <Tooltip
