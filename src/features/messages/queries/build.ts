@@ -82,6 +82,7 @@ export function buildMessageSearchQuery(
     destinationChains,
     startTime,
     endTime,
+    token: ['\\x7bd2676c85cca9fa2203eba324fb8792fbd520b8'],
   };
   const hasFilters = !!(
     originDomainIdFilter ||
@@ -115,6 +116,7 @@ export function buildMessageSearchQuery(
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
+        {origin_tx_recipient: {_in: $token } },
         ${whereClause}
       ]
     },
@@ -125,7 +127,7 @@ export function buildMessageSearchQuery(
     }`,
   );
 
-  const query = `query ($search: bytea, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
+  const query = `query ($search: bytea, $token: [bytea!], $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
     ${queries.join('\n')}
   }`;
   return { query, variables };

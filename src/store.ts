@@ -139,22 +139,29 @@ async function buildMultiProvider(
   return { metadata: mergedMetadata, multiProvider: new MultiProvider(mergedMetadata) };
 }
 
+type TokenGroup = {
+  addresses: Set<string>;
+  logoURI: string | undefined;
+};
+
 // TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
 export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
-  const test = Object.values(warpRouteConfigs).reduce<
-    Record<string, { addresses: Set<string>; logoURI: string | undefined }>
-  >((acc, { tokens }) => {
-    tokens.forEach((token) => {
-      const { addressOrDenom, symbol, logoURI } = token;
-      if (!addressOrDenom) return;
-      acc[symbol] ||= { addresses: new Set<string>(), logoURI: logoURI };
-      acc[symbol].addresses.add(addressOrDenom);
-      if (!acc[symbol].logoURI && logoURI) acc[symbol].logoURI = logoURI;
-    });
-    return acc;
-  }, {});
+  const test = Object.values(warpRouteConfigs).reduce<Record<string, TokenGroup>>(
+    (acc, { tokens }) => {
+      tokens.forEach((token) => {
+        const { addressOrDenom, symbol, logoURI } = token;
+        if (!addressOrDenom) return;
+        acc[symbol] ||= { addresses: new Set<string>(), logoURI: logoURI };
+        acc[symbol].addresses.add(addressOrDenom);
+        if (!acc[symbol].logoURI && logoURI) acc[symbol].logoURI = logoURI;
+      });
+      return acc;
+    },
+    {},
+  );
 
-  console.log(test);
+  const filteredTest = objFilter(test, (_, value): value is TokenGroup => !!value.logoURI);
+  console.log('filteredTGest', filteredTest);
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
@@ -164,3 +171,5 @@ export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
     return acc;
   }, {});
 }
+
+// originTxRecipien
