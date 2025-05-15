@@ -141,6 +141,20 @@ async function buildMultiProvider(
 
 // TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
 export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
+  const test = Object.values(warpRouteConfigs).reduce<
+    Record<string, { addresses: Set<string>; logoURI: string | undefined }>
+  >((acc, { tokens }) => {
+    tokens.forEach((token) => {
+      const { addressOrDenom, symbol, logoURI } = token;
+      if (!addressOrDenom) return;
+      acc[symbol] ||= { addresses: new Set<string>(), logoURI: logoURI };
+      acc[symbol].addresses.add(addressOrDenom);
+      if (!acc[symbol].logoURI && logoURI) acc[symbol].logoURI = logoURI;
+    });
+    return acc;
+  }, {});
+
+  console.log(test);
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
