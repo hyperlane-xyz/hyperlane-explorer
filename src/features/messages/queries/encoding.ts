@@ -10,6 +10,7 @@ import {
   isValidTransactionHashCosmos,
   isValidTransactionHashEvm,
   isValidTransactionHashSealevel,
+  isValidTransactionHashStarknet,
   ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
@@ -57,7 +58,11 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
     if (isAddress(input)) {
       return addressToPostgresBytea(input);
     }
-    if (isValidTransactionHashEvm(input) || isValidTransactionHashCosmos(input)) {
+    if (
+      isValidTransactionHashEvm(input) ||
+      isValidTransactionHashCosmos(input) ||
+      isValidTransactionHashStarknet(input)
+    ) {
       return stringToPostgresBytea(input);
     }
     if (isValidTransactionHashSealevel(input)) {
