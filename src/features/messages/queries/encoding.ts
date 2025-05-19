@@ -5,7 +5,7 @@ import {
   bufferToBase58,
   bytesToProtocolAddress,
   ensure0x,
-  isAddress,
+  getAddressProtocolType,
   isAddressEvm,
   isValidTransactionHashCosmos,
   isValidTransactionHashEvm,
@@ -24,11 +24,6 @@ export function stringToPostgresBytea(hexString: string): string {
 export function postgresByteaToString(byteString: string): string {
   if (!byteString || byteString.length < 4) throw new Error('Invalid byte string');
   return ensure0x(byteString.substring(2));
-}
-
-export function addressToPostgresBytea(address: Address): string {
-  const hexString = isAddressEvm(address) ? address : addressToByteHexString(address);
-  return stringToPostgresBytea(hexString);
 }
 
 export function postgresByteaToAddress(
@@ -52,12 +47,24 @@ export function postgresByteaToTxHash(
   return bufferToBase58(bytes);
 }
 
+export function isSearchableAddress(input: string): boolean {
+  const addressProtocolType = getAddressProtocolType(input);
+  return addressProtocolType !== undefined && addressProtocolType !== ProtocolType.Starknet;
+}
+
 export function searchValueToPostgresBytea(input: string): string | undefined {
   if (!input) return undefined;
   try {
-    if (isAddress(input)) {
-      return addressToPostgresBytea(input);
+    // EVM addresses are always searchable
+    if (isAddressEvm(input)) {
+      return stringToPostgresBytea(input);
     }
+    // Non-EVM addresses are only searchable if they're not Starknet
+    // We also have to convert to hex string to match the DB encoding
+    if (isSearchableAddress(input)) {
+      return stringToPostgresBytea(addressToByteHexString(input));
+    }
+    // Otherwise check if it's a tx hash
     if (
       isValidTransactionHashEvm(input) ||
       isValidTransactionHashCosmos(input) ||
@@ -65,6 +72,7 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
     ) {
       return stringToPostgresBytea(input);
     }
+    // Have to adjust sealevel tx hash to match the DB encoding
     if (isValidTransactionHashSealevel(input)) {
       const bytes = base58ToBuffer(input);
       return stringToPostgresBytea(bytes.toString('hex'));

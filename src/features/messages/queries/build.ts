@@ -1,8 +1,6 @@
-import { isAddress } from '@hyperlane-xyz/utils';
-
 import { adjustToUtcTime } from '../../../utils/time';
 
-import { searchValueToPostgresBytea } from './encoding';
+import { isSearchableAddress, searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
 
 /**
@@ -52,7 +50,7 @@ export function buildMessageQuery(
   const query = `
   query ($identifier: bytea!) @cached(ttl: 5) {
     message_view(
-      where: {${whereClause}}, 
+      where: {${whereClause}},
       limit: ${limit}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
@@ -133,7 +131,7 @@ export function buildMessageSearchQuery(
 
 function buildSearchWhereClauses(searchInput: string) {
   if (!searchInput) return [''];
-  if (isAddress(searchInput)) {
+  if (isSearchableAddress(searchInput)) {
     return [
       `{sender: {_eq: $search}}`,
       `{recipient: {_eq: $search}}`,
