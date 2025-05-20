@@ -74,6 +74,10 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
   }
 }
 
+/**
+ * Determines if a string could be a valid transaction hash across any supported blockchain protocol
+ * This is used in `buildSearchWhereClauses` to determine if the search input is a transaction hash
+ */
 export function isPotentiallyTransactionHash(input: string): boolean {
   if (!input) return false;
   return Object.values(ProtocolType).some((protocol) => isValidTransactionHash(input, protocol));
