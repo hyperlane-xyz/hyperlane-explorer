@@ -1,6 +1,7 @@
+import { isAddress } from '@hyperlane-xyz/utils';
 import { adjustToUtcTime } from '../../../utils/time';
 
-import { isSearchableAddress, searchValueToPostgresBytea } from './encoding';
+import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
 
 /**
@@ -131,20 +132,26 @@ export function buildMessageSearchQuery(
 
 function buildSearchWhereClauses(searchInput: string) {
   if (!searchInput) return [''];
-  if (isSearchableAddress(searchInput)) {
-    return [
+
+  const clauses: string[] = [];
+
+  if (isAddress(searchInput)) {
+    clauses.push(
       `{sender: {_eq: $search}}`,
       `{recipient: {_eq: $search}}`,
       `{origin_tx_sender: {_eq: $search}}`,
       `{destination_tx_sender: {_eq: $search}}`,
-    ];
-  } else {
-    return [
+    );
+  }
+
+  if (isPotentiallyTransactionHash(searchInput)) {
+    clauses.push(
       `{msg_id: {_eq: $search}}`,
       `{origin_tx_hash: {_eq: $search}}`,
       `{destination_tx_hash: {_eq: $search}}`,
-    ];
+    );
   }
+  return clauses;
 }
 
 function buildDomainIdWhereClause(

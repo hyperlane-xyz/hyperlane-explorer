@@ -5,8 +5,9 @@ import {
   bufferToBase58,
   bytesToProtocolAddress,
   ensure0x,
-  getAddressProtocolType,
+  isAddress,
   isAddressEvm,
+  isAddressStarknet,
   isValidTransactionHashCosmos,
   isValidTransactionHashEvm,
   isValidTransactionHashSealevel,
@@ -19,6 +20,12 @@ export function stringToPostgresBytea(hexString: string): string {
   const trimmed = strip0x(hexString).toLowerCase();
   const prefix = `\\x`;
   return `${prefix}${trimmed}`;
+}
+
+export function addressToPostgresBytea(address: Address): string {
+  const hexString =
+    isAddressEvm(address) || isAddressStarknet(address) ? address : addressToByteHexString(address);
+  return stringToPostgresBytea(hexString);
 }
 
 export function postgresByteaToString(byteString: string): string {
@@ -47,32 +54,15 @@ export function postgresByteaToTxHash(
   return bufferToBase58(bytes);
 }
 
-export function isSearchableAddress(input: string): boolean {
-  const addressProtocolType = getAddressProtocolType(input);
-  return addressProtocolType !== undefined && addressProtocolType !== ProtocolType.Starknet;
-}
-
 export function searchValueToPostgresBytea(input: string): string | undefined {
   if (!input) return undefined;
   try {
-    // EVM addresses are always searchable
-    if (isAddressEvm(input)) {
+    if (isAddress(input)) {
+      return addressToPostgresBytea(input);
+    }
+    if (isValidTransactionHashEvm(input) || isValidTransactionHashCosmos(input)) {
       return stringToPostgresBytea(input);
     }
-    // Non-EVM addresses are only searchable if they're not Starknet
-    // We also have to convert to hex string to match the DB encoding
-    if (isSearchableAddress(input)) {
-      return stringToPostgresBytea(addressToByteHexString(input));
-    }
-    // Otherwise check if it's a tx hash
-    if (
-      isValidTransactionHashEvm(input) ||
-      isValidTransactionHashCosmos(input) ||
-      isValidTransactionHashStarknet(input)
-    ) {
-      return stringToPostgresBytea(input);
-    }
-    // Have to adjust sealevel tx hash to match the DB encoding
     if (isValidTransactionHashSealevel(input)) {
       const bytes = base58ToBuffer(input);
       return stringToPostgresBytea(bytes.toString('hex'));
@@ -82,4 +72,14 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
     // Search input couldn't be decoded and recoded properly
     return undefined;
   }
+}
+
+export function isPotentiallyTransactionHash(input: string): boolean {
+  if (!input) return false;
+  return (
+    isValidTransactionHashEvm(input) ||
+    isValidTransactionHashCosmos(input) ||
+    isValidTransactionHashSealevel(input) ||
+    isValidTransactionHashStarknet(input)
+  );
 }
