@@ -7,6 +7,8 @@ import {
   ensure0x,
   isAddress,
   isAddressEvm,
+  isAddressStarknet,
+  isValidTransactionHash,
   isValidTransactionHashCosmos,
   isValidTransactionHashEvm,
   isValidTransactionHashSealevel,
@@ -26,7 +28,8 @@ export function postgresByteaToString(byteString: string): string {
 }
 
 export function addressToPostgresBytea(address: Address): string {
-  const hexString = isAddressEvm(address) ? address : addressToByteHexString(address);
+  const hexString =
+    isAddressEvm(address) || isAddressStarknet(address) ? address : addressToByteHexString(address);
   return stringToPostgresBytea(hexString);
 }
 
@@ -69,4 +72,13 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
     // Search input couldn't be decoded and recoded properly
     return undefined;
   }
+}
+
+/**
+ * Determines if a string could be a valid transaction hash across any supported blockchain protocol
+ * This is used in `buildSearchWhereClauses` to determine if the search input is a transaction hash
+ */
+export function isPotentiallyTransactionHash(input: string): boolean {
+  if (!input) return false;
+  return Object.values(ProtocolType).some((protocol) => isValidTransactionHash(input, protocol));
 }
