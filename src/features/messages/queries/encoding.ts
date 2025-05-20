@@ -8,10 +8,10 @@ import {
   isAddress,
   isAddressEvm,
   isAddressStarknet,
+  isValidTransactionHash,
   isValidTransactionHashCosmos,
   isValidTransactionHashEvm,
   isValidTransactionHashSealevel,
-  isValidTransactionHashStarknet,
   ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
@@ -22,15 +22,15 @@ export function stringToPostgresBytea(hexString: string): string {
   return `${prefix}${trimmed}`;
 }
 
+export function postgresByteaToString(byteString: string): string {
+  if (!byteString || byteString.length < 4) throw new Error('Invalid byte string');
+  return ensure0x(byteString.substring(2));
+}
+
 export function addressToPostgresBytea(address: Address): string {
   const hexString =
     isAddressEvm(address) || isAddressStarknet(address) ? address : addressToByteHexString(address);
   return stringToPostgresBytea(hexString);
-}
-
-export function postgresByteaToString(byteString: string): string {
-  if (!byteString || byteString.length < 4) throw new Error('Invalid byte string');
-  return ensure0x(byteString.substring(2));
 }
 
 export function postgresByteaToAddress(
@@ -76,10 +76,5 @@ export function searchValueToPostgresBytea(input: string): string | undefined {
 
 export function isPotentiallyTransactionHash(input: string): boolean {
   if (!input) return false;
-  return (
-    isValidTransactionHashEvm(input) ||
-    isValidTransactionHashCosmos(input) ||
-    isValidTransactionHashSealevel(input) ||
-    isValidTransactionHashStarknet(input)
-  );
+  return Object.values(ProtocolType).some((protocol) => isValidTransactionHash(input, protocol));
 }
