@@ -1,4 +1,5 @@
 import { isAddress } from '@hyperlane-xyz/utils';
+
 import { adjustToUtcTime } from '../../../utils/time';
 
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
@@ -134,7 +135,6 @@ function buildSearchWhereClauses(searchInput: string) {
   if (!searchInput) return [''];
 
   const clauses: string[] = [];
-
   if (isAddress(searchInput)) {
     clauses.push(
       `{sender: {_eq: $search}}`,
@@ -143,7 +143,6 @@ function buildSearchWhereClauses(searchInput: string) {
       `{destination_tx_sender: {_eq: $search}}`,
     );
   }
-
   if (isPotentiallyTransactionHash(searchInput)) {
     clauses.push(
       `{msg_id: {_eq: $search}}`,
