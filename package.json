@@ -5,7 +5,7 @@
   "author": "J M Rossy",
   "dependencies": {
     "@headlessui/react": "^2.2.0",
-    "@hyperlane-xyz/registry": "15.8.0",
+    "@hyperlane-xyz/registry": "15.6.0",
     "@hyperlane-xyz/sdk": "13.0.0",
     "@hyperlane-xyz/utils": "13.0.0",
     "@hyperlane-xyz/widgets": "13.0.0",
