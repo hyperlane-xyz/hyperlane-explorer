@@ -144,12 +144,10 @@ function buildSearchWhereClauses(searchInput: string) {
     );
   }
   if (isPotentiallyTransactionHash(searchInput)) {
-    clauses.push(
-      `{msg_id: {_eq: $search}}`,
-      `{origin_tx_hash: {_eq: $search}}`,
-      `{destination_tx_hash: {_eq: $search}}`,
-    );
+    clauses.push(`{origin_tx_hash: {_eq: $search}}`, `{destination_tx_hash: {_eq: $search}}`);
   }
+  clauses.push(`{msg_id: {_eq: $search}}`);
+
   return clauses;
 }
 
