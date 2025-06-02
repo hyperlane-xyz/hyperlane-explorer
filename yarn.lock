@@ -2931,14 +2931,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/core@npm:7.1.8":
-  version: 7.1.8
-  resolution: "@hyperlane-xyz/core@npm:7.1.8"
+"@hyperlane-xyz/core@npm:7.1.10":
+  version: 7.1.10
+  resolution: "@hyperlane-xyz/core@npm:7.1.10"
   dependencies:
     "@arbitrum/nitro-contracts": "npm:^1.2.1"
     "@chainlink/contracts-ccip": "npm:^1.5.0"
     "@eth-optimism/contracts": "npm:^0.6.0"
-    "@hyperlane-xyz/utils": "npm:13.1.1"
+    "@hyperlane-xyz/utils": "npm:13.2.1"
     "@layerzerolabs/lz-evm-oapp-v2": "npm:2.0.2"
     "@matterlabs/hardhat-zksync-solc": "npm:1.2.5"
     "@matterlabs/hardhat-zksync-verify": "npm:1.7.1"
@@ -2949,27 +2949,27 @@ __metadata:
     "@ethersproject/abi": "*"
     "@ethersproject/providers": "*"
     "@types/sinon-chai": "*"
-  checksum: 10/17ef1b217bafc877e1448760a492ddda93b98046c717d95e19669dc71520167f625028536bea3d1aae5c19bc44930559581dc1cd8e3b4905a9852cb32bf3ca8d
+  checksum: 10/5ba2fc3ddd21f0307cb715f8fbbd1463ac2b63ff61609469ca947af4e19569be2759094baf7dc7a49795ac14f24400ba0ed0ba6eb3a5b62b853aeb05bd505142
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/cosmos-sdk@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/cosmos-sdk@npm:13.1.1"
+"@hyperlane-xyz/cosmos-sdk@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/cosmos-sdk@npm:13.2.1"
   dependencies:
     "@cosmjs/stargate": "npm:^0.32.4"
-    "@hyperlane-xyz/cosmos-types": "npm:13.1.1"
-  checksum: 10/adc97ddff20ce0977c8a9e3602a0b5a02bc7a1585e9d0affcbd1f30f31c2ec2314b48af178aa24d0f541152f69a8647afe18f5a50ef35ed44f42c2c3f989f7e6
+    "@hyperlane-xyz/cosmos-types": "npm:13.2.1"
+  checksum: 10/4e4b25afe3ad2302a6cf0674d063aebd803fdd1f0026c0125ef25a6f1ccbced32cd67db1d903034aa19189007b8ea60e04b79b5f6b725b34e47724c015ab2abf
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/cosmos-types@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/cosmos-types@npm:13.1.1"
+"@hyperlane-xyz/cosmos-types@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/cosmos-types@npm:13.2.1"
   dependencies:
     long: "npm:^5.2.4"
     protobufjs: "npm:^7.4.0"
-  checksum: 10/6fde7265f03b5b1c104f93f6c46dac0c8ce88e5ba3d3f8ada777267fd6bcab77645f8e17a3aca6a72d390bf5180fbc156bbabde88ade0a243cca57c3fa474b3c
+  checksum: 10/43c29234613c30ca3aa045c48c56aa89c5ac3bfe1c1b7b6d3df9cedcff741c34fc593aa97b8b083ccd2654fef178d7d53dbb536d09b13048cc6a641fdd42a6c4
   languageName: node
   linkType: hard
 
@@ -2978,10 +2978,10 @@ __metadata:
   resolution: "@hyperlane-xyz/explorer@workspace:."
   dependencies:
     "@headlessui/react": "npm:^2.2.0"
-    "@hyperlane-xyz/registry": "npm:15.11.0"
-    "@hyperlane-xyz/sdk": "npm:13.1.1"
-    "@hyperlane-xyz/utils": "npm:13.1.1"
-    "@hyperlane-xyz/widgets": "npm:13.1.1"
+    "@hyperlane-xyz/registry": "npm:16.1.0"
+    "@hyperlane-xyz/sdk": "npm:13.2.1"
+    "@hyperlane-xyz/utils": "npm:13.2.1"
+    "@hyperlane-xyz/widgets": "npm:13.2.1"
     "@tanstack/eslint-plugin-query": "npm:^5.28.6"
     "@tanstack/react-query": "npm:^5.62.3"
     "@types/jest": "npm:^29.5.3"
@@ -2997,7 +2997,7 @@ __metadata:
     eslint: "npm:^9.16.0"
     eslint-config-next: "npm:^15.0.4"
     eslint-config-prettier: "npm:^9.1.0"
-    ethers: "npm:^5.7.2"
+    ethers: "npm:^5.8.0"
     formik: "npm:^2.4.6"
     graphql: "npm:^16.6.0"
     jest: "npm:^29.6.3"
@@ -3021,30 +3021,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@hyperlane-xyz/registry@npm:15.11.0":
-  version: 15.11.0
-  resolution: "@hyperlane-xyz/registry@npm:15.11.0"
+"@hyperlane-xyz/registry@npm:16.1.0":
+  version: 16.1.0
+  resolution: "@hyperlane-xyz/registry@npm:16.1.0"
   dependencies:
     jszip: "npm:^3.10.1"
     yaml: "npm:2.4.5"
     zod: "npm:^3.21.2"
-  checksum: 10/a0d5e1ef25dd200c5b3b0cc96b6d5b4efd24c608fa419daf4a36d160896acbc7758e32e2e3345be7adc8c460481da308e267ee4b1ee7ac29e5ea778f37db9812
+  checksum: 10/706a1fad274633807a45a1b16a5ca4fad78e1c9826ccfebff4f2b081f190f0959d18d00d85de52898e7db599c79c66b399e0a1b3650b2fd4725ccb0bc46cc98e
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/sdk@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/sdk@npm:13.1.1"
+"@hyperlane-xyz/sdk@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/sdk@npm:13.2.1"
   dependencies:
     "@arbitrum/sdk": "npm:^4.0.0"
     "@aws-sdk/client-s3": "npm:^3.577.0"
     "@chain-registry/types": "npm:^0.50.122"
     "@cosmjs/cosmwasm-stargate": "npm:^0.32.4"
     "@cosmjs/stargate": "npm:^0.32.4"
-    "@hyperlane-xyz/core": "npm:7.1.8"
-    "@hyperlane-xyz/cosmos-sdk": "npm:13.1.1"
-    "@hyperlane-xyz/starknet-core": "npm:13.1.1"
-    "@hyperlane-xyz/utils": "npm:13.1.1"
+    "@hyperlane-xyz/core": "npm:7.1.10"
+    "@hyperlane-xyz/cosmos-sdk": "npm:13.2.1"
+    "@hyperlane-xyz/starknet-core": "npm:13.2.1"
+    "@hyperlane-xyz/utils": "npm:13.2.1"
     "@safe-global/api-kit": "npm:1.3.0"
     "@safe-global/protocol-kit": "npm:1.3.0"
     "@safe-global/safe-deployments": "npm:1.37.23"
@@ -3053,7 +3053,7 @@ __metadata:
     bignumber.js: "npm:^9.1.1"
     cosmjs-types: "npm:^0.9.0"
     cross-fetch: "npm:^3.1.5"
-    ethers: "npm:^5.7.2"
+    ethers: "npm:^5.8.0"
     pino: "npm:^8.19.0"
     starknet: "npm:^6.24.1"
     viem: "npm:^2.21.45"
@@ -3062,45 +3062,45 @@ __metadata:
   peerDependencies:
     "@ethersproject/abi": "*"
     "@ethersproject/providers": "*"
-  checksum: 10/81b74faaeb4f62291473a1b5c0116e5115966c19db593dea51dada41f34b62022db7ede4e74cea9e6bb7ba109cca6039f9ba3a22960ab4fff281d919c048a069
+  checksum: 10/f3783222f524a2e1de053f14f5ee716f5d177f6d62e5d7a49268f9a24c4b9a5c299b81a520b7677a3171d799a942ac97a49d83e1500f638c57cad37570bcba16
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/starknet-core@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/starknet-core@npm:13.1.1"
+"@hyperlane-xyz/starknet-core@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/starknet-core@npm:13.2.1"
   dependencies:
     starknet: "npm:^6.24.1"
-  checksum: 10/300ff57e0dcc155d0a19887cf5d7391381c47f2a63e1a3e96b53e3c1d42b4430a10abe2a86e9ebfd055382c877aa345bae9075907eaac50b7c9c57a9e0f75cec
+  checksum: 10/ad7052f1562915159748e2587b26387647d07da661aa72d04e8e4c7c20e876b7d223aaf5d1fa17c14c42e42bd56cbb2d90e98e733114d1fa6379740aaeca3852
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/utils@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/utils@npm:13.1.1"
+"@hyperlane-xyz/utils@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/utils@npm:13.2.1"
   dependencies:
     "@cosmjs/encoding": "npm:^0.32.4"
     "@solana/web3.js": "npm:^1.95.4"
     bignumber.js: "npm:^9.1.1"
-    ethers: "npm:^5.7.2"
+    ethers: "npm:^5.8.0"
     lodash-es: "npm:^4.17.21"
     pino: "npm:^8.19.0"
     starknet: "npm:^6.24.1"
     yaml: "npm:2.4.5"
-  checksum: 10/3f085982672e918f2069e053a03b84994f721856048939ca26d1f23cdc91255892d51575f466a1b30e0c4546362c3e9ba3c6eaca25f0817d19771c74e88a4277
+  checksum: 10/d5af0d031fa84458e9dba6ed12d74eadddbf6985734c838af62026e17c98cf02499d3ef1da948eda56b10a6fc58d804c3bcc18f62da95d32447a90375edd8c73
   languageName: node
   linkType: hard
 
-"@hyperlane-xyz/widgets@npm:13.1.1":
-  version: 13.1.1
-  resolution: "@hyperlane-xyz/widgets@npm:13.1.1"
+"@hyperlane-xyz/widgets@npm:13.2.1":
+  version: 13.2.1
+  resolution: "@hyperlane-xyz/widgets@npm:13.2.1"
   dependencies:
     "@cosmjs/stargate": "npm:^0.32.4"
     "@cosmos-kit/react": "npm:^2.18.0"
     "@headlessui/react": "npm:^2.1.8"
-    "@hyperlane-xyz/cosmos-sdk": "npm:13.1.1"
-    "@hyperlane-xyz/sdk": "npm:13.1.1"
-    "@hyperlane-xyz/utils": "npm:13.1.1"
+    "@hyperlane-xyz/cosmos-sdk": "npm:13.2.1"
+    "@hyperlane-xyz/sdk": "npm:13.2.1"
+    "@hyperlane-xyz/utils": "npm:13.2.1"
     "@interchain-ui/react": "npm:^1.23.28"
     "@rainbow-me/rainbowkit": "npm:^2.2.0"
     "@solana/wallet-adapter-react": "npm:^0.15.32"
@@ -3115,7 +3115,7 @@ __metadata:
   peerDependencies:
     react: ^18
     react-dom: ^18
-  checksum: 10/79514ca67b31f94978db08614d1ea085a4eed0571096c957088b160ed978ab2c253ec7c4320698631279dc37f10b7ffef4d7dc5f546700d68a505901696c685b
+  checksum: 10/793cc1d82f2f11335f443ec510cde3edc80b7e1c0cbd48c68944c4a8890e07a10f7b69334e7031703881922bda7e7257e38f83626b85b25581ec3ccfeea3bda1
   languageName: node
   linkType: hard
 
