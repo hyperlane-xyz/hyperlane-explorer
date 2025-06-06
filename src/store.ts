@@ -1,15 +1,22 @@
-import { GithubRegistry, IRegistry, warpRouteConfigs } from '@hyperlane-xyz/registry';
+import {
+  GithubRegistry,
+  IRegistry,
+  warpRouteConfigs as publishedWarpRouteConfigs,
+} from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
   ChainMetadataSchema,
+  ChainName,
   MultiProvider,
+  WarpCoreConfig,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
+import { links } from './consts/links';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { WarpRouteChainAddressMap } from './types';
 import { logger } from './utils/logger';
@@ -48,16 +55,23 @@ export const useStore = create<AppState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         logger.debug('Setting chain overrides in store');
-        const { multiProvider } = await buildMultiProvider(get().registry, overrides);
+        const { multiProvider, warpRouteChainAddressMap } = await buildMultiProvider(
+          get().registry,
+          overrides,
+        );
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
-        set({ chainMetadataOverrides: filtered, multiProvider });
+        set({ chainMetadataOverrides: filtered, multiProvider, warpRouteChainAddressMap });
       },
       multiProvider: new MultiProvider({}),
       setMultiProvider: (multiProvider: MultiProvider) => {
         logger.debug('Setting multiProvider in store');
         set({ multiProvider });
       },
-      registry: new GithubRegistry({ proxyUrl: config.githubProxy }),
+      registry: new GithubRegistry({
+        proxyUrl: config.githubProxy,
+        uri: config.registryUrl,
+        branch: config.registryBranch,
+      }),
       setRegistry: (registry: IRegistry) => {
         set({ registry });
       },
@@ -80,13 +94,13 @@ export const useStore = create<AppState>()(
             return;
           }
           buildMultiProvider(state.registry, state.chainMetadataOverrides)
-            .then(({ metadata, multiProvider }) => {
+            .then(({ metadata, multiProvider, warpRouteChainAddressMap }) => {
               state.setChainMetadata(metadata);
               state.setMultiProvider(multiProvider);
+              state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProvider', e));
-          state.setWarpRouteChainAddressMap(buildWarpRouteChainAddressMap());
         };
       },
     },
@@ -109,21 +123,29 @@ export function useReadyMultiProvider() {
   return multiProvider;
 }
 
+export function useChainMetadata(chainName?: ChainName) {
+  const multiProvider = useMultiProvider();
+  if (!chainName) return undefined;
+  return multiProvider.tryGetChainMetadata(chainName);
+}
+
 async function buildMultiProvider(
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
 ) {
   logger.debug('Building new MultiProvider from registry');
+
   // TODO improve interface so this pre-cache isn't required
   await registry.listRegistryContent();
   const registryChainMetadata = await registry.getMetadata();
+
   // TODO have the registry do this automatically
   const metadataWithLogos = await promiseObjAll(
     objMap(
       registryChainMetadata,
       async (chainName, metadata): Promise<ChainMetadata> => ({
         ...metadata,
-        logoURI: (await registry.getChainLogoUri(chainName)) || undefined,
+        logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
       }),
     ),
   );
@@ -136,11 +158,31 @@ async function buildMultiProvider(
       return parsedMetadata.success;
     },
   );
-  return { metadata: mergedMetadata, multiProvider: new MultiProvider(mergedMetadata) };
+
+  const warpRouteChainAddressMap = await buildWarpRouteChainAddressMap(registry);
+
+  return {
+    metadata: mergedMetadata,
+    multiProvider: new MultiProvider(mergedMetadata),
+    warpRouteChainAddressMap,
+  };
 }
 
-// TODO: Get the most up to date data from the registry instead of using the warpRouteConfigs
-export function buildWarpRouteChainAddressMap(): WarpRouteChainAddressMap {
+export async function buildWarpRouteChainAddressMap(
+  registry: IRegistry,
+): Promise<WarpRouteChainAddressMap> {
+  let warpRouteConfigs: Record<string, WarpCoreConfig>;
+
+  try {
+    logger.debug('Building warp route map from GithubRegistry');
+    warpRouteConfigs = await registry.getWarpRoutes();
+  } catch {
+    logger.debug(
+      'Failed to build warp route map from GithubRegistry. Using published warp route configs.',
+    );
+    warpRouteConfigs = publishedWarpRouteConfigs;
+  }
+
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
