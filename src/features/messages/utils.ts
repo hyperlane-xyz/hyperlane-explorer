@@ -25,13 +25,7 @@ export function parseWarpRouteMessageDetails(
   multiProvider: MultiProvider,
 ): WarpRouteDetails | undefined {
   try {
-    const {
-      body,
-      origin: { to },
-      originDomainId,
-      destinationDomainId,
-      recipient,
-    } = message;
+    const { body, sender, originDomainId, destinationDomainId, recipient } = message;
 
     const originMetadata = multiProvider.tryGetChainMetadata(originDomainId);
     const destinationMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
@@ -40,7 +34,7 @@ export function parseWarpRouteMessageDetails(
 
     const originToken = getTokenFromWarpRouteChainAddressMap(
       originMetadata,
-      to,
+      sender,
       warpRouteChainAddressMap,
     );
     const destinationToken = getTokenFromWarpRouteChainAddressMap(
