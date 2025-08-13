@@ -10,13 +10,19 @@ import '@hyperlane-xyz/widgets/styles.css';
 import { useIsSsr } from '@hyperlane-xyz/widgets';
 import { AppLayout } from '../AppLayout';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
-import { config } from '../consts/config';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
 import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
 
 const urqlClient = createUrqlClient({
-  url: config.apiUrl,
+  url: 'api/graphQL',
+  fetchOptions: () => {
+    return {
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_INTERNAL_API_KEY}`,
+      },
+    };
+  },
 });
 
 const reactQueryClient = new QueryClient({
