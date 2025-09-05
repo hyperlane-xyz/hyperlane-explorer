@@ -1,4 +1,4 @@
-import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
+import { MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
 import { formatMessage, hexToRadixCustomPrefix, ProtocolType } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
@@ -18,6 +18,13 @@ interface Props {
   message: Message;
   blur: boolean;
 }
+
+const formatSenderOrRecipient = (address: string, domain: number, multiProvider: MultiProvider) => {
+  const metadata = multiProvider.tryGetChainMetadata(domain);
+  if (metadata?.protocol === ProtocolType.Radix)
+    return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+  return address;
+};
 
 export function ContentDetailsCard({
   message: {
@@ -40,15 +47,8 @@ export function ContentDetailsCard({
     BlockExplorerAddressUrls | undefined
   >(undefined);
 
-  const formatSenderOrRecipient = (address: string, domain: number) => {
-    const metadata = multiProvider.tryGetChainMetadata(domain);
-    if (metadata?.protocol === ProtocolType.Radix)
-      return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
-    return address;
-  };
-
-  const foramttedRecipient = formatSenderOrRecipient(recipient, destinationDomainId);
-  const formattedSender = formatSenderOrRecipient(sender, originDomainId);
+  const foramttedRecipient = formatSenderOrRecipient(recipient, destinationDomainId, multiProvider);
+  const formattedSender = formatSenderOrRecipient(sender, originDomainId, multiProvider);
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
