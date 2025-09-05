@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
 import {
   ProtocolType,
   hexToRadixCustomPrefix,
@@ -193,6 +193,17 @@ function TransactionCard({
   );
 }
 
+function getFormattedTransactionHash(hash: string, metadata: ChainMetadata | null) {
+  switch (metadata?.protocol) {
+    case ProtocolType.Radix:
+      return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
+    case ProtocolType.Cosmos:
+      return strip0x(hash);
+    default:
+      return hash;
+  }
+}
+
 function TransactionDetails({
   chainName,
   domainId,
@@ -212,16 +223,7 @@ function TransactionDetails({
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
 
-  let formattedHash = hash;
-  switch (protocol) {
-    case ProtocolType.Radix:
-      formattedHash = hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
-      break;
-    case ProtocolType.Cosmos:
-      formattedHash = strip0x(hash);
-      break;
-    default:
-  }
+  let formattedHash = getFormattedTransactionHash(hash, metadata);
 
   const formattedMailbox =
     protocol === ProtocolType.Radix
