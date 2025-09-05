@@ -1,5 +1,11 @@
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
+import {
+  ProtocolType,
+  hexToRadixCustomPrefix,
+  isAddress,
+  isZeroish,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useState } from 'react';
@@ -202,9 +208,25 @@ function TransactionDetails({
 }) {
   const multiProvider = useMultiProvider();
   const protocol = multiProvider.tryGetProtocol(domainId) || ProtocolType.Ethereum;
+  const metadata = multiProvider.tryGetChainMetadata(domainId);
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
-  const formattedHash = protocol === ProtocolType.Cosmos ? strip0x(hash) : hash;
+
+  let formattedHash = hash;
+  switch (protocol) {
+    case ProtocolType.Radix:
+      formattedHash = hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
+      break;
+    case ProtocolType.Cosmos:
+      formattedHash = strip0x(hash);
+      break;
+    default:
+  }
+
+  let formattedMailbox =
+    protocol === ProtocolType.Radix
+      ? hexToRadixCustomPrefix(mailbox, 'component', metadata?.bech32Prefix, 30)
+      : mailbox;
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
@@ -222,7 +244,7 @@ function TransactionDetails({
       <KeyValueRow
         label="Tx hash:"
         labelWidth="w-16"
-        display={hash}
+        display={formattedHash}
         displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
@@ -239,7 +261,7 @@ function TransactionDetails({
         <KeyValueRow
           label="Mailbox:"
           labelWidth="w-16"
-          display={mailbox}
+          display={formattedMailbox}
           displayWidth="w-60 sm:w-64"
           showCopy={true}
           blurValue={blur}

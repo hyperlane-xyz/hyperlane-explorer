@@ -1,5 +1,5 @@
 import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
-import { formatMessage } from '@hyperlane-xyz/utils';
+import { formatMessage, hexToRadixCustomPrefix, ProtocolType } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,6 +40,16 @@ export function ContentDetailsCard({
     BlockExplorerAddressUrls | undefined
   >(undefined);
 
+  const formatSenderOrRecipient = (address: string, domain: number) => {
+    const metadata = multiProvider.tryGetChainMetadata(domain);
+    if (metadata?.protocol === ProtocolType.Radix)
+      return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+    return address;
+  };
+
+  const foramttedRecipient = formatSenderOrRecipient(recipient, destinationDomainId);
+  const formattedSender = formatSenderOrRecipient(sender, originDomainId);
+
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
   }, [decodedBody]);
@@ -79,15 +89,15 @@ export function ContentDetailsCard({
     const senderAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       originChainId,
-      sender,
+      formattedSender,
     );
     const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       destinationChainId,
-      recipient,
+      foramttedRecipient,
     );
     return { sender: senderAddressLink, recipient: recipientAddressLink };
-  }, [destinationChainId, originChainId, multiProvider, sender, recipient]);
+  }, [destinationChainId, originChainId, multiProvider, formattedSender, foramttedRecipient]);
 
   useEffect(() => {
     getBlockExplorerLinks()
@@ -121,7 +131,7 @@ export function ContentDetailsCard({
         <KeyValueRow
           label="Sender:"
           labelWidth="w-16"
-          display={sender}
+          display={formattedSender}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
@@ -130,7 +140,7 @@ export function ContentDetailsCard({
         <KeyValueRow
           label="Recipient:"
           labelWidth="w-16"
-          display={recipient}
+          display={foramttedRecipient}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
