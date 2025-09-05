@@ -223,7 +223,7 @@ function TransactionDetails({
     default:
   }
 
-  let formattedMailbox =
+  const formattedMailbox =
     protocol === ProtocolType.Radix
       ? hexToRadixCustomPrefix(mailbox, 'component', metadata?.bech32Prefix, 30)
       : mailbox;
