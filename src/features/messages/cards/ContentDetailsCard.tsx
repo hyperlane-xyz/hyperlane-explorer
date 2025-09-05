@@ -47,7 +47,7 @@ export function ContentDetailsCard({
     BlockExplorerAddressUrls | undefined
   >(undefined);
 
-  const foramttedRecipient = formatSenderOrRecipient(recipient, destinationDomainId, multiProvider);
+  const formattedRecipient = formatSenderOrRecipient(recipient, destinationDomainId, multiProvider);
   const formattedSender = formatSenderOrRecipient(sender, originDomainId, multiProvider);
 
   useEffect(() => {
@@ -94,10 +94,10 @@ export function ContentDetailsCard({
     const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       destinationChainId,
-      foramttedRecipient,
+      formattedRecipient,
     );
     return { sender: senderAddressLink, recipient: recipientAddressLink };
-  }, [destinationChainId, originChainId, multiProvider, formattedSender, foramttedRecipient]);
+  }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
 
   useEffect(() => {
     getBlockExplorerLinks()
@@ -140,7 +140,7 @@ export function ContentDetailsCard({
         <KeyValueRow
           label="Recipient:"
           labelWidth="w-16"
-          display={foramttedRecipient}
+          display={formattedRecipient}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}

@@ -223,7 +223,7 @@ function TransactionDetails({
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
 
-  let formattedHash = getFormattedTransactionHash(hash, metadata);
+  const formattedHash = getFormattedTransactionHash(hash, metadata);
 
   const formattedMailbox =
     protocol === ProtocolType.Radix
