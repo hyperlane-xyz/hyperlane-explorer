@@ -1,5 +1,11 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { ProtocolType, isAddress, isZeroish, strip0x } from '@hyperlane-xyz/utils';
+import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import {
+  ProtocolType,
+  hexToRadixCustomPrefix,
+  isAddress,
+  isZeroish,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useState } from 'react';
@@ -187,6 +193,17 @@ function TransactionCard({
   );
 }
 
+function getFormattedTransactionHash(hash: string, metadata: ChainMetadata | null) {
+  switch (metadata?.protocol) {
+    case ProtocolType.Radix:
+      return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
+    case ProtocolType.Cosmos:
+      return strip0x(hash);
+    default:
+      return hash;
+  }
+}
+
 function TransactionDetails({
   chainName,
   domainId,
@@ -202,9 +219,16 @@ function TransactionDetails({
 }) {
   const multiProvider = useMultiProvider();
   const protocol = multiProvider.tryGetProtocol(domainId) || ProtocolType.Ethereum;
+  const metadata = multiProvider.tryGetChainMetadata(domainId);
 
   const { hash, from, timestamp, blockNumber, mailbox } = transaction;
-  const formattedHash = protocol === ProtocolType.Cosmos ? strip0x(hash) : hash;
+
+  const formattedHash = getFormattedTransactionHash(hash, metadata);
+
+  const formattedMailbox =
+    protocol === ProtocolType.Radix
+      ? hexToRadixCustomPrefix(mailbox, 'component', metadata?.bech32Prefix, 30)
+      : mailbox;
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
@@ -222,7 +246,7 @@ function TransactionDetails({
       <KeyValueRow
         label="Tx hash:"
         labelWidth="w-16"
-        display={hash}
+        display={formattedHash}
         displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
@@ -239,7 +263,7 @@ function TransactionDetails({
         <KeyValueRow
           label="Mailbox:"
           labelWidth="w-16"
-          display={mailbox}
+          display={formattedMailbox}
           displayWidth="w-60 sm:w-64"
           showCopy={true}
           blurValue={blur}

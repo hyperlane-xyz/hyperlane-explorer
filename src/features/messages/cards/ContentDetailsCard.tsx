@@ -1,5 +1,5 @@
-import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
-import { formatMessage } from '@hyperlane-xyz/utils';
+import { MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
+import { formatMessage, hexToRadixCustomPrefix, ProtocolType } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,6 +18,13 @@ interface Props {
   message: Message;
   blur: boolean;
 }
+
+const formatSenderOrRecipient = (address: string, domain: number, multiProvider: MultiProvider) => {
+  const metadata = multiProvider.tryGetChainMetadata(domain);
+  if (metadata?.protocol === ProtocolType.Radix)
+    return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+  return address;
+};
 
 export function ContentDetailsCard({
   message: {
@@ -39,6 +46,9 @@ export function ContentDetailsCard({
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
     BlockExplorerAddressUrls | undefined
   >(undefined);
+
+  const formattedRecipient = formatSenderOrRecipient(recipient, destinationDomainId, multiProvider);
+  const formattedSender = formatSenderOrRecipient(sender, originDomainId, multiProvider);
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
@@ -79,15 +89,15 @@ export function ContentDetailsCard({
     const senderAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       originChainId,
-      sender,
+      formattedSender,
     );
     const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
       multiProvider,
       destinationChainId,
-      recipient,
+      formattedRecipient,
     );
     return { sender: senderAddressLink, recipient: recipientAddressLink };
-  }, [destinationChainId, originChainId, multiProvider, sender, recipient]);
+  }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
 
   useEffect(() => {
     getBlockExplorerLinks()
@@ -121,7 +131,7 @@ export function ContentDetailsCard({
         <KeyValueRow
           label="Sender:"
           labelWidth="w-16"
-          display={sender}
+          display={formattedSender}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
@@ -130,7 +140,7 @@ export function ContentDetailsCard({
         <KeyValueRow
           label="Recipient:"
           labelWidth="w-16"
-          display={recipient}
+          display={formattedRecipient}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
