@@ -1,5 +1,5 @@
-import { MAILBOX_VERSION, MultiProvider } from '@hyperlane-xyz/sdk';
-import { formatMessage, hexToRadixCustomPrefix, ProtocolType } from '@hyperlane-xyz/utils';
+import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
+import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -7,6 +7,7 @@ import { Card } from '../../../components/layout/Card';
 import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
 import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
+import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
@@ -18,13 +19,6 @@ interface Props {
   message: Message;
   blur: boolean;
 }
-
-const formatSenderOrRecipient = (address: string, domain: number, multiProvider: MultiProvider) => {
-  const metadata = multiProvider.tryGetChainMetadata(domain);
-  if (metadata?.protocol === ProtocolType.Radix)
-    return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
-  return address;
-};
 
 export function ContentDetailsCard({
   message: {
@@ -47,8 +41,8 @@ export function ContentDetailsCard({
     BlockExplorerAddressUrls | undefined
   >(undefined);
 
-  const formattedRecipient = formatSenderOrRecipient(recipient, destinationDomainId, multiProvider);
-  const formattedSender = formatSenderOrRecipient(sender, originDomainId, multiProvider);
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
+  const formattedSender = formatAddress(sender, originDomainId, multiProvider);
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
