@@ -9,6 +9,7 @@ import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
+import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
@@ -67,6 +68,10 @@ export function MessageSummaryRow({
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
+  const formattedSender = formatAddress(sender, originDomainId, mp);
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
+  const formattedTxHash = formatTxHash(origin.hash, originDomainId, mp);
+
   let statusIcon = undefined;
   let statusTitle = '';
   if (status === MessageStatus.Delivered) {
@@ -97,10 +102,10 @@ export function MessageSummaryRow({
         <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
-        {shortenAddress(sender) || 'Invalid Address'}
+        {shortenAddress(formattedSender) || 'Invalid Address'}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
-        {shortenAddress(recipient) || 'Invalid Address'}
+        {shortenAddress(formattedRecipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell
         id={msgId}
@@ -108,7 +113,7 @@ export function MessageSummaryRow({
         tdClasses="hidden lg:table-cell"
         aClasses={styles.valueTruncated}
       >
-        {shortenAddress(origin.hash)}
+        {shortenAddress(formattedTxHash)}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(origin.timestamp)}
