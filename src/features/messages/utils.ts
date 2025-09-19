@@ -8,6 +8,7 @@ import {
   toBase64,
 } from '@hyperlane-xyz/utils';
 import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../types';
+import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
 
@@ -32,14 +33,17 @@ export function parseWarpRouteMessageDetails(
 
     if (!body || !originMetadata || !destinationMetadata) return undefined;
 
+    const parsedSender = formatAddress(sender, originDomainId, multiProvider);
+    const parsedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
+
     const originToken = getTokenFromWarpRouteChainAddressMap(
       originMetadata,
-      sender,
+      parsedSender,
       warpRouteChainAddressMap,
     );
     const destinationToken = getTokenFromWarpRouteChainAddressMap(
       destinationMetadata,
-      recipient,
+      parsedRecipient,
       warpRouteChainAddressMap,
     );
 
