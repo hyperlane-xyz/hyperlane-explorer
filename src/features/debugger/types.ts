@@ -6,6 +6,7 @@ export enum MessageDebugStatus {
   HandleCallFailure = 'handleCallFailure',
   MultisigIsmEmpty = 'multisigIsmEmpty',
   GasUnderfunded = 'gasUnderfunded',
+  InvalidIsmDefinition = 'invalidIsmDefinition',
 }
 
 export interface MessageDebugResult {

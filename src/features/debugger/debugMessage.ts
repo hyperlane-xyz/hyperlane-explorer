@@ -240,8 +240,18 @@ async function checkMultisigIsmEmpty(
     throw new Error('Recipient ISM is not a valid address');
   }
   const ism = InterchainSecurityModuleFactory.connect(ismAddress, destProvider);
-  const moduleType = await ism.moduleType();
 
+  let moduleType: number | undefined = undefined;
+  try {
+    moduleType = await ism.moduleType();
+  } catch (error) {
+    logger.error('Invalid ISM', error);
+    return {
+      status: MessageDebugStatus.InvalidIsmDefinition,
+      description:
+        'Invalid ISM. Please verify that the ISM has been configured correctly or exists.',
+    };
+  }
   const ismDetails = { ismAddress, moduleType };
   if (moduleType !== IsmModuleTypes.LEGACY_MULTISIG && moduleType !== IsmModuleTypes.MULTISIG) {
     return { ismDetails };
