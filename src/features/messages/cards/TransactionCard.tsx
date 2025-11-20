@@ -7,7 +7,7 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
-import { MessageStatus, MessageTx } from '../../../types';
+import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
 import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
@@ -15,6 +15,7 @@ import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { LabelAndCodeBlock } from './CodeBlock';
+import { CollateralWarning } from './CollateralWarning';
 import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
@@ -50,6 +51,8 @@ export function DestinationTransactionCard({
   isStatusFetching,
   isPiMsg,
   blur,
+  message,
+  warpRouteDetails,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -60,6 +63,8 @@ export function DestinationTransactionCard({
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
+  message?: Message;
+  warpRouteDetails?: WarpRouteDetails;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
@@ -71,13 +76,21 @@ export function DestinationTransactionCard({
   let content: ReactNode;
   if (transaction) {
     content = (
-      <TransactionDetails
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        duration={duration}
-        blur={blur}
-      />
+      <>
+        {/* TEMPORARY: Show collateral warning for all statuses for debugging */}
+        {message && warpRouteDetails && isDestinationEvmChain && (
+          <div className="mb-4">
+            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
+          </div>
+        )}
+        <TransactionDetails
+          chainName={chainName}
+          domainId={domainId}
+          transaction={transaction}
+          duration={duration}
+          blur={blur}
+        />
+      </>
     );
   } else if (!debugResult && isStatusFetching) {
     content = (
@@ -126,21 +139,35 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending && isDestinationEvmChain) {
+    // TEMPORARY: Also showing warning for delivered messages above for debugging
+    console.log('[TransactionCard] Pending EVM destination:', {
+      hasMessage: !!message,
+      hasWarpRouteDetails: !!warpRouteDetails,
+      destinationTokenStandard: warpRouteDetails?.destinationToken?.standard,
+    });
+
     content = (
-      <DeliveryStatus>
-        <div className="flex flex-col items-center">
-          <div>Delivery to destination chain still in progress.</div>
-          {isPiMsg && (
-            <div className="mt-2 max-w-xs text-sm">
-              Please ensure a relayer is running for this chain.
-            </div>
-          )}
-          <div className="mt-6 flex items-center justify-center">
-            <SpinnerIcon width={40} height={40} />
+      <>
+        {message && warpRouteDetails && (
+          <div className="mb-4">
+            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
           </div>
-          <CallDataModal debugResult={debugResult} />
-        </div>
-      </DeliveryStatus>
+        )}
+        <DeliveryStatus>
+          <div className="flex flex-col items-center">
+            <div>Delivery to destination chain still in progress.</div>
+            {isPiMsg && (
+              <div className="mt-2 max-w-xs text-sm">
+                Please ensure a relayer is running for this chain.
+              </div>
+            )}
+            <div className="mt-6 flex items-center justify-center">
+              <SpinnerIcon width={40} height={40} />
+            </div>
+            <CallDataModal debugResult={debugResult} />
+          </div>
+        </DeliveryStatus>
+      </>
     );
   } else {
     content = (

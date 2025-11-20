@@ -1,28 +1,24 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { Card } from '../../../components/layout/Card';
 import SendMoney from '../../../images/icons/send-money.svg';
-import { useMultiProvider, useStore } from '../../../store';
-import { Message } from '../../../types';
+import { useMultiProvider } from '../../../store';
+import { Message, WarpRouteDetails } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { parseWarpRouteMessageDetails } from '../utils';
+import { isCollateralRoute } from '../collateral/types';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
   message: Message;
+  warpRouteDetails: WarpRouteDetails | undefined;
   blur: boolean;
 }
 
-export function WarpTransferDetailsCard({ message, blur }: Props) {
+export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
   const multiProvider = useMultiProvider();
-  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
-  const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
-    [message, warpRouteChainAddressMap, multiProvider],
-  );
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
     BlockExplorerAddressUrls | undefined
   >(undefined);
@@ -59,6 +55,7 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
   if (!warpRouteDetails) return null;
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
+  const isCollateral = isCollateralRoute(destinationToken.standard);
 
   return (
     <Card className="w-full space-y-4">
@@ -76,6 +73,12 @@ export function WarpTransferDetailsCard({ message, blur }: Props) {
           />
         </div>
       </div>
+      {isCollateral && (
+        <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700">
+          <span className="font-medium">Collateral-backed route:</span> This transfer uses locked
+          collateral on the destination chain
+        </div>
+      )}
       <div className="flex flex-wrap gap-x-6 gap-y-4">
         <KeyValueRow
           label="Amount:"
