@@ -90,6 +90,14 @@ async function checkIsMessageDelivered(
   mailboxAddr: Address,
 ) {
   const { msgId, destinationDomainId } = message;
+
+  // Delivery checking is only supported for EVM chains
+  const destMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
+  if (destMetadata?.protocol !== 'ethereum') {
+    logger.debug('Skipping delivery check for non-EVM chain');
+    return { isDelivered: false };
+  }
+
   const provider = multiProvider.getEthersV5Provider(destinationDomainId);
   const mailbox = MailboxFactory.connect(mailboxAddr, provider);
 

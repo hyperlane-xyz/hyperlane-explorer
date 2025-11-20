@@ -18,6 +18,17 @@ async function fetchActiveRebalances(
   multiProvider: any,
 ): Promise<ActiveRebalance> {
   try {
+    // Rebalance tracking is currently only supported for EVM chains
+    // as it relies on MovableCollateralRouter contracts and event logs
+    const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
+    if (chainMetadata?.protocol !== 'ethereum') {
+      logger.debug('Skipping rebalance tracking for non-EVM chain:', chainName);
+      return {
+        rebalances: [],
+        totalInFlight: 0n,
+      };
+    }
+
     const provider = multiProvider.getEthersV5Provider(chainName);
     const currentBlock = await provider.getBlockNumber();
 

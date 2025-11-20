@@ -39,7 +39,11 @@ function queryResult<D, M extends MessageStub>(
   multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: Record<string, D[]> | undefined,
-  parseFn: (multiProvider: MultiProtocolProvider, scrapedChains: DomainsEntry[], data: D) => M | null,
+  parseFn: (
+    multiProvider: MultiProtocolProvider,
+    scrapedChains: DomainsEntry[],
+    data: D,
+  ) => M | null,
 ) {
   if (!data || !Object.keys(data).length) return [];
   return deduplicateMessageList(

@@ -32,9 +32,20 @@ export interface ActiveRebalance {
 }
 
 // Checks if a token standard is collateralized using SDK's official list
+// WORKAROUND: SDK is missing Starknet collateral standards from TOKEN_COLLATERALIZED_STANDARDS
+// TODO: Remove this workaround once SDK is fixed
+const STARKNET_COLLATERAL_STANDARDS = ['StarknetHypCollateral', 'StarknetHypNative'];
+
 export function isCollateralRoute(tokenStandard?: string): boolean {
   if (!tokenStandard) return false;
-  return TOKEN_COLLATERALIZED_STANDARDS.some((standard) => standard === tokenStandard);
+
+  // Check SDK's official list first
+  if (TOKEN_COLLATERALIZED_STANDARDS.some((standard) => standard === tokenStandard)) {
+    return true;
+  }
+
+  // WORKAROUND: Also check for Starknet collateral standards
+  return STARKNET_COLLATERAL_STANDARDS.includes(tokenStandard);
 }
 
 export function calculateCollateralStatus(available: bigint, required: bigint): CollateralInfo {

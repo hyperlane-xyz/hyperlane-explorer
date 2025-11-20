@@ -11,7 +11,7 @@ import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../ty
 import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
-import { getChainDisplayName, isEvmChain } from '../../chains/utils';
+import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { LabelAndCodeBlock } from './CodeBlock';
@@ -69,16 +69,13 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
 
-  const isDestinationEvmChain = isEvmChain(multiProvider, domainId);
-
   const { isOpen, open, close } = useModal();
 
   let content: ReactNode;
   if (transaction) {
     content = (
       <>
-        {/* TEMPORARY: Show collateral warning for all statuses for debugging */}
-        {message && warpRouteDetails && isDestinationEvmChain && (
+        {message && warpRouteDetails && (
           <div className="mb-4">
             <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
           </div>
@@ -138,14 +135,9 @@ export function DestinationTransactionCard({
         <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
       </>
     );
-  } else if (status === MessageStatus.Pending && isDestinationEvmChain) {
-    // TEMPORARY: Also showing warning for delivered messages above for debugging
-    console.log('[TransactionCard] Pending EVM destination:', {
-      hasMessage: !!message,
-      hasWarpRouteDetails: !!warpRouteDetails,
-      destinationTokenStandard: warpRouteDetails?.destinationToken?.standard,
-    });
-
+  } else if (status === MessageStatus.Pending) {
+    // Show collateral warning for all pending messages (not just EVM)
+    // since Token.getBalance() now supports cross-VM collateral checking
     content = (
       <>
         {message && warpRouteDetails && (

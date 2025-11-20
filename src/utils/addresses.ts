@@ -1,7 +1,11 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { hexToRadixCustomPrefix, ProtocolType, strip0x } from '@hyperlane-xyz/utils';
 
-export function formatAddress(address: string, domainId: number, multiProvider: MultiProtocolProvider) {
+export function formatAddress(
+  address: string,
+  domainId: number,
+  multiProvider: MultiProtocolProvider,
+) {
   const metadata = multiProvider.tryGetChainMetadata(domainId);
   if (metadata?.protocol === ProtocolType.Radix)
     return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
