@@ -2,7 +2,7 @@
 // The widgets lib doesn't export those yet, need to fix that first.
 import { BigNumber, providers } from 'ethers';
 
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { fetchWithTimeout, sleep } from '@hyperlane-xyz/utils';
 
 import { config } from '../consts/config';
@@ -22,7 +22,7 @@ export interface ExplorerQueryResponse<R> {
 }
 
 async function queryExplorer<P>(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName: string,
   params: URLSearchParams,
   useKey = false,
@@ -85,7 +85,7 @@ export interface ExplorerLogEntry {
 }
 
 export async function queryExplorerForLogs(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName: string,
   params: string,
   useKey = false,
@@ -127,7 +127,7 @@ export function toProviderLog(log: ExplorerLogEntry): ExtendedLog {
 }
 
 export async function queryExplorerForTx(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName: string,
   txHash: string,
   useKey = false,
@@ -152,7 +152,7 @@ export async function queryExplorerForTx(
 }
 
 export async function queryExplorerForTxReceipt(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName: string,
   txHash: string,
   useKey = false,
@@ -177,7 +177,7 @@ export async function queryExplorerForTxReceipt(
 }
 
 export async function queryExplorerForBlock(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName: string,
   blockNumber?: number | string,
   useKey = false,

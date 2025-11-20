@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
@@ -366,7 +366,7 @@ function ChainDescriptionRow({
 }: {
   chainName: string;
   domainId: DomainId;
-  multiProvider: MultiProvider;
+  multiProvider: MultiProtocolProvider;
   blur: boolean;
 }) {
   const idString =

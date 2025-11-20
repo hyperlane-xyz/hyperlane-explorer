@@ -1,5 +1,5 @@
-import { Token } from '@hyperlane-xyz/sdk';
 import { useQuery } from '@tanstack/react-query';
+import { Contract } from 'ethers';
 import { useEffect, useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
@@ -13,9 +13,22 @@ import {
   isCollateralRoute,
 } from './types';
 
+// Minimal ABI for various collateral router types
+const COLLATERAL_ROUTER_ABI = [
+  // EvmHypCollateral: Returns the address of the underlying collateral token
+  'function wrappedToken() view returns (address)',
+];
+
+const ERC20_ABI = [
+  // Returns the balance of tokens held by an address
+  'function balanceOf(address account) view returns (uint256)',
+];
+
 /**
- * Fetches the collateral balance for a token using the SDK's cross-VM adapter.
- * This works for EVM, Sealevel, CosmWasm, and other VM types.
+ * Fetches the collateral balance for an EVM collateral token.
+ * For EvmHypCollateral, we need to:
+ * 1. Call wrappedToken() to get the underlying ERC20 token address
+ * 2. Call balanceOf(routerAddress) on that token to get locked collateral
  */
 async function fetchCollateralBalance(
   destinationToken: WarpRouteDetails['destinationToken'],
@@ -28,20 +41,27 @@ async function fetchCollateralBalance(
   });
 
   try {
-    // Create a Token instance from the token args
-    const token = new Token(destinationToken);
-    console.log('[fetchCollateralBalance] Created token instance');
+    const provider = multiProvider.getEthersV5Provider(destinationToken.chainName);
+    console.log('[fetchCollateralBalance] Got provider');
 
-    // Get the adapter for this token (handles EVM, Sealevel, CosmWasm, etc.)
-    const adapter = token.getAdapter(multiProvider);
-    console.log('[fetchCollateralBalance] Got adapter for protocol:', token.protocol);
+    // Create router contract instance
+    const routerContract = new Contract(
+      destinationToken.addressOrDenom,
+      COLLATERAL_ROUTER_ABI,
+      provider,
+    );
+    console.log('[fetchCollateralBalance] Created router contract instance');
 
-    // Query the collateral balance
-    // For collateralized tokens, this returns the locked collateral
-    const balance = await adapter.getBalance(token.addressOrDenom);
+    // Get the underlying wrapped token address from the collateral router
+    const wrappedTokenAddress = await routerContract.wrappedToken();
+    console.log('[fetchCollateralBalance] Got wrapped token address:', wrappedTokenAddress);
+
+    // Query the wrapped token's balance held by the router (this is the collateral)
+    const wrappedTokenContract = new Contract(wrappedTokenAddress, ERC20_ABI, provider);
+    const balance = await wrappedTokenContract.balanceOf(destinationToken.addressOrDenom);
     console.log('[fetchCollateralBalance] Got collateral balance:', balance.toString());
 
-    return balance;
+    return BigInt(balance.toString());
   } catch (error) {
     console.error('[fetchCollateralBalance] Error:', error);
     logger.error('Error fetching collateral balance', error);

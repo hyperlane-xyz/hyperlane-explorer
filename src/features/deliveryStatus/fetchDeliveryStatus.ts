@@ -2,7 +2,7 @@ import { constants } from 'ethers';
 
 import { IMailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStatus } from '../../types';
@@ -20,7 +20,7 @@ import {
 } from './types';
 
 export async function fetchDeliveryStatus(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   message: Message,
@@ -85,12 +85,12 @@ export async function fetchDeliveryStatus(
 }
 
 async function checkIsMessageDelivered(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   message: Message,
   mailboxAddr: Address,
 ) {
   const { msgId, destinationDomainId } = message;
-  const provider = multiProvider.getProvider(destinationDomainId);
+  const provider = multiProvider.getEthersV5Provider(destinationDomainId);
   const mailbox = MailboxFactory.connect(mailboxAddr, provider);
 
   // Try finding logs first as they have more info
@@ -119,12 +119,12 @@ async function checkIsMessageDelivered(
 }
 
 function fetchTransactionDetails(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   domainId: DomainId,
   txHash?: string,
 ) {
   if (!txHash) return null;
   logger.debug(`Searching for transaction details for ${txHash}`);
-  const provider = multiProvider.getProvider(domainId);
+  const provider = multiProvider.getEthersV5Provider(domainId);
   return provider.getTransaction(txHash);
 }

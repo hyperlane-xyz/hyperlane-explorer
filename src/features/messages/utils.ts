@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   bytesToProtocolAddress,
   fromBase64,
@@ -23,7 +23,7 @@ export function deserializeMessage<M extends MessageStub>(data: string | string[
 export function parseWarpRouteMessageDetails(
   message: Message | MessageStub,
   warpRouteChainAddressMap: WarpRouteChainAddressMap,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
 ): WarpRouteDetails | undefined {
   try {
     const { body, sender, originDomainId, destinationDomainId, recipient } = message;

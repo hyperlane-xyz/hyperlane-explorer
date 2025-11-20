@@ -18,7 +18,7 @@ async function fetchActiveRebalances(
   multiProvider: any,
 ): Promise<ActiveRebalance> {
   try {
-    const provider = multiProvider.getProvider(chainName);
+    const provider = multiProvider.getEthersV5Provider(chainName);
     const currentBlock = await provider.getBlockNumber();
 
     // Connect to MovableCollateralRouter contract

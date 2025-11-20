@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
 
-import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { objFilter } from '@hyperlane-xyz/utils';
 
 import { unscrapedChainsInDb } from '../../../consts/config';
@@ -34,7 +34,7 @@ export function useScrapedDomains() {
   };
 }
 
-export function useScrapedChains(multiProvider: MultiProvider) {
+export function useScrapedChains(multiProvider: MultiProtocolProvider) {
   const { scrapedDomains, isFetching, isError } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
 
@@ -52,7 +52,7 @@ export function useScrapedChains(multiProvider: MultiProvider) {
 }
 
 // TODO: Remove once all chains in the DB are scraped
-export function isUnscrapedDbChain(multiProvider: MultiProvider, domainId: DomainId) {
+export function isUnscrapedDbChain(multiProvider: MultiProtocolProvider, domainId: DomainId) {
   const chainName = multiProvider.tryGetChainName(domainId);
   return chainName && unscrapedChainsInDb.includes(chainName);
 }
