@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
-import { Message, WarpRouteDetails } from '../../../types';
+import { Message, MessageStatus, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 
 import {
@@ -91,10 +91,9 @@ export function useCollateralStatus(
       return false;
     }
 
-    // Check collateral for pending and failing messages
-    // For pending: warn proactively
-    // For failing: show why it failed
-    if (message.status !== 'pending' && message.status !== 'failing') {
+    // Check collateral for any message that hasn't been delivered yet
+    // This includes pending, failing, and unknown states
+    if (message.status === MessageStatus.Delivered) {
       return false;
     }
 
