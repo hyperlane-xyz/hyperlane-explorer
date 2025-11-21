@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -63,7 +63,7 @@ export function MessageSummaryRow({
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
-  mp: MultiProvider;
+  mp: MultiProtocolProvider;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;

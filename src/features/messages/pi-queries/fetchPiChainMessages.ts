@@ -5,7 +5,7 @@ import {
   Mailbox__factory as MailboxFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   ProtocolType,
   addressToBytes32,
@@ -69,7 +69,7 @@ searchForMessages(input):
 export async function fetchMessagesFromPiChain(
   chainMetadata: ChainMetadata,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   queryType?: PiQueryType, // optionally force search down to just one type
 ): Promise<Message[]> {
@@ -112,7 +112,7 @@ export async function fetchMessagesFromPiChain(
 async function fetchLogsForAddress(
   chainMetadata: ChainMetadata,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
 ): Promise<ExtendedLog[]> {
   const { name, domainId } = chainMetadata;
@@ -139,11 +139,11 @@ async function fetchLogsForAddress(
 async function fetchLogsForTxHash(
   { name, domainId }: ChainMetadata,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
 ): Promise<ExtendedLog[]> {
   const txHash = query.input;
   logger.debug(`Fetching logs for txHash ${txHash} on chain ${name} (${domainId})`);
-  const provider = multiProvider.getProvider(domainId);
+  const provider = multiProvider.getEthersV5Provider(domainId);
   const txReceipt = await provider.getTransactionReceipt(txHash);
   if (txReceipt) {
     logger.debug(`Tx receipt found from provider for chain ${name} (${domainId})`);
@@ -163,7 +163,7 @@ async function fetchLogsForTxHash(
 async function fetchLogsForMsgId(
   chainMetadata: ChainMetadata,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
 ): Promise<ExtendedLog[]> {
   const { name, domainId } = chainMetadata;
@@ -199,9 +199,9 @@ async function fetchLogsFromProvider(
   contractAddr: Address,
   domainId: DomainId,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
 ): Promise<ExtendedLog[]> {
-  const provider = multiProvider.getProvider(domainId);
+  const provider = multiProvider.getEthersV5Provider(domainId);
 
   let { fromBlock, toBlock } = query;
   fromBlock ||= (await provider.getBlockNumber()) - PI_MESSAGE_LOG_CHECK_BLOCK_RANGE;
@@ -252,7 +252,7 @@ function parseBlockTimestamp(block: providers.Block | null | undefined): number 
 }
 
 function logToMessage(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   log: ExtendedLog,
   chainMetadata: ChainMetadata<{ mailbox?: Address }>,
 ): Message | null {
@@ -317,7 +317,7 @@ function logToMessage(
 async function tryFetchIgpGasPayments(
   message: Message,
   chainMetadata: ChainMetadata<{ interchainGasPaymaster?: Address }>,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
 ): Promise<Message> {
   const { name, domainId, interchainGasPaymaster } = chainMetadata;
   if (!interchainGasPaymaster || !isValidAddress(interchainGasPaymaster)) {
@@ -327,7 +327,7 @@ async function tryFetchIgpGasPayments(
 
   const igp = InterchainGasPaymasterFactory.connect(
     interchainGasPaymaster,
-    multiProvider.getProvider(domainId),
+    multiProvider.getEthersV5Provider(domainId),
   );
   const filter = igp.filters.GasPayment(message.msgId);
   const matchedEvents = (await igp.queryFilter(filter)) || [];

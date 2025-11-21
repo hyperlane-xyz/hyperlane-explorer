@@ -1,5 +1,5 @@
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
@@ -18,7 +18,7 @@ export async function getMailboxAddress(
 }
 
 export function getChainDisplayName(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chainName?: string,
   shortName = false,
   fallbackToId = true,
@@ -29,14 +29,14 @@ export function getChainDisplayName(
   return displayName || metadata.displayName || toTitleCase(metadata.name);
 }
 
-export function getChainEnvironment(multiProvider: MultiProvider, domainId: DomainId) {
+export function getChainEnvironment(multiProvider: MultiProtocolProvider, domainId: DomainId) {
   const isTestnet = multiProvider.tryGetChainMetadata(domainId)?.isTestnet;
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
 // Is a 'Permissionless Interop' chain (i.e. one not deployed and scraped by Abacus Works)
 export function isPiChain(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   domainId: DomainId,
 ) {
@@ -45,7 +45,7 @@ export function isPiChain(
   return !chainName || !scrapedChains.find((chain) => chain.name.trim() === chainName);
 }
 
-export function isEvmChain(multiProvider: MultiProvider, domainId: DomainId) {
+export function isEvmChain(multiProvider: MultiProtocolProvider, domainId: DomainId) {
   const protocol = multiProvider.tryGetProtocol(domainId);
   return protocol === ProtocolType.Ethereum;
 }

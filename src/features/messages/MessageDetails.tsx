@@ -1,7 +1,7 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
@@ -22,6 +22,7 @@ import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
+import { parseWarpRouteMessageDetails } from './utils';
 
 interface Props {
   messageId: string; // Hex value for message id
@@ -89,6 +90,13 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
 
+  // Parse warp route details for collateral checking
+  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const warpRouteDetails = useMemo(
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
+    [message, warpRouteChainAddressMap, multiProvider],
+  );
+
   return (
     <>
       <Card className="flex items-center justify-between rounded-full px-1">
@@ -122,9 +130,15 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={isPiMsg}
           blur={blur}
+          message={message}
+          warpRouteDetails={warpRouteDetails}
         />
         {showTimeline && <TimelineCard message={message} blur={blur} />}
-        <WarpTransferDetailsCard message={message} blur={blur} />
+        <WarpTransferDetailsCard
+          message={message}
+          warpRouteDetails={warpRouteDetails}
+          blur={blur}
+        />
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}

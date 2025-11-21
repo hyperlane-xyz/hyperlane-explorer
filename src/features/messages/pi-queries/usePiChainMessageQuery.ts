@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 
 import { useReadyMultiProvider, useRegistry } from '../../../store';
@@ -115,7 +115,7 @@ export function usePiChainMessageQuery({
 async function fetchMessages(
   chainMetadata: ChainMetadata,
   query: PiMessageQuery,
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   queryType?: PiQueryType,
 ): Promise<Message[]> {
