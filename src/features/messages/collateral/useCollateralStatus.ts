@@ -1,4 +1,4 @@
-import { Token } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider, Token } from '@hyperlane-xyz/sdk';
 import { toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -15,13 +15,17 @@ import {
   isCollateralRoute,
 } from './types';
 
+// Query configuration constants
+const COLLATERAL_REFETCH_INTERVAL = 30000; // 30 seconds
+const COLLATERAL_STALE_TIME = 20000; // 20 seconds
+
 /**
  * Fetches the collateral balance using the SDK's Token class.
  * This properly handles cross-VM collateral checking (EVM, Sealevel, CosmWasm).
  */
 async function fetchCollateralBalance(
   destinationToken: WarpRouteDetails['destinationToken'],
-  multiProvider: any,
+  multiProvider: MultiProtocolProvider,
 ): Promise<bigint | undefined> {
   try {
     // Validate token config
@@ -116,21 +120,28 @@ export function useCollateralStatus(
     return warpRouteDetails.destinationToken;
   }, [warpRouteDetails, shouldCheck]);
 
+  // Create stable query key from primitive values
+  // We intentionally use only primitives (not the full destinationToken object) for cache key stability
+  const queryKey = useMemo(
+    () => ['collateralBalance', destinationToken?.chainName, destinationToken?.addressOrDenom],
+    [destinationToken?.chainName, destinationToken?.addressOrDenom],
+  );
+
   const {
     data: collateralBalance,
     isLoading,
     error,
   } = useQuery({
-    // Use primitive values instead of objects for stable query keys
+    // multiProvider is stable from store and doesn't need to be in the key
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: ['collateralBalance', destinationToken?.chainName, destinationToken?.addressOrDenom],
+    queryKey,
     queryFn: () => {
       if (!destinationToken) return Promise.resolve(undefined);
       return fetchCollateralBalance(destinationToken, multiProvider);
     },
     enabled: !!destinationToken && shouldCheck,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 20000, // Consider stale after 20 seconds
+    refetchInterval: COLLATERAL_REFETCH_INTERVAL,
+    staleTime: COLLATERAL_STALE_TIME,
   });
 
   useEffect(() => {

@@ -11,7 +11,21 @@ import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils/messag
 
 import { ActiveRebalance, RebalanceInfo, isCollateralRoute } from './types';
 
-const REBALANCE_EVENT_LOOKBACK_BLOCKS = 10000; // ~48 hours for most chains
+// Query configuration constants
+const REBALANCE_REFETCH_INTERVAL = 60000; // 60 seconds
+const REBALANCE_STALE_TIME = 45000; // 45 seconds
+const REBALANCE_LOOKBACK_HOURS = 12; // Look back 12 hours for rebalance events
+const DEFAULT_BLOCK_TIME_SECONDS = 13; // Default Ethereum block time
+
+/**
+ * Calculate the number of blocks to look back based on chain's block time.
+ * Aims for approximately REBALANCE_LOOKBACK_HOURS of history.
+ */
+function calculateBlockLookback(blockTimeSeconds?: number): number {
+  const effectiveBlockTime = blockTimeSeconds || DEFAULT_BLOCK_TIME_SECONDS;
+  const targetSeconds = REBALANCE_LOOKBACK_HOURS * 60 * 60;
+  return Math.floor(targetSeconds / effectiveBlockTime);
+}
 
 async function fetchActiveRebalances(
   tokenAddress: string,
@@ -33,17 +47,22 @@ async function fetchActiveRebalances(
     const provider = multiProvider.getEthersV5Provider(chainName);
     const currentBlock = await provider.getBlockNumber();
 
+    // Calculate block lookback based on chain's block time
+    const blockLookback = calculateBlockLookback(chainMetadata.blockTime);
+
+    logger.debug('Querying rebalance events', {
+      chainName,
+      blockLookback,
+      blockTimeSeconds: chainMetadata.blockTime || DEFAULT_BLOCK_TIME_SECONDS,
+    });
+
     // Connect to MovableCollateralRouter contract
     // eslint-disable-next-line camelcase
     const router = MovableCollateralRouter__factory.connect(tokenAddress, provider);
 
     // Query for CollateralMoved events (outbound rebalances)
     const filter = router.filters.CollateralMoved();
-    const events = await router.queryFilter(
-      filter,
-      currentBlock - REBALANCE_EVENT_LOOKBACK_BLOCKS,
-      currentBlock,
-    );
+    const events = await router.queryFilter(filter, currentBlock - blockLookback, currentBlock);
 
     const rebalances: RebalanceInfo[] = [];
     let totalInFlight = 0n;
@@ -79,12 +98,14 @@ async function fetchActiveRebalances(
         continue;
       }
 
+      // Use the same block lookback for delivery checking
+      const destBlockLookback = calculateBlockLookback(destChainMetadata.blockTime);
       const deliveryStatus = await checkIsMessageDelivered(
         msgId,
         destChainMetadata.name,
         mailboxAddress,
         multiProvider,
-        REBALANCE_EVENT_LOOKBACK_BLOCKS,
+        destBlockLookback,
       );
       const isDelivered = deliveryStatus.isDelivered;
 
@@ -146,17 +167,24 @@ export function useActiveRebalances(
     };
   }, [warpRouteDetails, shouldCheck]);
 
+  // Create stable query key from primitive values
+  // We intentionally use only primitives (not the full tokenInfo object) for cache key stability
+  const queryKey = useMemo(
+    () => ['activeRebalances', tokenInfo?.chainName, tokenInfo?.address],
+    [tokenInfo?.chainName, tokenInfo?.address],
+  );
+
   const { data: activeRebalances } = useQuery({
-    // Use primitive values instead of objects for stable query keys
+    // multiProvider is stable from store and doesn't need to be in the key
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: ['activeRebalances', tokenInfo?.chainName, tokenInfo?.address],
+    queryKey,
     queryFn: () => {
       if (!tokenInfo) return Promise.resolve(undefined);
       return fetchActiveRebalances(tokenInfo.address, tokenInfo.chainName, multiProvider);
     },
     enabled: !!tokenInfo && shouldCheck,
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 45000, // Consider stale after 45 seconds
+    refetchInterval: REBALANCE_REFETCH_INTERVAL,
+    staleTime: REBALANCE_STALE_TIME,
   });
 
   return activeRebalances;
