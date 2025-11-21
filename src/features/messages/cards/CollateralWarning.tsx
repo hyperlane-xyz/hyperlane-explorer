@@ -26,8 +26,15 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
   // Show insufficient collateral warning
   if (collateralInfo.status === CollateralStatus.Insufficient) {
     const decimals = warpRouteDetails?.destinationToken.decimals || 18;
+    const symbol = warpRouteDetails?.destinationToken.symbol || 'tokens';
     const deficit = collateralInfo.deficit
       ? formatCollateralAmount(collateralInfo.deficit, decimals)
+      : 'N/A';
+    const available = collateralInfo.available
+      ? formatCollateralAmount(collateralInfo.available, decimals)
+      : 'N/A';
+    const required = collateralInfo.required
+      ? formatCollateralAmount(collateralInfo.required, decimals)
       : 'N/A';
 
     return (
@@ -39,10 +46,18 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
           <div className="ml-3 flex-1">
             <h3 className="text-sm font-medium text-red-800">Insufficient Collateral</h3>
             <div className="mt-2 text-sm text-red-700">
-              <p>
-                This transfer cannot be completed due to insufficient collateral on the destination
-                chain. Deficit: {deficit}
-              </p>
+              <p>This transfer cannot be completed due to insufficient collateral.</p>
+              <div className="mt-2 space-y-1">
+                <div>
+                  <span className="font-medium">Available:</span> {available} {symbol}
+                </div>
+                <div>
+                  <span className="font-medium">Required:</span> {required} {symbol}
+                </div>
+                <div>
+                  <span className="font-medium">Deficit:</span> {deficit} {symbol}
+                </div>
+              </div>
               {activeRebalances && activeRebalances.rebalances.length > 0 && (
                 <div className="mt-3">
                   <RebalanceList rebalances={activeRebalances.rebalances} />
@@ -57,7 +72,15 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
 
   // Show low collateral warning
   if (collateralInfo.status === CollateralStatus.Low) {
+    const decimals = warpRouteDetails?.destinationToken.decimals || 18;
+    const symbol = warpRouteDetails?.destinationToken.symbol || 'tokens';
     const utilization = collateralInfo.utilizationPercent?.toFixed(1) || 'N/A';
+    const available = collateralInfo.available
+      ? formatCollateralAmount(collateralInfo.available, decimals)
+      : 'N/A';
+    const required = collateralInfo.required
+      ? formatCollateralAmount(collateralInfo.required, decimals)
+      : 'N/A';
 
     return (
       <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3">
@@ -71,6 +94,14 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
               <p>
                 Collateral is running low ({utilization}% utilized). Rebalancing may be needed soon.
               </p>
+              <div className="mt-2 space-y-1">
+                <div>
+                  <span className="font-medium">Available:</span> {available} {symbol}
+                </div>
+                <div>
+                  <span className="font-medium">Required:</span> {required} {symbol}
+                </div>
+              </div>
               {activeRebalances && activeRebalances.rebalances.length > 0 && (
                 <div className="mt-3">
                   <RebalanceList rebalances={activeRebalances.rebalances} />

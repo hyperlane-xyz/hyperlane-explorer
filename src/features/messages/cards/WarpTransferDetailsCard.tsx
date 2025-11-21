@@ -7,8 +7,7 @@ import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, WarpRouteDetails } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { CollateralStatus, isCollateralRoute } from '../collateral/types';
-import { useCollateralStatus } from '../collateral/useCollateralStatus';
+import { isCollateralRoute } from '../collateral/types';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
@@ -23,8 +22,6 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
     BlockExplorerAddressUrls | undefined
   >(undefined);
-
-  const collateralInfo = useCollateralStatus(message, warpRouteDetails);
 
   const getBlockExplorerLinks = useCallback(async (): Promise<
     BlockExplorerAddressUrls | undefined
@@ -59,26 +56,6 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
   const isCollateral = isCollateralRoute(destinationToken.standard);
-
-  // Format collateral status for display
-  const getCollateralStatusDisplay = (): string | undefined => {
-    if (!isCollateral) return undefined;
-
-    switch (collateralInfo.status) {
-      case CollateralStatus.Checking:
-        return 'Checking...';
-      case CollateralStatus.Sufficient:
-        return 'Sufficient';
-      case CollateralStatus.Low:
-        return `Low (${collateralInfo.utilizationPercent?.toFixed(1)}% utilized)`;
-      case CollateralStatus.Insufficient:
-        return 'Insufficient';
-      default:
-        return undefined;
-    }
-  };
-
-  const collateralStatusDisplay = getCollateralStatusDisplay();
 
   return (
     <Card className="w-full space-y-4">
@@ -138,15 +115,6 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
           link={blockExplorerAddressUrls?.transferRecipient}
           showCopy
         />
-        {collateralStatusDisplay && (
-          <KeyValueRow
-            label="Collateral status:"
-            labelWidth="w-20 sm:w-32"
-            display={collateralStatusDisplay}
-            displayWidth="w-64 sm:w-96"
-            blurValue={blur}
-          />
-        )}
       </div>
     </Card>
   );
