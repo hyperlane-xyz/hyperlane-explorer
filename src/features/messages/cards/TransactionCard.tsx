@@ -77,9 +77,7 @@ export function DestinationTransactionCard({
     content = (
       <>
         {message && warpRouteDetails && (
-          <div className="mb-4">
-            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
-          </div>
+          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
         )}
         <TransactionDetails
           chainName={chainName}
@@ -110,9 +108,7 @@ export function DestinationTransactionCard({
     content = (
       <>
         {hasCollateralWarning && (
-          <div className="mb-4">
-            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
-          </div>
+          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
         )}
         {!hasCollateralWarning && (
           <DeliveryStatus>
@@ -158,9 +154,7 @@ export function DestinationTransactionCard({
     content = (
       <>
         {message && warpRouteDetails && (
-          <div className="mb-4">
-            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
-          </div>
+          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
         )}
         <DeliveryStatus>
           <div className="flex flex-col items-center">

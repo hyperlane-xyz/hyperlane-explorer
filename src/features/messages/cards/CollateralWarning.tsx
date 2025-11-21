@@ -5,7 +5,6 @@ import { Message, WarpRouteDetails } from '../../../types';
 import { CollateralStatus, formatCollateralAmount, RebalanceInfo } from '../collateral/types';
 import { useActiveRebalances } from '../collateral/useActiveRebalances';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
-import { WarningCard } from './WarningCard';
 
 const DEFAULT_DECIMALS = 18;
 const DEFAULT_SYMBOL = 'tokens';
@@ -42,29 +41,31 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
       : 'N/A';
 
     return (
-      <WarningCard
-        level="error"
-        icon={<ErrorIcon width={20} height={20} color="#f87171" />}
-        title="Insufficient Collateral"
-      >
-        <p>This transfer cannot be completed due to insufficient collateral.</p>
-        <div className="mt-2 space-y-1">
-          <div>
-            <span className="font-medium">Available:</span> {available} {symbol}
-          </div>
-          <div>
-            <span className="font-medium">Required:</span> {required} {symbol}
-          </div>
-          <div>
-            <span className="font-medium">Deficit:</span> {deficit} {symbol}
-          </div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <ErrorIcon width={20} height={20} color="#dc2626" />
+          <h3 className="text-sm font-medium text-red-600">Insufficient Collateral</h3>
         </div>
-        {activeRebalances && activeRebalances.rebalances.length > 0 && (
-          <div className="mt-3">
-            <RebalanceList rebalances={activeRebalances.rebalances} />
+        <div className="text-sm text-gray-700">
+          <p className="mb-2">This transfer cannot be completed due to insufficient collateral.</p>
+          <div className="space-y-1">
+            <div>
+              <span className="font-medium">Available:</span> {available} {symbol}
+            </div>
+            <div>
+              <span className="font-medium">Required:</span> {required} {symbol}
+            </div>
+            <div>
+              <span className="font-medium text-red-600">Deficit:</span> {deficit} {symbol}
+            </div>
           </div>
-        )}
-      </WarningCard>
+          {activeRebalances && activeRebalances.rebalances.length > 0 && (
+            <div className="mt-3">
+              <RebalanceList rebalances={activeRebalances.rebalances} />
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -81,26 +82,30 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
       : 'N/A';
 
     return (
-      <WarningCard
-        level="warning"
-        icon={<WarningIcon width={20} height={20} color="#fbbf24" />}
-        title="Low Collateral"
-      >
-        <p>Collateral is running low ({utilization}% utilized). Rebalancing may be needed soon.</p>
-        <div className="mt-2 space-y-1">
-          <div>
-            <span className="font-medium">Available:</span> {available} {symbol}
-          </div>
-          <div>
-            <span className="font-medium">Required:</span> {required} {symbol}
-          </div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <WarningIcon width={20} height={20} color="#f59e0b" />
+          <h3 className="text-sm font-medium text-yellow-600">Low Collateral</h3>
         </div>
-        {activeRebalances && activeRebalances.rebalances.length > 0 && (
-          <div className="mt-3">
-            <RebalanceList rebalances={activeRebalances.rebalances} />
+        <div className="text-sm text-gray-700">
+          <p className="mb-2">
+            Collateral is running low ({utilization}% utilized). Rebalancing may be needed soon.
+          </p>
+          <div className="space-y-1">
+            <div>
+              <span className="font-medium">Available:</span> {available} {symbol}
+            </div>
+            <div>
+              <span className="font-medium">Required:</span> {required} {symbol}
+            </div>
           </div>
-        )}
-      </WarningCard>
+          {activeRebalances && activeRebalances.rebalances.length > 0 && (
+            <div className="mt-3">
+              <RebalanceList rebalances={activeRebalances.rebalances} />
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -111,13 +116,15 @@ export function CollateralWarning({ message, warpRouteDetails }: Props) {
     activeRebalances.rebalances.length > 0
   ) {
     return (
-      <WarningCard
-        level="info"
-        icon={<RefreshIcon width={20} height={20} color="#60a5fa" />}
-        title="Active Rebalance"
-      >
-        <RebalanceList rebalances={activeRebalances.rebalances} />
-      </WarningCard>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <RefreshIcon width={20} height={20} color="#3b82f6" />
+          <h3 className="text-sm font-medium text-blue-600">Active Rebalance</h3>
+        </div>
+        <div className="text-sm text-gray-700">
+          <RebalanceList rebalances={activeRebalances.rebalances} />
+        </div>
+      </div>
     );
   }
 
