@@ -91,8 +91,10 @@ export function useCollateralStatus(
       return false;
     }
 
-    // Only check collateral for pending messages
-    if (message.status !== 'pending') {
+    // Check collateral for pending and failing messages
+    // For pending: warn proactively
+    // For failing: show why it failed
+    if (message.status !== 'pending' && message.status !== 'failing') {
       return false;
     }
 
