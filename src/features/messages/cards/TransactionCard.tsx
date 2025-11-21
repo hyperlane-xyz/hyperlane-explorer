@@ -14,6 +14,7 @@ import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
+import { isCctpRoute, isCollateralRoute } from '../collateral/types';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { CollateralWarning } from './CollateralWarning';
 import { KeyValueRow } from './KeyValueRow';
@@ -99,24 +100,33 @@ export function DestinationTransactionCard({
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Failing) {
+    // Check if this is a collateral-related failure
+    const hasCollateralWarning =
+      message &&
+      warpRouteDetails &&
+      isCollateralRoute(warpRouteDetails.destinationToken.standard) &&
+      !isCctpRoute(warpRouteDetails.destinationToken.addressOrDenom);
+
     content = (
       <>
-        {message && warpRouteDetails && (
+        {hasCollateralWarning && (
           <div className="mb-4">
             <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
           </div>
         )}
-        <DeliveryStatus>
-          <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
-            debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
-          }`}</div>
-          {!!debugResult?.description && (
-            <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
-              {debugResult.description}
-            </div>
-          )}
-          <CallDataModal debugResult={debugResult} />
-        </DeliveryStatus>
+        {!hasCollateralWarning && (
+          <DeliveryStatus>
+            <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
+              debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
+            }`}</div>
+            {!!debugResult?.description && (
+              <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
+                {debugResult.description}
+              </div>
+            )}
+            <CallDataModal debugResult={debugResult} />
+          </DeliveryStatus>
+        )}
       </>
     );
   } else if (!hasChainConfig) {
