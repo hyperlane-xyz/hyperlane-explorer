@@ -100,17 +100,24 @@ export function DestinationTransactionCard({
     );
   } else if (status === MessageStatus.Failing) {
     content = (
-      <DeliveryStatus>
-        <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
-          debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
-        }`}</div>
-        {!!debugResult?.description && (
-          <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
-            {debugResult.description}
+      <>
+        {message && warpRouteDetails && (
+          <div className="mb-4">
+            <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
           </div>
         )}
-        <CallDataModal debugResult={debugResult} />
-      </DeliveryStatus>
+        <DeliveryStatus>
+          <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
+            debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
+          }`}</div>
+          {!!debugResult?.description && (
+            <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
+              {debugResult.description}
+            </div>
+          )}
+          <CallDataModal debugResult={debugResult} />
+        </DeliveryStatus>
+      </>
     );
   } else if (!hasChainConfig) {
     content = (

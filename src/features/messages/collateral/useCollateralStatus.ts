@@ -99,10 +99,6 @@ export function useCollateralStatus(
 
     // Skip CCTP routes - they use Circle's burn/mint mechanism, not traditional collateral
     if (isCctpRoute(warpRouteDetails.destinationToken.addressOrDenom)) {
-      logger.debug('Skipping collateral check for CCTP route', {
-        address: warpRouteDetails.destinationToken.addressOrDenom,
-        chain: warpRouteDetails.destinationToken.chainName,
-      });
       return false;
     }
 
