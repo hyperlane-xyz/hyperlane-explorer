@@ -118,7 +118,9 @@ export function useActiveRebalances(
   }, [warpRouteDetails, shouldCheck]);
 
   const { data: activeRebalances } = useQuery({
-    queryKey: ['activeRebalances', tokenInfo, multiProvider],
+    // Use primitive values instead of objects for stable query keys
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    queryKey: ['activeRebalances', tokenInfo?.chainName, tokenInfo?.address],
     queryFn: () => {
       if (!tokenInfo) return Promise.resolve(undefined);
       return fetchActiveRebalances(tokenInfo.address, tokenInfo.chainName, multiProvider);
