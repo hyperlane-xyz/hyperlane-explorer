@@ -1,16 +1,15 @@
 import { constants } from 'ethers';
 
-import { IMailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 
-import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
+import { checkIsMessageDelivered } from '../messages/utils/messageUtils';
 
 import {
   MessageDeliveryFailingResult,
@@ -37,9 +36,10 @@ export async function fetchDeliveryStatus(
     );
 
   const { isDelivered, blockNumber, transactionHash } = await checkIsMessageDelivered(
-    multiProvider,
-    message,
+    message.msgId,
+    message.destinationDomainId,
     destMailboxAddr,
+    multiProvider,
   );
 
   if (isDelivered) {
@@ -82,48 +82,6 @@ export async function fetchDeliveryStatus(
     };
     return result;
   }
-}
-
-async function checkIsMessageDelivered(
-  multiProvider: MultiProtocolProvider,
-  message: Message,
-  mailboxAddr: Address,
-) {
-  const { msgId, destinationDomainId } = message;
-
-  // Delivery checking is only supported for EVM chains
-  const destMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
-  if (destMetadata?.protocol !== 'ethereum') {
-    logger.debug('Skipping delivery check for non-EVM chain');
-    return { isDelivered: false };
-  }
-
-  const provider = multiProvider.getEthersV5Provider(destinationDomainId);
-  const mailbox = MailboxFactory.connect(mailboxAddr, provider);
-
-  // Try finding logs first as they have more info
-  try {
-    logger.debug(`Searching for process logs for msgId ${msgId}`);
-    const fromBlock = (await provider.getBlockNumber()) - DELIVERY_LOG_CHECK_BLOCK_RANGE;
-    const logs = await mailbox.queryFilter(mailbox.filters.ProcessId(msgId), fromBlock, 'latest');
-    if (logs?.length) {
-      logger.debug(`Found process log for ${msgId}`);
-      const log = logs[0]; // Should only be 1 log per message delivery
-      return {
-        isDelivered: true,
-        transactionHash: log.transactionHash,
-        blockNumber: log.blockNumber,
-      };
-    }
-  } catch (error) {
-    logger.warn(`Error querying for process logs for msgId ${msgId}`, error);
-  }
-
-  // Logs are unreliable so check the mailbox itself as a fallback
-  logger.debug(`Querying mailbox about msgId ${msgId}`);
-  const isDelivered = await mailbox.delivered(msgId);
-  logger.debug(`Mailbox delivery status for ${msgId}: ${isDelivered}`);
-  return { isDelivered };
 }
 
 function fetchTransactionDetails(

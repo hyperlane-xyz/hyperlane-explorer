@@ -7,6 +7,7 @@ import { MovableCollateralRouter__factory } from '@hyperlane-xyz/core';
 import { useMultiProvider } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
+import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils/messageUtils';
 
 import { ActiveRebalance, RebalanceInfo, isCollateralRoute } from './types';
 
@@ -57,16 +58,38 @@ async function fetchActiveRebalances(
       const block = await provider.getBlock(event.blockNumber);
       const timestamp = block?.timestamp || 0;
 
-      // For now, assume rebalances within lookback window are potentially in-flight
-      // In a full implementation, query message delivery status
-      const isDelivered = false; // TODO: Check actual message delivery status
-
       const destChainMetadata = multiProvider.tryGetChainMetadata(domain);
-
       if (!destChainMetadata) continue;
 
+      // Extract message ID from transaction receipt
+      const msgId = await extractMessageIdFromTx(txHash, chainName, multiProvider);
+      if (!msgId) {
+        // If we can't extract the message ID, skip this rebalance
+        // (it might be a very old format or non-standard transaction)
+        logger.debug('Skipping rebalance without message ID', { txHash, chainName });
+        continue;
+      }
+
+      // Check if the message has been delivered on the destination chain
+      const mailboxAddress = destChainMetadata.mailbox;
+      if (!mailboxAddress) {
+        logger.debug('No mailbox address for destination chain', {
+          destinationChain: destChainMetadata.name,
+        });
+        continue;
+      }
+
+      const deliveryStatus = await checkIsMessageDelivered(
+        msgId,
+        destChainMetadata.name,
+        mailboxAddress,
+        multiProvider,
+        REBALANCE_EVENT_LOOKBACK_BLOCKS,
+      );
+      const isDelivered = deliveryStatus.isDelivered;
+
       const rebalance: RebalanceInfo = {
-        messageId: '', // TODO: Extract from event logs or transaction receipt
+        messageId: msgId,
         amount: BigInt(amount.toString()),
         originChain: chainName,
         destinationChain: destChainMetadata.name,
@@ -103,7 +126,13 @@ export function useActiveRebalances(
   const shouldCheck = useMemo(() => {
     if (!warpRouteDetails) return false;
 
-    // Only check for collateral-backed routes
+    // Only check for collateral-backed routes (TokenStandard indicates collateral type)
+    // Not all collateral routes support auto-rebalancing - reasons include:
+    // 1. Non-EVM chains (Solana, CosmWasm, etc.) - explicitly filtered in fetchActiveRebalances
+    // 2. Older collateral tokens deployed before MovableCollateralRouter was introduced
+    // 3. Collateral routes that intentionally don't use movable collateral (e.g., TokenType.collateralVault)
+    // Since we can't access TokenType from TokenArgs (only TokenStandard), we attempt to query
+    // all collateral routes and handle failures gracefully (no events = no active rebalances)
     const destStandard = warpRouteDetails.destinationToken.standard;
     return isCollateralRoute(destStandard);
   }, [warpRouteDetails]);
