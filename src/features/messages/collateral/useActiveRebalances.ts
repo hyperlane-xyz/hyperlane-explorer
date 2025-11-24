@@ -7,9 +7,10 @@ import { MovableCollateralRouter__factory } from '@hyperlane-xyz/core';
 import { useMultiProvider } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
-import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils/messageUtils';
 
-import { ActiveRebalance, RebalanceInfo, isCollateralRoute } from './types';
+import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils';
+import { ActiveRebalance, RebalanceInfo } from './types';
+import { isCollateralRoute } from './utils';
 
 // Query configuration constants
 const REBALANCE_REFETCH_INTERVAL = 60000; // 60 seconds

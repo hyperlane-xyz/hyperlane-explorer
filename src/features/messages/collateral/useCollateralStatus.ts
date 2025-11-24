@@ -7,13 +7,8 @@ import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 
-import {
-  calculateCollateralStatus,
-  CollateralInfo,
-  CollateralStatus,
-  isCctpRoute,
-  isCollateralRoute,
-} from './types';
+import { CollateralInfo, CollateralStatus } from './types';
+import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 
 // Query configuration constants
 const COLLATERAL_REFETCH_INTERVAL = 30000; // 30 seconds
@@ -152,6 +147,7 @@ export function useCollateralStatus(
 
   // Return status based on query state
   if (!shouldCheck) {
+    if (message?.status === MessageStatus.Delivered) return { status: CollateralStatus.Sufficient };
     return { status: CollateralStatus.Unknown };
   }
 

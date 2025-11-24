@@ -7,7 +7,7 @@ import SendMoney from '../../../images/icons/send-money.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, WarpRouteDetails } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { isCollateralRoute } from '../collateral/types';
+import { isCollateralRoute } from '../collateral/utils';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 

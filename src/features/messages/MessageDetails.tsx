@@ -90,7 +90,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
 
-  // Parse warp route details for collateral checking
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),

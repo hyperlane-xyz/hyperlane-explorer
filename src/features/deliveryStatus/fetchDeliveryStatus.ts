@@ -1,16 +1,13 @@
-import { constants } from 'ethers';
-
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-
+import { constants } from 'ethers';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
-import { checkIsMessageDelivered } from '../messages/utils/messageUtils';
-
+import { checkIsMessageDelivered } from '../messages/utils';
 import {
   MessageDeliveryFailingResult,
   MessageDeliveryPendingResult,

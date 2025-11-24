@@ -14,9 +14,10 @@ import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-import { isCctpRoute, isCollateralRoute } from '../collateral/types';
+import { CollateralStatus } from '../collateral/types';
+import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
-import { CollateralWarning } from './CollateralWarning';
+import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
@@ -69,6 +70,7 @@ export function DestinationTransactionCard({
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
+  const collateralInfo = useCollateralStatus(message, warpRouteDetails);
 
   const { isOpen, open, close } = useModal();
 
@@ -76,9 +78,6 @@ export function DestinationTransactionCard({
   if (transaction) {
     content = (
       <>
-        {message && warpRouteDetails && (
-          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
-        )}
         <TransactionDetails
           chainName={chainName}
           domainId={domainId}
@@ -86,6 +85,12 @@ export function DestinationTransactionCard({
           duration={duration}
           blur={blur}
         />
+        {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
+          <ActiveRebalanceModal
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
+        )}
       </>
     );
   } else if (!debugResult && isStatusFetching) {
@@ -99,16 +104,14 @@ export function DestinationTransactionCard({
     );
   } else if (status === MessageStatus.Failing) {
     // Check if this is a collateral-related failure
-    const hasCollateralWarning =
-      message &&
-      warpRouteDetails &&
-      isCollateralRoute(warpRouteDetails.destinationToken.standard) &&
-      !isCctpRoute(warpRouteDetails.destinationToken.addressOrDenom);
-
+    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
       <>
         {hasCollateralWarning && (
-          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
+          <InsufficientCollateralWarning
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
         )}
         {!hasCollateralWarning && (
           <DeliveryStatus>
@@ -151,25 +154,31 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Pending) {
     // Show collateral warning for all pending messages (not just EVM)
     // since Token.getBalance() now supports cross-VM collateral checking
+    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
       <>
-        {message && warpRouteDetails && (
-          <CollateralWarning message={message} warpRouteDetails={warpRouteDetails} />
+        {hasCollateralWarning && (
+          <InsufficientCollateralWarning
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
         )}
-        <DeliveryStatus>
-          <div className="flex flex-col items-center">
-            <div>Delivery to destination chain still in progress.</div>
-            {isPiMsg && (
-              <div className="mt-2 max-w-xs text-sm">
-                Please ensure a relayer is running for this chain.
+        {!hasCollateralWarning && (
+          <DeliveryStatus>
+            <div className="flex flex-col items-center">
+              <div>Delivery to destination chain still in progress.</div>
+              {isPiMsg && (
+                <div className="mt-2 max-w-xs text-sm">
+                  Please ensure a relayer is running for this chain.
+                </div>
+              )}
+              <div className="mt-6 flex items-center justify-center">
+                <SpinnerIcon width={40} height={40} />
               </div>
-            )}
-            <div className="mt-6 flex items-center justify-center">
-              <SpinnerIcon width={40} height={40} />
+              <CallDataModal debugResult={debugResult} />
             </div>
-            <CallDataModal debugResult={debugResult} />
-          </div>
-        </DeliveryStatus>
+          </DeliveryStatus>
+        )}
       </>
     );
   } else {

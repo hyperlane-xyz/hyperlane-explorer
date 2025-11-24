@@ -59,20 +59,6 @@ export async function debugMessage(
 ): Promise<MessageDebugResult> {
   logger.debug(`Debugging message id: ${msgId}`);
 
-  const destName = multiProvider.tryGetChainName(destDomain)!;
-
-  // Message debugging is currently only supported for EVM chains
-  // as it relies on ethers contracts and Mailbox/ISM interactions
-  const originMetadata = multiProvider.tryGetChainMetadata(originDomain);
-  const destMetadata = multiProvider.tryGetChainMetadata(destDomain);
-  if (originMetadata?.protocol !== 'ethereum' || destMetadata?.protocol !== 'ethereum') {
-    logger.debug(`Skipping debug for non-EVM chain: ${destName}`);
-    return {
-      status: MessageDebugStatus.NoErrorsFound,
-      description: 'Message debugging is only supported for EVM chains',
-    };
-  }
-
   // Prepare some useful data/encodings
   const messageBytes = formatMessage(
     MAILBOX_VERSION,
@@ -83,6 +69,7 @@ export async function debugMessage(
     recipient,
     body,
   );
+  const destName = multiProvider.tryGetChainName(destDomain)!;
   const originProvider = multiProvider.getEthersV5Provider(originDomain) as Provider;
   const destProvider = multiProvider.getEthersV5Provider(destDomain) as Provider;
   const senderBytes = addressToBytes32(sender);
