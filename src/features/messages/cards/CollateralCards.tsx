@@ -32,7 +32,6 @@ export function InsufficientCollateralWarning({
   const required = collateralInfo.required
     ? fromWei(collateralInfo.required.toString(), decimals)
     : 'N/A';
-  console.log('collateralInfo', collateralInfo);
 
   if (collateralInfo.status !== CollateralStatus.Insufficient) return null;
 
