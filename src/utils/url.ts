@@ -1,8 +1,8 @@
-import { ChainNameOrId, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainNameOrId, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isZeroishAddress } from '@hyperlane-xyz/utils';
 
 export async function tryGetBlockExplorerAddressUrl(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   chain: ChainNameOrId,
   address: string,
 ) {

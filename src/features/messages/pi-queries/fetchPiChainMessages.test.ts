@@ -1,5 +1,5 @@
 import { GithubRegistry, chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProvider } from '@hyperlane-xyz/sdk';
+import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { config } from '../../../consts/config';
 import { Message, MessageStatus } from '../../../types';
 import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
@@ -166,5 +166,5 @@ describe('fetchMessagesFromPiChain', () => {
 });
 
 function createMP(config: ChainMetadata) {
-  return new MultiProvider({ ...chainMetadata, sepolia: config });
+  return new MultiProtocolProvider({ ...chainMetadata, sepolia: config });
 }

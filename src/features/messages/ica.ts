@@ -104,9 +104,13 @@ export function useIcaAddress(originDomainId: DomainId, sender?: Address | null)
     queryFn: () => {
       if (!originDomainId || !multiProvider || !sender || BigNumber.from(sender).isZero())
         return null;
-      const provider = multiProvider.tryGetProvider(originDomainId);
-      if (!provider) return null;
-      return tryFetchIcaAddress(originDomainId, sender, provider);
+      try {
+        const provider = multiProvider.getEthersV5Provider(originDomainId);
+        return tryFetchIcaAddress(originDomainId, sender, provider);
+      } catch (error) {
+        logger.error('Error fetching ICA address', error);
+        return null;
+      }
     },
     retry: false,
   });

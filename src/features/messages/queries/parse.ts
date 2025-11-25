@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
@@ -20,7 +20,7 @@ import {
  */
 
 export function parseMessageStubResult(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
 ): MessageStub[] {
@@ -28,7 +28,7 @@ export function parseMessageStubResult(
 }
 
 export function parseMessageQueryResult(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: MessagesQueryResult | undefined,
 ): Message[] {
@@ -36,10 +36,14 @@ export function parseMessageQueryResult(
 }
 
 function queryResult<D, M extends MessageStub>(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: Record<string, D[]> | undefined,
-  parseFn: (multiProvider: MultiProvider, scrapedChains: DomainsEntry[], data: D) => M | null,
+  parseFn: (
+    multiProvider: MultiProtocolProvider,
+    scrapedChains: DomainsEntry[],
+    data: D,
+  ) => M | null,
 ) {
   if (!data || !Object.keys(data).length) return [];
   return deduplicateMessageList(
@@ -52,7 +56,7 @@ function queryResult<D, M extends MessageStub>(
 }
 
 function parseMessageStub(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   m: MessageStubEntry,
 ): MessageStub | null {
@@ -100,7 +104,7 @@ function parseMessageStub(
 }
 
 function parseMessage(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   m: MessageEntry,
 ): Message | null {

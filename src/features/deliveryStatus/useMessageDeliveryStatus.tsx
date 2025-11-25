@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -89,7 +89,7 @@ export function useMessageDeliveryStatus({
   };
 }
 
-function checkChain(multiProvider: MultiProvider, domainId: number) {
+function checkChain(multiProvider: MultiProtocolProvider, domainId: number) {
   if (!multiProvider.hasChain(domainId)) {
     toast.error(<MissingChainConfigToast domainId={domainId} />);
     return false;

@@ -1,4 +1,4 @@
-import { MultiProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
@@ -7,14 +7,17 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
-import { MessageStatus, MessageTx } from '../../../types';
+import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
 import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
-import { getChainDisplayName, isEvmChain } from '../../chains/utils';
+import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
+import { CollateralStatus } from '../collateral/types';
+import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
+import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
 
 export function OriginTransactionCard({
@@ -50,6 +53,8 @@ export function DestinationTransactionCard({
   isStatusFetching,
   isPiMsg,
   blur,
+  message,
+  warpRouteDetails,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -60,24 +65,33 @@ export function DestinationTransactionCard({
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
+  message?: Message;
+  warpRouteDetails?: WarpRouteDetails;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
-
-  const isDestinationEvmChain = isEvmChain(multiProvider, domainId);
+  const collateralInfo = useCollateralStatus(message, warpRouteDetails);
 
   const { isOpen, open, close } = useModal();
 
   let content: ReactNode;
   if (transaction) {
     content = (
-      <TransactionDetails
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        duration={duration}
-        blur={blur}
-      />
+      <>
+        <TransactionDetails
+          chainName={chainName}
+          domainId={domainId}
+          transaction={transaction}
+          duration={duration}
+          blur={blur}
+        />
+        {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
+          <ActiveRebalanceModal
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
+        )}
+      </>
     );
   } else if (!debugResult && isStatusFetching) {
     content = (
@@ -89,18 +103,30 @@ export function DestinationTransactionCard({
       </DeliveryStatus>
     );
   } else if (status === MessageStatus.Failing) {
+    // Check if this is a collateral-related failure
+    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
-      <DeliveryStatus>
-        <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
-          debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
-        }`}</div>
-        {!!debugResult?.description && (
-          <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
-            {debugResult.description}
-          </div>
+      <>
+        {hasCollateralWarning && (
+          <InsufficientCollateralWarning
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
         )}
-        <CallDataModal debugResult={debugResult} />
-      </DeliveryStatus>
+        {!hasCollateralWarning && (
+          <DeliveryStatus>
+            <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
+              debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
+            }`}</div>
+            {!!debugResult?.description && (
+              <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
+                {debugResult.description}
+              </div>
+            )}
+            <CallDataModal debugResult={debugResult} />
+          </DeliveryStatus>
+        )}
+      </>
     );
   } else if (!hasChainConfig) {
     content = (
@@ -125,22 +151,35 @@ export function DestinationTransactionCard({
         <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
       </>
     );
-  } else if (status === MessageStatus.Pending && isDestinationEvmChain) {
+  } else if (status === MessageStatus.Pending) {
+    // Show collateral warning for all pending messages (not just EVM)
+    // since Token.getBalance() now supports cross-VM collateral checking
+    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
-      <DeliveryStatus>
-        <div className="flex flex-col items-center">
-          <div>Delivery to destination chain still in progress.</div>
-          {isPiMsg && (
-            <div className="mt-2 max-w-xs text-sm">
-              Please ensure a relayer is running for this chain.
+      <>
+        {hasCollateralWarning && (
+          <InsufficientCollateralWarning
+            warpRouteDetails={warpRouteDetails}
+            collateralInfo={collateralInfo}
+          />
+        )}
+        {!hasCollateralWarning && (
+          <DeliveryStatus>
+            <div className="flex flex-col items-center">
+              <div>Delivery to destination chain still in progress.</div>
+              {isPiMsg && (
+                <div className="mt-2 max-w-xs text-sm">
+                  Please ensure a relayer is running for this chain.
+                </div>
+              )}
+              <div className="mt-6 flex items-center justify-center">
+                <SpinnerIcon width={40} height={40} />
+              </div>
+              <CallDataModal debugResult={debugResult} />
             </div>
-          )}
-          <div className="mt-6 flex items-center justify-center">
-            <SpinnerIcon width={40} height={40} />
-          </div>
-          <CallDataModal debugResult={debugResult} />
-        </div>
-      </DeliveryStatus>
+          </DeliveryStatus>
+        )}
+      </>
     );
   } else {
     content = (
@@ -173,7 +212,7 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
   return (
-    <Card className="flex min-w-fit flex-1 flex-col space-y-3">
+    <Card className="flex min-w-[400px] flex-1 basis-0 flex-col space-y-3">
       <div className="flex items-center justify-between">
         <div className="relative -left-0.5 -top-px">
           <ChainLogo chainName={chainName} />
@@ -339,7 +378,7 @@ function ChainDescriptionRow({
 }: {
   chainName: string;
   domainId: DomainId;
-  multiProvider: MultiProvider;
+  multiProvider: MultiProtocolProvider;
   blur: boolean;
 }) {
   const idString =
