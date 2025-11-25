@@ -8,7 +8,7 @@ import {
   ChainMetadata,
   ChainMetadataSchema,
   ChainName,
-  MultiProvider,
+  MultiProtocolProvider,
   WarpCoreConfig,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk';
@@ -33,8 +33,8 @@ interface AppState {
   setChainMetadata: (metadata: ChainMap<ChainMetadata>) => void;
   chainMetadataOverrides: ChainMap<Partial<ChainMetadata>>;
   setChainMetadataOverrides: (overrides?: ChainMap<Partial<ChainMetadata> | undefined>) => void;
-  multiProvider: MultiProvider;
-  setMultiProvider: (mp: MultiProvider) => void;
+  multiProvider: MultiProtocolProvider;
+  setMultiProvider: (mp: MultiProtocolProvider) => void;
   registry: IRegistry;
   setRegistry: (registry: IRegistry) => void;
   bannerClassName: string;
@@ -62,8 +62,8 @@ export const useStore = create<AppState>()(
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
         set({ chainMetadataOverrides: filtered, multiProvider, warpRouteChainAddressMap });
       },
-      multiProvider: new MultiProvider({}),
-      setMultiProvider: (multiProvider: MultiProvider) => {
+      multiProvider: new MultiProtocolProvider({}),
+      setMultiProvider: (multiProvider: MultiProtocolProvider) => {
         logger.debug('Setting multiProvider in store');
         set({ multiProvider });
       },
@@ -100,7 +100,7 @@ export const useStore = create<AppState>()(
               state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
               logger.debug('Rehydration complete');
             })
-            .catch((e) => logger.error('Error building MultiProvider', e));
+            .catch((e) => logger.error('Error building MultiProtocolProvider', e));
         };
       },
     },
@@ -133,7 +133,7 @@ async function buildMultiProvider(
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
 ) {
-  logger.debug('Building new MultiProvider from registry');
+  logger.debug('Building new MultiProtocolProvider from registry');
 
   // TODO improve interface so this pre-cache isn't required
   await registry.listRegistryContent();
@@ -163,7 +163,7 @@ async function buildMultiProvider(
 
   return {
     metadata: mergedMetadata,
-    multiProvider: new MultiProvider(mergedMetadata),
+    multiProvider: new MultiProtocolProvider(mergedMetadata),
     warpRouteChainAddressMap,
   };
 }

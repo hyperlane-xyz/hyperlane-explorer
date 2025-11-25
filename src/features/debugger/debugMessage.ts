@@ -14,7 +14,7 @@ import {
   ChainMap,
   ChainMetadata,
   MAILBOX_VERSION,
-  MultiProvider,
+  MultiProtocolProvider,
   isProxy,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
@@ -41,7 +41,7 @@ const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 const IGP_PAYMENT_CHECK_DELAY = 60_000; // 60 seconds
 
 export async function debugMessage(
-  multiProvider: MultiProvider,
+  multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
   {
@@ -70,8 +70,8 @@ export async function debugMessage(
     body,
   );
   const destName = multiProvider.tryGetChainName(destDomain)!;
-  const originProvider = multiProvider.getProvider(originDomain);
-  const destProvider = multiProvider.getProvider(destDomain);
+  const originProvider = multiProvider.getEthersV5Provider(originDomain) as Provider;
+  const destProvider = multiProvider.getEthersV5Provider(destDomain) as Provider;
   const senderBytes = addressToBytes32(sender);
 
   // Create a bag to hold all the useful info collected along the way
