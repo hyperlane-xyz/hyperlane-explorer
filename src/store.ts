@@ -184,10 +184,17 @@ export async function buildWarpRouteChainAddressMap(
   }
 
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
+    // Calculate the max decimals across all tokens in this warp route
+    const maxDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
+
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
+      if (!addressOrDenom) return;
       acc[chainName] ||= {};
-      acc[chainName][addressOrDenom] = token;
+      acc[chainName][addressOrDenom] = {
+        ...token,
+        maxDecimals,
+      };
     });
     return acc;
   }, {});
