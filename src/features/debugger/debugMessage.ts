@@ -381,7 +381,8 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
     // scan bytecode for handle function selector
     const bytecode = await provider.getCode(recipientAddress);
     // Cast to ethers Interface to access methods not exposed in typechain types
-    const msgRecipientInterface = MessageRecipientFactory.createInterface() as ethersUtils.Interface;
+    const msgRecipientInterface =
+      MessageRecipientFactory.createInterface() as ethersUtils.Interface;
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
     return bytecode.includes(strip0x(handleSignature));

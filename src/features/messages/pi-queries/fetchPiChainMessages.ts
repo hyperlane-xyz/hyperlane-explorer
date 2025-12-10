@@ -1,4 +1,4 @@
-import { BigNumber, constants, ethers, providers, utils as ethersUtils } from 'ethers';
+import { BigNumber, constants, ethers, utils as ethersUtils, providers } from 'ethers';
 
 import {
   IInterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
