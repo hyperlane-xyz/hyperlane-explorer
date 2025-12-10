@@ -333,7 +333,8 @@ async function tryCheckIgpGasFunded(
 }
 
 async function fetchGasPaymentEvents(provider: Provider, messageId: string) {
-  const igpInterface = InterchainGasPaymasterFactory.createInterface();
+  // Cast to ethers Interface to access methods not exposed in typechain types
+  const igpInterface = InterchainGasPaymasterFactory.createInterface() as ethersUtils.Interface;
   const paymentFragment = igpInterface.getEvent('GasPayment');
   const paymentTopics = igpInterface.encodeFilterTopics(paymentFragment.name, [messageId]);
   const paymentLogs = (await provider.getLogs({ topics: paymentTopics })) || [];
@@ -379,7 +380,8 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
   try {
     // scan bytecode for handle function selector
     const bytecode = await provider.getCode(recipientAddress);
-    const msgRecipientInterface = MessageRecipientFactory.createInterface();
+    // Cast to ethers Interface to access methods not exposed in typechain types
+    const msgRecipientInterface = MessageRecipientFactory.createInterface() as ethersUtils.Interface;
     const handleFunction = msgRecipientInterface.functions[HANDLE_FUNCTION_SIG];
     const handleSignature = msgRecipientInterface.getSighash(handleFunction);
     return bytecode.includes(strip0x(handleSignature));
