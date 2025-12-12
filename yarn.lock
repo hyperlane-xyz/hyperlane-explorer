@@ -3044,7 +3044,7 @@ __metadata:
     formik: "npm:^2.4.6"
     graphql: "npm:^16.6.0"
     jest: "npm:^29.6.3"
-    next: "npm:15.4.8"
+    next: "npm:15.4.10"
     nextjs-cors: "npm:^2.1.2"
     postcss: "npm:^8.4.49"
     prettier: "npm:^3.2.5"
@@ -4536,10 +4536,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.4.8":
-  version: 15.4.8
-  resolution: "@next/env@npm:15.4.8"
-  checksum: 10/1e809a53745626a2806657b31b10c8b28da47a6c6efa99cb68dd5f501664e9a2a79fa64287435e338d86b00e59b74cd96e9fb6ed55b918972b61008d3ac3d789
+"@next/env@npm:15.4.10":
+  version: 15.4.10
+  resolution: "@next/env@npm:15.4.10"
+  checksum: 10/17528c028ec4f7d0c58b51eac909c518b2364fe620fbb973f239dc087f6ed9e6b4887466fd25f99fe63fa0ee370388599efae076f83a5b9d82c82df0f1b7da3c
   languageName: node
   linkType: hard
 
@@ -17855,11 +17855,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:15.4.8":
-  version: 15.4.8
-  resolution: "next@npm:15.4.8"
+"next@npm:15.4.10":
+  version: 15.4.10
+  resolution: "next@npm:15.4.10"
   dependencies:
-    "@next/env": "npm:15.4.8"
+    "@next/env": "npm:15.4.10"
     "@next/swc-darwin-arm64": "npm:15.4.8"
     "@next/swc-darwin-x64": "npm:15.4.8"
     "@next/swc-linux-arm64-gnu": "npm:15.4.8"
@@ -17910,7 +17910,7 @@ __metadata:
       optional: true
   bin:
     next: dist/bin/next
-  checksum: 10/3fc5d3d79c20af819efcf34342b55ee64025a7f6353ced4f17da303750107a8eb40c484b83d8f2352109f2dd7d137ff1f1228956b53dbf4f1f2fce0a3349eb18
+  checksum: 10/37b621d0ef1315cc1001f104bab7c873735cb19b06586e93a34b6a482b7f91b4968dfe723f9be6dc1cd8ff868adcef18a7dc25425f5a76091cd1c913f057ef8b
   languageName: node
   linkType: hard
 
