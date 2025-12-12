@@ -6,27 +6,27 @@ An interchain explorer for the Hyperlane protocol and network.
 
 ```sh
 # Install dependencies
-yarn
+pnpm install
 
 # Build source and generate types
-yarn build
+pnpm run build
 ```
 
 ## Development
 
 ```sh
 # Start the Next dev server
-yarn dev
+pnpm run dev
 ```
 
 ## Test
 
 ```sh
 # Run all unit tests
-yarn test
+pnpm run test
 
 # Lint check code
-yarn lint
+pnpm run lint
 ```
 
 ## Learn more
