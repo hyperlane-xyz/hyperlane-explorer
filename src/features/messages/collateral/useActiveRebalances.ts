@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Event } from 'ethers';
 import { useMemo } from 'react';
 
 // eslint-disable-next-line camelcase
@@ -73,12 +72,10 @@ async function fetchActiveRebalances(
       if (!event.args) continue;
 
       const { domain, amount } = event.args;
-      // Cast to base Event type to access transactionHash/blockNumber not in typechain types
-      const baseEvent = event as unknown as Event;
-      const txHash = baseEvent.transactionHash;
+      const txHash = event.transactionHash;
 
       // Get timestamp from block
-      const block = await provider.getBlock(baseEvent.blockNumber);
+      const block = await provider.getBlock(event.blockNumber);
       const timestamp = block?.timestamp || 0;
 
       const destChainMetadata = multiProvider.tryGetChainMetadata(domain);

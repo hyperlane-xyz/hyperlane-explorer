@@ -1,4 +1,4 @@
-import { BigNumber, constants, ethers, utils as ethersUtils, providers } from 'ethers';
+import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import {
   IInterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
@@ -21,8 +21,7 @@ import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { logger } from '../../../utils/logger';
 
-// Cast to ethers Interface to access methods not exposed in typechain types
-const mailbox = MailboxFactory.createInterface() as ethersUtils.Interface;
+const mailbox = MailboxFactory.createInterface();
 const dispatchTopic0 = mailbox.getEventTopic('Dispatch');
 const dispatchIdTopic0 = mailbox.getEventTopic('DispatchId');
 // const processTopic0 = mailbox.getEventTopic('Process');
