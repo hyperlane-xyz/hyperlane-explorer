@@ -117,6 +117,14 @@ interface WarpToken {
 // Map of chainName -> lowercase address -> token info
 type WarpRouteMap = Map<string, Map<string, WarpToken>>;
 
+// Sanitize token symbols for OG image rendering (Satori doesn't support all Unicode)
+function sanitizeSymbol(symbol: string): string {
+  // Replace known problematic Unicode characters
+  return symbol
+    .replace(/₮/g, 'T') // Mongolian Tugrik sign used in USDT
+    .replace(/[^\x20-\x7E]/g, ''); // Remove any other non-ASCII characters
+}
+
 // Fetch warp route configs from registry
 async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
   const map: WarpRouteMap = new Map();
@@ -591,7 +599,7 @@ export default async function handler(req: NextRequest) {
                 style={{ borderRadius: '50%' }}
               />
               <span style={{ color: '#94A3B8', fontSize: '38px', fontWeight: 500 }}>
-                {warpTransfer.amount} {warpTransfer.token.symbol}
+                {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
               </span>
             </div>
           )}
