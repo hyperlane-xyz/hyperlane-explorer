@@ -9,6 +9,13 @@ export const config = {
   runtime: 'edge',
 };
 
+// Load Space Grotesk font for OG images
+async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
+  const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
+  const response = await fetch(fontUrl);
+  return response.arrayBuffer();
+}
+
 // Simple bytea conversion that doesn't need the full encoding module
 function stringToPostgresBytea(hexString: string): string {
   const trimmed = hexString.replace(/^0x/i, '').toLowerCase();
@@ -321,14 +328,27 @@ function getChainDisplayName(
 }
 
 export default async function handler(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams, origin } = new URL(req.url);
   const messageId = searchParams.get('messageId');
 
+  // Load font from public folder
+  const fontData = await loadFont(origin);
+
+  const imageOptions = {
+    width: 1200,
+    height: 630,
+    fonts: [
+      {
+        name: 'SpaceGrotesk',
+        data: fontData,
+        style: 'normal' as const,
+        weight: 500 as const,
+      },
+    ],
+  };
+
   if (!messageId) {
-    return new ImageResponse(<DefaultOGImage />, {
-      width: 1200,
-      height: 630,
-    });
+    return new ImageResponse(<DefaultOGImage />, imageOptions);
   }
 
   const [messageData, domainNames, chainMetadata, warpRouteMap] = await Promise.all([
@@ -339,10 +359,7 @@ export default async function handler(req: NextRequest) {
   ]);
 
   if (!messageData) {
-    return new ImageResponse(<DefaultOGImage />, {
-      width: 1200,
-      height: 630,
-    });
+    return new ImageResponse(<DefaultOGImage />, imageOptions);
   }
 
   const originChainName =
@@ -399,7 +416,7 @@ export default async function handler(req: NextRequest) {
           display: 'flex',
           flexDirection: 'column',
           padding: '48px 64px',
-          fontFamily: 'sans-serif',
+          fontFamily: 'SpaceGrotesk, sans-serif',
           position: 'relative',
         }}
       >
@@ -652,10 +669,7 @@ export default async function handler(req: NextRequest) {
         </div>
       </div>
     ),
-    {
-      width: 1200,
-      height: 630,
-    },
+    imageOptions,
   );
 }
 
