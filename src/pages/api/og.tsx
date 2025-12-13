@@ -26,6 +26,9 @@ interface MessageOGData {
   originDomainId: number;
   destinationDomainId: number;
   timestamp: number;
+  sender: string;
+  recipient: string;
+  body: string | null;
 }
 
 async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
@@ -63,6 +66,9 @@ async function fetchMessageForOG(messageId: string): Promise<MessageOGData | nul
       originDomainId: msg.origin_domain_id,
       destinationDomainId: msg.destination_domain_id,
       timestamp: new Date(msg.send_occurred_at + 'Z').getTime(),
+      sender: postgresByteaToHex(msg.sender),
+      recipient: postgresByteaToHex(msg.recipient),
+      body: msg.message_body ? postgresByteaToHex(msg.message_body) : null,
     };
   } catch {
     return null;
@@ -94,6 +100,148 @@ async function fetchDomainNames(): Promise<Map<number, string>> {
   } catch {
     return new Map();
   }
+}
+
+// Warp route token info
+interface WarpToken {
+  symbol: string;
+  name: string;
+  decimals: number;
+  logoURI: string;
+  chainName: string;
+  addressOrDenom: string;
+}
+
+// Map of chainName -> lowercase address -> token info
+type WarpRouteMap = Map<string, Map<string, WarpToken>>;
+
+// Fetch warp route configs from registry
+async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
+  const map: WarpRouteMap = new Map();
+
+  try {
+    const response = await fetch(
+      `${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`,
+    );
+    if (!response.ok) return map;
+
+    const yaml = await response.text();
+
+    // Split YAML into token entries (each starts with "    - addressOrDenom:")
+    const tokenBlocks = yaml.split(/^    - addressOrDenom:/gm).slice(1);
+
+    for (const block of tokenBlocks) {
+      // Parse each field independently since order varies
+      const addressMatch = block.match(/^\s*"?([^"\n]+)"?/);
+      const chainMatch = block.match(/^\s+chainName:\s*(\w+)/m);
+      const decimalsMatch = block.match(/^\s+decimals:\s*(\d+)/m);
+      const logoMatch = block.match(/^\s+logoURI:\s*([^\n]+)/m);
+      const nameMatch = block.match(/^\s+name:\s*([^\n]+)/m);
+      const symbolMatch = block.match(/^\s+symbol:\s*([^\n]+)/m);
+
+      if (addressMatch && chainMatch && decimalsMatch && symbolMatch) {
+        const addressOrDenom = addressMatch[1].trim();
+        const chainName = chainMatch[1].trim();
+        const decimals = parseInt(decimalsMatch[1], 10);
+        const logoURI = logoMatch?.[1]?.trim() || '';
+        const name = nameMatch?.[1]?.trim() || '';
+        const symbol = symbolMatch[1].trim();
+
+        if (!map.has(chainName)) {
+          map.set(chainName, new Map());
+        }
+
+        const chainMap = map.get(chainName)!;
+        const normalizedAddress = addressOrDenom.toLowerCase();
+
+        chainMap.set(normalizedAddress, {
+          addressOrDenom,
+          chainName,
+          decimals,
+          logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
+          name,
+          symbol,
+        });
+      }
+    }
+
+    return map;
+  } catch {
+    return map;
+  }
+}
+
+// Parse warp route message body to extract amount
+// Warp message format: first 32 bytes = recipient, next 32 bytes = amount (big-endian uint256)
+function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
+  try {
+    // Remove 0x prefix
+    const hex = body.replace(/^0x/i, '');
+
+    // Must have at least 64 bytes (recipient + amount)
+    if (hex.length < 128) return null;
+
+    const recipient = '0x' + hex.slice(0, 64);
+    const amountHex = hex.slice(64, 128);
+    const amount = BigInt('0x' + amountHex);
+
+    return { recipient, amount };
+  } catch {
+    return null;
+  }
+}
+
+// Format token amount with proper decimals
+function formatTokenAmount(amount: bigint, decimals: number): string {
+  const divisor = BigInt(10 ** decimals);
+  const whole = amount / divisor;
+  const remainder = amount % divisor;
+
+  if (remainder === 0n) {
+    return whole.toLocaleString();
+  }
+
+  // Format with decimal places
+  const remainderStr = remainder.toString().padStart(decimals, '0');
+  // Trim trailing zeros but keep at least 2 decimal places for readability
+  const trimmed = remainderStr.replace(/0+$/, '').slice(0, 4);
+
+  if (trimmed === '') {
+    return whole.toLocaleString();
+  }
+
+  return `${whole.toLocaleString()}.${trimmed}`;
+}
+
+// Get warp transfer details if this is a warp route message
+interface WarpTransferDetails {
+  token: WarpToken;
+  amount: string;
+}
+
+function getWarpTransferDetails(
+  messageData: MessageOGData,
+  originChainName: string,
+  warpRouteMap: WarpRouteMap,
+): WarpTransferDetails | null {
+  if (!messageData.body) return null;
+
+  // The sender is the warp router contract on the origin chain
+  const chainTokens = warpRouteMap.get(originChainName);
+  if (!chainTokens) return null;
+
+  // Look up token by sender address (lowercase for case-insensitive matching)
+  const token = chainTokens.get(messageData.sender.toLowerCase());
+  if (!token) return null;
+
+  // Parse the message body
+  const parsed = parseWarpMessageBody(messageData.body);
+  if (!parsed) return null;
+
+  return {
+    token,
+    amount: formatTokenAmount(parsed.amount, token.decimals),
+  };
 }
 
 // Get chain logo URL from registry CDN
@@ -173,10 +321,11 @@ export default async function handler(req: NextRequest) {
     });
   }
 
-  const [messageData, domainNames, chainMetadata] = await Promise.all([
+  const [messageData, domainNames, chainMetadata, warpRouteMap] = await Promise.all([
     fetchMessageForOG(messageId),
     fetchDomainNames(),
     fetchAllChainMetadata(),
+    fetchWarpRouteMap(),
   ]);
 
   if (!messageData) {
@@ -195,6 +344,9 @@ export default async function handler(req: NextRequest) {
   // Get display names from chain metadata
   const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
   const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
+
+  // Check if this is a warp route transfer
+  const warpTransfer = getWarpTransferDetails(messageData, originChainName, warpRouteMap);
 
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
   const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';
@@ -327,8 +479,32 @@ export default async function handler(req: NextRequest) {
             </div>
           </div>
 
-          {/* Arrow */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Arrow with optional token transfer info */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            {warpTransfer && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(214, 49, 185, 0.15)',
+                  border: '1px solid rgba(214, 49, 185, 0.4)',
+                  borderRadius: '12px',
+                  padding: '10px 18px',
+                }}
+              >
+                <img
+                  src={warpTransfer.token.logoURI}
+                  width="28"
+                  height="28"
+                  alt=""
+                  style={{ borderRadius: '50%' }}
+                />
+                <span style={{ color: 'white', fontSize: '22px', fontWeight: 600 }}>
+                  {warpTransfer.amount} {warpTransfer.token.symbol}
+                </span>
+              </div>
+            )}
             <svg width="64" height="32" viewBox="0 0 64 32" fill="none">
               <defs>
                 <linearGradient id="arrowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
