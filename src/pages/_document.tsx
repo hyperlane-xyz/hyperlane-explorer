@@ -1,50 +1,120 @@
-import { Head, Html, Main, NextScript } from 'next/document';
+import Document, {
+  DocumentContext,
+  DocumentInitialProps,
+  Head,
+  Html,
+  Main,
+  NextScript,
+} from 'next/document';
 
 import { links } from '../consts/links';
 import { MAIN_FONT } from '../styles/fonts';
+import { fetchDomainNames, fetchMessageForOG, MessageOGData } from '../utils/serverFetch';
 
-export default function Document() {
-  return (
-    <Html lang="en">
-      <Head>
-        <meta charSet="utf-8" />
+interface MyDocumentProps extends DocumentInitialProps {
+  ogData: {
+    messageId: string;
+    message: MessageOGData;
+    originChain: string;
+    destChain: string;
+  } | null;
+}
 
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2362C1" />
-        <link rel="shortcut icon" href="/favicon.png" />
-        <meta name="msapplication-TileColor" content="#2362C1" />
-        <meta name="theme-color" content="#ffffff" />
+export default class MyDocument extends Document<MyDocumentProps> {
+  static async getInitialProps(ctx: DocumentContext): Promise<MyDocumentProps> {
+    // Fetch OG data BEFORE rendering the document to avoid pino-pretty SSR errors
+    const pathname = ctx.pathname;
+    const query = ctx.query;
+    let ogData: MyDocumentProps['ogData'] = null;
 
-        <meta name="application-name" content="Hyperlane Explorer" />
-        <meta
-          name="keywords"
-          content="Hyperlane Explorer Scan Interchain Permissionless Interoperability Network Blockchain"
-        />
-        <meta
-          name="description"
-          content="The official interchain explorer for the Hyperlane protocol and network."
-        />
+    if (pathname === '/message/[messageId]' && query.messageId && typeof query.messageId === 'string') {
+      try {
+        const [messageData, domainNames] = await Promise.all([
+          fetchMessageForOG(query.messageId),
+          fetchDomainNames(),
+        ]);
 
-        <meta name="HandheldFriendly" content="true" />
-        <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        if (messageData) {
+          const originChain = domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
+          const destChain = domainNames.get(messageData.destinationDomainId) || `Domain ${messageData.destinationDomainId}`;
+          const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-        <meta property="og:url" content={links.baseUrl} />
-        <meta property="og:title" content="Hyperlane Explorer" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={links.baseUrl + '/images/logo.png'} />
-        <meta
-          property="og:description"
-          content="The official interchain explorer for the Hyperlane protocol and network."
-        />
-      </Head>
-      <body className={`${MAIN_FONT.variable} font-sans text-black`}>
-        <Main />
-        <NextScript />
-      </body>
-    </Html>
-  );
+          ogData = {
+            messageId: query.messageId,
+            message: messageData,
+            originChain: capitalize(originChain),
+            destChain: capitalize(destChain),
+          };
+        }
+      } catch {
+        // Silently fail - will use default OG tags
+      }
+    }
+
+    const initialProps = await Document.getInitialProps(ctx);
+    return { ...initialProps, ogData };
+  }
+
+  render() {
+    const { ogData } = this.props;
+
+    // Generate dynamic OG metadata for message pages
+    const isMessagePage = ogData?.message;
+    const ogTitle = isMessagePage
+      ? `${ogData.originChain} → ${ogData.destChain} | Hyperlane Explorer`
+      : 'Hyperlane Explorer';
+    const ogDescription = isMessagePage
+      ? `Interchain message from ${ogData.originChain} to ${ogData.destChain}. Status: ${ogData.message.status}. View transaction details on Hyperlane Explorer.`
+      : 'The official interchain explorer for the Hyperlane protocol and network.';
+    const ogImage = isMessagePage
+      ? `/api/og?messageId=${ogData.messageId}`
+      : links.baseUrl + '/images/logo.png';
+
+    return (
+      <Html lang="en">
+        <Head>
+          <meta charSet="utf-8" />
+
+          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+          <link rel="manifest" href="/site.webmanifest" />
+          <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2362C1" />
+          <link rel="shortcut icon" href="/favicon.png" />
+          <meta name="msapplication-TileColor" content="#2362C1" />
+          <meta name="theme-color" content="#ffffff" />
+
+          <meta name="application-name" content="Hyperlane Explorer" />
+          <meta
+            name="keywords"
+            content="Hyperlane Explorer Scan Interchain Permissionless Interoperability Network Blockchain"
+          />
+          <meta name="description" content={ogDescription} />
+
+          <meta name="HandheldFriendly" content="true" />
+          <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+
+          {/* Open Graph */}
+          <meta property="og:url" content={links.baseUrl} />
+          <meta property="og:title" content={ogTitle} />
+          <meta property="og:type" content="website" />
+          <meta property="og:image" content={ogImage} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:description" content={ogDescription} />
+
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={ogTitle} />
+          <meta name="twitter:description" content={ogDescription} />
+          <meta name="twitter:image" content={ogImage} />
+        </Head>
+        <body className={`${MAIN_FONT.variable} font-sans text-black`}>
+          <Main />
+          <NextScript />
+        </body>
+      </Html>
+    );
+  }
 }
