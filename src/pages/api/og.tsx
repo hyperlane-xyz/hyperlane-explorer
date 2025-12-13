@@ -101,6 +101,67 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
+interface ChainDisplayNames {
+  displayName: string;
+  displayNameShort?: string;
+}
+
+// Fetch all chain metadata from the consolidated registry file
+async function fetchAllChainMetadata(): Promise<Map<string, ChainDisplayNames>> {
+  const map = new Map<string, ChainDisplayNames>();
+  try {
+    const response = await fetch(`${links.imgPath}/chains/metadata.yaml`);
+    if (!response.ok) return map;
+
+    const yaml = await response.text();
+
+    // Parse YAML by splitting on chain name entries (lines starting with a word at column 0)
+    // Each chain section starts with "chainname:" at column 0
+    const chainSections = yaml.split(/^(?=\w+:$)/m);
+
+    for (const section of chainSections) {
+      const lines = section.trim().split('\n');
+      if (lines.length === 0) continue;
+
+      // First line is the chain name
+      const chainNameMatch = lines[0].match(/^(\w+):$/);
+      if (!chainNameMatch) continue;
+      const chainName = chainNameMatch[1];
+
+      // Find displayName and displayNameShort in the section
+      const displayNameMatch = section.match(/^\s+displayName:\s*(.+)$/m);
+      const displayNameShortMatch = section.match(/^\s+displayNameShort:\s*(.+)$/m);
+
+      if (displayNameMatch) {
+        map.set(chainName, {
+          displayName: displayNameMatch[1].trim(),
+          displayNameShort: displayNameShortMatch?.[1]?.trim(),
+        });
+      }
+    }
+
+    return map;
+  } catch {
+    return map;
+  }
+}
+
+// Get display name for chain, preferring displayNameShort
+function getChainDisplayName(
+  chainName: string,
+  chainMetadata: Map<string, ChainDisplayNames>,
+): string {
+  const metadata = chainMetadata.get(chainName.toLowerCase());
+  if (metadata) {
+    return metadata.displayNameShort ?? metadata.displayName;
+  }
+  // Fallback to title case
+  return chainName
+    .split(/[-_\s]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export default async function handler(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const messageId = searchParams.get('messageId');
@@ -112,9 +173,10 @@ export default async function handler(req: NextRequest) {
     });
   }
 
-  const [messageData, domainNames] = await Promise.all([
+  const [messageData, domainNames, chainMetadata] = await Promise.all([
     fetchMessageForOG(messageId),
     fetchDomainNames(),
+    fetchAllChainMetadata(),
   ]);
 
   if (!messageData) {
@@ -124,11 +186,16 @@ export default async function handler(req: NextRequest) {
     });
   }
 
-  const originChain =
+  const originChainName =
     domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
-  const destChain =
+  const destChainName =
     domainNames.get(messageData.destinationDomainId) ||
     `Domain ${messageData.destinationDomainId}`;
+
+  // Get display names from chain metadata
+  const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
+  const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
+
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
   const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';
   const statusBgColor =
@@ -141,9 +208,8 @@ export default async function handler(req: NextRequest) {
     minute: '2-digit',
   });
 
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  const originChainLogo = getChainLogoUrl(originChain.toLowerCase());
-  const destChainLogo = getChainLogoUrl(destChain.toLowerCase());
+  const originChainLogo = getChainLogoUrl(originChainName.toLowerCase());
+  const destChainLogo = getChainLogoUrl(destChainName.toLowerCase());
 
   return new ImageResponse(
     (
@@ -248,13 +314,7 @@ export default async function handler(req: NextRequest) {
               FROM
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img
-                src={originChainLogo}
-                width="40"
-                height="40"
-                alt=""
-                style={{ borderRadius: '50%' }}
-              />
+              <img src={originChainLogo} width="40" height="40" alt="" />
               <span
                 style={{
                   color: 'white',
@@ -262,7 +322,7 @@ export default async function handler(req: NextRequest) {
                   fontWeight: 600,
                 }}
               >
-                {capitalize(originChain)}
+                {originDisplayName}
               </span>
             </div>
           </div>
@@ -305,13 +365,7 @@ export default async function handler(req: NextRequest) {
               TO
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img
-                src={destChainLogo}
-                width="40"
-                height="40"
-                alt=""
-                style={{ borderRadius: '50%' }}
-              />
+              <img src={destChainLogo} width="40" height="40" alt="" />
               <span
                 style={{
                   color: 'white',
@@ -319,7 +373,7 @@ export default async function handler(req: NextRequest) {
                   fontWeight: 600,
                 }}
               >
-                {capitalize(destChain)}
+                {destDisplayName}
               </span>
             </div>
           </div>
