@@ -7,7 +7,6 @@ import Document, {
   NextScript,
 } from 'next/document';
 
-import { links } from '../consts/links';
 import { MAIN_FONT } from '../styles/fonts';
 import { fetchDomainNames, fetchMessageForOG, MessageOGData } from '../utils/serverFetch';
 
@@ -18,6 +17,7 @@ interface MyDocumentProps extends DocumentInitialProps {
     originChain: string;
     destChain: string;
   } | null;
+  host: string;
 }
 
 export default class MyDocument extends Document<MyDocumentProps> {
@@ -26,6 +26,11 @@ export default class MyDocument extends Document<MyDocumentProps> {
     const pathname = ctx.pathname;
     const query = ctx.query;
     let ogData: MyDocumentProps['ogData'] = null;
+
+    // Get the host from the request for absolute OG image URLs
+    const host = ctx.req?.headers?.host || 'explorer.hyperlane.xyz';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
 
     if (pathname === '/message/[messageId]' && query.messageId && typeof query.messageId === 'string') {
       try {
@@ -52,11 +57,11 @@ export default class MyDocument extends Document<MyDocumentProps> {
     }
 
     const initialProps = await Document.getInitialProps(ctx);
-    return { ...initialProps, ogData };
+    return { ...initialProps, ogData, host: baseUrl };
   }
 
   render() {
-    const { ogData } = this.props;
+    const { ogData, host } = this.props;
 
     // Generate dynamic OG metadata for message pages
     const isMessagePage = ogData?.message;
@@ -67,8 +72,8 @@ export default class MyDocument extends Document<MyDocumentProps> {
       ? `Interchain message from ${ogData.originChain} to ${ogData.destChain}. Status: ${ogData.message.status}. View transaction details on Hyperlane Explorer.`
       : 'The official interchain explorer for the Hyperlane protocol and network.';
     const ogImage = isMessagePage
-      ? `/api/og?messageId=${ogData.messageId}`
-      : links.baseUrl + '/images/logo.png';
+      ? `${host}/api/og?messageId=${ogData.messageId}`
+      : host + '/images/logo.png';
 
     return (
       <Html lang="en">
@@ -96,7 +101,7 @@ export default class MyDocument extends Document<MyDocumentProps> {
           <meta name="apple-mobile-web-app-capable" content="yes" />
 
           {/* Open Graph */}
-          <meta property="og:url" content={links.baseUrl} />
+          <meta property="og:url" content={host} />
           <meta property="og:title" content={ogTitle} />
           <meta property="og:type" content="website" />
           <meta property="og:image" content={ogImage} />
