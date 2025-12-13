@@ -8,7 +8,13 @@ import Document, {
 } from 'next/document';
 
 import { MAIN_FONT } from '../styles/fonts';
-import { fetchDomainNames, fetchMessageForOG, MessageOGData } from '../utils/serverFetch';
+import {
+  fetchChainMetadata,
+  fetchDomainNames,
+  fetchMessageForOG,
+  getChainDisplayName,
+  MessageOGData,
+} from '../utils/serverFetch';
 
 interface MyDocumentProps extends DocumentInitialProps {
   ogData: {
@@ -34,21 +40,21 @@ export default class MyDocument extends Document<MyDocumentProps> {
 
     if (pathname === '/message/[messageId]' && query.messageId && typeof query.messageId === 'string') {
       try {
-        const [messageData, domainNames] = await Promise.all([
+        const [messageData, domainNames, chainMetadata] = await Promise.all([
           fetchMessageForOG(query.messageId),
           fetchDomainNames(),
+          fetchChainMetadata(),
         ]);
 
         if (messageData) {
-          const originChain = domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
-          const destChain = domainNames.get(messageData.destinationDomainId) || `Domain ${messageData.destinationDomainId}`;
-          const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+          const originChainName = domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
+          const destChainName = domainNames.get(messageData.destinationDomainId) || `Domain ${messageData.destinationDomainId}`;
 
           ogData = {
             messageId: query.messageId,
             message: messageData,
-            originChain: capitalize(originChain),
-            destChain: capitalize(destChain),
+            originChain: getChainDisplayName(originChainName, chainMetadata),
+            destChain: getChainDisplayName(destChainName, chainMetadata),
           };
         }
       } catch {
