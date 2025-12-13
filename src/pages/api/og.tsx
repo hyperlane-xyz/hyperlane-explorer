@@ -29,6 +29,7 @@ interface MessageOGData {
   sender: string;
   recipient: string;
   body: string | null;
+  deliveryLatency: string | null;
 }
 
 async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
@@ -69,6 +70,7 @@ async function fetchMessageForOG(messageId: string): Promise<MessageOGData | nul
       sender: postgresByteaToHex(msg.sender),
       recipient: postgresByteaToHex(msg.recipient),
       body: msg.message_body ? postgresByteaToHex(msg.message_body) : null,
+      deliveryLatency: msg.delivery_latency,
     };
   } catch {
     return null;
@@ -360,8 +362,24 @@ export default async function handler(req: NextRequest) {
     minute: '2-digit',
   });
 
+  // Format delivery latency (e.g., "00:01:32" -> "1m 32s")
+  const formattedLatency = messageData.deliveryLatency
+    ? (() => {
+        const parts = messageData.deliveryLatency.split(':');
+        const hours = parseInt(parts[0], 10);
+        const minutes = parseInt(parts[1], 10);
+        const seconds = parseInt(parts[2], 10);
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
+      })()
+    : null;
+
   const originChainLogo = getChainLogoUrl(originChainName.toLowerCase());
   const destChainLogo = getChainLogoUrl(destChainName.toLowerCase());
+
+  // Background image URL - using the same background as the explorer
+  const backgroundUrl = 'https://explorer.hyperlane.xyz/images/background.svg';
 
   return new ImageResponse(
     (
@@ -374,8 +392,23 @@ export default async function handler(req: NextRequest) {
           flexDirection: 'column',
           padding: '48px 64px',
           fontFamily: 'sans-serif',
+          position: 'relative',
         }}
       >
+        {/* Sparkle background */}
+        <img
+          src={backgroundUrl}
+          style={{
+            position: 'absolute',
+            top: '-75%',
+            left: '-75%',
+            width: '250%',
+            height: '250%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+          }}
+        />
+
         {/* Top decorative line */}
         <div
           style={{
@@ -408,7 +441,7 @@ export default async function handler(req: NextRequest) {
               {/* Center bar */}
               <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white"/>
             </svg>
-            <span style={{ color: 'white', fontSize: '32px', fontWeight: 600, letterSpacing: '-0.5px' }}>
+            <span style={{ color: 'white', fontSize: '34px', fontWeight: 600, letterSpacing: '-0.5px' }}>
               Hyperlane Explorer
             </span>
           </div>
@@ -418,7 +451,7 @@ export default async function handler(req: NextRequest) {
               alignItems: 'center',
               gap: '8px',
               background: statusBgColor,
-              padding: '8px 16px',
+              padding: '10px 18px',
               borderRadius: '24px',
               border: `1px solid ${statusColor}`,
             }}
@@ -431,7 +464,7 @@ export default async function handler(req: NextRequest) {
                 backgroundColor: statusColor,
               }}
             />
-            <span style={{ color: statusColor, fontSize: '18px', fontWeight: 500 }}>
+            <span style={{ color: statusColor, fontSize: '20px', fontWeight: 500 }}>
               {messageData.status}
             </span>
           </div>
@@ -441,139 +474,148 @@ export default async function handler(req: NextRequest) {
         <div
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             flex: 1,
-            gap: '32px',
           }}
         >
-          {/* Origin Chain */}
           <div
             style={{
-              background: 'rgba(35, 98, 193, 0.1)',
-              border: '1px solid rgba(95, 138, 250, 0.3)',
-              borderRadius: '20px',
-              padding: '28px 48px',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              minWidth: '280px',
+              justifyContent: 'center',
+              gap: '32px',
             }}
           >
-            <span
-              style={{ color: '#5F8AFA', fontSize: '13px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+            {/* Origin Chain */}
+            <div
+              style={{
+                background: 'rgba(35, 98, 193, 0.1)',
+                border: '1px solid rgba(95, 138, 250, 0.3)',
+                borderRadius: '20px',
+                padding: '28px 48px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: '280px',
+              }}
             >
-              FROM
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img src={originChainLogo} width="40" height="40" alt="" />
               <span
-                style={{
-                  color: 'white',
-                  fontSize: '32px',
-                  fontWeight: 600,
-                }}
+                style={{ color: '#5F8AFA', fontSize: '14px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
               >
-                {originDisplayName}
+                FROM
               </span>
-            </div>
-          </div>
-
-          {/* Arrow with optional token transfer info */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            {warpTransfer && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  background: 'rgba(214, 49, 185, 0.15)',
-                  border: '1px solid rgba(214, 49, 185, 0.4)',
-                  borderRadius: '12px',
-                  padding: '10px 18px',
-                }}
-              >
-                <img
-                  src={warpTransfer.token.logoURI}
-                  width="28"
-                  height="28"
-                  alt=""
-                  style={{ borderRadius: '50%' }}
-                />
-                <span style={{ color: 'white', fontSize: '22px', fontWeight: 600 }}>
-                  {warpTransfer.amount} {warpTransfer.token.symbol}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src={originChainLogo} width="44" height="44" alt="" />
+                <span
+                  style={{
+                    color: 'white',
+                    fontSize: '36px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {originDisplayName}
                 </span>
               </div>
-            )}
-            <svg width="64" height="32" viewBox="0 0 64 32" fill="none">
-              <defs>
-                <linearGradient id="arrowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
-                  <stop offset="0%" stopColor="#2362C1" />
-                  <stop offset="100%" stopColor="#5F8AFA" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M0 16h56M48 6l8 10-8 10"
-                stroke="url(#arrowGrad)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+            </div>
 
-          {/* Destination Chain */}
-          <div
-            style={{
-              background: 'rgba(35, 98, 193, 0.1)',
-              border: '1px solid rgba(95, 138, 250, 0.3)',
-              borderRadius: '20px',
-              padding: '28px 48px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              minWidth: '280px',
-            }}
-          >
-            <span
-              style={{ color: '#5F8AFA', fontSize: '13px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+            {/* Arrow */}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <svg width="72" height="36" viewBox="0 0 64 32" fill="none">
+                <defs>
+                  <linearGradient id="arrowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stopColor="#2362C1" />
+                    <stop offset="100%" stopColor="#5F8AFA" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0 16h56M48 6l8 10-8 10"
+                  stroke="url(#arrowGrad)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+
+            {/* Destination Chain */}
+            <div
+              style={{
+                background: 'rgba(35, 98, 193, 0.1)',
+                border: '1px solid rgba(95, 138, 250, 0.3)',
+                borderRadius: '20px',
+                padding: '28px 48px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: '280px',
+              }}
             >
-              TO
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img src={destChainLogo} width="40" height="40" alt="" />
               <span
-                style={{
-                  color: 'white',
-                  fontSize: '32px',
-                  fontWeight: 600,
-                }}
+                style={{ color: '#5F8AFA', fontSize: '14px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
               >
-                {destDisplayName}
+                TO
               </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src={destChainLogo} width="44" height="44" alt="" />
+                <span
+                  style={{
+                    color: 'white',
+                    fontSize: '36px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {destDisplayName}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Warp transfer details row */}
+          {warpTransfer && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: '56px',
+                gap: '10px',
+              }}
+            >
+              <img
+                src={warpTransfer.token.logoURI}
+                width="48"
+                height="48"
+                alt=""
+                style={{ borderRadius: '50%' }}
+              />
+              <span style={{ color: '#94A3B8', fontSize: '38px', fontWeight: 500 }}>
+                {warpTransfer.amount} {warpTransfer.token.symbol}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Footer with ID and timestamp */}
+        {/* Footer with ID, delivery time, and timestamp */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end',
-            marginTop: '32px',
-            paddingTop: '24px',
+            marginTop: '24px',
+            paddingTop: '20px',
             borderTop: '1px solid rgba(95, 138, 250, 0.2)',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ color: '#6B7280', fontSize: '13px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
               MESSAGE ID
             </span>
             <span
               style={{
                 color: '#94A3B8',
-                fontSize: '18px',
+                fontSize: '20px',
                 fontFamily: 'monospace',
                 background: 'rgba(35, 98, 193, 0.15)',
                 padding: '6px 12px',
@@ -584,11 +626,20 @@ export default async function handler(req: NextRequest) {
             </span>
           </div>
 
+          {formattedLatency && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                DELIVERY TIME
+              </span>
+              <span style={{ color: '#10b981', fontSize: '20px', fontWeight: 500 }}>{formattedLatency}</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ color: '#6B7280', fontSize: '13px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
               SENT
             </span>
-            <span style={{ color: '#94A3B8', fontSize: '18px' }}>{formattedDate}</span>
+            <span style={{ color: '#94A3B8', fontSize: '20px' }}>{formattedDate}</span>
           </div>
         </div>
       </div>
