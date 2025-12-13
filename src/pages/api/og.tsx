@@ -130,7 +130,7 @@ async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
     const yaml = await response.text();
 
     // Split YAML into token entries (each starts with "    - addressOrDenom:")
-    const tokenBlocks = yaml.split(/^    - addressOrDenom:/gm).slice(1);
+    const tokenBlocks = yaml.split(/^ {4}- addressOrDenom:/gm).slice(1);
 
     for (const block of tokenBlocks) {
       // Parse each field independently since order varies
