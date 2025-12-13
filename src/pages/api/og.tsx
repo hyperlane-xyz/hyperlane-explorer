@@ -466,7 +466,7 @@ export default async function handler(req: NextRequest) {
               {/* Center bar */}
               <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white"/>
             </svg>
-            <span style={{ color: 'white', fontSize: '34px', fontWeight: 600, letterSpacing: '-0.5px' }}>
+            <span style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}>
               Hyperlane Explorer
             </span>
           </div>
@@ -474,22 +474,22 @@ export default async function handler(req: NextRequest) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
               background: statusBgColor,
-              padding: '10px 18px',
-              borderRadius: '24px',
+              padding: '14px 24px',
+              borderRadius: '28px',
               border: `1px solid ${statusColor}`,
             }}
           >
             <div
               style={{
-                width: '10px',
-                height: '10px',
+                width: '14px',
+                height: '14px',
                 borderRadius: '50%',
                 backgroundColor: statusColor,
               }}
             />
-            <span style={{ color: statusColor, fontSize: '20px', fontWeight: 500 }}>
+            <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
               {messageData.status}
             </span>
           </div>
@@ -527,16 +527,16 @@ export default async function handler(req: NextRequest) {
               }}
             >
               <span
-                style={{ color: '#5F8AFA', fontSize: '14px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+                style={{ color: '#5F8AFA', fontSize: '21px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
               >
                 FROM
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src={originChainLogo} width="44" height="44" alt="" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <img src={originChainLogo} width="56" height="56" alt="" />
                 <span
                   style={{
                     color: 'white',
-                    fontSize: '36px',
+                    fontSize: '54px',
                     fontWeight: 600,
                   }}
                 >
@@ -578,16 +578,16 @@ export default async function handler(req: NextRequest) {
               }}
             >
               <span
-                style={{ color: '#5F8AFA', fontSize: '14px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+                style={{ color: '#5F8AFA', fontSize: '21px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
               >
                 TO
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src={destChainLogo} width="44" height="44" alt="" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <img src={destChainLogo} width="56" height="56" alt="" />
                 <span
                   style={{
                     color: 'white',
-                    fontSize: '36px',
+                    fontSize: '54px',
                     fontWeight: 600,
                   }}
                 >
@@ -604,18 +604,18 @@ export default async function handler(req: NextRequest) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: '56px',
-                gap: '10px',
+                marginTop: '32px',
+                gap: '14px',
               }}
             >
               <img
                 src={warpTransfer.token.logoURI}
-                width="48"
-                height="48"
+                width="64"
+                height="64"
                 alt=""
                 style={{ borderRadius: '50%' }}
               />
-              <span style={{ color: '#94A3B8', fontSize: '38px', fontWeight: 500 }}>
+              <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
                 {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
               </span>
             </div>
@@ -634,17 +634,17 @@ export default async function handler(req: NextRequest) {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
               MESSAGE ID
             </span>
             <span
               style={{
                 color: '#94A3B8',
-                fontSize: '20px',
+                fontSize: '32px',
                 fontFamily: 'monospace',
                 background: 'rgba(35, 98, 193, 0.15)',
-                padding: '6px 12px',
-                borderRadius: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
               }}
             >
               {shortMsgId}
@@ -653,18 +653,18 @@ export default async function handler(req: NextRequest) {
 
           {formattedLatency && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+              <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
                 DELIVERY TIME
               </span>
-              <span style={{ color: '#10b981', fontSize: '20px', fontWeight: 500 }}>{formattedLatency}</span>
+              <span style={{ color: '#10b981', fontSize: '32px', fontWeight: 500 }}>{formattedLatency}</span>
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ color: '#6B7280', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
               SENT
             </span>
-            <span style={{ color: '#94A3B8', fontSize: '20px' }}>{formattedDate}</span>
+            <span style={{ color: '#94A3B8', fontSize: '32px' }}>{formattedDate}</span>
           </div>
         </div>
       </div>

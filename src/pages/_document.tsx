@@ -65,12 +65,22 @@ export default class MyDocument extends Document<MyDocumentProps> {
 
     // Generate dynamic OG metadata for message pages
     const isMessagePage = ogData?.message;
+    const shortMsgId = isMessagePage
+      ? `${ogData.messageId.slice(0, 6)}...${ogData.messageId.slice(-4)}`
+      : '';
+    const formattedDate = isMessagePage
+      ? new Date(ogData.message.timestamp).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : '';
     const ogTitle = isMessagePage
-      ? `${ogData.originChain} → ${ogData.destChain} | Hyperlane Explorer`
+      ? `Message ${shortMsgId} ⋅ Hyperlane Explorer`
       : 'Hyperlane Explorer';
     const ogDescription = isMessagePage
-      ? `Interchain message from ${ogData.originChain} to ${ogData.destChain}. Status: ${ogData.message.status}. View transaction details on Hyperlane Explorer.`
-      : 'The official interchain explorer for the Hyperlane protocol and network.';
+      ? `${ogData.originChain} → ${ogData.destChain} message on ${formattedDate}. View details on Hyperlane Explorer.`
+      : 'The interchain explorer for the Hyperlane protocol.';
     const ogImage = isMessagePage
       ? `${host}/api/og?messageId=${ogData.messageId}`
       : host + '/images/logo.png';
