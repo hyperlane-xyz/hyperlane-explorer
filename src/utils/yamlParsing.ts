@@ -1,13 +1,8 @@
+import YAML from 'yaml';
+
 import { links } from '../consts/links';
 
 import { logger } from './logger';
-
-/**
- * NOTE: These regex-based YAML parsing utilities are used in Edge Runtime (og.tsx)
- * where dynamic code evaluation (eval, new Function) is not allowed.
- * The @hyperlane-xyz/utils YAML parser uses 'yaml' package which triggers this restriction.
- * These regex patterns work for the specific registry YAML formats we parse.
- */
 
 // ============================================================================
 // Chain Metadata Parsing
@@ -20,37 +15,26 @@ export interface ChainDisplayNames {
 
 /**
  * Parse chain metadata from registry YAML format.
- * Expects format:
- * ```
- * chainname:
- *   displayName: Chain Name
- *   displayNameShort: CN
- *   ...
- * ```
+ * Returns a map of chain name -> display names
  */
-export function parseChainMetadataYaml(yaml: string): Map<string, ChainDisplayNames> {
+export function parseChainMetadataYaml(yamlStr: string): Map<string, ChainDisplayNames> {
   const map = new Map<string, ChainDisplayNames>();
 
-  // Split on chain name entries (lines starting with a word followed by colon at column 0)
-  const chainSections = yaml.split(/^(?=\w+:$)/m);
-
-  for (const section of chainSections) {
-    const lines = section.trim().split('\n');
-    if (lines.length === 0) continue;
-
-    const chainNameMatch = lines[0].match(/^(\w+):$/);
-    if (!chainNameMatch) continue;
-    const chainName = chainNameMatch[1];
-
-    const displayNameMatch = section.match(/^\s+displayName:\s*(.+)$/m);
-    const displayNameShortMatch = section.match(/^\s+displayNameShort:\s*(.+)$/m);
-
-    if (displayNameMatch) {
-      map.set(chainName, {
-        displayName: displayNameMatch[1].trim(),
-        displayNameShort: displayNameShortMatch?.[1]?.trim(),
-      });
+  try {
+    const data = YAML.parse(yamlStr) as Record<
+      string,
+      { displayName?: string; displayNameShort?: string }
+    >;
+    for (const [chainName, metadata] of Object.entries(data)) {
+      if (metadata?.displayName) {
+        map.set(chainName, {
+          displayName: metadata.displayName,
+          displayNameShort: metadata.displayNameShort,
+        });
+      }
     }
+  } catch (error) {
+    logger.error('Failed to parse chain metadata YAML:', error);
   }
 
   return map;
@@ -106,49 +90,63 @@ export interface WarpToken {
 // Map of chainName -> lowercase address -> token info
 export type WarpRouteMap = Map<string, Map<string, WarpToken>>;
 
+interface WarpRouteConfigEntry {
+  addressOrDenom?: string;
+  chainName?: string;
+  decimals?: number;
+  symbol?: string;
+  name?: string;
+  logoURI?: string;
+}
+
+interface WarpRouteConfig {
+  tokens?: WarpRouteConfigEntry[];
+}
+
 /**
  * Parse warp route configs from registry YAML format.
- * Expects format with token entries starting with "    - addressOrDenom:"
+ * Returns a map of chainName -> address -> token info
  */
-export function parseWarpRouteConfigYaml(yaml: string): WarpRouteMap {
+export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
   const map: WarpRouteMap = new Map();
 
-  // Split YAML into token entries (each starts with "    - addressOrDenom:")
-  const tokenBlocks = yaml.split(/^ {4}- addressOrDenom:/gm).slice(1);
+  try {
+    const data = YAML.parse(yamlStr) as Record<string, WarpRouteConfig>;
 
-  for (const block of tokenBlocks) {
-    // Parse each field independently since order varies
-    const addressMatch = block.match(/^\s*"?([^"\n]+)"?/);
-    const chainMatch = block.match(/^\s+chainName:\s*(\w+)/m);
-    const decimalsMatch = block.match(/^\s+decimals:\s*(\d+)/m);
-    const logoMatch = block.match(/^\s+logoURI:\s*([^\n]+)/m);
-    const nameMatch = block.match(/^\s+name:\s*([^\n]+)/m);
-    const symbolMatch = block.match(/^\s+symbol:\s*([^\n]+)/m);
+    for (const route of Object.values(data)) {
+      if (!route?.tokens) continue;
 
-    if (addressMatch && chainMatch && decimalsMatch && symbolMatch) {
-      const addressOrDenom = addressMatch[1].trim();
-      const chainName = chainMatch[1].trim();
-      const decimals = parseInt(decimalsMatch[1], 10);
-      const logoURI = logoMatch?.[1]?.trim() || '';
-      const name = nameMatch?.[1]?.trim() || '';
-      const symbol = symbolMatch[1].trim();
+      for (const token of route.tokens) {
+        if (
+          !token.addressOrDenom ||
+          !token.chainName ||
+          token.decimals === undefined ||
+          !token.symbol
+        ) {
+          continue;
+        }
 
-      if (!map.has(chainName)) {
-        map.set(chainName, new Map());
+        const chainName = token.chainName;
+        if (!map.has(chainName)) {
+          map.set(chainName, new Map());
+        }
+
+        const chainMap = map.get(chainName)!;
+        const normalizedAddress = token.addressOrDenom.toLowerCase();
+        const logoURI = token.logoURI || '';
+
+        chainMap.set(normalizedAddress, {
+          addressOrDenom: token.addressOrDenom,
+          chainName,
+          decimals: token.decimals,
+          logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
+          name: token.name || '',
+          symbol: token.symbol,
+        });
       }
-
-      const chainMap = map.get(chainName)!;
-      const normalizedAddress = addressOrDenom.toLowerCase();
-
-      chainMap.set(normalizedAddress, {
-        addressOrDenom,
-        chainName,
-        decimals,
-        logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
-        name,
-        symbol,
-      });
     }
+  } catch (error) {
+    logger.error('Failed to parse warp route config YAML:', error);
   }
 
   return map;

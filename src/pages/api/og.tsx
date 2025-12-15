@@ -145,49 +145,44 @@ function sanitizeSymbol(symbol: string): string {
     .replace(/[^\x20-\x7E]/g, ''); // Remove any other non-ASCII characters
 }
 
-// Parse warp route message body to extract amount
-// Warp message format: first 32 bytes = recipient, next 32 bytes = amount (big-endian uint256)
-// NOTE: Cannot use parseWarpRouteMessage from @hyperlane-xyz/utils due to Edge Runtime restrictions
+// Parse warp route message body to extract recipient and amount
+// This is a simplified version that doesn't depend on @hyperlane-xyz/utils
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
-    // Remove 0x prefix
-    const hex = body.replace(/^0x/i, '');
+    // Remove 0x prefix if present
+    const hex = body.startsWith('0x') ? body.slice(2) : body;
+    if (hex.length < 64) return null;
 
-    // Must have at least 64 bytes (recipient + amount)
-    if (hex.length < 128) return null;
+    // First 32 bytes (64 hex chars) = recipient address (right-padded)
+    const recipientHex = hex.slice(0, 64);
+    const recipient = '0x' + recipientHex.replace(/^0+/, '').padStart(40, '0');
 
-    const recipient = '0x' + hex.slice(0, 64);
+    // Next 32 bytes = amount (uint256)
     const amountHex = hex.slice(64, 128);
     const amount = BigInt('0x' + amountHex);
 
     return { recipient, amount };
-  } catch (error) {
-    logger.error('Error parsing warp message body:', error);
+  } catch {
     return null;
   }
 }
 
-// Format token amount with proper decimals
-// NOTE: Cannot use fromWei from @hyperlane-xyz/utils due to Edge Runtime restrictions
-function formatTokenAmount(amount: bigint, decimals: number): string {
+// Format token amount from wei to human-readable string
+function formatTokenAmount(amountWei: bigint, decimals: number): string {
   const divisor = BigInt(10 ** decimals);
-  const whole = amount / divisor;
-  const remainder = amount % divisor;
+  const integerPart = amountWei / divisor;
+  const fractionalPart = amountWei % divisor;
 
-  if (remainder === 0n) {
-    return whole.toLocaleString();
+  if (fractionalPart === BigInt(0)) {
+    return integerPart.toString();
   }
 
-  // Format with decimal places
-  const remainderStr = remainder.toString().padStart(decimals, '0');
-  // Trim trailing zeros but keep at least 2 decimal places for readability
-  const trimmed = remainderStr.replace(/0+$/, '').slice(0, 4);
+  // Pad fractional part with leading zeros
+  let fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+  // Remove trailing zeros
+  fractionalStr = fractionalStr.replace(/0+$/, '');
 
-  if (trimmed === '') {
-    return whole.toLocaleString();
-  }
-
-  return `${whole.toLocaleString()}.${trimmed}`;
+  return `${integerPart}.${fractionalStr}`;
 }
 
 // Get warp transfer details if this is a warp route message
@@ -206,7 +201,6 @@ function getWarpTransferDetails(
   const token = chainTokens.get(messageData.sender.toLowerCase());
   if (!token) return null;
 
-  // Parse the message body
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
