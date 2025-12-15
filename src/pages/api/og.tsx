@@ -696,7 +696,7 @@ function DefaultOGImage() {
         }}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
         <svg width="140" height="126" viewBox="0 0 550 494" fill="none">
           {/* Back chevrons - magenta */}
           <path d="M270.652 0H371.119C384.826 0 397.089 7.95912 401.874 19.9606L490.058 241.148C490.739 242.854 490.747 244.731 490.081 246.443L489.587 247.714L489.582 247.726L401.769 473.524C397.054 485.646 384.726 493.716 370.923 493.716H270.471C264.822 493.716 260.862 488.506 262.724 483.523L353.271 241.148L262.946 10.2988C260.989 5.29678 264.952 0 270.652 0Z" fill="#D631B9"/>
@@ -716,6 +716,9 @@ function DefaultOGImage() {
           }}
         >
           Hyperlane Explorer
+        </span>
+        <span style={{ color: '#6B7280', fontSize: '28px' }}>
+          The official interchain explorer for the Hyperlane protocol and network.
         </span>
       </div>
     </div>
