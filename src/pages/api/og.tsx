@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 import { config as appConfig } from '../../consts/config';
 import { links } from '../../consts/links';
-import { messageStubFragment, MessageStubEntry } from '../../features/messages/queries/fragments';
+import { MessageStubEntry, messageStubFragment } from '../../features/messages/queries/fragments';
 import { postgresByteaToHex, stringToPostgresBytea } from '../../utils/bytea';
 import { logger } from '../../utils/logger';
 import {
@@ -245,8 +245,7 @@ export default async function handler(req: NextRequest) {
   const originChainName =
     domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
   const destChainName =
-    domainNames.get(messageData.destinationDomainId) ||
-    `Domain ${messageData.destinationDomainId}`;
+    domainNames.get(messageData.destinationDomainId) || `Domain ${messageData.destinationDomainId}`;
 
   // Get display names from chain metadata
   const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
@@ -338,17 +337,37 @@ export default async function handler(req: NextRequest) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <svg width="44" height="40" viewBox="0 0 550 494" fill="none" style={{ marginRight: '16px' }}>
+            <svg
+              width="44"
+              height="40"
+              viewBox="0 0 550 494"
+              fill="none"
+              style={{ marginRight: '16px' }}
+            >
               {/* Back chevrons - magenta */}
-              <path d="M270.652 0H371.119C384.826 0 397.089 7.95912 401.874 19.9606L490.058 241.148C490.739 242.854 490.747 244.731 490.081 246.443L489.587 247.714L489.582 247.726L401.769 473.524C397.054 485.646 384.726 493.716 370.923 493.716H270.471C264.822 493.716 260.862 488.506 262.724 483.523L353.271 241.148L262.946 10.2988C260.989 5.29678 264.952 0 270.652 0Z" fill="#D631B9"/>
-              <path d="M8.39276 0H108.86C122.567 0 134.83 7.95912 139.614 19.9606L227.799 241.148C228.479 242.854 228.487 244.731 227.822 246.443L227.327 247.714L227.322 247.726L139.509 473.524C134.795 485.646 122.467 493.716 108.664 493.716H8.2115C2.56253 493.716 -1.39662 488.506 0.465105 483.523L91.0122 241.148L0.686825 10.2988C-1.27034 5.29678 2.69291 0 8.39276 0Z" fill="#D631B9"/>
+              <path
+                d="M270.652 0H371.119C384.826 0 397.089 7.95912 401.874 19.9606L490.058 241.148C490.739 242.854 490.747 244.731 490.081 246.443L489.587 247.714L489.582 247.726L401.769 473.524C397.054 485.646 384.726 493.716 370.923 493.716H270.471C264.822 493.716 260.862 488.506 262.724 483.523L353.271 241.148L262.946 10.2988C260.989 5.29678 264.952 0 270.652 0Z"
+                fill="#D631B9"
+              />
+              <path
+                d="M8.39276 0H108.86C122.567 0 134.83 7.95912 139.614 19.9606L227.799 241.148C228.479 242.854 228.487 244.731 227.822 246.443L227.327 247.714L227.322 247.726L139.509 473.524C134.795 485.646 122.467 493.716 108.664 493.716H8.2115C2.56253 493.716 -1.39662 488.506 0.465105 483.523L91.0122 241.148L0.686825 10.2988C-1.27034 5.29678 2.69291 0 8.39276 0Z"
+                fill="#D631B9"
+              />
               {/* Front chevrons - white */}
-              <path d="M328.652 0H429.119C442.826 0 455.089 7.95912 459.874 19.9606L548.058 241.148C548.739 242.854 548.747 244.731 548.081 246.443L547.587 247.714L547.582 247.726L459.769 473.524C455.054 485.646 442.726 493.716 428.923 493.716H328.471C322.822 493.716 318.862 488.506 320.724 483.523L411.271 241.148L320.946 10.2988C318.989 5.29678 322.952 0 328.652 0Z" fill="white"/>
-              <path d="M66.3928 0H166.86C180.567 0 192.83 7.95912 197.614 19.9606L285.799 241.148C286.479 242.854 286.487 244.731 285.822 246.443L285.327 247.714L285.322 247.726L197.509 473.524C192.795 485.646 180.467 493.716 166.664 493.716H66.2115C60.5625 493.716 56.6034 488.506 58.4651 483.523L149.012 241.148L58.6868 10.2988C56.7297 5.29678 60.6929 0 66.3928 0Z" fill="white"/>
+              <path
+                d="M328.652 0H429.119C442.826 0 455.089 7.95912 459.874 19.9606L548.058 241.148C548.739 242.854 548.747 244.731 548.081 246.443L547.587 247.714L547.582 247.726L459.769 473.524C455.054 485.646 442.726 493.716 428.923 493.716H328.471C322.822 493.716 318.862 488.506 320.724 483.523L411.271 241.148L320.946 10.2988C318.989 5.29678 322.952 0 328.652 0Z"
+                fill="white"
+              />
+              <path
+                d="M66.3928 0H166.86C180.567 0 192.83 7.95912 197.614 19.9606L285.799 241.148C286.479 242.854 286.487 244.731 285.822 246.443L285.327 247.714L285.322 247.726L197.509 473.524C192.795 485.646 180.467 493.716 166.664 493.716H66.2115C60.5625 493.716 56.6034 488.506 58.4651 483.523L149.012 241.148L58.6868 10.2988C56.7297 5.29678 60.6929 0 66.3928 0Z"
+                fill="white"
+              />
               {/* Center bar */}
-              <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white"/>
+              <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white" />
             </svg>
-            <span style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}>
+            <span
+              style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}
+            >
               Hyperlane Explorer
             </span>
           </div>
@@ -409,7 +428,13 @@ export default async function handler(req: NextRequest) {
               }}
             >
               <span
-                style={{ color: '#5F8AFA', fontSize: '21px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+                style={{
+                  color: '#5F8AFA',
+                  fontSize: '21px',
+                  fontWeight: 500,
+                  marginBottom: '12px',
+                  letterSpacing: '1px',
+                }}
               >
                 FROM
               </span>
@@ -460,7 +485,13 @@ export default async function handler(req: NextRequest) {
               }}
             >
               <span
-                style={{ color: '#5F8AFA', fontSize: '21px', fontWeight: 500, marginBottom: '12px', letterSpacing: '1px' }}
+                style={{
+                  color: '#5F8AFA',
+                  fontSize: '21px',
+                  fontWeight: 500,
+                  marginBottom: '12px',
+                  letterSpacing: '1px',
+                }}
               >
                 TO
               </span>
@@ -490,12 +521,7 @@ export default async function handler(req: NextRequest) {
                 gap: '14px',
               }}
             >
-              <img
-                src={warpTransfer.token.logoURI}
-                height="64"
-                alt=""
-                style={{ height: '64px' }}
-              />
+              <img src={warpTransfer.token.logoURI} height="64" alt="" style={{ height: '64px' }} />
               <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
                 {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
               </span>
@@ -515,7 +541,14 @@ export default async function handler(req: NextRequest) {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
+            <span
+              style={{
+                color: '#6B7280',
+                fontSize: '24px',
+                marginBottom: '8px',
+                letterSpacing: '0.5px',
+              }}
+            >
               MESSAGE ID
             </span>
             <span
@@ -534,15 +567,31 @@ export default async function handler(req: NextRequest) {
 
           {formattedLatency && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
+              <span
+                style={{
+                  color: '#6B7280',
+                  fontSize: '24px',
+                  marginBottom: '8px',
+                  letterSpacing: '0.5px',
+                }}
+              >
                 DELIVERY TIME
               </span>
-              <span style={{ color: '#10b981', fontSize: '32px', fontWeight: 500 }}>{formattedLatency}</span>
+              <span style={{ color: '#10b981', fontSize: '32px', fontWeight: 500 }}>
+                {formattedLatency}
+              </span>
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ color: '#6B7280', fontSize: '24px', marginBottom: '8px', letterSpacing: '0.5px' }}>
+            <span
+              style={{
+                color: '#6B7280',
+                fontSize: '24px',
+                marginBottom: '8px',
+                letterSpacing: '0.5px',
+              }}
+            >
               SENT
             </span>
             <span style={{ color: '#94A3B8', fontSize: '32px' }}>{formattedDate}</span>
@@ -583,13 +632,25 @@ function DefaultOGImage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
         <svg width="140" height="126" viewBox="0 0 550 494" fill="none">
           {/* Back chevrons - magenta */}
-          <path d="M270.652 0H371.119C384.826 0 397.089 7.95912 401.874 19.9606L490.058 241.148C490.739 242.854 490.747 244.731 490.081 246.443L489.587 247.714L489.582 247.726L401.769 473.524C397.054 485.646 384.726 493.716 370.923 493.716H270.471C264.822 493.716 260.862 488.506 262.724 483.523L353.271 241.148L262.946 10.2988C260.989 5.29678 264.952 0 270.652 0Z" fill="#D631B9"/>
-          <path d="M8.39276 0H108.86C122.567 0 134.83 7.95912 139.614 19.9606L227.799 241.148C228.479 242.854 228.487 244.731 227.822 246.443L227.327 247.714L227.322 247.726L139.509 473.524C134.795 485.646 122.467 493.716 108.664 493.716H8.2115C2.56253 493.716 -1.39662 488.506 0.465105 483.523L91.0122 241.148L0.686825 10.2988C-1.27034 5.29678 2.69291 0 8.39276 0Z" fill="#D631B9"/>
+          <path
+            d="M270.652 0H371.119C384.826 0 397.089 7.95912 401.874 19.9606L490.058 241.148C490.739 242.854 490.747 244.731 490.081 246.443L489.587 247.714L489.582 247.726L401.769 473.524C397.054 485.646 384.726 493.716 370.923 493.716H270.471C264.822 493.716 260.862 488.506 262.724 483.523L353.271 241.148L262.946 10.2988C260.989 5.29678 264.952 0 270.652 0Z"
+            fill="#D631B9"
+          />
+          <path
+            d="M8.39276 0H108.86C122.567 0 134.83 7.95912 139.614 19.9606L227.799 241.148C228.479 242.854 228.487 244.731 227.822 246.443L227.327 247.714L227.322 247.726L139.509 473.524C134.795 485.646 122.467 493.716 108.664 493.716H8.2115C2.56253 493.716 -1.39662 488.506 0.465105 483.523L91.0122 241.148L0.686825 10.2988C-1.27034 5.29678 2.69291 0 8.39276 0Z"
+            fill="#D631B9"
+          />
           {/* Front chevrons - white */}
-          <path d="M328.652 0H429.119C442.826 0 455.089 7.95912 459.874 19.9606L548.058 241.148C548.739 242.854 548.747 244.731 548.081 246.443L547.587 247.714L547.582 247.726L459.769 473.524C455.054 485.646 442.726 493.716 428.923 493.716H328.471C322.822 493.716 318.862 488.506 320.724 483.523L411.271 241.148L320.946 10.2988C318.989 5.29678 322.952 0 328.652 0Z" fill="white"/>
-          <path d="M66.3928 0H166.86C180.567 0 192.83 7.95912 197.614 19.9606L285.799 241.148C286.479 242.854 286.487 244.731 285.822 246.443L285.327 247.714L285.322 247.726L197.509 473.524C192.795 485.646 180.467 493.716 166.664 493.716H66.2115C60.5625 493.716 56.6034 488.506 58.4651 483.523L149.012 241.148L58.6868 10.2988C56.7297 5.29678 60.6929 0 66.3928 0Z" fill="white"/>
+          <path
+            d="M328.652 0H429.119C442.826 0 455.089 7.95912 459.874 19.9606L548.058 241.148C548.739 242.854 548.747 244.731 548.081 246.443L547.587 247.714L547.582 247.726L459.769 473.524C455.054 485.646 442.726 493.716 428.923 493.716H328.471C322.822 493.716 318.862 488.506 320.724 483.523L411.271 241.148L320.946 10.2988C318.989 5.29678 322.952 0 328.652 0Z"
+            fill="white"
+          />
+          <path
+            d="M66.3928 0H166.86C180.567 0 192.83 7.95912 197.614 19.9606L285.799 241.148C286.479 242.854 286.487 244.731 285.822 246.443L285.327 247.714L285.322 247.726L197.509 473.524C192.795 485.646 180.467 493.716 166.664 493.716H66.2115C60.5625 493.716 56.6034 488.506 58.4651 483.523L149.012 241.148L58.6868 10.2988C56.7297 5.29678 60.6929 0 66.3928 0Z"
+            fill="white"
+          />
           {/* Center bar */}
-          <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white"/>
+          <path d="M401.826 194H260V301H401.826L425 245.971L401.826 194Z" fill="white" />
         </svg>
         <span
           style={{

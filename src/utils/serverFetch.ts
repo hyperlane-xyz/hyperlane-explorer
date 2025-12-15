@@ -1,8 +1,8 @@
 import { config } from '../consts/config';
 import {
-  messageStubFragment,
   MessagesStubQueryResult,
   MessageStubEntry,
+  messageStubFragment,
 } from '../features/messages/queries/fragments';
 
 import { postgresByteaToHex, stringToPostgresBytea } from './bytea';
@@ -73,7 +73,6 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
     timestamp: new Date(message.send_occurred_at + 'Z').getTime(),
   };
 }
-
 
 /**
  * Fetch chain names from the domains table

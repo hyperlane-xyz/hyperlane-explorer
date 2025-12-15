@@ -33,7 +33,11 @@ export default class MyDocument extends Document<MyDocumentProps> {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
 
-    if (pathname === '/message/[messageId]' && query.messageId && typeof query.messageId === 'string') {
+    if (
+      pathname === '/message/[messageId]' &&
+      query.messageId &&
+      typeof query.messageId === 'string'
+    ) {
       try {
         const [messageData, domainNames, chainMetadata] = await Promise.all([
           fetchMessageForOG(query.messageId),
@@ -42,8 +46,11 @@ export default class MyDocument extends Document<MyDocumentProps> {
         ]);
 
         if (messageData) {
-          const originChainName = domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
-          const destChainName = domainNames.get(messageData.destinationDomainId) || `Domain ${messageData.destinationDomainId}`;
+          const originChainName =
+            domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
+          const destChainName =
+            domainNames.get(messageData.destinationDomainId) ||
+            `Domain ${messageData.destinationDomainId}`;
 
           ogData = {
             messageId: query.messageId,

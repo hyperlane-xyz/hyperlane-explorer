@@ -161,9 +161,7 @@ export function parseWarpRouteConfigYaml(yaml: string): WarpRouteMap {
  */
 export async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
   try {
-    const response = await fetch(
-      `${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`,
-    );
+    const response = await fetch(`${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`);
     if (!response.ok) return new Map();
 
     const yaml = await response.text();
