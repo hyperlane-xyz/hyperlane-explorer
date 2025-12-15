@@ -8,13 +8,8 @@ import Document, {
 } from 'next/document';
 
 import { MAIN_FONT } from '../styles/fonts';
-import {
-  fetchChainMetadata,
-  fetchDomainNames,
-  fetchMessageForOG,
-  getChainDisplayName,
-  MessageOGData,
-} from '../utils/serverFetch';
+import { fetchDomainNames, fetchMessageForOG, MessageOGData } from '../utils/serverFetch';
+import { fetchChainMetadata, getChainDisplayName } from '../utils/yamlParsing';
 
 interface MyDocumentProps extends DocumentInitialProps {
   ogData: {

@@ -6,16 +6,31 @@ import { links } from '../../consts/links';
 import { messageStubFragment, MessageStubEntry } from '../../features/messages/queries/fragments';
 import { postgresByteaToHex, stringToPostgresBytea } from '../../utils/bytea';
 import { logger } from '../../utils/logger';
+import {
+  fetchChainMetadata,
+  fetchWarpRouteMap,
+  getChainDisplayName,
+  type WarpRouteMap,
+  type WarpToken,
+} from '../../utils/yamlParsing';
 
 export const config = {
   runtime: 'edge',
 };
 
-// Load Space Grotesk font for OG images
+// Global font cache to avoid reloading on every request
+// Edge runtime persists module-level state across requests within the same instance
+let fontCache: ArrayBuffer | null = null;
+
+// Load Space Grotesk font for OG images with caching
 async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
+  if (fontCache) {
+    return fontCache;
+  }
   const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
   const response = await fetch(fontUrl);
-  return response.arrayBuffer();
+  fontCache = await response.arrayBuffer();
+  return fontCache;
 }
 
 interface MessageOGData {
@@ -105,82 +120,12 @@ async function fetchDomainNames(): Promise<Map<number, string>> {
   }
 }
 
-// Warp route token info
-interface WarpToken {
-  symbol: string;
-  name: string;
-  decimals: number;
-  logoURI: string;
-  chainName: string;
-  addressOrDenom: string;
-}
-
-// Map of chainName -> lowercase address -> token info
-type WarpRouteMap = Map<string, Map<string, WarpToken>>;
-
 // Sanitize token symbols for OG image rendering (Satori doesn't support all Unicode)
 function sanitizeSymbol(symbol: string): string {
   // Replace known problematic Unicode characters
   return symbol
     .replace(/₮/g, 'T') // Mongolian Tugrik sign used in USDT
     .replace(/[^\x20-\x7E]/g, ''); // Remove any other non-ASCII characters
-}
-
-// Fetch warp route configs from registry
-async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
-  const map: WarpRouteMap = new Map();
-
-  try {
-    const response = await fetch(
-      `${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`,
-    );
-    if (!response.ok) return map;
-
-    const yaml = await response.text();
-
-    // Split YAML into token entries (each starts with "    - addressOrDenom:")
-    const tokenBlocks = yaml.split(/^ {4}- addressOrDenom:/gm).slice(1);
-
-    for (const block of tokenBlocks) {
-      // Parse each field independently since order varies
-      const addressMatch = block.match(/^\s*"?([^"\n]+)"?/);
-      const chainMatch = block.match(/^\s+chainName:\s*(\w+)/m);
-      const decimalsMatch = block.match(/^\s+decimals:\s*(\d+)/m);
-      const logoMatch = block.match(/^\s+logoURI:\s*([^\n]+)/m);
-      const nameMatch = block.match(/^\s+name:\s*([^\n]+)/m);
-      const symbolMatch = block.match(/^\s+symbol:\s*([^\n]+)/m);
-
-      if (addressMatch && chainMatch && decimalsMatch && symbolMatch) {
-        const addressOrDenom = addressMatch[1].trim();
-        const chainName = chainMatch[1].trim();
-        const decimals = parseInt(decimalsMatch[1], 10);
-        const logoURI = logoMatch?.[1]?.trim() || '';
-        const name = nameMatch?.[1]?.trim() || '';
-        const symbol = symbolMatch[1].trim();
-
-        if (!map.has(chainName)) {
-          map.set(chainName, new Map());
-        }
-
-        const chainMap = map.get(chainName)!;
-        const normalizedAddress = addressOrDenom.toLowerCase();
-
-        chainMap.set(normalizedAddress, {
-          addressOrDenom,
-          chainName,
-          decimals,
-          logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
-          name,
-          symbol,
-        });
-      }
-    }
-
-    return map;
-  } catch (error) {
-    logger.error('Error fetching warp route map:', error);
-    return map;
-  }
 }
 
 // Parse warp route message body to extract amount
@@ -262,68 +207,6 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
-interface ChainDisplayNames {
-  displayName: string;
-  displayNameShort?: string;
-}
-
-// Fetch all chain metadata from the consolidated registry file
-async function fetchAllChainMetadata(): Promise<Map<string, ChainDisplayNames>> {
-  const map = new Map<string, ChainDisplayNames>();
-  try {
-    const response = await fetch(`${links.imgPath}/chains/metadata.yaml`);
-    if (!response.ok) return map;
-
-    const yaml = await response.text();
-
-    // Parse YAML by splitting on chain name entries (lines starting with a word at column 0)
-    // Each chain section starts with "chainname:" at column 0
-    const chainSections = yaml.split(/^(?=\w+:$)/m);
-
-    for (const section of chainSections) {
-      const lines = section.trim().split('\n');
-      if (lines.length === 0) continue;
-
-      // First line is the chain name
-      const chainNameMatch = lines[0].match(/^(\w+):$/);
-      if (!chainNameMatch) continue;
-      const chainName = chainNameMatch[1];
-
-      // Find displayName and displayNameShort in the section
-      const displayNameMatch = section.match(/^\s+displayName:\s*(.+)$/m);
-      const displayNameShortMatch = section.match(/^\s+displayNameShort:\s*(.+)$/m);
-
-      if (displayNameMatch) {
-        map.set(chainName, {
-          displayName: displayNameMatch[1].trim(),
-          displayNameShort: displayNameShortMatch?.[1]?.trim(),
-        });
-      }
-    }
-
-    return map;
-  } catch (error) {
-    logger.error('Error fetching chain metadata:', error);
-    return map;
-  }
-}
-
-// Get display name for chain, preferring displayNameShort
-function getChainDisplayName(
-  chainName: string,
-  chainMetadata: Map<string, ChainDisplayNames>,
-): string {
-  const metadata = chainMetadata.get(chainName.toLowerCase());
-  if (metadata) {
-    return metadata.displayNameShort ?? metadata.displayName;
-  }
-  // Fallback to title case
-  return chainName
-    .split(/[-_\s]+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
 export default async function handler(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const messageId = searchParams.get('messageId');
@@ -351,7 +234,7 @@ export default async function handler(req: NextRequest) {
   const [messageData, domainNames, chainMetadata, warpRouteMap] = await Promise.all([
     fetchMessageForOG(messageId),
     fetchDomainNames(),
-    fetchAllChainMetadata(),
+    fetchChainMetadata(),
     fetchWarpRouteMap(),
   ]);
 

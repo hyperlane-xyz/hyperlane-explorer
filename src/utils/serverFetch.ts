@@ -1,5 +1,4 @@
 import { config } from '../consts/config';
-import { links } from '../consts/links';
 import {
   messageStubFragment,
   MessagesStubQueryResult,
@@ -114,70 +113,4 @@ export async function fetchDomainNames(): Promise<Map<number, string>> {
     logger.error('Error fetching domain names:', error);
     return new Map();
   }
-}
-
-/**
- * Chain display name metadata
- */
-export interface ChainDisplayNames {
-  displayName: string;
-  displayNameShort?: string;
-}
-
-/**
- * Fetch chain metadata from the registry for display names
- */
-export async function fetchChainMetadata(): Promise<Map<string, ChainDisplayNames>> {
-  const map = new Map<string, ChainDisplayNames>();
-  try {
-    const response = await fetch(`${links.imgPath}/chains/metadata.yaml`);
-    if (!response.ok) return map;
-
-    const yaml = await response.text();
-
-    // Parse YAML by splitting on chain name entries (lines starting with a word at column 0)
-    const chainSections = yaml.split(/^(?=\w+:$)/m);
-
-    for (const section of chainSections) {
-      const lines = section.trim().split('\n');
-      if (lines.length === 0) continue;
-
-      const chainNameMatch = lines[0].match(/^(\w+):$/);
-      if (!chainNameMatch) continue;
-      const chainName = chainNameMatch[1];
-
-      const displayNameMatch = section.match(/^\s+displayName:\s*(.+)$/m);
-      const displayNameShortMatch = section.match(/^\s+displayNameShort:\s*(.+)$/m);
-
-      if (displayNameMatch) {
-        map.set(chainName, {
-          displayName: displayNameMatch[1].trim(),
-          displayNameShort: displayNameShortMatch?.[1]?.trim(),
-        });
-      }
-    }
-
-    return map;
-  } catch (error) {
-    logger.error('Error fetching chain metadata:', error);
-    return map;
-  }
-}
-
-/**
- * Get display name for a chain, preferring displayNameShort
- */
-export function getChainDisplayName(
-  chainName: string,
-  chainMetadata: Map<string, ChainDisplayNames>,
-): string {
-  const metadata = chainMetadata.get(chainName.toLowerCase());
-  if (metadata) {
-    return metadata.displayNameShort ?? metadata.displayName;
-  }
-  // Fallback to title case
-  return chainName
-    .split(/[-_\s]+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
 }
