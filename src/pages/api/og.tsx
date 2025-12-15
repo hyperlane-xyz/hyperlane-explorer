@@ -259,13 +259,15 @@ export default async function handler(req: NextRequest) {
   const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';
   const statusBgColor =
     messageData.status === 'Delivered' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)';
-  const formattedDate = new Date(messageData.timestamp).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const formattedDate = new Date(messageData.timestamp)
+    .toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(/,/g, '');
 
   // Format delivery latency (e.g., "00:01:32" -> "1m 32s")
   const formattedLatency = messageData.deliveryLatency
@@ -412,7 +414,7 @@ export default async function handler(req: NextRequest) {
                 FROM
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={originChainLogo} width="56" height="56" alt="" />
+                <img src={originChainLogo} height="56" alt="" style={{ height: '56px' }} />
                 <span
                   style={{
                     color: 'white',
@@ -463,7 +465,7 @@ export default async function handler(req: NextRequest) {
                 TO
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={destChainLogo} width="56" height="56" alt="" />
+                <img src={destChainLogo} height="56" alt="" style={{ height: '56px' }} />
                 <span
                   style={{
                     color: 'white',
@@ -490,10 +492,9 @@ export default async function handler(req: NextRequest) {
             >
               <img
                 src={warpTransfer.token.logoURI}
-                width="64"
                 height="64"
                 alt=""
-                style={{ borderRadius: '50%' }}
+                style={{ height: '64px' }}
               />
               <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
                 {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
@@ -601,7 +602,7 @@ function DefaultOGImage() {
           Hyperlane Explorer
         </span>
         <span style={{ color: '#6B7280', fontSize: '28px' }}>
-          The official interchain explorer for the Hyperlane protocol and network.
+          The official interchain explorer for the Hyperlane protocol and network
         </span>
       </div>
     </div>
