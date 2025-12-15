@@ -177,12 +177,15 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
     return integerPart.toString();
   }
 
-  // Pad fractional part with leading zeros
-  let fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-  // Remove trailing zeros
-  fractionalStr = fractionalStr.replace(/0+$/, '');
+  // Pad fractional part with leading zeros, limit to 6 decimal places
+  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+  const trimmed = fractionalStr.slice(0, 6).replace(/0+$/, '');
 
-  return `${integerPart}.${fractionalStr}`;
+  if (trimmed === '') {
+    return integerPart.toString();
+  }
+
+  return `${integerPart}.${trimmed}`;
 }
 
 // Get warp transfer details if this is a warp route message
@@ -428,7 +431,19 @@ export default async function handler(req: NextRequest) {
                 FROM
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={originChainLogo} height="56" alt="" style={{ height: '56px' }} />
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '12px',
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <img src={originChainLogo} width="48" height="48" alt="" />
+                </div>
                 <span
                   style={{
                     color: 'white',
@@ -476,7 +491,19 @@ export default async function handler(req: NextRequest) {
                 TO
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={destChainLogo} height="56" alt="" style={{ height: '56px' }} />
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '12px',
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <img src={destChainLogo} width="48" height="48" alt="" />
+                </div>
                 <span
                   style={{
                     color: 'white',
