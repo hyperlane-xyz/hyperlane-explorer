@@ -35,7 +35,9 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const message = data ? deserializeMessage<Message>(data) : undefined;
 
   // Generate OG metadata
-  const shortMsgId = ogData ? `${ogData.messageId.slice(0, 6)}...${ogData.messageId.slice(-4)}` : '';
+  const shortMsgId = ogData
+    ? `${ogData.messageId.slice(0, 6)}...${ogData.messageId.slice(-4)}`
+    : '';
   const formattedDate = ogData
     ? new Date(ogData.timestamp).toLocaleDateString('en-US', {
         month: 'short',
@@ -47,7 +49,9 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const ogDescription = ogData
     ? `${ogData.originChain} → ${ogData.destChain} message on ${formattedDate}. View details on Hyperlane Explorer.`
     : 'The interchain explorer for the Hyperlane protocol.';
-  const ogImage = ogData ? `${host}/api/og?messageId=${ogData.messageId}` : `${host}/images/logo.png`;
+  const ogImage = ogData
+    ? `${host}/api/og?messageId=${ogData.messageId}`
+    : `${host}/images/logo.png`;
 
   return (
     <>

@@ -3,8 +3,11 @@ import type { NextRequest } from 'next/server';
 
 import { config as appConfig } from '../../consts/config';
 import { links } from '../../consts/links';
+import {
+  postgresByteaToString,
+  stringToPostgresBytea,
+} from '../../features/messages/queries/encoding';
 import { MessageStubEntry, messageStubFragment } from '../../features/messages/queries/fragments';
-import { postgresByteaToHex, stringToPostgresBytea } from '../../utils/bytea';
 import { logger } from '../../utils/logger';
 import {
   fetchChainMetadata,
@@ -13,6 +16,31 @@ import {
   type WarpRouteMap,
   type WarpToken,
 } from '../../utils/yamlParsing';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface MessageOGData {
+  msgId: string;
+  status: 'Delivered' | 'Pending' | 'Unknown';
+  originDomainId: number;
+  destinationDomainId: number;
+  timestamp: number;
+  sender: string;
+  recipient: string;
+  body: string | null;
+  deliveryLatency: string | null;
+}
+
+interface WarpTransferDetails {
+  token: WarpToken;
+  amount: string;
+}
+
+// ============================================================================
+// Config
+// ============================================================================
 
 export const config = {
   runtime: 'edge',
@@ -33,21 +61,10 @@ async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
   return fontCache;
 }
 
-interface MessageOGData {
-  msgId: string;
-  status: 'Delivered' | 'Pending' | 'Unknown';
-  originDomainId: number;
-  destinationDomainId: number;
-  timestamp: number;
-  sender: string;
-  recipient: string;
-  body: string | null;
-  deliveryLatency: string | null;
-}
-
 async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
+  // Validate messageId format (must be 0x-prefixed hex string)
+  if (!messageId || !/^0x[0-9a-f]+$/i.test(messageId)) return null;
   const identifier = stringToPostgresBytea(messageId);
-  if (!identifier) return null;
 
   const query = `
     query ($identifier: bytea!) @cached(ttl: 5) {
@@ -76,14 +93,14 @@ async function fetchMessageForOG(messageId: string): Promise<MessageOGData | nul
 
     const msg = messages[0];
     return {
-      msgId: postgresByteaToHex(msg.msg_id),
+      msgId: postgresByteaToString(msg.msg_id),
       status: msg.is_delivered ? 'Delivered' : 'Pending',
       originDomainId: msg.origin_domain_id,
       destinationDomainId: msg.destination_domain_id,
       timestamp: new Date(msg.send_occurred_at + 'Z').getTime(),
-      sender: postgresByteaToHex(msg.sender),
-      recipient: postgresByteaToHex(msg.recipient),
-      body: msg.message_body ? postgresByteaToHex(msg.message_body) : null,
+      sender: postgresByteaToString(msg.sender),
+      recipient: postgresByteaToString(msg.recipient),
+      body: msg.message_body ? postgresByteaToString(msg.message_body) : null,
       deliveryLatency: msg.delivery_latency,
     };
   } catch (error) {
@@ -130,6 +147,7 @@ function sanitizeSymbol(symbol: string): string {
 
 // Parse warp route message body to extract amount
 // Warp message format: first 32 bytes = recipient, next 32 bytes = amount (big-endian uint256)
+// NOTE: Cannot use parseWarpRouteMessage from @hyperlane-xyz/utils due to Edge Runtime restrictions
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
     // Remove 0x prefix
@@ -150,6 +168,7 @@ function parseWarpMessageBody(body: string): { recipient: string; amount: bigint
 }
 
 // Format token amount with proper decimals
+// NOTE: Cannot use fromWei from @hyperlane-xyz/utils due to Edge Runtime restrictions
 function formatTokenAmount(amount: bigint, decimals: number): string {
   const divisor = BigInt(10 ** decimals);
   const whole = amount / divisor;
@@ -172,11 +191,6 @@ function formatTokenAmount(amount: bigint, decimals: number): string {
 }
 
 // Get warp transfer details if this is a warp route message
-interface WarpTransferDetails {
-  token: WarpToken;
-  amount: string;
-}
-
 function getWarpTransferDetails(
   messageData: MessageOGData,
   originChainName: string,
@@ -205,6 +219,17 @@ function getWarpTransferDetails(
 // Get chain logo URL from registry CDN
 function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
+}
+
+// Format delivery latency string (e.g., "00:01:32" -> "1m 32s")
+function formatDeliveryLatency(latency: string): string {
+  const parts = latency.split(':');
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 export default async function handler(req: NextRequest) {
@@ -268,17 +293,8 @@ export default async function handler(req: NextRequest) {
     })
     .replace(/,/g, '');
 
-  // Format delivery latency (e.g., "00:01:32" -> "1m 32s")
   const formattedLatency = messageData.deliveryLatency
-    ? (() => {
-        const parts = messageData.deliveryLatency.split(':');
-        const hours = parseInt(parts[0], 10);
-        const minutes = parseInt(parts[1], 10);
-        const seconds = parseInt(parts[2], 10);
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        if (minutes > 0) return `${minutes}m ${seconds}s`;
-        return `${seconds}s`;
-      })()
+    ? formatDeliveryLatency(messageData.deliveryLatency)
     : null;
 
   const originChainLogo = getChainLogoUrl(originChainName.toLowerCase());

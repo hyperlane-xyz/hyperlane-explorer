@@ -5,7 +5,10 @@ import {
   messageStubFragment,
 } from '../features/messages/queries/fragments';
 
-import { postgresByteaToHex, stringToPostgresBytea } from './bytea';
+import {
+  postgresByteaToString,
+  stringToPostgresBytea,
+} from '../features/messages/queries/encoding';
 import { logger } from './logger';
 
 /**
@@ -13,8 +16,9 @@ import { logger } from './logger';
  * This is used in getServerSideProps to fetch minimal message info
  */
 export async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
+  // Validate messageId format (must be 0x-prefixed hex string)
+  if (!messageId || !/^0x[0-9a-f]+$/i.test(messageId)) return null;
   const identifier = stringToPostgresBytea(messageId);
-  if (!identifier) return null;
 
   const query = `
     query ($identifier: bytea!) @cached(ttl: 5) {
@@ -65,11 +69,11 @@ export interface MessageOGData {
 
 function parseMessageForOG(message: MessageStubEntry): MessageOGData {
   return {
-    msgId: postgresByteaToHex(message.msg_id),
+    msgId: postgresByteaToString(message.msg_id),
     status: message.is_delivered ? 'Delivered' : 'Pending',
     originDomainId: message.origin_domain_id,
     destinationDomainId: message.destination_domain_id,
-    originTxHash: postgresByteaToHex(message.origin_tx_hash),
+    originTxHash: postgresByteaToString(message.origin_tx_hash),
     timestamp: new Date(message.send_occurred_at + 'Z').getTime(),
   };
 }

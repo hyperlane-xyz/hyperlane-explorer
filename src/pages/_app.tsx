@@ -50,12 +50,18 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
         <meta property="og:image" content={`${links.baseUrl}/images/logo.png`} />
-        <meta property="og:description" content="The interchain explorer for the Hyperlane protocol." />
+        <meta
+          property="og:description"
+          content="The interchain explorer for the Hyperlane protocol."
+        />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Hyperlane Explorer" />
-        <meta name="twitter:description" content="The interchain explorer for the Hyperlane protocol." />
+        <meta
+          name="twitter:description"
+          content="The interchain explorer for the Hyperlane protocol."
+        />
         <meta name="twitter:image" content={`${links.baseUrl}/images/logo.png`} />
       </Head>
       <ErrorBoundary>

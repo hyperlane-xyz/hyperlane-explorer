@@ -3,12 +3,10 @@ import { links } from '../consts/links';
 import { logger } from './logger';
 
 /**
- * WARNING: These regex-based YAML parsing utilities are fragile and depend on the exact
- * format of YAML files from the Hyperlane registry. If the YAML structure changes
- * (e.g., different indentation, field order, or syntax), parsing will break.
- * Consider using a proper YAML parser if the format becomes unstable.
- *
- * We avoid adding a full YAML parser dependency to keep the Edge runtime bundle small.
+ * NOTE: These regex-based YAML parsing utilities are used in Edge Runtime (og.tsx)
+ * where dynamic code evaluation (eval, new Function) is not allowed.
+ * The @hyperlane-xyz/utils YAML parser uses 'yaml' package which triggers this restriction.
+ * These regex patterns work for the specific registry YAML formats we parse.
  */
 
 // ============================================================================
