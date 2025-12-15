@@ -431,19 +431,7 @@ export default async function handler(req: NextRequest) {
                 FROM
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '12px',
-                    background: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <img src={originChainLogo} width="48" height="48" alt="" />
-                </div>
+                <img src={originChainLogo} alt="" style={{ height: '56px' }} />
                 <span
                   style={{
                     color: 'white',
@@ -491,19 +479,7 @@ export default async function handler(req: NextRequest) {
                 TO
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '12px',
-                    background: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <img src={destChainLogo} width="48" height="48" alt="" />
-                </div>
+                <img src={destChainLogo} alt="" style={{ height: '56px' }} />
                 <span
                   style={{
                     color: 'white',
