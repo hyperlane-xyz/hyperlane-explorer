@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import { ToastContainer, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Tooltip } from 'react-tooltip';
@@ -11,6 +12,7 @@ import { useIsSsr } from '@hyperlane-xyz/widgets';
 import { AppLayout } from '../AppLayout';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
 import { config } from '../consts/config';
+import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
 import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
@@ -39,6 +41,23 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // Otherwise Next.js will not load the font
   return (
     <div className={`${MAIN_FONT.variable} font-sans text-black`}>
+      <Head>
+        <title>Hyperlane Explorer</title>
+        <meta name="description" content="The interchain explorer for the Hyperlane protocol." />
+
+        {/* Open Graph */}
+        <meta property="og:url" content={links.baseUrl} />
+        <meta property="og:title" content="Hyperlane Explorer" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={`${links.baseUrl}/images/logo.png`} />
+        <meta property="og:description" content="The interchain explorer for the Hyperlane protocol." />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Hyperlane Explorer" />
+        <meta name="twitter:description" content="The interchain explorer for the Hyperlane protocol." />
+        <meta name="twitter:image" content={`${links.baseUrl}/images/logo.png`} />
+      </Head>
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
