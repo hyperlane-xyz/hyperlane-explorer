@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server';
 import { config as appConfig } from '../../consts/config';
 import { links } from '../../consts/links';
 import { messageStubFragment, MessageStubEntry } from '../../features/messages/queries/fragments';
+import { postgresByteaToHex, stringToPostgresBytea } from '../../utils/bytea';
+import { logger } from '../../utils/logger';
 
 export const config = {
   runtime: 'edge',
@@ -16,20 +18,9 @@ async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
   return response.arrayBuffer();
 }
 
-// Simple bytea conversion that doesn't need the full encoding module
-function stringToPostgresBytea(hexString: string): string {
-  const trimmed = hexString.replace(/^0x/i, '').toLowerCase();
-  return `\\x${trimmed}`;
-}
-
-function postgresByteaToHex(byteString: string): string {
-  if (!byteString || byteString.length < 4) return '';
-  return '0x' + byteString.substring(2);
-}
-
 interface MessageOGData {
   msgId: string;
-  status: 'Delivered' | 'Pending';
+  status: 'Delivered' | 'Pending' | 'Unknown';
   originDomainId: number;
   destinationDomainId: number;
   timestamp: number;
@@ -41,6 +32,7 @@ interface MessageOGData {
 
 async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
   const identifier = stringToPostgresBytea(messageId);
+  if (!identifier) return null;
 
   const query = `
     query ($identifier: bytea!) @cached(ttl: 5) {
@@ -79,7 +71,8 @@ async function fetchMessageForOG(messageId: string): Promise<MessageOGData | nul
       body: msg.message_body ? postgresByteaToHex(msg.message_body) : null,
       deliveryLatency: msg.delivery_latency,
     };
-  } catch {
+  } catch (error) {
+    logger.error('Error fetching message for OG:', error);
     return null;
   }
 }
@@ -106,7 +99,8 @@ async function fetchDomainNames(): Promise<Map<number, string>> {
       map.set(domain.id, domain.name);
     }
     return map;
-  } catch {
+  } catch (error) {
+    logger.error('Error fetching domain names:', error);
     return new Map();
   }
 }
@@ -183,7 +177,8 @@ async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
     }
 
     return map;
-  } catch {
+  } catch (error) {
+    logger.error('Error fetching warp route map:', error);
     return map;
   }
 }
@@ -203,7 +198,8 @@ function parseWarpMessageBody(body: string): { recipient: string; amount: bigint
     const amount = BigInt('0x' + amountHex);
 
     return { recipient, amount };
-  } catch {
+  } catch (error) {
+    logger.error('Error parsing warp message body:', error);
     return null;
   }
 }
@@ -306,7 +302,8 @@ async function fetchAllChainMetadata(): Promise<Map<string, ChainDisplayNames>> 
     }
 
     return map;
-  } catch {
+  } catch (error) {
+    logger.error('Error fetching chain metadata:', error);
     return map;
   }
 }

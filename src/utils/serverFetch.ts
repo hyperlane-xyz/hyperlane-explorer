@@ -6,14 +6,8 @@ import {
   MessageStubEntry,
 } from '../features/messages/queries/fragments';
 
-// Simple bytea conversion for SSR - avoids importing encoding module that pulls in @hyperlane-xyz/utils
-function stringToPostgresBytea(hexString: string): string | null {
-  if (!hexString) return null;
-  const trimmed = hexString.replace(/^0x/i, '').toLowerCase();
-  // Basic validation: must be a valid hex string
-  if (!/^[0-9a-f]+$/.test(trimmed)) return null;
-  return `\\x${trimmed}`;
-}
+import { postgresByteaToHex, stringToPostgresBytea } from './bytea';
+import { logger } from './logger';
 
 /**
  * Server-side utility to fetch message data from GraphQL for OG meta tags
@@ -56,7 +50,7 @@ export async function fetchMessageForOG(messageId: string): Promise<MessageOGDat
     const message = data.message_view[0];
     return parseMessageForOG(message);
   } catch (error) {
-    console.error('Error fetching message for OG:', error);
+    logger.error('Error fetching message for OG:', error);
     return null;
   }
 }
@@ -81,10 +75,6 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
   };
 }
 
-function postgresByteaToHex(byteString: string): string {
-  if (!byteString || byteString.length < 4) return '';
-  return '0x' + byteString.substring(2);
-}
 
 /**
  * Fetch chain names from the domains table
@@ -121,7 +111,7 @@ export async function fetchDomainNames(): Promise<Map<number, string>> {
     }
     return map;
   } catch (error) {
-    console.error('Error fetching domain names:', error);
+    logger.error('Error fetching domain names:', error);
     return new Map();
   }
 }
@@ -169,7 +159,7 @@ export async function fetchChainMetadata(): Promise<Map<string, ChainDisplayName
 
     return map;
   } catch (error) {
-    console.error('Error fetching chain metadata:', error);
+    logger.error('Error fetching chain metadata:', error);
     return map;
   }
 }
