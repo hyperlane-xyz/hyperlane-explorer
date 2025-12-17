@@ -55,10 +55,19 @@ async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
   if (fontCache) {
     return fontCache;
   }
-  const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
-  const response = await fetch(fontUrl);
-  fontCache = await response.arrayBuffer();
-  return fontCache;
+  try {
+    const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
+    const response = await fetch(fontUrl);
+    if (!response.ok) {
+      logger.error(`Failed to fetch font: ${response.status} ${response.statusText}`);
+      return new ArrayBuffer(0);
+    }
+    fontCache = await response.arrayBuffer();
+    return fontCache;
+  } catch (error) {
+    logger.error('Error loading font for OG image:', error);
+    return new ArrayBuffer(0);
+  }
 }
 
 async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
