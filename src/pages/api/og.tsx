@@ -8,6 +8,12 @@ import {
   fetchMessageForOG,
   type MessageOGData,
 } from '../../features/messages/queries/serverFetch';
+import {
+  adjustColorForBackground,
+  type ChainColors,
+  DEFAULT_CHAIN_COLORS,
+  extractChainColors,
+} from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
 import {
   fetchChainMetadata,
@@ -250,6 +256,30 @@ export default async function handler(req: NextRequest) {
   const originChainLogo = getChainLogoUrl(originChainName);
   const destChainLogo = getChainLogoUrl(destChainName);
 
+  // Extract colors from chain logos in parallel
+  const [originColorsRaw, destColorsRaw] = await Promise.all([
+    extractChainColors(originChainLogo, originChainName),
+    extractChainColors(destChainLogo, destChainName),
+  ]);
+
+  // Adjust colors for dark background visibility
+  const originColors: ChainColors = originColorsRaw
+    ? {
+        primary: adjustColorForBackground(originColorsRaw.primary),
+        secondary: originColorsRaw.secondary
+          ? adjustColorForBackground(originColorsRaw.secondary)
+          : null,
+      }
+    : DEFAULT_CHAIN_COLORS;
+  const destColors: ChainColors = destColorsRaw
+    ? {
+        primary: adjustColorForBackground(destColorsRaw.primary),
+        secondary: destColorsRaw.secondary
+          ? adjustColorForBackground(destColorsRaw.secondary)
+          : null,
+      }
+    : DEFAULT_CHAIN_COLORS;
+
   // Background image URL - using the same background as the explorer
   const backgroundUrl = `${origin}/images/background.svg`;
 
@@ -359,11 +389,11 @@ export default async function handler(req: NextRequest) {
               gap: '32px',
             }}
           >
-            {/* Origin Chain */}
+            {/* Origin Chain Box */}
             <div
               style={{
-                background: 'rgba(35, 98, 193, 0.1)',
-                border: '1px solid rgba(95, 138, 250, 0.3)',
+                background: `linear-gradient(135deg, ${originColors.primary}15 0%, ${originColors.secondary || originColors.primary}08 100%)`,
+                border: `1px solid ${originColors.primary}30`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
@@ -374,7 +404,7 @@ export default async function handler(req: NextRequest) {
             >
               <span
                 style={{
-                  color: '#5F8AFA',
+                  color: originColors.primary,
                   fontSize: '21px',
                   fontWeight: 500,
                   marginBottom: '12px',
@@ -407,11 +437,11 @@ export default async function handler(req: NextRequest) {
               />
             </div>
 
-            {/* Destination Chain */}
+            {/* Destination Chain Box */}
             <div
               style={{
-                background: 'rgba(35, 98, 193, 0.1)',
-                border: '1px solid rgba(95, 138, 250, 0.3)',
+                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}08 0%, ${destColors.primary}15 100%)`,
+                border: `1px solid ${destColors.primary}30`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
@@ -422,7 +452,7 @@ export default async function handler(req: NextRequest) {
             >
               <span
                 style={{
-                  color: '#5F8AFA',
+                  color: destColors.primary,
                   fontSize: '21px',
                   fontWeight: 500,
                   marginBottom: '12px',
