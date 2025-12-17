@@ -146,16 +146,16 @@ function sanitizeSymbol(symbol: string): string {
 }
 
 // Parse warp route message body to extract recipient and amount
-// This is a simplified version that doesn't depend on @hyperlane-xyz/utils
+// Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
     // Remove 0x prefix if present
     const hex = body.startsWith('0x') ? body.slice(2) : body;
-    if (hex.length < 64) return null;
+    // Need at least 64 bytes (128 hex chars) for recipient (32) + amount (32)
+    if (hex.length < 128) return null;
 
-    // First 32 bytes (64 hex chars) = recipient address (right-padded)
-    const recipientHex = hex.slice(0, 64);
-    const recipient = '0x' + recipientHex.replace(/^0+/, '').padStart(40, '0');
+    // First 32 bytes (64 hex chars) = recipient (kept as full 32-byte hex)
+    const recipient = '0x' + hex.slice(0, 64);
 
     // Next 32 bytes = amount (uint256)
     const amountHex = hex.slice(64, 128);

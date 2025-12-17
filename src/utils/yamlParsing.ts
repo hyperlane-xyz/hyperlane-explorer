@@ -5,6 +5,66 @@ import { links } from '../consts/links';
 import { logger } from './logger';
 
 // ============================================================================
+// Address Utilities (Edge-compatible)
+// ============================================================================
+
+const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+/**
+ * Decode a base58 string to bytes (Edge-compatible, no Buffer)
+ */
+function base58Decode(str: string): Uint8Array {
+  const bytes: number[] = [];
+  for (const char of str) {
+    const value = BASE58_ALPHABET.indexOf(char);
+    if (value === -1) throw new Error(`Invalid base58 character: ${char}`);
+
+    let carry = value;
+    for (let i = 0; i < bytes.length; i++) {
+      carry += bytes[i] * 58;
+      bytes[i] = carry & 0xff;
+      carry >>= 8;
+    }
+    while (carry > 0) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+
+  // Handle leading zeros
+  for (const char of str) {
+    if (char !== '1') break;
+    bytes.push(0);
+  }
+
+  return new Uint8Array(bytes.reverse());
+}
+
+/**
+ * Convert address to lowercase hex format.
+ * Handles both 0x-prefixed hex and base58 (Solana) addresses.
+ */
+function normalizeAddressToHex(address: string): string {
+  if (address.startsWith('0x')) {
+    return address.toLowerCase();
+  }
+
+  // Assume base58 (Solana/SVM address)
+  try {
+    const bytes = base58Decode(address);
+    const hex =
+      '0x' +
+      Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    return hex.toLowerCase();
+  } catch {
+    // If decoding fails, return as-is lowercase
+    return address.toLowerCase();
+  }
+}
+
+// ============================================================================
 // Chain Metadata Parsing
 // ============================================================================
 
@@ -132,7 +192,7 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
         }
 
         const chainMap = map.get(chainName)!;
-        const normalizedAddress = token.addressOrDenom.toLowerCase();
+        const normalizedAddress = normalizeAddressToHex(token.addressOrDenom);
         const logoURI = token.logoURI || '';
 
         chainMap.set(normalizedAddress, {
