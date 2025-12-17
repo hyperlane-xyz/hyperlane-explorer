@@ -135,11 +135,11 @@ const KNOWN_CHAIN_COLORS: Record<string, ChainColors> = {
   ethereum: { primary: '#627EEA', secondary: '#3C3C3D' },
   polygon: { primary: '#8247E5', secondary: '#7B3FE4' },
   arbitrum: { primary: '#28A0F0', secondary: '#213147' },
-  optimism: { primary: '#FF0420', secondary: '#FF0420' },
-  base: { primary: '#0052FF', secondary: '#0052FF' },
-  avalanche: { primary: '#E84142', secondary: '#E84142' },
-  bsc: { primary: '#F0B90B', secondary: '#F0B90B' },
-  binance: { primary: '#F0B90B', secondary: '#F0B90B' },
+  optimism: { primary: '#FF0420', secondary: '#C2130D' },
+  base: { primary: '#0052FF', secondary: '#1A6AFF' },
+  avalanche: { primary: '#E84142', secondary: '#C73535' },
+  bsc: { primary: '#F0B90B', secondary: '#F5D03B' },
+  binance: { primary: '#F0B90B', secondary: '#F5D03B' },
 };
 
 /**
