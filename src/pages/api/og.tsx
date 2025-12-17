@@ -294,11 +294,11 @@ export default async function handler(req: NextRequest) {
     ? formatDeliveryLatency(messageData.deliveryLatency)
     : null;
 
-  const originChainLogo = getChainLogoUrl(originChainName.toLowerCase());
-  const destChainLogo = getChainLogoUrl(destChainName.toLowerCase());
+  const originChainLogo = getChainLogoUrl(originChainName);
+  const destChainLogo = getChainLogoUrl(destChainName);
 
   // Background image URL - using the same background as the explorer
-  const backgroundUrl = 'https://explorer.hyperlane.xyz/images/background.svg';
+  const backgroundUrl = `${origin}/images/background.svg`;
 
   return new ImageResponse(
     (
@@ -625,7 +625,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
           Hyperlane Explorer
         </span>
         <span style={{ color: '#6B7280', fontSize: '28px' }}>
-          The official interchain explorer for the Hyperlane protocol and network
+          The official interchain explorer for the Hyperlane protocol
         </span>
       </div>
     </div>

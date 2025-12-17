@@ -46,10 +46,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <meta name="description" content="The interchain explorer for the Hyperlane protocol." />
 
         {/* Open Graph */}
-        <meta property="og:url" content={links.baseUrl} />
+        <meta property="og:url" content={links.explorerUrl} />
         <meta property="og:title" content="Hyperlane Explorer" />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content={`${links.baseUrl}/images/logo.png`} />
+        <meta property="og:image" content={`${links.explorerUrl}/images/logo.png`} />
         <meta
           property="og:description"
           content="The interchain explorer for the Hyperlane protocol."
@@ -62,7 +62,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
           name="twitter:description"
           content="The interchain explorer for the Hyperlane protocol."
         />
-        <meta name="twitter:image" content={`${links.baseUrl}/images/logo.png`} />
+        <meta name="twitter:image" content={`${links.explorerUrl}/images/logo.png`} />
       </Head>
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>

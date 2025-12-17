@@ -63,7 +63,7 @@ export function getChainDisplayName(
   chainName: string,
   chainMetadata: Map<string, ChainDisplayNames>,
 ): string {
-  const metadata = chainMetadata.get(chainName.toLowerCase());
+  const metadata = chainMetadata.get(chainName);
   if (metadata) {
     return metadata.displayNameShort ?? metadata.displayName;
   }

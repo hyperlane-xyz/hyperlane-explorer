@@ -1,5 +1,6 @@
 export const links = {
   baseUrl: 'https://www.hyperlane.xyz',
+  explorerUrl: 'https://explorer.hyperlane.xyz',
   home: 'https://www.hyperlane.xyz',
   discord: 'https://discord.gg/VK9ZUy3aTV',
   github: 'https://github.com/hyperlane-xyz',
