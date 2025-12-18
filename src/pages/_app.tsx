@@ -55,11 +55,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // Otherwise Next.js will not load the font
 
   // During SSR, render the page component with providers for its Head/meta tags
-  // but skip the full layout. Page components should guard their body content
-  // to avoid rendering heavy components during SSR.
+  // but hide body content to avoid flash of unstyled content.
+  // The Component is rendered (for Head/OG tags) but visually hidden.
   if (isSsr) {
     return (
-      <div className={`${MAIN_FONT.variable} font-sans text-black`}>
+      <div className={`${MAIN_FONT.variable} font-sans text-black`} style={{ visibility: 'hidden' }}>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
