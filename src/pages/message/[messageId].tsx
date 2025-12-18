@@ -73,6 +73,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:description" content={ogDescription} />
+        <meta property="og:logo" content={`${host}/images/logo.png`} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={ogDescription} />
@@ -95,6 +96,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:description" content={ogDescription} />
+        <meta property="og:logo" content={`${host}/images/logo.png`} />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
