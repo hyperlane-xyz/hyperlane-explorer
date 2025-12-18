@@ -30,11 +30,11 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     if (!messageId || typeof messageId !== 'string')
       router.replace('/').catch((e) => logger.error('Error routing back to home', e));
   }, [router, messageId]);
-  if (!messageId || typeof messageId !== 'string') return null;
 
   const message = data ? deserializeMessage<Message>(data) : undefined;
 
-  // Generate OG metadata
+  // Generate OG metadata - use ogData from SSR props, not router.query
+  // This ensures meta tags are rendered during SSR for social crawlers
   const shortMsgId = ogData
     ? `${ogData.messageId.slice(0, 6)}...${ogData.messageId.slice(-4)}`
     : '';
@@ -52,6 +52,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const ogImage = ogData
     ? `${host}/api/og?messageId=${ogData.messageId}`
     : `${host}/images/logo.png`;
+  const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
 
   return (
     <>
@@ -60,7 +61,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         <meta name="description" content={ogDescription} />
 
         {/* Open Graph */}
-        <meta property="og:url" content={`${host}/message/${messageId}`} />
+        <meta property="og:url" content={ogUrl} />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:type" content="website" />
         <meta property="og:image" content={ogImage} />
@@ -74,7 +75,10 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         <meta name="twitter:description" content={ogDescription} />
         <meta name="twitter:image" content={ogImage} />
       </Head>
-      <MessageDetails messageId={messageId} message={message} />
+      {/* Only render body content after client-side router is ready */}
+      {messageId && typeof messageId === 'string' && (
+        <MessageDetails messageId={messageId} message={message} />
+      )}
     </>
   );
 };

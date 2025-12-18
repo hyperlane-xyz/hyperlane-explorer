@@ -31,14 +31,23 @@ const reactQueryClient = new QueryClient({
 
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
-  // complicates graphql integration
+  // complicates graphql integration. However, we still need to render
+  // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
-  if (isSsr) {
-    return <div></div>;
-  }
 
   // Note, the font definition is required both here and in _document.tsx
   // Otherwise Next.js will not load the font
+
+  // During SSR, only render the page component for its Head/meta tags
+  // The page component should handle SSR gracefully (return null for body content)
+  if (isSsr) {
+    return (
+      <div className={`${MAIN_FONT.variable} font-sans text-black`}>
+        <Component {...pageProps} />
+      </div>
+    );
+  }
+
   return (
     <div className={`${MAIN_FONT.variable} font-sans text-black`}>
       <Head>
