@@ -59,7 +59,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // The Component is rendered (for Head/OG tags) but visually hidden.
   if (isSsr) {
     return (
-      <div className={`${MAIN_FONT.variable} font-sans text-black`} style={{ visibility: 'hidden' }}>
+      <div
+        className={`${MAIN_FONT.variable} font-sans text-black`}
+        style={{ visibility: 'hidden' }}
+      >
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
