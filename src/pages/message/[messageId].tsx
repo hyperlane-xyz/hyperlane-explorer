@@ -1,14 +1,20 @@
 import type { GetServerSideProps, NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-import { MessageDetails } from '../../features/messages/MessageDetails';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { fetchDomainNames, fetchMessageForOG } from '../../utils/serverFetch';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
+
+// Dynamic import with ssr: false to avoid pino-pretty issues during SSR
+const MessageDetails = dynamic(
+  () => import('../../features/messages/MessageDetails').then((mod) => mod.MessageDetails),
+  { ssr: false },
+);
 
 interface OGData {
   messageId: string;
@@ -54,6 +60,27 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     : `${host}/images/logo.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
 
+  // Render nothing while waiting for client-side router
+  if (!messageId || typeof messageId !== 'string') {
+    return (
+      <Head>
+        <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
+        <meta property="og:url" content={ogUrl} />
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:description" content={ogDescription} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Head>
+    );
+  }
+
   return (
     <>
       <Head>
@@ -75,10 +102,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         <meta name="twitter:description" content={ogDescription} />
         <meta name="twitter:image" content={ogImage} />
       </Head>
-      {/* Only render body content after client-side router is ready */}
-      {messageId && typeof messageId === 'string' && (
-        <MessageDetails messageId={messageId} message={message} />
-      )}
+      <MessageDetails messageId={messageId} message={message} />
     </>
   );
 };
