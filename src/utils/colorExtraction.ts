@@ -8,6 +8,23 @@ export interface ChainColors {
   secondary: string | null;
 }
 
+// Common named colors for SVG parsing
+const NAMED_COLORS: Record<string, string> = {
+  white: '#ffffff',
+  black: '#000000',
+  red: '#ff0000',
+  green: '#008000',
+  blue: '#0000ff',
+  yellow: '#ffff00',
+  cyan: '#00ffff',
+  magenta: '#ff00ff',
+  orange: '#ffa500',
+  purple: '#800080',
+  pink: '#ffc0cb',
+  gray: '#808080',
+  grey: '#808080',
+};
+
 /**
  * Parse a color string (hex, rgb, named) to hex format
  */
@@ -35,24 +52,7 @@ function normalizeColor(color: string): string | null {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
 
-  // Common named colors
-  const namedColors: Record<string, string> = {
-    white: '#ffffff',
-    black: '#000000',
-    red: '#ff0000',
-    green: '#008000',
-    blue: '#0000ff',
-    yellow: '#ffff00',
-    cyan: '#00ffff',
-    magenta: '#ff00ff',
-    orange: '#ffa500',
-    purple: '#800080',
-    pink: '#ffc0cb',
-    gray: '#808080',
-    grey: '#808080',
-  };
-
-  return namedColors[color] || null;
+  return NAMED_COLORS[color] || null;
 }
 
 /**
