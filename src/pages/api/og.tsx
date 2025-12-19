@@ -1,13 +1,13 @@
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 
-import { config as appConfig } from '../../consts/config';
+import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
 import { links } from '../../consts/links';
 import {
-  postgresByteaToString,
-  stringToPostgresBytea,
-} from '../../features/messages/queries/encoding';
-import { MessageStubEntry, messageStubFragment } from '../../features/messages/queries/fragments';
+  fetchDomainNames,
+  fetchMessageForOG,
+  type MessageOGData,
+} from '../../features/messages/queries/serverFetch';
 import { logger } from '../../utils/logger';
 import {
   fetchChainMetadata,
@@ -20,18 +20,6 @@ import {
 // ============================================================================
 // Types
 // ============================================================================
-
-interface MessageOGData {
-  msgId: string;
-  status: 'Delivered' | 'Pending' | 'Unknown';
-  originDomainId: number;
-  destinationDomainId: number;
-  timestamp: number;
-  sender: string;
-  recipient: string;
-  body: string | null;
-  deliveryLatency: string | null;
-}
 
 interface WarpTransferDetails {
   token: WarpToken;
@@ -70,82 +58,6 @@ async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
   }
 }
 
-async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
-  // Validate messageId format (must be 0x-prefixed hex string)
-  if (!messageId || !/^0x[0-9a-f]+$/i.test(messageId)) return null;
-  const identifier = stringToPostgresBytea(messageId);
-
-  const query = `
-    query ($identifier: bytea!) @cached(ttl: 5) {
-      message_view(
-        where: {msg_id: {_eq: $identifier}},
-        limit: 1
-      ) {
-        ${messageStubFragment}
-      }
-    }
-  `;
-
-  try {
-    const response = await fetch(appConfig.apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { identifier } }),
-    });
-
-    if (!response.ok) return null;
-
-    const result = await response.json();
-    const messages = result.data?.message_view as MessageStubEntry[] | undefined;
-
-    if (!messages?.length) return null;
-
-    const msg = messages[0];
-    return {
-      msgId: postgresByteaToString(msg.msg_id),
-      status: msg.is_delivered ? 'Delivered' : 'Pending',
-      originDomainId: msg.origin_domain_id,
-      destinationDomainId: msg.destination_domain_id,
-      timestamp: new Date(msg.send_occurred_at + 'Z').getTime(),
-      sender: postgresByteaToString(msg.sender),
-      recipient: postgresByteaToString(msg.recipient),
-      body: msg.message_body ? postgresByteaToString(msg.message_body) : null,
-      deliveryLatency: msg.delivery_latency,
-    };
-  } catch (error) {
-    logger.error('Error fetching message for OG:', error);
-    return null;
-  }
-}
-
-async function fetchDomainNames(): Promise<Map<number, string>> {
-  const query = `query @cached { domain { id name } }`;
-
-  try {
-    const response = await fetch(appConfig.apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    });
-
-    if (!response.ok) return new Map();
-
-    const result = await response.json();
-    const domains = result.data?.domain as Array<{ id: number; name: string }> | undefined;
-
-    if (!domains) return new Map();
-
-    const map = new Map<number, string>();
-    for (const domain of domains) {
-      map.set(domain.id, domain.name);
-    }
-    return map;
-  } catch (error) {
-    logger.error('Error fetching domain names:', error);
-    return new Map();
-  }
-}
-
 // Sanitize token symbols for OG image rendering (Satori doesn't support all Unicode)
 function sanitizeSymbol(symbol: string): string {
   // Replace known problematic Unicode characters
@@ -154,8 +66,39 @@ function sanitizeSymbol(symbol: string): string {
     .replace(/[^\x20-\x7E]/g, ''); // Remove any other non-ASCII characters
 }
 
-// Parse warp route message body to extract recipient and amount
-// Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage
+/**
+ * Parse warp route message body to extract recipient and amount.
+ * Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage.
+ *
+ * IMPORTANT: Decimal Scaling in Warp Routes
+ * -----------------------------------------
+ * The amount in the message body is NORMALIZED to a common decimal format (wire format),
+ * which is the max decimals among all tokens in the warp route.
+ *
+ * EVM Implementation (TokenRouter.sol):
+ *   - Uses `scale = 10^(maxDecimals - localDecimals)` set at deployment
+ *   - Outbound: `messageAmount = localAmount * scale`
+ *   - Inbound: `localAmount = messageAmount / scale`
+ *
+ * Sealevel Implementation (Rust):
+ *   - Stores both `decimals` (local) and `remote_decimals` (wire format)
+ *   - Uses convert_decimals() to transform between local and wire formats
+ *
+ * Example: USDC (6 decimals) bridging to an 18-decimal token
+ *   - Wire format = max(6, 18) = 18 decimals
+ *   - Scale for USDC = 10^(18-6) = 10^12
+ *   - Local amount: 1_000_000 (1 USDC in 6 decimals)
+ *   - Wire amount: 1_000_000 * 10^12 = 10^18 (1 USDC in 18 decimals)
+ *
+ * Example: USDC (6 decimals) bridging to another 6-decimal token
+ *   - Wire format = max(6, 6) = 6 decimals
+ *   - Scale = 10^(6-6) = 1
+ *   - Local amount: 1_000_000 (1 USDC)
+ *   - Wire amount: 1_000_000 (unchanged)
+ *
+ * We determine wireDecimals by finding the max decimals among all tokens in each
+ * warp route config (see yamlParsing.ts). This matches how the contracts calculate scale.
+ */
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
     // Remove 0x prefix if present
@@ -218,7 +161,8 @@ function getWarpTransferDetails(
 
   return {
     token,
-    amount: formatTokenAmount(parsed.amount, token.decimals),
+    // Use wireDecimals (max decimals in this warp route) since message amounts are scaled
+    amount: formatTokenAmount(parsed.amount, token.wireDecimals),
   };
 }
 
@@ -369,7 +313,7 @@ export default async function handler(req: NextRequest) {
             <span
               style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}
             >
-              Hyperlane Explorer
+              {APP_NAME}
             </span>
           </div>
           <div
@@ -631,11 +575,9 @@ function DefaultOGImage({ origin }: { origin: string }) {
             letterSpacing: '-1px',
           }}
         >
-          Hyperlane Explorer
+          {APP_NAME}
         </span>
-        <span style={{ color: '#6B7280', fontSize: '28px' }}>
-          The official interchain explorer for the Hyperlane protocol
-        </span>
+        <span style={{ color: '#6B7280', fontSize: '28px' }}>{APP_DESCRIPTION}</span>
       </div>
     </div>
   );

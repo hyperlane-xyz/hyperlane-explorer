@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { ToastContainer, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,6 +10,7 @@ import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql
 import '@hyperlane-xyz/widgets/styles.css';
 
 import { AppLayout } from '../AppLayout';
+import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
@@ -74,30 +74,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className={`${MAIN_FONT.variable} font-sans text-black`}>
-      <Head>
-        <title>Hyperlane Explorer</title>
-        <meta name="description" content="The interchain explorer for the Hyperlane protocol." />
-
-        {/* Open Graph */}
-        <meta property="og:url" content={links.explorerUrl} />
-        <meta property="og:title" content="Hyperlane Explorer" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={`${links.explorerUrl}/images/logo.png`} />
-        <meta
-          property="og:description"
-          content="The interchain explorer for the Hyperlane protocol."
-        />
-        <meta property="og:logo" content={`${links.explorerUrl}/images/logo.png`} />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Hyperlane Explorer" />
-        <meta
-          name="twitter:description"
-          content="The interchain explorer for the Hyperlane protocol."
-        />
-        <meta name="twitter:image" content={`${links.explorerUrl}/images/logo.png`} />
-      </Head>
+      <OGHead
+        url={links.explorerUrl}
+        image={`${links.explorerUrl}/images/logo.png`}
+        logoUrl={`${links.explorerUrl}/images/logo.png`}
+      />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>

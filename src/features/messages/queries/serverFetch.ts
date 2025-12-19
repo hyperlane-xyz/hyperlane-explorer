@@ -1,15 +1,15 @@
-import { config } from '../consts/config';
-import {
-  MessagesStubQueryResult,
-  MessageStubEntry,
-  messageStubFragment,
-} from '../features/messages/queries/fragments';
+import { config } from '../../../consts/config';
+import { logger } from '../../../utils/logger';
 
 import {
   postgresByteaToString,
   stringToPostgresBytea,
-} from '../features/messages/queries/encoding';
-import { logger } from './logger';
+} from './encoding';
+import {
+  MessagesStubQueryResult,
+  MessageStubEntry,
+  messageStubFragment,
+} from './fragments';
 
 /**
  * Server-side utility to fetch message data from GraphQL for OG meta tags
@@ -65,6 +65,10 @@ export interface MessageOGData {
   destinationDomainId: number;
   originTxHash: string;
   timestamp: number;
+  sender: string;
+  recipient: string;
+  body: string | null;
+  deliveryLatency: string | null;
 }
 
 function parseMessageForOG(message: MessageStubEntry): MessageOGData {
@@ -75,6 +79,10 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
     destinationDomainId: message.destination_domain_id,
     originTxHash: postgresByteaToString(message.origin_tx_hash),
     timestamp: new Date(message.send_occurred_at + 'Z').getTime(),
+    sender: postgresByteaToString(message.sender),
+    recipient: postgresByteaToString(message.recipient),
+    body: message.message_body ? postgresByteaToString(message.message_body) : null,
+    deliveryLatency: message.delivery_latency,
   };
 }
 
@@ -82,6 +90,8 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
  * Fetch chain names from the domains table
  */
 export async function fetchDomainNames(): Promise<Map<number, string>> {
+  const domainMap = new Map<number, string>();
+
   const query = `
     query @cached {
       domain {
@@ -100,20 +110,19 @@ export async function fetchDomainNames(): Promise<Map<number, string>> {
       body: JSON.stringify({ query }),
     });
 
-    if (!response.ok) return new Map();
+    if (!response.ok) return domainMap;
 
     const result = await response.json();
     const domains = result.data?.domain as Array<{ id: number; name: string }> | undefined;
 
-    if (!domains) return new Map();
+    if (!domains) return domainMap;
 
-    const map = new Map<number, string>();
     for (const domain of domains) {
-      map.set(domain.id, domain.name);
+      domainMap.set(domain.id, domain.name);
     }
-    return map;
+    return domainMap;
   } catch (error) {
     logger.error('Error fetching domain names:', error);
-    return new Map();
+    return domainMap;
   }
 }

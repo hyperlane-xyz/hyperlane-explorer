@@ -1,13 +1,14 @@
 import type { GetServerSideProps, NextPage } from 'next';
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
+import { OGHead } from '../../components/OGHead';
+import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
-import { fetchDomainNames, fetchMessageForOG } from '../../utils/serverFetch';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
 // Dynamic import with ssr: false to avoid pino-pretty issues during SSR
@@ -51,59 +52,38 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         year: 'numeric',
       })
     : '';
-  const ogTitle = ogData ? `Message ${shortMsgId} · Hyperlane Explorer` : 'Hyperlane Explorer';
+  const ogTitle = ogData ? `Message ${shortMsgId} · ${APP_NAME}` : APP_NAME;
   const ogDescription = ogData
-    ? `${ogData.originChain} → ${ogData.destChain} message on ${formattedDate}. View details on Hyperlane Explorer.`
-    : 'The interchain explorer for the Hyperlane protocol.';
+    ? `${ogData.originChain} → ${ogData.destChain} message on ${formattedDate}. View details on ${APP_NAME}.`
+    : APP_DESCRIPTION;
   const ogImage = ogData
     ? `${host}/api/og?messageId=${ogData.messageId}`
     : `${host}/images/logo.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
+  const logoUrl = `${host}/images/logo.png`;
 
   // Render nothing while waiting for client-side router
   if (!messageId || typeof messageId !== 'string') {
     return (
-      <Head>
-        <title>{ogTitle}</title>
-        <meta name="description" content={ogDescription} />
-        <meta property="og:url" content={ogUrl} />
-        <meta property="og:title" content={ogTitle} />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={ogImage} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:description" content={ogDescription} />
-        <meta property="og:logo" content={`${host}/images/logo.png`} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={ogTitle} />
-        <meta name="twitter:description" content={ogDescription} />
-        <meta name="twitter:image" content={ogImage} />
-      </Head>
+      <OGHead
+        title={ogTitle}
+        description={ogDescription}
+        url={ogUrl}
+        image={ogImage}
+        logoUrl={logoUrl}
+      />
     );
   }
 
   return (
     <>
-      <Head>
-        <title>{ogTitle}</title>
-        <meta name="description" content={ogDescription} />
-
-        {/* Open Graph */}
-        <meta property="og:url" content={ogUrl} />
-        <meta property="og:title" content={ogTitle} />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={ogImage} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:description" content={ogDescription} />
-        <meta property="og:logo" content={`${host}/images/logo.png`} />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={ogTitle} />
-        <meta name="twitter:description" content={ogDescription} />
-        <meta name="twitter:image" content={ogImage} />
-      </Head>
+      <OGHead
+        title={ogTitle}
+        description={ogDescription}
+        url={ogUrl}
+        image={ogImage}
+        logoUrl={logoUrl}
+      />
       <MessageDetails messageId={messageId} message={message} />
     </>
   );
