@@ -1,15 +1,8 @@
 import { config } from '../../../consts/config';
 import { logger } from '../../../utils/logger';
 
-import {
-  postgresByteaToString,
-  stringToPostgresBytea,
-} from './encoding';
-import {
-  MessagesStubQueryResult,
-  MessageStubEntry,
-  messageStubFragment,
-} from './fragments';
+import { postgresByteaToString, stringToPostgresBytea } from './encoding';
+import { MessagesStubQueryResult, MessageStubEntry, messageStubFragment } from './fragments';
 
 /**
  * Server-side utility to fetch message data from GraphQL for OG meta tags
