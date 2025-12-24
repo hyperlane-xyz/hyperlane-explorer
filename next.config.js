@@ -50,6 +50,21 @@ const nextConfig = {
 
   reactStrictMode: true,
 
+  // Transpile hyperlane packages to apply webpack aliases
+  transpilePackages: ['@hyperlane-xyz/utils', '@hyperlane-xyz/widgets'],
+
+  // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Replace pino with a mock module to avoid SSR errors with pino-pretty transport
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        pino: require.resolve('./src/utils/pino-noop.js'),
+      };
+    }
+    return config;
+  },
+
   experimental: {
     optimizePackageImports: [
       '@hyperlane-xyz/registry',

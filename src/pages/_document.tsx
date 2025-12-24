@@ -1,6 +1,5 @@
 import { Head, Html, Main, NextScript } from 'next/document';
 
-import { links } from '../consts/links';
 import { MAIN_FONT } from '../styles/fonts';
 
 export default function Document() {
@@ -23,23 +22,10 @@ export default function Document() {
           name="keywords"
           content="Hyperlane Explorer Scan Interchain Permissionless Interoperability Network Blockchain"
         />
-        <meta
-          name="description"
-          content="The official interchain explorer for the Hyperlane protocol and network."
-        />
 
         <meta name="HandheldFriendly" content="true" />
         <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-
-        <meta property="og:url" content={links.baseUrl} />
-        <meta property="og:title" content="Hyperlane Explorer" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={links.baseUrl + '/images/logo.png'} />
-        <meta
-          property="og:description"
-          content="The official interchain explorer for the Hyperlane protocol and network."
-        />
       </Head>
       <body className={`${MAIN_FONT.variable} font-sans text-black`}>
         <Main />
