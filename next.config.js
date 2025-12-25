@@ -65,12 +65,6 @@ const nextConfig = {
     return config;
   },
 
-  // Exclude heavy packages from serverless bundle to avoid EMFILE errors
-  serverExternalPackages: [
-    '@hyperlane-xyz/core',
-    '@hyperlane-xyz/relayer',
-  ],
-
   // Exclude typechain factories from file tracing (they have thousands of files)
   outputFileTracingExcludes: {
     '*': [
@@ -85,8 +79,6 @@ const nextConfig = {
       '@hyperlane-xyz/sdk',
       '@hyperlane-xyz/utils',
       '@hyperlane-xyz/widgets',
-      '@hyperlane-xyz/core',
-      '@hyperlane-xyz/relayer',
     ],
   },
 };
