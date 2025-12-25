@@ -60,22 +60,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // Note, the font definition is required both here and in _document.tsx
   // Otherwise Next.js will not load the font
 
-  // During SSR, render the page component with providers for its Head/meta tags
-  // but hide body content to avoid flash of unstyled content.
-  // The Component is rendered (for Head/OG tags) but visually hidden.
+  // Disable SSR entirely like warp-ui-template to avoid bundling heavy
+  // dependencies (@hyperlane-xyz/core) for the server.
+  // OG tags are handled via API routes (/api/og/).
   if (isSsr) {
-    return (
-      <div
-        className={`${MAIN_FONT.variable} font-sans text-black`}
-        style={{ visibility: 'hidden' }}
-      >
-        <QueryClientProvider client={reactQueryClient}>
-          <UrqlProvider value={urqlClient}>
-            <Component {...pageProps} />
-          </UrqlProvider>
-        </QueryClientProvider>
-      </div>
-    );
+    return <div></div>;
   }
 
   return (
