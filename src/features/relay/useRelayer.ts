@@ -3,6 +3,7 @@ import { HyperlaneCore, MultiProvider } from '@hyperlane-xyz/sdk';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
+import { logger } from '../../utils/logger';
 
 export function useRelayer() {
   const multiProtocolProvider = useReadyMultiProvider();
@@ -23,7 +24,7 @@ export function useRelayer() {
     try {
       return new MultiProvider(chainMetadata);
     } catch (error) {
-      console.error('Failed to create MultiProvider:', error);
+      logger.error('Failed to create MultiProvider:', error);
       return null;
     }
   }, [multiProtocolProvider, chainMetadata]);
@@ -33,7 +34,7 @@ export function useRelayer() {
     try {
       return HyperlaneCore.fromAddressesMap(addresses, evmMultiProvider);
     } catch (error) {
-      console.error('Failed to create HyperlaneCore:', error);
+      logger.error('Failed to create HyperlaneCore:', error);
       return null;
     }
   }, [evmMultiProvider, addresses]);
