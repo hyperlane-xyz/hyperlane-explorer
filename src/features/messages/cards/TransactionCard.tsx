@@ -11,9 +11,10 @@ import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../ty
 import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
-import { getChainDisplayName } from '../../chains/utils';
+import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
+import { SelfRelayButton } from '../../relay';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
@@ -105,6 +106,11 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Failing) {
     // Check if this is a collateral-related failure
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
+    const canSelfRelay =
+      message &&
+      isEvmChain(multiProvider, message.originDomainId) &&
+      isEvmChain(multiProvider, message.destinationDomainId);
+
     content = (
       <>
         {hasCollateralWarning && (
@@ -124,6 +130,11 @@ export function DestinationTransactionCard({
               </div>
             )}
             <CallDataModal debugResult={debugResult} />
+            {canSelfRelay && message && (
+              <div className="flex justify-center">
+                <SelfRelayButton message={message} />
+              </div>
+            )}
           </DeliveryStatus>
         )}
       </>
@@ -152,9 +163,12 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending) {
-    // Show collateral warning for all pending messages (not just EVM)
-    // since Token.getBalance() now supports cross-VM collateral checking
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
+    const canSelfRelay =
+      message &&
+      isEvmChain(multiProvider, message.originDomainId) &&
+      isEvmChain(multiProvider, message.destinationDomainId);
+
     content = (
       <>
         {hasCollateralWarning && (
@@ -176,6 +190,11 @@ export function DestinationTransactionCard({
                 <SpinnerIcon width={40} height={40} />
               </div>
               <CallDataModal debugResult={debugResult} />
+              {canSelfRelay && message && (
+                <div className="flex justify-center">
+                  <SelfRelayButton message={message} />
+                </div>
+              )}
             </div>
           </DeliveryStatus>
         )}

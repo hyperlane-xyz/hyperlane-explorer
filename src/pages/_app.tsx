@@ -14,6 +14,7 @@ import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
+import { EvmWalletContext } from '../features/wallet';
 import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
 
@@ -83,9 +84,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <ChainConfigSyncer>
-              <AppLayout pathName={router.pathname}>
-                <Component {...pageProps} />
-              </AppLayout>
+              <EvmWalletContext>
+                <AppLayout pathName={router.pathname}>
+                  <Component {...pageProps} />
+                </AppLayout>
+              </EvmWalletContext>
             </ChainConfigSyncer>
           </UrqlProvider>
         </QueryClientProvider>
