@@ -11,15 +11,10 @@ interface SelfRelayParams {
   message: Message;
 }
 
-declare global {
-  interface Window {
-    ethereum?: providers.ExternalProvider;
-  }
-}
-
 function getEthersSigner(): providers.JsonRpcSigner | null {
   if (typeof window === 'undefined' || !window.ethereum) return null;
-  const provider = new providers.Web3Provider(window.ethereum);
+  // Cast to ExternalProvider for ethers v5 compatibility
+  const provider = new providers.Web3Provider(window.ethereum as providers.ExternalProvider);
   return provider.getSigner();
 }
 

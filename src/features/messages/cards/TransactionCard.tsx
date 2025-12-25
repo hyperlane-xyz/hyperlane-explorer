@@ -2,6 +2,7 @@ import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
+import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
@@ -14,12 +15,17 @@ import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-import { SelfRelayButton } from '../../relay';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
+
+// Dynamic import to avoid EMFILE issues on Vercel from RainbowKit dependencies
+const SelfRelayButton = dynamic(
+  () => import('../../relay').then((mod) => mod.SelfRelayButton),
+  { ssr: false },
+);
 
 export function OriginTransactionCard({
   chainName,
