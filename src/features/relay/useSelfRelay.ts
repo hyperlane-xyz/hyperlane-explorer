@@ -12,9 +12,10 @@ interface SelfRelayParams {
 }
 
 function getEthersSigner(): providers.JsonRpcSigner | null {
-  if (typeof window === 'undefined' || !window.ethereum) return null;
-  // Cast to ExternalProvider for ethers v5 compatibility
-  const provider = new providers.Web3Provider(window.ethereum as providers.ExternalProvider);
+  if (typeof window === 'undefined') return null;
+  const ethereum = (window as any).ethereum;
+  if (!ethereum) return null;
+  const provider = new providers.Web3Provider(ethereum);
   return provider.getSigner();
 }
 
