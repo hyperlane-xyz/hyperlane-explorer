@@ -65,12 +65,28 @@ const nextConfig = {
     return config;
   },
 
+  // Exclude heavy packages from serverless bundle to avoid EMFILE errors
+  serverExternalPackages: [
+    '@hyperlane-xyz/core',
+    '@hyperlane-xyz/relayer',
+  ],
+
+  // Exclude typechain factories from file tracing (they have thousands of files)
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/@hyperlane-xyz/core/dist/typechain/**',
+      './node_modules/.pnpm/**/node_modules/@hyperlane-xyz/core/dist/typechain/**',
+    ],
+  },
+
   experimental: {
     optimizePackageImports: [
       '@hyperlane-xyz/registry',
       '@hyperlane-xyz/sdk',
       '@hyperlane-xyz/utils',
       '@hyperlane-xyz/widgets',
+      '@hyperlane-xyz/core',
+      '@hyperlane-xyz/relayer',
     ],
   },
 };

@@ -21,10 +21,11 @@ import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
 
-// Dynamic import to avoid EMFILE issues on Vercel from RainbowKit dependencies
-const SelfRelayButton = dynamic(() => import('../../relay').then((mod) => mod.SelfRelayButton), {
-  ssr: false,
-});
+// Dynamic import directly from file (not barrel) to avoid bundling the full relayer dependency tree
+const SelfRelayButton = dynamic(
+  () => import('../../relay/SelfRelayButton').then((mod) => mod.SelfRelayButton),
+  { ssr: false },
+);
 
 export function OriginTransactionCard({
   chainName,
