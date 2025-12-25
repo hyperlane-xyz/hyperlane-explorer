@@ -22,10 +22,9 @@ import { ActiveRebalanceModal, InsufficientCollateralWarning } from './Collatera
 import { KeyValueRow } from './KeyValueRow';
 
 // Dynamic import to avoid EMFILE issues on Vercel from RainbowKit dependencies
-const SelfRelayButton = dynamic(
-  () => import('../../relay').then((mod) => mod.SelfRelayButton),
-  { ssr: false },
-);
+const SelfRelayButton = dynamic(() => import('../../relay').then((mod) => mod.SelfRelayButton), {
+  ssr: false,
+});
 
 export function OriginTransactionCard({
   chainName,
