@@ -65,14 +65,6 @@ const nextConfig = {
     return config;
   },
 
-  // Exclude typechain factories from file tracing (they have thousands of files)
-  outputFileTracingExcludes: {
-    '*': [
-      './node_modules/@hyperlane-xyz/core/dist/typechain/**',
-      './node_modules/.pnpm/**/node_modules/@hyperlane-xyz/core/dist/typechain/**',
-    ],
-  },
-
   experimental: {
     optimizePackageImports: [
       '@hyperlane-xyz/registry',
