@@ -14,9 +14,14 @@ import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
-import { EvmWalletContext } from '../features/wallet';
 import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
+
+// Dynamic import to avoid EMFILE issues on Vercel
+const EvmWalletContext = dynamic(
+  () => import('../features/wallet/EvmWalletContext').then((mod) => mod.EvmWalletContext),
+  { ssr: false },
+);
 
 // Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
 const ErrorBoundary = dynamic(
