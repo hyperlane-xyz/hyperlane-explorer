@@ -5,8 +5,12 @@ interface Props {
   padding?: string;
 }
 
-export function Card({ className, padding = 'p-4 sm:p-5', children }: PropsWithChildren<Props>) {
+export function Card({ className, padding = 'p-3 sm:p-4', children }: PropsWithChildren<Props>) {
   return (
-    <div className={`overflow-auto rounded-xl bg-white ${padding} ${className}`}>{children}</div>
+    <div
+      className={`overflow-auto rounded-xl bg-card-gradient shadow-card ${padding} ${className}`}
+    >
+      {children}
+    </div>
   );
 }

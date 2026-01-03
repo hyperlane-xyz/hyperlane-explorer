@@ -14,7 +14,6 @@ import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
-import { MAIN_FONT } from '../styles/fonts';
 import '../styles/global.css';
 
 // Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
@@ -59,10 +58,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // The Component is rendered (for Head/OG tags) but visually hidden.
   if (isSsr) {
     return (
-      <div
-        className={`${MAIN_FONT.variable} font-sans text-black`}
-        style={{ visibility: 'hidden' }}
-      >
+      <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
@@ -73,7 +69,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   }
 
   return (
-    <div className={`${MAIN_FONT.variable} font-sans text-black`}>
+    <div className="font-sans text-black">
       <OGHead
         url={links.explorerUrl}
         image={`${links.explorerUrl}/images/logo.png`}
