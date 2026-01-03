@@ -1,8 +1,8 @@
 <svg width="64" height="32" viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="arrowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
-      <stop offset="0%" stop-color="#2362C1"/>
-      <stop offset="100%" stop-color="#5F8AFA"/>
+      <stop offset="0%" stop-color="#9A0DFF"/>
+      <stop offset="100%" stop-color="#FF4FE9"/>
     </linearGradient>
   </defs>
   <path d="M0 16h56M48 6l8 10-8 10" stroke="url(#arrowGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
