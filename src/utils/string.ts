@@ -17,3 +17,8 @@ export function tryUtf8DecodeBytes(value: string, fatal = true) {
     return undefined;
   }
 }
+
+export function truncateString(str: string, startChars = 15, endChars = 15) {
+  if (!str || str.length <= startChars + endChars + 3) return str;
+  return `${str.slice(0, startChars)}...${str.slice(-endChars)}`;
+}
