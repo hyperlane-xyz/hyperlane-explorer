@@ -95,8 +95,8 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'flex items-center justify-center rounded-lg border border-pink-500 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
-          value ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded-lg border border-accent-500 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          value ? 'bg-accent-500 pr-7 text-white sm:pr-8' : 'text-accent-500',
         )}
         onClick={open}
       >
@@ -169,17 +169,17 @@ function DatetimeSelector({
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-pink-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
-          hasValue ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded-lg border border-accent-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-accent-500 pr-7 text-white sm:pr-8' : 'text-accent-500',
         )}
         panelClassname="w-60"
       >
         {({ close }) => (
           <div className="p-4" key="date-time-selector">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-blue-500">Time Range</h3>
+              <h3 className="font-medium text-primary-500">Time Range</h3>
               <div className="flex pt-1">
-                <TextButton classes="text-sm font-medium text-pink-500" onClick={onClickClear}>
+                <TextButton classes="text-sm font-medium text-accent-500" onClick={onClickClear}>
                   Clear
                 </TextButton>
               </div>
@@ -207,7 +207,7 @@ function DatetimeSelector({
 function ClearButton({ onClick }: { onClick: () => void }) {
   return (
     <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-      <IconButton onClick={onClick} className="rounded-full bg-pink-300 p-1.5">
+      <IconButton onClick={onClick} className="rounded-full bg-accent-300 p-1.5">
         <XIcon color="white" height={9} width={9} />
       </IconButton>
     </div>

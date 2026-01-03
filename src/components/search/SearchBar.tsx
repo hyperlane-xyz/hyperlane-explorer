@@ -40,7 +40,9 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
         </div>
       )}
       {!isFetching && value && (
-        <div className={`${iconStyle} bg-pink-600 duration-500 hover:bg-blue-500 sm:h-12 sm:w-12`}>
+        <div
+          className={`${iconStyle} bg-accent-500 duration-500 hover:bg-primary-500 sm:h-12 sm:w-12`}
+        >
           <IconButton
             title="Clear search"
             className="h-full w-full rounded-full"
@@ -54,4 +56,4 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   );
 }
 const iconStyle =
-  'flex h-10 w-10 items-center justify-center rounded-full bg-pink-600 sm:h-12 sm:w-12';
+  'flex h-10 w-10 items-center justify-center rounded-full bg-accent-500 sm:h-12 sm:w-12';
