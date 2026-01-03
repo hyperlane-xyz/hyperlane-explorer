@@ -63,10 +63,10 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         {warpRouteDetails.originToken.logoURI ? (
           <TokenIcon token={warpRouteDetails.originToken} size={28} />
         ) : (
-          <Image src={SendMoney} width={28} height={28} alt="" className="opacity-80" />
+          <Image src={SendMoney} width={28} height={28} alt="" />
         )}
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Warp Transfer Details</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-500">Warp Transfer Details</h3>
           <Tooltip
             id="warp-route-info"
             content="Information about the warp route transfer such as the end recipient and amount transferred"
@@ -74,7 +74,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         </div>
       </div>
       {isCollateral && (
-        <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700">
+        <div className="rounded-md bg-primary-50 px-3 py-2 text-xs text-primary-700">
           <span className="font-medium">Collateral-backed route:</span> This transfer uses locked
           collateral on the destination chain
         </div>

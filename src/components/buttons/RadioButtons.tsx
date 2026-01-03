@@ -18,7 +18,7 @@ export function RadioButtons({ options, selected, onChange, label }: Props) {
               key={o.value}
               value={o.value}
               className={({ checked }) =>
-                `${checked ? 'bg-blue-500 hover:bg-blue-400' : 'bg-white hover:bg-gray-100'} relative flex cursor-pointer px-2 py-1.5 outline-none`
+                `${checked ? 'bg-primary-500 hover:bg-primary-400' : 'bg-white hover:bg-gray-100'} relative flex cursor-pointer px-2 py-1.5 outline-none`
               }
             >
               {({ checked }) => (

@@ -28,3 +28,8 @@ export function isWarpRouteIdFormat(input: string): boolean {
   const slashCount = (trimmed.match(/\//g) || []).length;
   return slashCount === 1;
 }
+
+export function truncateString(str: string, startChars = 15, endChars = 15) {
+  if (!str || str.length <= startChars + endChars + 3) return str;
+  return `${str.slice(0, startChars)}...${str.slice(-endChars)}`;
+}
