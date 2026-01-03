@@ -5,9 +5,7 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
-import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
@@ -25,8 +23,8 @@ export function Header({ pathName }: { pathName: string }) {
 
   return (
     <header
-      className={`sticky top-0 z-10 w-full bg-blue-500 px-2 transition-all duration-200 ease-in-out sm:px-6 lg:px-12 ${
-        animateHeader ? 'border-b border-white py-1' : 'py-4 sm:py-5'
+      className={`sticky top-0 z-20 w-full bg-black/10 px-2 backdrop-blur-md transition-all duration-200 ease-in-out sm:px-6 lg:px-12 ${
+        animateHeader ? 'py-1' : 'py-4 sm:py-5'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -39,8 +37,12 @@ export function Header({ pathName }: { pathName: string }) {
             } transition-all duration-500 ease-in-out`}
           >
             <Image src={Logo} alt="" className="h-7 w-auto sm:h-8" />
-            <Image src={Name} alt="Hyperlane" className="ml-3 mt-1 hidden h-6 w-auto sm:block" />
-            <Image src={Explorer} alt="Explorer" className="ml-2.5 mt-1 h-5 w-auto sm:h-6" />
+            <span className="ml-3 hidden text-xl font-medium tracking-tight text-white sm:block">
+              Hyperlane
+            </span>
+            <span className="ml-2 text-lg font-medium tracking-tight text-white sm:text-xl">
+              Explorer
+            </span>
           </div>
         </Link>
         <nav
@@ -94,7 +96,7 @@ export function Header({ pathName }: { pathName: string }) {
                 </MobileNavLink>
               ),
             ]}
-            menuClassname="!left-0 !right-0 py-7 px-8 bg-blue-500"
+            menuClassname="!left-0 !right-0 py-7 px-8 bg-primary-500/95 backdrop-blur-sm"
           />
         </div>
       </div>
@@ -104,7 +106,7 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white bg-pink-500 px-4 py-1">
+    <div className="flex flex-col items-center rounded-lg border border-white bg-accent-500 px-4 py-1">
       <WideChevronIcon
         width={10}
         height={14}
@@ -139,7 +141,7 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="flex cursor-pointer items-center py-4 pl-3 decoration-pink-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
+      className="flex cursor-pointer items-center py-4 pl-3 decoration-accent-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
       onClick={closeDropdown}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
@@ -151,7 +153,7 @@ function MobileNavLink({
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[3px] transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-accent-500 underline-offset-[3px] transition-all',
   dropdownOption:
-    'flex items-center cursor-pointer p-2 mt-1 rounded text-blue-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
+    'flex items-center cursor-pointer p-2 mt-1 rounded text-primary-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };

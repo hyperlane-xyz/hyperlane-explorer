@@ -3,6 +3,72 @@
 @tailwind utilities;
 
 /*
+Custom Fonts (falls back to system fonts if not available)
+Place font files in public/fonts/ directory
+===========================================================
+*/
+
+/* PP Valve - Primary font (variable) */
+@font-face {
+  font-family: 'PP Valve';
+  src: url('/fonts/PPValve-PlainVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* PP Fraktion Mono - Secondary/Mono font */
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Thin.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
 Normalization
 =============
 */
@@ -43,7 +109,7 @@ Background
 ==========
 */
 body {
-  background-color: #f3f4f6;
+  background-color: #f8f8ff;
 }
 
 /*
@@ -63,6 +129,24 @@ Scrollbar Overrides
 body {
   scroll-behavior: smooth;
   scrollbar-width: thin;
+  scrollbar-color: #e8caff transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e8caff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4a3ff;
 }
 
 /* phones */
@@ -172,7 +256,7 @@ Toasts
 ======
 */
 :root {
-  --toastify-color-light: #ffffff;
+  --toastify-color-light: #f8f8ff;
   --toastify-color-dark: #2e3338;
   --toastify-color-info: #3498db;
   --toastify-color-success: #35d07f;
@@ -217,4 +301,64 @@ Toasts
   --toastify-color-progress-success: var(--toastify-color-success);
   --toastify-color-progress-warning: var(--toastify-color-warning);
   --toastify-color-progress-error: var(--toastify-color-error);
+}
+
+/*
+Hyperlane Widget Overrides
+==========================
+*/
+
+/* Timeline bar and icon circles - use purple */
+.htw-bg-blue-500 {
+  background-color: #9a0dff !important;
+}
+
+.htw-bg-blue-600 {
+  background-color: #7a00cc !important;
+}
+
+.htw-bg-blue-100 {
+  background-color: #e8caff !important;
+}
+
+.htw-bg-blue-200 {
+  background-color: #d9a4ff !important;
+}
+
+.htw-bg-blue-300 {
+  background-color: #c97eff !important;
+}
+
+.htw-bg-blue-400 {
+  background-color: #aa33ff !important;
+}
+
+/* Override widget chevron SVG fills - blue to purple */
+svg path[fill='#2764C1'],
+svg path[fill='#2362C1'],
+svg path[fill='#2764c1'],
+svg path[fill='#2362c1'] {
+  fill: #9a0dff !important;
+}
+
+/* White chevrons - cream to blend with background */
+svg path[fill='#ffffff'],
+svg path[fill='#FFFFFF'],
+svg path[fill='white'] {
+  fill: #f8f8ff !important;
+}
+
+/* Timeline hole elements - light purple for visibility */
+.htw-rounded-full.htw-bg-white {
+  background-color: #e8caff !important;
+}
+
+/* Widget text styling */
+.htw-text-gray-500,
+.htw-text-sm {
+  font-family: 'PP Fraktion Mono', system-ui, monospace !important;
+}
+
+.htw-text-gray-700 {
+  color: #3d304c !important;
 }
