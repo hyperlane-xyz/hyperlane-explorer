@@ -1,10 +1,11 @@
 // Partly copied from https://github.com/hyperlane-xyz/hyperlane-website/blob/main/src/components/nav/Footer.tsx
+import Image from 'next/image';
 import Link from 'next/link';
 
-import { DiscordIcon, GithubIcon, HyperlaneLogo, TwitterIcon } from '@hyperlane-xyz/widgets';
+import { DiscordIcon, GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import { Color } from '../../styles/Color';
+import Logo from '../../images/logos/hyperlane-logo.svg';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },
@@ -26,12 +27,10 @@ const footerLinks3 = [
 
 export function Footer() {
   return (
-    <footer className="bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
+    <footer className="relative z-10 bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
       <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
-          <div className="ml-2 h-12 w-12 sm:h-14 sm:w-14">
-            <HyperlaneLogo color={Color.white} />
-          </div>
+          <Image src={Logo} alt="" className="h-12 w-auto sm:h-14" />
           <div className="ml-6 space-y-1 text-lg font-medium sm:text-xl">
             <div>Go interchain</div>
             <div>with Hyperlane</div>
