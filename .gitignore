@@ -35,3 +35,6 @@ npm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# proprietary fonts (keep private, use system fallbacks on Vercel)
+/public/fonts/
