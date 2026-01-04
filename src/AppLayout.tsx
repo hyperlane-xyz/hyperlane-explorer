@@ -42,7 +42,6 @@ const styles = {
   starOverlay: {
     backgroundImage: 'url(/images/background.svg)',
     backgroundSize: 'cover',
-    backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
   },
   main: {

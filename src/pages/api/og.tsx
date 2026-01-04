@@ -296,7 +296,8 @@ export default async function handler(req: NextRequest) {
     (
       <div
         style={{
-          background: '#110821',
+          background:
+            'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -517,17 +518,17 @@ export default async function handler(req: NextRequest) {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
+            alignItems: 'center',
             marginTop: '24px',
             paddingTop: '20px',
             borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span
               style={{
                 color: '#6B7280',
-                fontSize: '20px',
+                fontSize: '18px',
                 marginBottom: '8px',
                 letterSpacing: '0.5px',
               }}
@@ -537,7 +538,7 @@ export default async function handler(req: NextRequest) {
             <span
               style={{
                 color: '#94A3B8',
-                fontSize: '28px',
+                fontSize: '26px',
                 fontFamily: 'PPFraktionMono, monospace',
                 background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
@@ -553,7 +554,7 @@ export default async function handler(req: NextRequest) {
               <span
                 style={{
                   color: '#6B7280',
-                  fontSize: '20px',
+                  fontSize: '18px',
                   marginBottom: '8px',
                   letterSpacing: '0.5px',
                 }}
@@ -563,9 +564,10 @@ export default async function handler(req: NextRequest) {
               <span
                 style={{
                   color: '#10b981',
-                  fontSize: '28px',
+                  fontSize: '26px',
                   fontWeight: 500,
                   fontFamily: 'PPFraktionMono, monospace',
+                  padding: '8px 16px',
                 }}
               >
                 {formattedLatency}
@@ -577,7 +579,7 @@ export default async function handler(req: NextRequest) {
             <span
               style={{
                 color: '#6B7280',
-                fontSize: '20px',
+                fontSize: '18px',
                 marginBottom: '8px',
                 letterSpacing: '0.5px',
               }}
@@ -587,8 +589,9 @@ export default async function handler(req: NextRequest) {
             <span
               style={{
                 color: '#94A3B8',
-                fontSize: '28px',
+                fontSize: '26px',
                 fontFamily: 'PPFraktionMono, monospace',
+                padding: '8px 16px',
               }}
             >
               {formattedDate}
@@ -605,7 +608,8 @@ function DefaultOGImage({ origin }: { origin: string }) {
   return (
     <div
       style={{
-        background: '#110821',
+        background:
+          'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
         width: '100%',
         height: '100%',
         display: 'flex',

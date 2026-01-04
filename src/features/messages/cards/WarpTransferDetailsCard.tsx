@@ -66,7 +66,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
           <Image src={SendMoney} width={28} height={28} alt="" />
         )}
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-primary-500">Warp Transfer Details</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-800">Warp Transfer Details</h3>
           <Tooltip
             id="warp-route-info"
             content="Information about the warp route transfer such as the end recipient and amount transferred"
