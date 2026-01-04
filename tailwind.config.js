@@ -48,7 +48,7 @@ module.exports = {
           700: '#7211B9',
           800: '#5E1396',
           900: '#4A1673',
-          950: '#110821',
+          950: '#1a0a28',
         },
         accent: {
           25: '#F8F0FF',
@@ -167,7 +167,7 @@ module.exports = {
         'app-gradient': `radial-gradient(81.94% 51.02% at 50% 100%, ${theme('colors.primary.100')} 0%, ${theme('colors.cream.300')} 100%)`,
         'accent-gradient': `radial-gradient(61.48% 118.8% at 50.08% 92%, ${theme('colors.primary.200')} 0%, ${theme('colors.primary.500')} 100%)`,
         'card-gradient': `linear-gradient(180deg, ${theme('colors.white')} 0%, ${theme('colors.cream.200')} 100%)`,
-        'brand-gradient': `linear-gradient(135deg, ${theme('colors.blue.500')} 0%, ${theme('colors.primary.500')} 25%, ${theme('colors.primary.500')} 60%, ${theme('colors.accent.500')} 100%)`,
+        'brand-gradient': `radial-gradient(ellipse 200% 150% at 50% 100%, ${theme('colors.primary.800')} 0%, ${theme('colors.primary.950')} 40%, #0d0612 100%)`,
       }),
       boxShadow: ({ theme }) => ({
         'accent-glow': `inset 2px 2px 13px 2px ${theme('colors.accent.100')}`,

@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { Card } from '../../components/layout/Card';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
+import { Color } from '../../styles/Color';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
@@ -99,7 +100,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   return (
     <>
       <Card className="flex items-center justify-between rounded-full px-2 py-2 shadow-button">
-        <h2 className="text-md font-medium text-primary-500">{`${
+        <h2 className="text-md font-medium text-primary-800">{`${
           isIcaMsg ? 'ICA ' : ''
         } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
           multiProvider,
@@ -177,7 +178,7 @@ function StatusHeader({
   if (isFetching) {
     icon = (
       <div className="flex items-center justify-center">
-        <SpinnerIcon width={20} height={20} />
+        <SpinnerIcon width={20} height={20} color={Color.primaryDark} />
       </div>
     );
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
@@ -189,7 +190,7 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="mr-2 text-md font-medium text-primary-500">{text}</h3>
+      <h3 className="mr-2 text-md font-medium text-primary-800">{text}</h3>
       {icon}
     </div>
   );

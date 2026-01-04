@@ -29,7 +29,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
           <Image src={AccountStar} width={28} height={28} alt="" />
         </div>
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-primary-500">ICA Details</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-800">ICA Details</h3>
           <Tooltip
             id="ica-info"
             content="Extra information for messages from/to Interchain Accounts."
