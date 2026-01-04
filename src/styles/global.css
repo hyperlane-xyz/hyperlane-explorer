@@ -308,57 +308,64 @@ Hyperlane Widget Overrides
 ==========================
 */
 
-/* Timeline bar and icon circles - use purple */
-.htw-bg-blue-500 {
-  background-color: #9a0dff !important;
+/* Timeline stages - deeper purple to match dark bg */
+[class*="htw-bg-blue-"] {
+  background-color: #4c1d95 !important;
 }
 
-.htw-bg-blue-600 {
-  background-color: #7a00cc !important;
-}
-
-.htw-bg-blue-100 {
-  background-color: #e8caff !important;
-}
-
-.htw-bg-blue-200 {
-  background-color: #d9a4ff !important;
-}
-
-.htw-bg-blue-300 {
-  background-color: #c97eff !important;
-}
-
-.htw-bg-blue-400 {
-  background-color: #aa33ff !important;
-}
-
-/* Override widget chevron SVG fills - blue to purple */
+/* Override widget icon SVG fills - blue to purple */
 svg path[fill='#2764C1'],
 svg path[fill='#2362C1'],
 svg path[fill='#2764c1'],
-svg path[fill='#2362c1'] {
-  fill: #9a0dff !important;
+svg path[fill='#2362c1'],
+svg path[fill='rgb(39, 100, 193)'] {
+  fill: #4c1d95 !important;
 }
 
-/* White chevrons - cream to blend with background */
+/* Override widget icon SVG strokes - blue to purple */
+svg path[stroke='#2764C1'],
+svg path[stroke='#2362C1'],
+svg path[stroke='#2764c1'],
+svg path[stroke='#2362c1'],
+svg [stroke='#2764C1'],
+svg [stroke='#2764c1'] {
+  stroke: #4c1d95 !important;
+}
+
+/* Chevron polygon fills */
+svg polygon[fill='#2764C1'],
+svg polygon[fill='#2764c1'] {
+  fill: #4c1d95 !important;
+}
+
+/* White chevrons - cream to blend with card bg */
 svg path[fill='#ffffff'],
 svg path[fill='#FFFFFF'],
 svg path[fill='white'] {
   fill: #f8f8ff !important;
 }
 
-/* Timeline hole elements - light purple for visibility */
+/* Timeline hole elements - off-white for visibility */
 .htw-rounded-full.htw-bg-white {
-  background-color: #e8caff !important;
+  background-color: #f8f8ff !important;
 }
 
-/* Widget text styling */
-.htw-text-gray-500,
-.htw-text-sm {
+
+/* Widget text styling - default to primary font */
+[class*="htw-"] {
+  font-family: 'PP Valve', system-ui, sans-serif;
+}
+
+/* Chain picker subtitles (Mainnet/Testnet labels) - mono */
+.htw-text-gray-500.htw-text-xs {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
 
-.htw-text-gray-700 {
-  color: #3d304c !important;
+/* Explicitly set mono for technical content */
+.htw-font-mono,
+[class*="htw-"] input,
+[class*="htw-"] textarea,
+[class*="htw-"] a[href^="http"],
+[class*="htw-"] a[href^="https"] {
+  font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }

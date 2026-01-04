@@ -31,12 +31,12 @@ export function Footer() {
       <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
           <Image src={Logo} alt="" className="h-12 w-auto sm:h-14" />
-          <div className="ml-6 space-y-1 text-lg font-medium sm:text-xl">
+          <div className="ml-6 space-y-1 text-lg sm:text-xl">
             <div>Go interchain</div>
             <div>with Hyperlane</div>
           </div>
         </div>
-        <nav className="flex font-medium">
+        <nav className="flex">
           <ul className={`${styles.linkCol} mr-14`}>
             {footerLinks1.map((item) => (
               <li className="" key={item.title}>
