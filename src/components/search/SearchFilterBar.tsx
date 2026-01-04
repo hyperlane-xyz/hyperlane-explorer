@@ -3,14 +3,7 @@ import { useState } from 'react';
 
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
-import {
-  ChevronIcon,
-  DatetimeField,
-  IconButton,
-  Popover,
-  XIcon,
-  useModal,
-} from '@hyperlane-xyz/widgets';
+import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
