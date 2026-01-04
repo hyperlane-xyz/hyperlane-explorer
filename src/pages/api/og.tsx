@@ -172,6 +172,15 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
+// Parse delivery latency string to total seconds
+function parseLatencySeconds(latency: string): number {
+  const parts = latency.split(':');
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 // Format delivery latency string (e.g., "00:01:32" -> "1m 32s")
 function formatDeliveryLatency(latency: string): string {
   const parts = latency.split(':');
@@ -256,6 +265,11 @@ export default async function handler(req: NextRequest) {
   const formattedLatency = messageData.deliveryLatency
     ? formatDeliveryLatency(messageData.deliveryLatency)
     : null;
+  const latencyColor = messageData.deliveryLatency
+    ? parseLatencySeconds(messageData.deliveryLatency) < 300
+      ? '#10b981'
+      : '#94A3B8'
+    : '#94A3B8';
 
   const originChainLogo = getChainLogoUrl(originChainName);
   const destChainLogo = getChainLogoUrl(destChainName);
@@ -526,7 +540,7 @@ export default async function handler(req: NextRequest) {
             borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
             <span
               style={{
                 color: '#6B7280',
@@ -551,33 +565,35 @@ export default async function handler(req: NextRequest) {
             </span>
           </div>
 
-          {formattedLatency && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: '18px',
-                  marginBottom: '8px',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                DELIVERY TIME
-              </span>
-              <span
-                style={{
-                  color: '#10b981',
-                  fontSize: '26px',
-                  fontWeight: 500,
-                  fontFamily: 'PPFraktionMono, monospace',
-                  padding: '8px 16px',
-                }}
-              >
-                {formattedLatency}
-              </span>
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+            {formattedLatency ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span
+                  style={{
+                    color: '#6B7280',
+                    fontSize: '18px',
+                    marginBottom: '8px',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  DELIVERY TIME
+                </span>
+                <span
+                  style={{
+                    color: latencyColor,
+                    fontSize: '26px',
+                    fontWeight: 500,
+                    fontFamily: 'PPFraktionMono, monospace',
+                    padding: '8px 16px',
+                  }}
+                >
+                  {formattedLatency}
+                </span>
+              </div>
+            ) : null}
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}>
             <span
               style={{
                 color: '#6B7280',
@@ -593,7 +609,9 @@ export default async function handler(req: NextRequest) {
                 color: '#94A3B8',
                 fontSize: '26px',
                 fontFamily: 'PPFraktionMono, monospace',
+                background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
+                borderRadius: '10px',
               }}
             >
               {formattedDate}
