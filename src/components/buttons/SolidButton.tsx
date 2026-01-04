@@ -29,13 +29,13 @@ export function SolidButton(props: PropsWithChildren<ButtonProps>) {
   const base = 'flex items-center justify-center rounded-full transition-all duration-500';
   let baseColors, onHover, onActive;
   if (color === 'primary') {
-    baseColors = 'bg-primary-500 text-white';
-    onHover = 'hover:bg-primary-600';
-    onActive = 'active:bg-primary-700';
+    baseColors = 'bg-primary-600 text-white';
+    onHover = 'hover:bg-primary-700';
+    onActive = 'active:bg-primary-800';
   } else if (color === 'accent') {
-    baseColors = 'bg-accent-500 text-white';
-    onHover = 'hover:bg-accent-600';
-    onActive = 'active:bg-accent-700';
+    baseColors = 'bg-accent-700 text-white';
+    onHover = 'hover:bg-accent-800';
+    onActive = 'active:bg-accent-900';
   } else if (color === 'green') {
     baseColors = 'bg-green-500 text-white';
     onHover = 'hover:bg-green-600';

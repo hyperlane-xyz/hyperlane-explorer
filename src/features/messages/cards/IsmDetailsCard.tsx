@@ -19,7 +19,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
       <div className="flex items-center justify-between">
         <Image src={ShieldLock} width={24} height={24} alt="" />
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-primary-500">Interchain Security Modules</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-800">Interchain Security Modules</h3>
           <Tooltip
             id="ism-info"
             content="Details about the Interchain Security Modules (ISM) that must verify this message."
@@ -32,7 +32,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
           href={docLinks.ism}
           target="_blank"
           rel="noopener noreferrer"
-          className="cursor-pointer text-primary-500 transition-all hover:text-primary-400 active:text-primary-300"
+          className="cursor-pointer text-primary-600 transition-all hover:text-primary-500 active:text-primary-400"
         >
           Learn more about ISMs.
         </a>
