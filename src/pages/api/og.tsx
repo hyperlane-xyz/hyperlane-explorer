@@ -540,7 +540,9 @@ export default async function handler(req: NextRequest) {
             borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}
+          >
             <span
               style={{
                 color: '#6B7280',
@@ -593,7 +595,9 @@ export default async function handler(req: NextRequest) {
             ) : null}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}
+          >
             <span
               style={{
                 color: '#6B7280',

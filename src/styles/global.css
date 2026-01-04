@@ -309,7 +309,7 @@ Hyperlane Widget Overrides
 */
 
 /* Timeline stages - deeper purple to match dark bg */
-[class*="htw-bg-blue-"] {
+[class*='htw-bg-blue-'] {
   background-color: #4c1d95 !important;
 }
 
@@ -350,9 +350,8 @@ svg path[fill='white'] {
   background-color: #f8f8ff !important;
 }
 
-
 /* Widget text styling - default to primary font */
-[class*="htw-"] {
+[class*='htw-'] {
   font-family: 'PP Valve', system-ui, sans-serif;
 }
 
@@ -363,9 +362,9 @@ svg path[fill='white'] {
 
 /* Explicitly set mono for technical content */
 .htw-font-mono,
-[class*="htw-"] input,
-[class*="htw-"] textarea,
-[class*="htw-"] a[href^="http"],
-[class*="htw-"] a[href^="https"] {
+[class*='htw-'] input,
+[class*='htw-'] textarea,
+[class*='htw-'] a[href^='http'],
+[class*='htw-'] a[href^='https'] {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
