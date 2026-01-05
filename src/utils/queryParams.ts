@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import type { ParsedUrlQuery } from 'querystring';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { logger } from './logger';
 
@@ -19,19 +19,34 @@ export function useQueryParam(key: string, defaultVal = '') {
   return getQueryParamString(router.query, key, defaultVal);
 }
 
-export function useMultipleQueryParams(keys: string[]) {
+export function useMultipleQueryParams(keys: string[]): [string[], boolean] {
   const router = useRouter();
 
-  return keys.map((key) => {
+  const values = keys.map((key) => {
     return getQueryParamString(router.query, key);
   });
+
+  return [values, router.isReady];
 }
 
 // Keep value in sync with query param in URL
 export function useSyncQueryParam(params: Record<string, string>) {
   const router = useRouter();
-  const { pathname, query } = router;
+  const { pathname, query, isReady } = router;
+  // Track if we've completed initial hydration sync to avoid clearing URL params prematurely
+  const hasHydratedRef = useRef(false);
+
   useEffect(() => {
+    // Wait for router to be ready before syncing
+    if (!isReady) return;
+
+    // On first run after hydration, just mark as hydrated and don't modify URL
+    // This gives other effects a chance to sync state from URL params first
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      return;
+    }
+
     let hasChanged = false;
     const newQuery = new URLSearchParams(
       Object.fromEntries(
@@ -55,7 +70,7 @@ export function useSyncQueryParam(params: Record<string, string>) {
     }
     // Must exclude router for next.js shallow routing, otherwise links break:
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params]);
+  }, [params, isReady]);
 }
 
 // Circumventing Next's router.replace method here because
