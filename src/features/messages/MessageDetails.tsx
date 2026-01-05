@@ -1,10 +1,8 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { Card } from '../../components/layout/Card';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useMultiProvider, useStore } from '../../store';
 import { Color } from '../../styles/Color';
 import { Message, MessageStatus } from '../../types';
@@ -99,20 +97,23 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   return (
     <>
-      <Card className="flex items-center justify-between rounded-full px-2 py-2 shadow-button">
-        <h2 className="text-md font-medium text-primary-800">{`${
-          isIcaMsg ? 'ICA ' : ''
-        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
-          multiProvider,
-          destinationChainName,
-        )}`}</h2>
+      <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-2 shadow-accent-glow">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-cream-300" />
+          <h2 className="text-md font-medium text-white">{`${
+            isIcaMsg ? 'ICA ' : ''
+          }Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
+            multiProvider,
+            destinationChainName,
+          )}`}</h2>
+        </div>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
         />
-      </Card>
+      </div>
       <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
         <OriginTransactionCard
           chainName={originChainName}
@@ -178,11 +179,11 @@ function StatusHeader({
   if (isFetching) {
     icon = (
       <div className="flex items-center justify-center">
-        <SpinnerIcon width={20} height={20} color={Color.primaryDark} />
+        <SpinnerIcon width={20} height={20} color={Color.white} />
       </div>
     );
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
-    icon = <Image src={CheckmarkIcon} width={24} height={24} alt="" />;
+    icon = <CheckmarkIcon width={24} height={24} color={Color.white} />;
   } else {
     // icon = <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
     icon = null;
@@ -190,7 +191,7 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="mr-2 text-md font-medium text-primary-800">{text}</h3>
+      <h3 className="mr-2 text-md font-medium text-white">{text}</h3>
       {icon}
     </div>
   );
