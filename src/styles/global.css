@@ -336,3 +336,8 @@ svg path[fill='white'] {
 [class*='htw-'] input {
   background-color: #f8f8ff !important;
 }
+
+/* Modal backdrop - darker fade for better contrast */
+.htw-bg-black\/25 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
