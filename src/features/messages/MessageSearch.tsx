@@ -177,7 +177,7 @@ function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => 
   return (
     <IconButton
       onClick={onClick}
-      className="flex h-[30px] w-[30px] items-center justify-center rounded bg-primary-500 duration-500 hover:bg-primary-600"
+      className="flex h-[30px] w-[30px] items-center justify-center rounded bg-accent-500 duration-500 hover:bg-accent-600"
       disabled={loading}
     >
       <RefreshIcon color="white" height={18} width={18} />
