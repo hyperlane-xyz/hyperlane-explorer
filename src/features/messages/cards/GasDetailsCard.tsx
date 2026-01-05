@@ -72,29 +72,29 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     }, [decimals, message, igpPayments]);
 
   return (
-    <Card className="relative w-full space-y-4">
+    <Card className="relative w-full space-y-3">
       <div className="flex items-center justify-between">
-        <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
+        <Image src={FuelPump} width={22} height={22} alt="" />
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Gas Payments</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-800">Interchain Gas Payments</h3>
           <Tooltip
             content="Amounts paid to the Interchain Gas Paymaster for message delivery."
             id="gas-info"
           />
         </div>
       </div>
-      <p className="text-sm font-light">
+      <p className="text-xs font-light">
         Interchain gas payments are required to fund message delivery on the destination chain.{' '}
         <a
           href={docLinks.gas}
           target="_blank"
           rel="noopener noreferrer"
-          className="cursor-pointer text-blue-500 transition-all hover:text-blue-400 active:text-blue-300"
+          className="cursor-pointer text-primary-800 transition-all hover:text-primary-700 active:text-primary-600"
         >
           Learn more about gas on Hyperlane.
         </a>
       </p>
-      <div className="mr-36 flex flex-wrap gap-x-4 gap-y-4">
+      <div className="mr-28 flex flex-wrap gap-x-4 gap-y-2">
         <KeyValueRow
           label="Payment count:"
           labelWidth="w-28"
@@ -188,6 +188,6 @@ function computeAvgGasPrice(
 }
 
 const style = {
-  th: 'p-1 md:p-2 text-sm text-gray-500 font-normal text-left border border-gray-200 rounded',
-  td: 'p-1 md:p-2 text-xs md:text-sm text-gray-700 text-left border border-gray-200 rounded',
+  th: 'p-1 md:p-1.5 text-xs text-gray-500 font-normal text-left border border-gray-200 rounded',
+  td: 'p-1 md:p-1.5 font-mono text-xxs md:text-xs text-gray-700 text-left border border-gray-200 rounded',
 };

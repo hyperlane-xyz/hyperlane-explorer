@@ -70,7 +70,7 @@ export function ActiveRebalanceModal({ warpRouteDetails }: CollateralCardsProps)
   return (
     <div className="space-y-3">
       <TextButton
-        classes="flex gap-1 cursor-pointer text-sm text-blue-500 underline underline-offset-1 transition-all hover:text-blue-600 active:text-blue-700"
+        classes="flex gap-1 cursor-pointer text-sm text-primary-600 underline underline-offset-1 transition-all hover:text-primary-600 active:text-primary-700"
         onClick={open}
       >
         <RefreshIcon width={20} height={20} color={Color.blue} />
@@ -104,7 +104,7 @@ function RebalanceList({ rebalances }: { rebalances: RebalanceInfo[] }) {
             {rebalance.messageId && (
               <Link
                 href={`/message/${rebalance.messageId}`}
-                className="text-blue-600 underline hover:text-blue-800"
+                className="text-primary-600 underline hover:text-primary-800"
                 target="_blank"
               >
                 View message →
