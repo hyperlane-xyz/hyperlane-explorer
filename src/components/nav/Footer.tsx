@@ -6,6 +6,7 @@ import { DiscordIcon, GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
 import Logo from '../../images/logos/hyperlane-logo.svg';
+import { Color } from '../../styles/Color';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },
@@ -20,9 +21,14 @@ const footerLinks2 = [
 ];
 
 const footerLinks3 = [
-  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color="#fff" /> },
-  { title: 'Discord', url: links.discord, external: true, icon: <DiscordIcon color="#fff" /> },
-  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color="#fff" /> },
+  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color={Color.white} /> },
+  {
+    title: 'Discord',
+    url: links.discord,
+    external: true,
+    icon: <DiscordIcon color={Color.white} />,
+  },
+  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color={Color.white} /> },
 ];
 
 export function Footer() {

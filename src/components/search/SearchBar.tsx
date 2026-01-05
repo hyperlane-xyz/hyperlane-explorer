@@ -20,13 +20,13 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   };
 
   return (
-    <div className="flex w-full items-center rounded-full bg-white p-1 transition-all duration-500">
+    <div className="flex w-full items-center rounded bg-white p-1 transition-all duration-500">
       <input
         value={value}
         onChange={onChange}
         type="search"
         placeholder={placeholder}
-        className="h-10 flex-1 rounded-full bg-white p-1 font-light placeholder:text-gray-600 focus:outline-none sm:h-12 sm:px-4 md:px-5"
+        className="h-10 flex-1 rounded bg-white p-1 font-light placeholder:text-gray-600 focus:outline-none sm:h-12 sm:px-4 md:px-5"
       />
 
       {isFetching && (
@@ -56,4 +56,4 @@ export function SearchBar({ value, placeholder, onChangeValue, isFetching }: Pro
   );
 }
 const iconStyle =
-  'flex h-10 w-10 items-center justify-center rounded-full bg-accent-600 sm:h-12 sm:w-12';
+  'flex h-10 w-10 items-center justify-center rounded bg-accent-600 duration-500 hover:bg-accent-700 sm:h-12 sm:w-12';
