@@ -41,21 +41,23 @@ export function KeyValueRow({
   return (
     <div className={`flex items-center gap-2 font-light ${classes}`}>
       <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div
-        className={`min-w-0 flex-1 font-mono text-sm ${displayWidth || ''} ${blurValue && 'blur-xs'} ${!truncateMiddle && 'truncate'}`}
-      >
-        <span>{displayValue}</span>
-        {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
+      <div className={`flex min-w-0 items-center ${displayWidth || ''}`}>
+        <span
+          className={`font-mono text-sm ${displayWidth ? 'truncate' : ''} ${blurValue && 'blur-xs'}`}
+        >
+          {displayValue}
+          {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
+        </span>
+        {showCopy && !useFallbackVal && (
+          <CopyButton
+            copyValue={display}
+            width={12}
+            height={12}
+            className={`ml-1.5 shrink-0 opacity-60 ${copyButtonClasses}`}
+          />
+        )}
+        {link && <LinkIcon href={link} />}
       </div>
-      {showCopy && !useFallbackVal && (
-        <CopyButton
-          copyValue={display}
-          width={12}
-          height={12}
-          className={`shrink-0 opacity-60 ${copyButtonClasses}`}
-        />
-      )}
-      {link && <LinkIcon href={link} />}
     </div>
   );
 }
