@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -71,10 +71,11 @@ export function MessageSearch() {
     tryToDecimalNumber(defaultEndTime),
   );
 
-  // One-way sync: URL params → state on initial hydration
-  // Only depends on router readiness and URL values, not local state
+  // One-way sync: URL params → state on initial hydration only
+  const hasHydratedRef = useRef(false);
   useEffect(() => {
-    if (!isRouterReady) return;
+    if (!isRouterReady || hasHydratedRef.current) return;
+    hasHydratedRef.current = true;
     if (defaultSearchQuery) setSearchInput(defaultSearchQuery);
     if (defaultOriginQuery) setOriginChainFilter(defaultOriginQuery);
     if (defaultDestinationQuery) setDestinationChainFilter(defaultDestinationQuery);
