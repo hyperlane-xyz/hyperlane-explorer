@@ -326,3 +326,13 @@ svg path[fill='white'] {
 [class*='htw-'] a[href^='https'] {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
+
+/* Modal and panel backgrounds - cream instead of pure white */
+.htw-bg-white {
+  background-color: #f8f8ff !important;
+}
+
+/* Input backgrounds in widgets */
+[class*='htw-'] input {
+  background-color: #f8f8ff !important;
+}
