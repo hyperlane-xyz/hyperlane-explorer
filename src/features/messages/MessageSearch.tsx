@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -67,6 +68,32 @@ export function MessageSearch() {
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(
     tryToDecimalNumber(defaultEndTime),
   );
+
+  // Sync state with URL params when router becomes ready (handles page refresh)
+  const router = useRouter();
+  useEffect(() => {
+    if (!router.isReady) return;
+    // Read directly from router.query to get fresh values after hydration
+    const { query } = router;
+    const searchParam = typeof query[MESSAGE_QUERY_PARAMS.SEARCH] === 'string'
+      ? query[MESSAGE_QUERY_PARAMS.SEARCH] : '';
+    const originParam = typeof query[MESSAGE_QUERY_PARAMS.ORIGIN] === 'string'
+      ? query[MESSAGE_QUERY_PARAMS.ORIGIN] : '';
+    const destParam = typeof query[MESSAGE_QUERY_PARAMS.DESTINATION] === 'string'
+      ? query[MESSAGE_QUERY_PARAMS.DESTINATION] : '';
+    const startParam = typeof query[MESSAGE_QUERY_PARAMS.START_TIME] === 'string'
+      ? query[MESSAGE_QUERY_PARAMS.START_TIME] : '';
+    const endParam = typeof query[MESSAGE_QUERY_PARAMS.END_TIME] === 'string'
+      ? query[MESSAGE_QUERY_PARAMS.END_TIME] : '';
+
+    // Only sync if state is empty but URL has values (i.e., initial hydration)
+    if (!searchInput && searchParam) setSearchInput(searchParam);
+    if (!originChainFilter && originParam) setOriginChainFilter(originParam);
+    if (!destinationChainFilter && destParam) setDestinationChainFilter(destParam);
+    if (startTimeFilter === null && startParam) setStartTimeFilter(tryToDecimalNumber(startParam));
+    if (endTimeFilter === null && endParam) setEndTimeFilter(tryToDecimalNumber(endParam));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query]);
 
   // GraphQL query and results
   const {
