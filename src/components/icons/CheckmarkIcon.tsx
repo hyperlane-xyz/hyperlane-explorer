@@ -7,8 +7,8 @@ interface Props {
   className?: string;
 }
 
-// Default color is accent-600 (#DA46CA) to match other UI elements
-function _CheckmarkIcon({ width = 16, height = 16, color = '#DA46CA', className }: Props) {
+// Default color is primary-500 (#9A0DFF) purple
+function _CheckmarkIcon({ width = 16, height = 16, color = '#9A0DFF', className }: Props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
