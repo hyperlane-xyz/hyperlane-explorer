@@ -81,8 +81,8 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-700 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
-          value ? 'bg-accent-700 pr-7 text-white sm:pr-8' : 'text-accent-700',
+          'flex items-center justify-center rounded border border-primary-500 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          value ? 'bg-primary-500 pr-7 text-white sm:pr-8' : 'text-primary-500',
         )}
         onClick={open}
       >
@@ -93,7 +93,7 @@ function ChainSelector({
             width={9}
             height={5}
             className="ml-2 opacity-80"
-            color="#B53DAA"
+            color="#9A0DFF"
           />
         )}
       </button>
@@ -149,14 +149,14 @@ function DatetimeSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color="#B53DAA"
+                color="#9A0DFF"
               />
             )}
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-700 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
-          hasValue ? 'bg-accent-700 pr-7 text-white sm:pr-8' : 'text-accent-700',
+          'flex items-center justify-center rounded border border-primary-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-primary-500 pr-7 text-white sm:pr-8' : 'text-primary-500',
         )}
         panelClassname="w-60"
       >
@@ -165,7 +165,7 @@ function DatetimeSelector({
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-primary-800">Time Range</h3>
               <div className="flex pt-1">
-                <TextButton classes="text-sm font-medium text-accent-700" onClick={onClickClear}>
+                <TextButton classes="text-sm font-medium text-primary-500" onClick={onClickClear}>
                   Clear
                 </TextButton>
               </div>
