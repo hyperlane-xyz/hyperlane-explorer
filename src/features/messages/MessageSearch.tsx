@@ -71,19 +71,15 @@ export function MessageSearch() {
     tryToDecimalNumber(defaultEndTime),
   );
 
-  // Sync state with URL params when router becomes ready (handles page refresh/remount)
+  // One-way sync: URL params → state on initial hydration
+  // Only depends on router readiness and URL values, not local state
   useEffect(() => {
     if (!isRouterReady) return;
-    // Sync if state is empty but URL has values
-    if (!searchInput && defaultSearchQuery) setSearchInput(defaultSearchQuery);
-    if (!originChainFilter && defaultOriginQuery) setOriginChainFilter(defaultOriginQuery);
-    if (!destinationChainFilter && defaultDestinationQuery)
-      setDestinationChainFilter(defaultDestinationQuery);
-    if (startTimeFilter === null && defaultStartTime)
-      setStartTimeFilter(tryToDecimalNumber(defaultStartTime));
-    if (endTimeFilter === null && defaultEndTime)
-      setEndTimeFilter(tryToDecimalNumber(defaultEndTime));
-    // Include default values in deps so effect re-runs when router.query updates
+    if (defaultSearchQuery) setSearchInput(defaultSearchQuery);
+    if (defaultOriginQuery) setOriginChainFilter(defaultOriginQuery);
+    if (defaultDestinationQuery) setDestinationChainFilter(defaultDestinationQuery);
+    if (defaultStartTime) setStartTimeFilter(tryToDecimalNumber(defaultStartTime));
+    if (defaultEndTime) setEndTimeFilter(tryToDecimalNumber(defaultEndTime));
   }, [
     isRouterReady,
     defaultSearchQuery,
@@ -91,11 +87,6 @@ export function MessageSearch() {
     defaultDestinationQuery,
     defaultStartTime,
     defaultEndTime,
-    searchInput,
-    originChainFilter,
-    destinationChainFilter,
-    startTimeFilter,
-    endTimeFilter,
   ]);
 
   // GraphQL query and results
