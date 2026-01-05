@@ -343,6 +343,11 @@ svg path[fill='white'] {
   z-index: 30 !important;
 }
 
+/* Modal panel container - above backdrop */
+.htw-z-20 {
+  z-index: 40 !important;
+}
+
 /* Widget gray backgrounds - match our cream/lavender tones */
 .htw-bg-gray-100 {
   background-color: #f3f0f8 !important;
