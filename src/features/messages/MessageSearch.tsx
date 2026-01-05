@@ -35,7 +35,13 @@ export function MessageSearch() {
 
   // Query params from URL - isRouterReady indicates router has hydrated
   const [
-    [defaultSearchQuery, defaultOriginQuery, defaultDestinationQuery, defaultStartTime, defaultEndTime],
+    [
+      defaultSearchQuery,
+      defaultOriginQuery,
+      defaultDestinationQuery,
+      defaultStartTime,
+      defaultEndTime,
+    ],
     isRouterReady,
   ] = useMultipleQueryParams([
     MESSAGE_QUERY_PARAMS.SEARCH,
