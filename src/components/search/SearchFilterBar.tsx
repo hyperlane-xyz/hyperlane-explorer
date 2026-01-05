@@ -87,7 +87,7 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          'flex items-center justify-center rounded border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
           value ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         onClick={open}
@@ -161,7 +161,7 @@ function DatetimeSelector({
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
           hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-60"

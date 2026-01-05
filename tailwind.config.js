@@ -170,7 +170,7 @@ module.exports = {
         'brand-gradient': `radial-gradient(ellipse 200% 150% at 50% 100%, ${theme('colors.primary.800')} 0%, ${theme('colors.primary.950')} 40%, #0d0612 100%)`,
       }),
       boxShadow: ({ theme }) => ({
-        'accent-glow': `inset 2px 2px 13px 2px ${theme('colors.accent.100')}`,
+        'accent-glow': `inset 0 0 20px 0 rgba(154, 13, 255, 0.35)`,
         card: `0px 4px 6px ${theme('colors.gray.950')}1A`,
         button: `0 4px 6px ${theme('colors.gray.950')}1A`,
         input: `0 0 4px ${theme('colors.gray.400')}4D`,
