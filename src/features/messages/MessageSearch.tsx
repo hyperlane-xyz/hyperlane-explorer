@@ -198,7 +198,9 @@ export function MessageSearch() {
         />
         <SearchUnknownError show={isAnyError && isValidInput} />
         <SearchInvalidError show={!isValidInput} allowAddress={true} />
-        <SearchChainError show={(!isValidOrigin || !isValidDestination) && isValidInput} />
+        <SearchChainError
+          show={(!isValidOrigin || !isValidDestination) && isValidInput && !!multiProvider}
+        />
       </Card>
     </>
   );
