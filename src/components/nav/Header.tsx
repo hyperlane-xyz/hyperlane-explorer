@@ -106,7 +106,7 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white bg-primary-500 px-4 py-1">
+    <div className="flex flex-col items-center rounded border border-white bg-primary-500 px-4 py-1">
       <WideChevronIcon
         width={10}
         height={14}

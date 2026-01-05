@@ -266,9 +266,9 @@ Hyperlane Widget Overrides
 ==========================
 */
 
-/* Timeline stages - deeper purple to match dark bg */
+/* Timeline stages - bright purple to match card header bars */
 [class*='htw-bg-blue-'] {
-  background-color: #4c1d95 !important;
+  background-color: #9a0dff !important;
 }
 
 /* Override widget icon SVG fills - blue to purple */
@@ -277,7 +277,7 @@ svg path[fill='#2362C1'],
 svg path[fill='#2764c1'],
 svg path[fill='#2362c1'],
 svg path[fill='rgb(39, 100, 193)'] {
-  fill: #4c1d95 !important;
+  fill: #9a0dff !important;
 }
 
 /* Override widget icon SVG strokes - blue to purple */
@@ -287,13 +287,13 @@ svg path[stroke='#2764c1'],
 svg path[stroke='#2362c1'],
 svg [stroke='#2764C1'],
 svg [stroke='#2764c1'] {
-  stroke: #4c1d95 !important;
+  stroke: #9a0dff !important;
 }
 
 /* Chevron polygon fills */
 svg polygon[fill='#2764C1'],
 svg polygon[fill='#2764c1'] {
-  fill: #4c1d95 !important;
+  fill: #9a0dff !important;
 }
 
 /* White chevrons - cream to blend with card bg */
