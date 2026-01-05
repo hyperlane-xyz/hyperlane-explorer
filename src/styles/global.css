@@ -348,7 +348,18 @@ svg path[fill='white'] {
   z-index: 40 !important;
 }
 
-/* Widget gray backgrounds - match our cream/lavender tones */
+/* Widget gray backgrounds - match cream white */
 .htw-bg-gray-100 {
-  background-color: #f3f0f8 !important;
+  background-color: #f8f8ff !important; /* same as our white */
+}
+
+/* Widget hover states - match message table accent colors */
+[class*='htw-']:hover.hover\:htw-bg-gray-100,
+.hover\:htw-bg-gray-100:hover {
+  background-color: #F9D5FB !important; /* accent-50 */
+}
+
+[class*='htw-']:hover.hover\:htw-bg-gray-200,
+.hover\:htw-bg-gray-200:hover {
+  background-color: #FABAF8 !important; /* accent-100 */
 }
