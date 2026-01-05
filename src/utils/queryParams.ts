@@ -19,12 +19,14 @@ export function useQueryParam(key: string, defaultVal = '') {
   return getQueryParamString(router.query, key, defaultVal);
 }
 
-export function useMultipleQueryParams(keys: string[]) {
+export function useMultipleQueryParams(keys: string[]): [string[], boolean] {
   const router = useRouter();
 
-  return keys.map((key) => {
+  const values = keys.map((key) => {
     return getQueryParamString(router.query, key);
   });
+
+  return [values, router.isReady];
 }
 
 // Keep value in sync with query param in URL

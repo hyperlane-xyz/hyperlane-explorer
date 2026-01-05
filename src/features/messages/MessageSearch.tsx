@@ -1,4 +1,3 @@
-import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
@@ -34,13 +33,10 @@ export function MessageSearch() {
   // Chain metadata
   const multiProvider = useReadyMultiProvider();
 
-  // query params
+  // Query params from URL - isRouterReady indicates router has hydrated
   const [
-    defaultSearchQuery,
-    defaultOriginQuery,
-    defaultDestinationQuery,
-    defaultStartTime,
-    defaultEndTime,
+    [defaultSearchQuery, defaultOriginQuery, defaultDestinationQuery, defaultStartTime, defaultEndTime],
+    isRouterReady,
   ] = useMultipleQueryParams([
     MESSAGE_QUERY_PARAMS.SEARCH,
     MESSAGE_QUERY_PARAMS.ORIGIN,
@@ -69,31 +65,32 @@ export function MessageSearch() {
     tryToDecimalNumber(defaultEndTime),
   );
 
-  // Sync state with URL params when router becomes ready (handles page refresh)
-  const router = useRouter();
+  // Sync state with URL params when router becomes ready (handles page refresh/remount)
   useEffect(() => {
-    if (!router.isReady) return;
-    // Read directly from router.query to get fresh values after hydration
-    const { query } = router;
-    const searchParam = typeof query[MESSAGE_QUERY_PARAMS.SEARCH] === 'string'
-      ? query[MESSAGE_QUERY_PARAMS.SEARCH] : '';
-    const originParam = typeof query[MESSAGE_QUERY_PARAMS.ORIGIN] === 'string'
-      ? query[MESSAGE_QUERY_PARAMS.ORIGIN] : '';
-    const destParam = typeof query[MESSAGE_QUERY_PARAMS.DESTINATION] === 'string'
-      ? query[MESSAGE_QUERY_PARAMS.DESTINATION] : '';
-    const startParam = typeof query[MESSAGE_QUERY_PARAMS.START_TIME] === 'string'
-      ? query[MESSAGE_QUERY_PARAMS.START_TIME] : '';
-    const endParam = typeof query[MESSAGE_QUERY_PARAMS.END_TIME] === 'string'
-      ? query[MESSAGE_QUERY_PARAMS.END_TIME] : '';
-
-    // Only sync if state is empty but URL has values (i.e., initial hydration)
-    if (!searchInput && searchParam) setSearchInput(searchParam);
-    if (!originChainFilter && originParam) setOriginChainFilter(originParam);
-    if (!destinationChainFilter && destParam) setDestinationChainFilter(destParam);
-    if (startTimeFilter === null && startParam) setStartTimeFilter(tryToDecimalNumber(startParam));
-    if (endTimeFilter === null && endParam) setEndTimeFilter(tryToDecimalNumber(endParam));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, router.query]);
+    if (!isRouterReady) return;
+    // Sync if state is empty but URL has values
+    if (!searchInput && defaultSearchQuery) setSearchInput(defaultSearchQuery);
+    if (!originChainFilter && defaultOriginQuery) setOriginChainFilter(defaultOriginQuery);
+    if (!destinationChainFilter && defaultDestinationQuery)
+      setDestinationChainFilter(defaultDestinationQuery);
+    if (startTimeFilter === null && defaultStartTime)
+      setStartTimeFilter(tryToDecimalNumber(defaultStartTime));
+    if (endTimeFilter === null && defaultEndTime)
+      setEndTimeFilter(tryToDecimalNumber(defaultEndTime));
+    // Include default values in deps so effect re-runs when router.query updates
+  }, [
+    isRouterReady,
+    defaultSearchQuery,
+    defaultOriginQuery,
+    defaultDestinationQuery,
+    defaultStartTime,
+    defaultEndTime,
+    searchInput,
+    originChainFilter,
+    destinationChainFilter,
+    startTimeFilter,
+    endTimeFilter,
+  ]);
 
   // GraphQL query and results
   const {
@@ -144,11 +141,12 @@ export function MessageSearch() {
     isAnyMessageFound &&
     !!multiProvider;
 
-  // Keep url in sync
+  // Keep url in sync - use raw filter values, not validated ones, to preserve URL params
+  // even when chain metadata hasn't loaded yet
   useSyncQueryParam({
-    [MESSAGE_QUERY_PARAMS.SEARCH]: isValidInput ? sanitizedInput : '',
-    [MESSAGE_QUERY_PARAMS.ORIGIN]: (isValidOrigin && originChainFilter) || '',
-    [MESSAGE_QUERY_PARAMS.DESTINATION]: (isValidDestination && destinationChainFilter) || '',
+    [MESSAGE_QUERY_PARAMS.SEARCH]: sanitizedInput,
+    [MESSAGE_QUERY_PARAMS.ORIGIN]: originChainFilter || '',
+    [MESSAGE_QUERY_PARAMS.DESTINATION]: destinationChainFilter || '',
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
     [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
