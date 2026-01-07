@@ -2,6 +2,7 @@ import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
+import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
@@ -11,7 +12,7 @@ import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../ty
 import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
-import { getChainDisplayName } from '../../chains/utils';
+import { getChainDisplayName, isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
@@ -19,6 +20,12 @@ import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
+
+// Dynamic import directly from file (not barrel) to avoid bundling the full relayer dependency tree
+const SelfRelayButton = dynamic(
+  () => import('../../relay/SelfRelayButton').then((mod) => mod.SelfRelayButton),
+  { ssr: false },
+);
 
 export function OriginTransactionCard({
   chainName,
@@ -105,6 +112,11 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Failing) {
     // Check if this is a collateral-related failure
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
+    const canSelfRelay =
+      message &&
+      isEvmChain(multiProvider, message.originDomainId) &&
+      isEvmChain(multiProvider, message.destinationDomainId);
+
     content = (
       <>
         {hasCollateralWarning && (
@@ -124,6 +136,11 @@ export function DestinationTransactionCard({
               </div>
             )}
             <CallDataModal debugResult={debugResult} />
+            {canSelfRelay && message && (
+              <div className="flex justify-center">
+                <SelfRelayButton message={message} />
+              </div>
+            )}
           </DeliveryStatus>
         )}
       </>
@@ -152,9 +169,12 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending) {
-    // Show collateral warning for all pending messages (not just EVM)
-    // since Token.getBalance() now supports cross-VM collateral checking
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
+    const canSelfRelay =
+      message &&
+      isEvmChain(multiProvider, message.originDomainId) &&
+      isEvmChain(multiProvider, message.destinationDomainId);
+
     content = (
       <>
         {hasCollateralWarning && (
@@ -176,6 +196,11 @@ export function DestinationTransactionCard({
                 <SpinnerIcon width={40} height={40} />
               </div>
               <CallDataModal debugResult={debugResult} />
+              {canSelfRelay && message && (
+                <div className="flex justify-center">
+                  <SelfRelayButton message={message} />
+                </div>
+              )}
             </div>
           </DeliveryStatus>
         )}

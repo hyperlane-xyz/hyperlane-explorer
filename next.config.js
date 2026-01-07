@@ -50,9 +50,6 @@ const nextConfig = {
 
   reactStrictMode: true,
 
-  // Transpile hyperlane packages to apply webpack aliases
-  transpilePackages: ['@hyperlane-xyz/utils', '@hyperlane-xyz/widgets'],
-
   // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -63,15 +60,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-
-  experimental: {
-    optimizePackageImports: [
-      '@hyperlane-xyz/registry',
-      '@hyperlane-xyz/sdk',
-      '@hyperlane-xyz/utils',
-      '@hyperlane-xyz/widgets',
-    ],
   },
 };
 

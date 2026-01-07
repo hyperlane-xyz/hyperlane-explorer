@@ -5,6 +5,7 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
+import { ConnectWalletButton } from '../../features/wallet';
 import Explorer from '../../images/logos/hyperlane-explorer.svg';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import Name from '../../images/logos/hyperlane-name.svg';
@@ -66,6 +67,7 @@ export function Header({ pathName }: { pathName: string }) {
             Docs
           </a>
           {showSearch && <MiniSearchBar />}
+          <ConnectWalletButton />
         </nav>
         {/* Dropdown menu, used on mobile */}
         <div className="item-center relative mr-2 flex sm:hidden">
