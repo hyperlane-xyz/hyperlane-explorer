@@ -62,11 +62,13 @@ export interface ExtendedLog extends providers.Log {
   to?: Address;
 }
 
+export type TokenArgsWithMaxDecimals = TokenArgs & { maxDecimals: number };
+
 export interface WarpRouteDetails {
   amount: string;
   transferRecipient: string;
-  originToken: TokenArgs;
-  destinationToken: TokenArgs;
+  originToken: TokenArgsWithMaxDecimals;
+  destinationToken: TokenArgsWithMaxDecimals;
 }
 
-export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgs>>;
+export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgsWithMaxDecimals>>;
