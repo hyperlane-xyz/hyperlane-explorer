@@ -40,6 +40,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.967.0",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.1",
     "@tanstack/eslint-plugin-query": "^5.28.6",
@@ -75,6 +76,8 @@
   },
   "scripts": {
     "clean": "rm -rf dist cache .next",
+    "prebuild": "node scripts/fetch-fonts.mjs",
+    "fetch-fonts": "node --env-file=.env.local scripts/fetch-fonts.mjs",
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc",
