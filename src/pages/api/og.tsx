@@ -487,7 +487,14 @@ export default async function handler(req: NextRequest) {
                 gap: '14px',
               }}
             >
-              <img src={warpTransfer.token.logoURI} height="64" alt="" style={{ height: '64px' }} />
+              {warpTransfer.token.logoURI && (
+                <img
+                  src={warpTransfer.token.logoURI}
+                  height="64"
+                  alt=""
+                  style={{ height: '64px' }}
+                />
+              )}
               <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
                 {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
               </span>
