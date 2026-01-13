@@ -46,7 +46,7 @@ export function Header({ pathName }: { pathName: string }) {
           </div>
         </Link>
         <nav
-          className={`hidden sm:flex sm:items-center sm:space-x-8 ${
+          className={`hidden sm:flex sm:min-h-[40px] sm:items-center sm:space-x-8 ${
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
