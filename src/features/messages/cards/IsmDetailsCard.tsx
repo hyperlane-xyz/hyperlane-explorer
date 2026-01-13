@@ -1,9 +1,7 @@
 import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
-import ShieldLock from '../../../images/icons/shield-lock.svg';
 import { IsmModuleTypes, MessageDebugResult } from '../../debugger/types';
 
 import { KeyValueRow } from './KeyValueRow';
@@ -15,42 +13,43 @@ interface Props {
 
 export function IsmDetailsCard({ ismDetails, blur }: Props) {
   return (
-    <Card className="relative w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <Image src={ShieldLock} width={24} height={24} alt="" />
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-primary-800">Interchain Security Modules</h3>
-          <Tooltip
-            id="ism-info"
-            content="Details about the Interchain Security Modules (ISM) that must verify this message."
-          />
-        </div>
+    <SectionCard
+      className="w-full"
+      title="Interchain Security Modules"
+      icon={
+        <Tooltip
+          id="ism-info"
+          content="Details about the Interchain Security Modules (ISM) that must verify this message."
+        />
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-sm font-light">
+          Interchain Security Modules define the rules for verifying messages before delivery.{' '}
+          <a
+            href={docLinks.ism}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cursor-pointer text-primary-600 transition-all hover:text-primary-500 active:text-primary-400"
+          >
+            Learn more about ISMs.
+          </a>
+        </p>
+        <KeyValueRow
+          label="ISM Address:"
+          labelWidth="w-24"
+          display={ismDetails?.ismAddress || ''}
+          showCopy={true}
+          blurValue={blur}
+        />
+        <KeyValueRow
+          label="Module Type:"
+          labelWidth="w-24"
+          display={!isNullish(ismDetails?.moduleType) ? IsmLabels[ismDetails!.moduleType] : ''}
+          blurValue={blur}
+        />
       </div>
-      <p className="text-sm font-light">
-        Interchain Security Modules define the rules for verifying messages before delivery.{' '}
-        <a
-          href={docLinks.ism}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="cursor-pointer text-primary-600 transition-all hover:text-primary-500 active:text-primary-400"
-        >
-          Learn more about ISMs.
-        </a>
-      </p>
-      <KeyValueRow
-        label="ISM Address:"
-        labelWidth="w-24"
-        display={ismDetails?.ismAddress || ''}
-        showCopy={true}
-        blurValue={blur}
-      />
-      <KeyValueRow
-        label="Module Type:"
-        labelWidth="w-24"
-        display={!isNullish(ismDetails?.moduleType) ? IsmLabels[ismDetails!.moduleType] : ''}
-        blurValue={blur}
-      />
-    </Card>
+    </SectionCard>
   );
 }
 
