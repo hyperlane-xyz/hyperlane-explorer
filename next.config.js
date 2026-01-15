@@ -54,6 +54,7 @@ const nextConfig = {
   transpilePackages: ['@hyperlane-xyz/utils', '@hyperlane-xyz/widgets'],
 
   // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
+  // and exclude Aleo WASM modules that don't work with Next.js
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Replace pino with a mock module to avoid SSR errors with pino-pretty transport
@@ -62,6 +63,21 @@ const nextConfig = {
         pino: require.resolve('./src/utils/pino-noop.js'),
       };
     }
+
+    // Mock Aleo SDK WASM modules that cause issues with Next.js bundling
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@provablehq/wasm': false,
+      '@provablehq/sdk': false,
+      '@hyperlane-xyz/aleo-sdk': false,
+    };
+
+    // Ignore WASM files
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'asset/resource',
+    });
+
     return config;
   },
 

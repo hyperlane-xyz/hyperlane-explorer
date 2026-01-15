@@ -11,10 +11,11 @@ import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { useIsmDetails } from '../debugger/useIsmDetails';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
-import { IsmDetailsCard } from './cards/IsmDetailsCard';
+import { IsmDetailsCard, extractValidatorInfo } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
 import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
@@ -75,6 +76,9 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const { msgId, status, originDomainId, destinationDomainId, origin, destination, isPiMsg } =
     message;
 
+  // Fetch ISM details from backend API (includes real validator signature status)
+  const { data: ismDetails } = useIsmDetails(isMessageFound ? message : null);
+
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
     : undefined;
@@ -131,8 +135,9 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           blur={blur}
           message={message}
           warpRouteDetails={warpRouteDetails}
+          validatorInfo={ismDetails ? extractValidatorInfo(ismDetails) : null}
         />
-        {showTimeline && <TimelineCard message={message} blur={blur} />}
+        {showTimeline && <TimelineCard message={message} blur={blur} debugResult={debugResult} ismResult={ismDetails} />}
         <WarpTransferDetailsCard
           message={message}
           warpRouteDetails={warpRouteDetails}
@@ -144,8 +149,8 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+        {ismDetails && (
+          <IsmDetailsCard result={ismDetails} blur={blur} />
         )}
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
