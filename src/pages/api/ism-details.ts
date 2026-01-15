@@ -6,15 +6,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { GithubRegistry } from '@hyperlane-xyz/registry';
+import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
 import {
-  HyperlaneCore,
-  MultiProvider,
-  EvmIsmReader,
-  EvmHookReader,
   BaseMetadataBuilder,
   DerivedIsmConfig,
+  EvmHookReader,
+  EvmIsmReader,
+  HyperlaneCore,
+  MultiProvider,
 } from '@hyperlane-xyz/sdk';
-import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
 
 // DerivedHookConfig is WithAddress<Exclude<HookConfig, Address>>
 // Using any for now until SDK exports this type
@@ -71,7 +71,13 @@ function createTimer() {
 async function getRegistryAndCore() {
   const timer = createTimer();
   const now = Date.now();
-  if (cachedRegistry && cachedMultiProvider && cachedCore && cachedMetadataBuilder && now - cacheTimestamp < CACHE_TTL) {
+  if (
+    cachedRegistry &&
+    cachedMultiProvider &&
+    cachedCore &&
+    cachedMetadataBuilder &&
+    now - cacheTimestamp < CACHE_TTL
+  ) {
     logger.info('[TIMING] getRegistryAndCore: cache HIT');
     return {
       registry: cachedRegistry,
@@ -142,10 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const timer = createTimer();
 
   try {
-    const {
-      originTxHash,
-      messageId,
-    } = req.body;
+    const { originTxHash, messageId } = req.body;
 
     if (!originTxHash || !messageId) {
       return res.status(400).json({ error: 'Missing required fields: originTxHash, messageId' });
@@ -153,7 +156,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { multiProvider, core, metadataBuilder, fromCache } = await getRegistryAndCore();
     timer.mark('getRegistryAndCore');
-    logger.info(`[TIMING] getRegistryAndCore took ${timer.getTimings().getRegistryAndCore}ms (fromCache: ${fromCache})`);
+    logger.info(
+      `[TIMING] getRegistryAndCore took ${timer.getTimings().getRegistryAndCore}ms (fromCache: ${fromCache})`,
+    );
 
     // We need to find which chain this transaction is on
     // For now, require the origin domain to be passed
@@ -202,11 +207,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check caches
     const now = Date.now();
-    
+
     // ISM cache key includes origin chain because routing ISMs route based on origin
     const ismCacheKey = getIsmCacheKey(destinationChain, originChain, recipientIsm);
     const hookCacheKey = getHookCacheKey(originChain, senderHook);
-    
+
     const cachedIsmConfig = ismConfigCache.get(ismCacheKey);
     const cachedHookConfig = hookConfigCache.get(hookCacheKey);
 
@@ -218,12 +223,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Derive configs in parallel if needed, use cache if available
     const ismConfigPromise: Promise<DerivedIsmConfig> = ismCacheValid
-      ? (ismFromCache = true, logger.info(`[TIMING] ISM config cache HIT for ${ismCacheKey}`), Promise.resolve(cachedIsmConfig!.config))
+      ? ((ismFromCache = true),
+        logger.info(`[TIMING] ISM config cache HIT for ${ismCacheKey}`),
+        Promise.resolve(cachedIsmConfig!.config))
       : (async () => {
           logger.info(`[TIMING] ISM config cache MISS for ${ismCacheKey}, will derive...`);
           const ismConfigStart = Date.now();
           // Pass message context to EvmIsmReader for optimized routing ISM derivation
-          const evmIsmReader = new EvmIsmReader(multiProvider, destinationChain, undefined, message);
+          const evmIsmReader = new EvmIsmReader(
+            multiProvider,
+            destinationChain,
+            undefined,
+            message,
+          );
           const result = await evmIsmReader.deriveIsmConfig(recipientIsm);
           logger.info(`[TIMING] deriveIsmConfig completed in ${Date.now() - ismConfigStart}ms`);
           // Cache with specific origin chain key
@@ -232,7 +244,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })();
 
     const hookConfigPromise: Promise<DerivedHookConfig> = hookCacheValid
-      ? (hookFromCache = true, logger.info(`[TIMING] Hook config cache HIT for ${hookCacheKey}`), Promise.resolve(cachedHookConfig!.config))
+      ? ((hookFromCache = true),
+        logger.info(`[TIMING] Hook config cache HIT for ${hookCacheKey}`),
+        Promise.resolve(cachedHookConfig!.config))
       : (async () => {
           logger.info(`[TIMING] Hook config cache MISS for ${hookCacheKey}, will derive...`);
           const hookConfigStart = Date.now();

@@ -3,8 +3,8 @@
  * Uses the SDK's BaseMetadataBuilder for real validator signature status.
  */
 
-import { useQuery } from '@tanstack/react-query';
 import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
+import { useQuery } from '@tanstack/react-query';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 

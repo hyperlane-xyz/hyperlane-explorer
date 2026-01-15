@@ -1,7 +1,7 @@
+import type { ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
-import type { ValidatorInfo } from '@hyperlane-xyz/sdk';
 import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -386,9 +386,7 @@ function ValidatorStatusSummary({
         />
       </div>
       {!hasQuorum && (
-        <p className="mt-2 text-center text-xs text-gray-500">
-          Waiting for validators to sign...
-        </p>
+        <p className="mt-2 text-center text-xs text-gray-500">Waiting for validators to sign...</p>
       )}
       {hasQuorum && (
         <p className="mt-2 text-center text-xs text-green-600">

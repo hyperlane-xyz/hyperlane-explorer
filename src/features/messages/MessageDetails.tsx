@@ -10,8 +10,8 @@ import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
-import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { useIsmDetails } from '../debugger/useIsmDetails';
+import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
@@ -137,7 +137,14 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           warpRouteDetails={warpRouteDetails}
           validatorInfo={ismDetails ? extractValidatorInfo(ismDetails) : null}
         />
-        {showTimeline && <TimelineCard message={message} blur={blur} debugResult={debugResult} ismResult={ismDetails} />}
+        {showTimeline && (
+          <TimelineCard
+            message={message}
+            blur={blur}
+            debugResult={debugResult}
+            ismResult={ismDetails}
+          />
+        )}
         <WarpTransferDetailsCard
           message={message}
           warpRouteDetails={warpRouteDetails}
@@ -149,9 +156,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
-        {ismDetails && (
-          <IsmDetailsCard result={ismDetails} blur={blur} />
-        )}
+        {ismDetails && <IsmDetailsCard result={ismDetails} blur={blur} />}
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>

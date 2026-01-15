@@ -1,12 +1,12 @@
-import { shortenAddress } from '@hyperlane-xyz/utils';
 import type {
+  AggregationMetadataBuildResult,
   MetadataBuildResult,
   MultisigMetadataBuildResult,
-  AggregationMetadataBuildResult,
   RoutingMetadataBuildResult,
   ValidatorInfo,
 } from '@hyperlane-xyz/sdk';
 import { IsmType } from '@hyperlane-xyz/sdk';
+import { shortenAddress } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -71,11 +71,11 @@ function IsmTreeNode({ result, depth }: { result: MetadataBuildResult; depth: nu
       >
         {/* Expand/collapse indicator */}
         {(hasChildren || isMultisig) && (
-          <span className="text-gray-400 text-xs w-3">{expanded ? '▼' : '▶'}</span>
+          <span className="w-3 text-xs text-gray-400">{expanded ? '▼' : '▶'}</span>
         )}
 
         {/* ISM type badge */}
-        <span className={`text-xs font-medium px-2 py-0.5 rounded ${badgeColor}`}>
+        <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
           {typeName}
           {isAggregation && ` (${(result as AggregationMetadataBuildResult).threshold})`}
           {isMultisig && ` (${(result as MultisigMetadataBuildResult).threshold})`}
@@ -87,14 +87,14 @@ function IsmTreeNode({ result, depth }: { result: MetadataBuildResult; depth: nu
         {/* Validator count for multisig */}
         {isMultisig && (result as MultisigMetadataBuildResult).validators && (
           <span className="text-xs text-gray-500">
-            ({getSignedCount(result as MultisigMetadataBuildResult)}/{(result as MultisigMetadataBuildResult).validators.length} signed, {(result as MultisigMetadataBuildResult).threshold} required)
+            ({getSignedCount(result as MultisigMetadataBuildResult)}/
+            {(result as MultisigMetadataBuildResult).validators.length} signed,{' '}
+            {(result as MultisigMetadataBuildResult).threshold} required)
           </span>
         )}
 
         {/* Metadata status indicator */}
-        {result.metadata !== undefined && (
-          <span className="text-xs text-green-600">✓ ready</span>
-        )}
+        {result.metadata !== undefined && <span className="text-xs text-green-600">✓ ready</span>}
       </div>
 
       {/* Expanded content */}
@@ -114,7 +114,11 @@ function IsmTreeNode({ result, depth }: { result: MetadataBuildResult; depth: nu
           {isAggregation && (result as AggregationMetadataBuildResult).modules && (
             <div className="space-y-1">
               {(result as AggregationMetadataBuildResult).modules.map((subModule, index) => (
-                <IsmTreeNode key={subModule.ismAddress || index} result={subModule} depth={depth + 1} />
+                <IsmTreeNode
+                  key={subModule.ismAddress || index}
+                  result={subModule}
+                  depth={depth + 1}
+                />
               ))}
             </div>
           )}
@@ -123,7 +127,10 @@ function IsmTreeNode({ result, depth }: { result: MetadataBuildResult; depth: nu
           {isRouting && (result as RoutingMetadataBuildResult).selectedIsm && (
             <div className="space-y-1">
               <span className="ml-6 text-xs text-gray-500">Routes to:</span>
-              <IsmTreeNode result={(result as RoutingMetadataBuildResult).selectedIsm} depth={depth + 1} />
+              <IsmTreeNode
+                result={(result as RoutingMetadataBuildResult).selectedIsm}
+                depth={depth + 1}
+              />
             </div>
           )}
         </div>
@@ -132,7 +139,13 @@ function IsmTreeNode({ result, depth }: { result: MetadataBuildResult; depth: nu
   );
 }
 
-function ValidatorList({ validators, threshold }: { validators: ValidatorInfo[]; threshold: number }) {
+function ValidatorList({
+  validators,
+  threshold,
+}: {
+  validators: ValidatorInfo[];
+  threshold: number;
+}) {
   const signedCount = validators.filter((v) => v.status === 'signed').length;
   const hasQuorum = signedCount >= threshold;
 
@@ -176,8 +189,7 @@ function ValidatorList({ validators, threshold }: { validators: ValidatorInfo[];
 }
 
 function ValidatorRow({ validator }: { validator: ValidatorInfo }) {
-  const statusIcon =
-    validator.status === 'signed' ? '✓' : validator.status === 'error' ? '✗' : '•';
+  const statusIcon = validator.status === 'signed' ? '✓' : validator.status === 'error' ? '✗' : '•';
   const statusColor =
     validator.status === 'signed'
       ? 'text-green-600'
@@ -186,7 +198,7 @@ function ValidatorRow({ validator }: { validator: ValidatorInfo }) {
         : 'text-gray-400';
 
   return (
-    <div className="flex items-center justify-between rounded bg-white px-2 py-1 text-xs border border-gray-100">
+    <div className="flex items-center justify-between rounded border border-gray-100 bg-white px-2 py-1 text-xs">
       <div className="flex items-center space-x-2">
         <span className={`font-medium ${statusColor}`}>{statusIcon}</span>
         <span className="font-mono text-gray-700">{shortenAddress(validator.address)}</span>
@@ -194,12 +206,13 @@ function ValidatorRow({ validator }: { validator: ValidatorInfo }) {
       </div>
       {/* Show status badge for signed validators */}
       {validator.status === 'signed' && (
-        <span className="rounded px-1.5 py-0.5 text-xs bg-green-100 text-green-700">
-          signed
-        </span>
+        <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">signed</span>
       )}
       {validator.status === 'error' && (
-        <span className="rounded px-1.5 py-0.5 text-xs bg-red-100 text-red-700" title={validator.error}>
+        <span
+          className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700"
+          title={validator.error}
+        >
           error
         </span>
       )}
@@ -218,7 +231,9 @@ function isMultisigResult(result: MetadataBuildResult): result is MultisigMetada
   );
 }
 
-function isAggregationResult(result: MetadataBuildResult): result is AggregationMetadataBuildResult {
+function isAggregationResult(
+  result: MetadataBuildResult,
+): result is AggregationMetadataBuildResult {
   return result.type === IsmType.AGGREGATION || result.type === IsmType.STORAGE_AGGREGATION;
 }
 
@@ -259,10 +274,7 @@ function getIsmTypeName(type: IsmType): string {
 }
 
 function getTypeBadgeColor(type: IsmType): string {
-  if (
-    type === IsmType.AGGREGATION ||
-    type === IsmType.STORAGE_AGGREGATION
-  ) {
+  if (type === IsmType.AGGREGATION || type === IsmType.STORAGE_AGGREGATION) {
     return 'bg-purple-100 text-purple-700';
   }
   if (

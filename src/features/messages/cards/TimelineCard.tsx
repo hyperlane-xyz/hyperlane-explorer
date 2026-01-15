@@ -1,6 +1,6 @@
+import type { MetadataBuildResult, ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import { MessageStage, useMessageStage } from '@hyperlane-xyz/widgets';
-import type { MetadataBuildResult, ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import { Message, MessageStatus } from '../../../types';
@@ -83,12 +83,7 @@ function EnhancedMessageTimeline({
       <div className="flex w-full">
         {/* Sent Stage */}
         <div className="flex flex-1 flex-col items-center">
-          <StageBar
-            isFirst
-            stage={MessageStage.Sent}
-            currentStage={stage}
-            status={status}
-          />
+          <StageBar isFirst stage={MessageStage.Sent} currentStage={stage} status={status} />
           <h4 className="mt-2.5 text-xs text-gray-700 xs:text-sm sm:text-base">
             {getStageHeader(MessageStage.Sent, stage, timings, status)}
           </h4>
@@ -97,15 +92,11 @@ function EnhancedMessageTimeline({
           </p>
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Finalized Stage */}
         <div className="flex flex-1 flex-col items-center">
-          <StageBar
-            stage={MessageStage.Finalized}
-            currentStage={stage}
-            status={status}
-          />
+          <StageBar stage={MessageStage.Finalized} currentStage={stage} status={status} />
           <h4 className="mt-2.5 text-xs text-gray-700 xs:text-sm sm:text-base">
             {getStageHeader(MessageStage.Finalized, stage, timings, status)}
           </h4>
@@ -114,15 +105,11 @@ function EnhancedMessageTimeline({
           </p>
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Validated Stage - WITH VALIDATOR INFO */}
         <div className="flex flex-1 flex-col items-center">
-          <StageBar
-            stage={MessageStage.Validated}
-            currentStage={stage}
-            status={status}
-          />
+          <StageBar stage={MessageStage.Validated} currentStage={stage} status={status} />
           <h4 className="mt-2.5 text-xs text-gray-700 xs:text-sm sm:text-base">
             {getStageHeader(MessageStage.Validated, stage, timings, status)}
           </h4>
@@ -148,16 +135,11 @@ function EnhancedMessageTimeline({
           )}
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Relayed Stage */}
         <div className="flex flex-1 flex-col items-center">
-          <StageBar
-            isLast
-            stage={MessageStage.Relayed}
-            currentStage={stage}
-            status={status}
-          />
+          <StageBar isLast stage={MessageStage.Relayed} currentStage={stage} status={status} />
           <h4 className="mt-2.5 text-xs text-gray-700 xs:text-sm sm:text-base">
             {getStageHeader(MessageStage.Relayed, stage, timings, status)}
           </h4>
