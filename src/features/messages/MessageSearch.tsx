@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 
@@ -33,13 +33,16 @@ export function MessageSearch() {
   // Chain metadata
   const multiProvider = useReadyMultiProvider();
 
-  // query params
+  // Query params from URL - isRouterReady indicates router has hydrated
   const [
-    defaultSearchQuery,
-    defaultOriginQuery,
-    defaultDestinationQuery,
-    defaultStartTime,
-    defaultEndTime,
+    [
+      defaultSearchQuery,
+      defaultOriginQuery,
+      defaultDestinationQuery,
+      defaultStartTime,
+      defaultEndTime,
+    ],
+    isRouterReady,
   ] = useMultipleQueryParams([
     MESSAGE_QUERY_PARAMS.SEARCH,
     MESSAGE_QUERY_PARAMS.ORIGIN,
@@ -67,6 +70,25 @@ export function MessageSearch() {
   const [endTimeFilter, setEndTimeFilter] = useState<number | null>(
     tryToDecimalNumber(defaultEndTime),
   );
+
+  // One-way sync: URL params → state on initial hydration only
+  const hasHydratedRef = useRef(false);
+  useEffect(() => {
+    if (!isRouterReady || hasHydratedRef.current) return;
+    hasHydratedRef.current = true;
+    if (defaultSearchQuery) setSearchInput(defaultSearchQuery);
+    if (defaultOriginQuery) setOriginChainFilter(defaultOriginQuery);
+    if (defaultDestinationQuery) setDestinationChainFilter(defaultDestinationQuery);
+    if (defaultStartTime) setStartTimeFilter(tryToDecimalNumber(defaultStartTime));
+    if (defaultEndTime) setEndTimeFilter(tryToDecimalNumber(defaultEndTime));
+  }, [
+    isRouterReady,
+    defaultSearchQuery,
+    defaultOriginQuery,
+    defaultDestinationQuery,
+    defaultStartTime,
+    defaultEndTime,
+  ]);
 
   // GraphQL query and results
   const {
@@ -117,11 +139,12 @@ export function MessageSearch() {
     isAnyMessageFound &&
     !!multiProvider;
 
-  // Keep url in sync
+  // Keep url in sync - use raw filter values, not validated ones, to preserve URL params
+  // even when chain metadata hasn't loaded yet
   useSyncQueryParam({
-    [MESSAGE_QUERY_PARAMS.SEARCH]: isValidInput ? sanitizedInput : '',
-    [MESSAGE_QUERY_PARAMS.ORIGIN]: (isValidOrigin && originChainFilter) || '',
-    [MESSAGE_QUERY_PARAMS.DESTINATION]: (isValidDestination && destinationChainFilter) || '',
+    [MESSAGE_QUERY_PARAMS.SEARCH]: sanitizedInput,
+    [MESSAGE_QUERY_PARAMS.ORIGIN]: originChainFilter || '',
+    [MESSAGE_QUERY_PARAMS.DESTINATION]: destinationChainFilter || '',
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
     [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
   });
@@ -167,7 +190,9 @@ export function MessageSearch() {
         />
         <SearchUnknownError show={isAnyError && isValidInput} />
         <SearchInvalidError show={!isValidInput} allowAddress={true} />
-        <SearchChainError show={(!isValidOrigin || !isValidDestination) && isValidInput} />
+        <SearchChainError
+          show={(!isValidOrigin || !isValidDestination) && isValidInput && !!multiProvider}
+        />
       </Card>
     </>
   );
