@@ -63,11 +63,9 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
+    // The amount in warp route messages is normalized to the max decimals across all chains in the route
     return {
-      amount: fromWei(
-        parsedMessage.amount.toString(),
-        Math.max(originToken.decimals, destinationToken.decimals) || 18,
-      ),
+      amount: fromWei(parsedMessage.amount.toString(), originToken.maxDecimals),
       transferRecipient: address,
       originToken: originToken,
       destinationToken: destinationToken,
