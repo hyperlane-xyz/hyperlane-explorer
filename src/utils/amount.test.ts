@@ -1,4 +1,4 @@
-import { formatAmountCompact } from './amount';
+import { formatAmountCompact, formatAmountWithCommas } from './amount';
 
 describe('formatAmountCompact', () => {
   it('returns original string for invalid numbers', () => {
@@ -55,5 +55,34 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('1.0000')).toBe('1');
     expect(formatAmountCompact('1000.00')).toBe('1K');
     expect(formatAmountCompact('1500000')).toBe('1.5M');
+  });
+});
+
+describe('formatAmountWithCommas', () => {
+  it('returns original string for invalid numbers', () => {
+    expect(formatAmountWithCommas('invalid')).toBe('invalid');
+    expect(formatAmountWithCommas('')).toBe('');
+  });
+
+  it('formats integers with thousand separators', () => {
+    expect(formatAmountWithCommas('1000')).toBe('1,000');
+    expect(formatAmountWithCommas('100000')).toBe('100,000');
+    expect(formatAmountWithCommas('1000000')).toBe('1,000,000');
+    expect(formatAmountWithCommas('1234567890')).toBe('1,234,567,890');
+  });
+
+  it('formats decimals with thousand separators', () => {
+    expect(formatAmountWithCommas('1234.56')).toBe('1,234.56');
+    expect(formatAmountWithCommas('8820.7')).toBe('8,820.7');
+    expect(formatAmountWithCommas('1234567.89')).toBe('1,234,567.89');
+  });
+
+  it('handles small numbers without commas', () => {
+    expect(formatAmountWithCommas('999')).toBe('999');
+    expect(formatAmountWithCommas('0.123456')).toBe('0.123456');
+  });
+
+  it('limits to 6 decimal places', () => {
+    expect(formatAmountWithCommas('1.123456789')).toBe('1.123457');
   });
 });

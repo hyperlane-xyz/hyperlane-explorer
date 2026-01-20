@@ -35,3 +35,18 @@ export function formatAmountCompact(amount: string): string {
   // Small amounts - show significant figures
   return num.toPrecision(4).replace(/\.?0+$/, '');
 }
+
+/**
+ * Format a token amount with thousand separators (commas).
+ * Preserves up to 6 decimal places, trims trailing zeros.
+ *
+ * Examples:
+ *   100000      → "100,000"
+ *   8820.7      → "8,820.7"
+ *   1234567.89  → "1,234,567.89"
+ */
+export function formatAmountWithCommas(amount: string): string {
+  const num = parseFloat(amount);
+  if (isNaN(num)) return amount;
+  return num.toLocaleString('en-US', { maximumFractionDigits: 6 });
+}
