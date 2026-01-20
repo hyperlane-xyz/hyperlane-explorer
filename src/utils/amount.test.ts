@@ -24,12 +24,12 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('0.9999')).toBe('0.9999');
   });
 
-  it('formats normal amounts (1-999) with up to 2 decimals', () => {
-    expect(formatAmountCompact('1')).toBe('1');
-    expect(formatAmountCompact('1.5')).toBe('1.5');
+  it('formats normal amounts (1-999) with exactly 2 decimals', () => {
+    expect(formatAmountCompact('1')).toBe('1.00');
+    expect(formatAmountCompact('1.5')).toBe('1.50');
     expect(formatAmountCompact('1.23456789')).toBe('1.23');
     expect(formatAmountCompact('999.99')).toBe('999.99');
-    expect(formatAmountCompact('500.1000')).toBe('500.1');
+    expect(formatAmountCompact('500.1000')).toBe('500.10');
   });
 
   it('formats thousands with K suffix', () => {
@@ -37,7 +37,7 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('1234.56')).toBe('1.23K');
     expect(formatAmountCompact('12345.67')).toBe('12.35K');
     expect(formatAmountCompact('123456.78')).toBe('123.46K');
-    expect(formatAmountCompact('999999')).toBe('1000K');
+    expect(formatAmountCompact('999999')).toBe('1M');
   });
 
   it('formats millions with M suffix', () => {
@@ -58,8 +58,7 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('-1234567.89')).toBe('-1.23M');
   });
 
-  it('trims trailing zeros', () => {
-    expect(formatAmountCompact('1.0000')).toBe('1');
+  it('trims trailing zeros for K/M/B suffixes', () => {
     expect(formatAmountCompact('1000.00')).toBe('1K');
     expect(formatAmountCompact('1500000')).toBe('1.5M');
   });
