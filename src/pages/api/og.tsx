@@ -22,6 +22,7 @@ import {
   fetchChainMetadata,
   fetchWarpRouteMap,
   getChainDisplayName,
+  normalizeAddressToHex,
   type ChainDisplayNames,
   type WarpRouteMap,
   type WarpToken,
@@ -141,26 +142,30 @@ function getWarpTransferDetails(
   const destMeta = chainMetadata.get(destChainName);
 
   const normalizedSender = originMeta
-    ? bytes32ToProtocolAddress(
-        messageData.sender,
-        originMeta.protocol || 'ethereum',
-        originMeta.bech32Prefix,
+    ? normalizeAddressToHex(
+        bytes32ToProtocolAddress(
+          messageData.sender,
+          originMeta.protocol || 'ethereum',
+          originMeta.bech32Prefix,
+        ),
       )
-    : messageData.sender;
+    : normalizeAddressToHex(messageData.sender);
 
-  const originToken = originChainTokens.get(normalizedSender.toLowerCase());
+  const originToken = originChainTokens.get(normalizedSender);
   if (!originToken) return null;
 
   const normalizedRecipient = destMeta
-    ? bytes32ToProtocolAddress(
-        messageData.recipient,
-        destMeta.protocol || 'ethereum',
-        destMeta.bech32Prefix,
+    ? normalizeAddressToHex(
+        bytes32ToProtocolAddress(
+          messageData.recipient,
+          destMeta.protocol || 'ethereum',
+          destMeta.bech32Prefix,
+        ),
       )
-    : messageData.recipient;
+    : normalizeAddressToHex(messageData.recipient);
 
   const destChainTokens = warpRouteMap.get(destChainName);
-  const destToken = destChainTokens?.get(normalizedRecipient.toLowerCase());
+  const destToken = destChainTokens?.get(normalizedRecipient);
 
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
