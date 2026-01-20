@@ -1,3 +1,5 @@
+import { COSMOS_STANDARDS } from '../consts/tokenStandards';
+
 const DEFAULT_TOKEN_DECIMALS = 18;
 
 export type WarpRouteAmountConfig = {
@@ -9,6 +11,56 @@ export type WarpRouteAmountParts = {
   amount: bigint;
   decimals: number;
 };
+
+/**
+ * Token info needed to determine effective decimals for amount decoding.
+ * Designed to work with both SDK TokenArgs (maxDecimals) and Edge-compatible WarpToken (wireDecimals).
+ */
+export interface EffectiveDecimalsToken {
+  decimals?: number;
+  scale?: number;
+  standard?: string;
+  // maxDecimals (SDK) or wireDecimals (Edge) - both mean "max decimals in route"
+  maxDecimals?: number;
+  wireDecimals?: number;
+}
+
+/**
+ * Determine the effective decimals for decoding a warp route message amount.
+ *
+ * The message body amount encoding depends on the token standard:
+ * 1. If scale is explicitly set, the router multiplied localAmount by scale,
+ *    so we use origin token's native decimals
+ * 2. Cosmos standards don't normalize amounts to max decimals,
+ *    so the message amount is in origin token's native decimals
+ * 3. EVM/Sealevel standards normalize to wireDecimals (max across all tokens in route)
+ */
+export function getEffectiveDecimals(
+  originToken: EffectiveDecimalsToken,
+  destinationToken?: EffectiveDecimalsToken,
+): number {
+  // If scale is explicitly set, use origin decimals
+  if (originToken.scale !== undefined) {
+    return originToken.decimals ?? DEFAULT_TOKEN_DECIMALS;
+  }
+
+  // Check if either token uses a Cosmos standard (no normalization)
+  const isCosmosRoute =
+    COSMOS_STANDARDS.has(originToken.standard || '') ||
+    COSMOS_STANDARDS.has(destinationToken?.standard || '');
+
+  if (isCosmosRoute) {
+    return originToken.decimals ?? DEFAULT_TOKEN_DECIMALS;
+  }
+
+  // EVM/Sealevel: normalized to max decimals in route (wireDecimals or maxDecimals)
+  return (
+    originToken.wireDecimals ??
+    originToken.maxDecimals ??
+    originToken.decimals ??
+    DEFAULT_TOKEN_DECIMALS
+  );
+}
 
 function parseScale(scale: WarpRouteAmountConfig['scale']): bigint | null {
   if (scale === undefined || scale === null) return null;

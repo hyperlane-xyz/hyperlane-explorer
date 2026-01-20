@@ -12,11 +12,10 @@ import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { messageId } from '@hyperlane-xyz/utils';
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../types';
-import { COSMOS_STANDARDS } from '../../consts/tokenStandards';
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
-import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
@@ -65,18 +64,7 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
-    // Determine effective decimals for decoding the message amount:
-    // - If scale is set, the router multiplied localAmount by scale, so we use origin decimals
-    // - Cosmos standards don't normalize amounts, so message is in origin decimals
-    // - EVM/Sealevel standards normalize to maxDecimals (max across all tokens in route)
-    const isCosmosRoute =
-      COSMOS_STANDARDS.has(originToken.standard) || COSMOS_STANDARDS.has(destinationToken.standard);
-    const effectiveDecimals =
-      originToken.scale !== undefined
-        ? originToken.decimals
-        : isCosmosRoute
-          ? (originToken.decimals ?? 18)
-          : originToken.maxDecimals;
+    const effectiveDecimals = getEffectiveDecimals(originToken, destinationToken);
 
     const amountParts = getWarpRouteAmountParts(parsedMessage.amount, {
       decimals: effectiveDecimals,

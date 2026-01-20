@@ -8,7 +8,6 @@ import {
   fetchMessageForOG,
   type MessageOGData,
 } from '../../features/messages/queries/serverFetch';
-import { COSMOS_STANDARDS } from '../../consts/tokenStandards';
 import { formatAmountWithCommas } from '../../utils/amount';
 import {
   adjustColorForBackground,
@@ -17,7 +16,7 @@ import {
   type ChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
-import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 import {
   bytes32ToProtocolAddress,
   fetchChainMetadata,
@@ -166,19 +165,7 @@ function getWarpTransferDetails(
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
-  // Determine effective decimals based on token standard:
-  // - If scale is explicitly set, use origin token decimals
-  // - Cosmos standards don't normalize, so use origin decimals
-  // - Other standards (EVM, Sealevel) normalize to wireDecimals (max)
-  const isCosmosRoute =
-    COSMOS_STANDARDS.has(originToken.standard || '') ||
-    COSMOS_STANDARDS.has(destToken?.standard || '');
-  const effectiveDecimals =
-    originToken.scale !== undefined
-      ? originToken.decimals
-      : isCosmosRoute
-        ? originToken.decimals
-        : originToken.wireDecimals;
+  const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
 
   const amountParts = getWarpRouteAmountParts(parsed.amount, {
     decimals: effectiveDecimals,
