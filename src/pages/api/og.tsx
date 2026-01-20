@@ -22,7 +22,6 @@ import {
   fetchWarpRouteMap,
   getChainDisplayName,
   normalizeAddressToHex,
-  type ChainDisplayNames,
   type WarpRouteMap,
   type WarpToken,
 } from '../../utils/yamlParsing';
@@ -130,7 +129,6 @@ function getWarpTransferDetails(
   originChainName: string,
   destChainName: string,
   warpRouteMap: WarpRouteMap,
-  _chainMetadata: Map<string, ChainDisplayNames>,
 ): WarpTransferDetails | null {
   if (!messageData.body) return null;
 
@@ -230,7 +228,6 @@ export default async function handler(req: NextRequest) {
     originChainName,
     destChainName,
     warpRouteMap,
-    chainMetadata,
   );
 
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
