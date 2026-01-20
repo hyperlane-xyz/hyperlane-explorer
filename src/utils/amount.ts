@@ -1,9 +1,10 @@
 /**
  * Format a token amount with abbreviations for large numbers.
- * Small amounts show up to 2 decimals for normal amounts, 4 significant figures for small amounts.
+ * Shows <0.0001 for dust amounts, 2 decimals for normal amounts, K/M/B for large.
  *
  * Examples:
- *   0.000123    → "0.0001234"
+ *   0.00000001  → "<0.0001"
+ *   0.001       → "0.001"
  *   1.5         → "1.5"
  *   999.99      → "999.99"
  *   1234.56     → "1.23K"
@@ -32,8 +33,11 @@ export function formatAmountCompact(amount: string): string {
   if (absNum === 0) {
     return '0';
   }
-  // Small amounts - show significant figures
-  return num.toPrecision(4).replace(/\.?0+$/, '');
+  if (absNum < 0.0001) {
+    return '<0.0001';
+  }
+  // Small amounts between 0.0001 and 1
+  return num.toFixed(4).replace(/\.?0+$/, '');
 }
 
 /**
