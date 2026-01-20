@@ -16,6 +16,7 @@ import {
   extractChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
+import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 import {
   fetchChainMetadata,
   fetchWarpRouteMap,
@@ -79,8 +80,8 @@ function sanitizeSymbol(symbol: string): string {
  *
  * IMPORTANT: Decimal Scaling in Warp Routes
  * -----------------------------------------
- * The amount in the message body is NORMALIZED to a common decimal format (wire format),
- * which is the max decimals among all tokens in the warp route.
+ * The amount in the message body is NORMALIZED by each router's scale factor.
+ * When scale matches 10^(maxDecimals - localDecimals), this aligns with wire decimals.
  *
  * EVM Implementation (TokenRouter.sol):
  *   - Uses `scale = 10^(maxDecimals - localDecimals)` set at deployment
@@ -146,32 +147,67 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
 
   return `${integerPart}.${trimmed}`;
 }
+// Cosmos warp standards don't normalize amounts to maxDecimals
+const COSMOS_STANDARDS = new Set([
+  'CW20',
+  'CWNative',
+  'CW721',
+  'CwHypNative',
+  'CwHypCollateral',
+  'CwHypSynthetic',
+  'CosmosIbc',
+]);
 
 // Get warp transfer details if this is a warp route message
 function getWarpTransferDetails(
   messageData: MessageOGData,
   originChainName: string,
+  destChainName: string,
   warpRouteMap: WarpRouteMap,
 ): WarpTransferDetails | null {
   if (!messageData.body) return null;
 
   // The sender is the warp router contract on the origin chain
-  const chainTokens = warpRouteMap.get(originChainName);
-  if (!chainTokens) return null;
+  const originChainTokens = warpRouteMap.get(originChainName);
+  if (!originChainTokens) return null;
 
   // Look up token by sender address (lowercase for case-insensitive matching)
-  const token = chainTokens.get(messageData.sender.toLowerCase());
-  if (!token) return null;
+  const originToken = originChainTokens.get(messageData.sender.toLowerCase());
+  if (!originToken) return null;
+
+  // Look up destination token by recipient address
+  const destChainTokens = warpRouteMap.get(destChainName);
+  const destToken = destChainTokens?.get(messageData.recipient.toLowerCase());
 
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
+  // Determine effective decimals based on token standard:
+  // - If scale is explicitly set, use origin token decimals
+  // - Cosmos standards don't normalize, so use min decimals
+  // - Other standards (EVM, Sealevel) normalize to wireDecimals (max)
+  const isCosmosRoute =
+    COSMOS_STANDARDS.has(originToken.standard || '') ||
+    COSMOS_STANDARDS.has(destToken?.standard || '');
+  const effectiveDecimals =
+    originToken.scale !== undefined
+      ? originToken.decimals
+      : isCosmosRoute
+        ? Math.min(originToken.decimals, destToken?.decimals ?? originToken.decimals)
+        : originToken.wireDecimals;
+
+  const amountParts = getWarpRouteAmountParts(parsed.amount, {
+    decimals: effectiveDecimals,
+    scale: originToken.scale,
+  });
+  const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
+
   return {
-    token,
-    // Use wireDecimals (max decimals in this warp route) since message amounts are scaled
-    amount: formatAmountWithCommas(formatTokenAmount(parsed.amount, token.wireDecimals)),
+    token: originToken,
+    amount: formatAmountWithCommas(formattedAmount),
   };
 }
+
 
 // Get chain logo URL from registry CDN
 function getChainLogoUrl(chainName: string): string {
@@ -234,7 +270,12 @@ export default async function handler(req: NextRequest) {
   const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
 
   // Check if this is a warp route transfer
-  const warpTransfer = getWarpTransferDetails(messageData, originChainName, warpRouteMap);
+  const warpTransfer = getWarpTransferDetails(
+    messageData,
+    originChainName,
+    destChainName,
+    warpRouteMap,
+  );
 
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
   const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';

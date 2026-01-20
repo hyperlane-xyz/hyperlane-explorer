@@ -15,6 +15,18 @@ import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
+import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+
+// Cosmos warp standards don't normalize amounts to maxDecimals
+const COSMOS_STANDARDS = new Set([
+  'CW20',
+  'CWNative',
+  'CW721',
+  'CwHypNative',
+  'CwHypCollateral',
+  'CwHypSynthetic',
+  'CosmosIbc',
+]);
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
@@ -63,9 +75,26 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
-    // The amount in warp route messages is normalized to the max decimals across all chains in the route
+    // Determine effective decimals based on token standard:
+    // - If scale is explicitly set, use origin token decimals
+    // - Cosmos standards don't normalize, so use min decimals
+    // - Other standards (EVM, Sealevel) normalize to maxDecimals
+    const isCosmosRoute =
+      COSMOS_STANDARDS.has(originToken.standard) || COSMOS_STANDARDS.has(destinationToken.standard);
+    const effectiveDecimals =
+      originToken.scale !== undefined
+        ? originToken.decimals
+        : isCosmosRoute
+          ? Math.min(originToken.decimals ?? 18, destinationToken.decimals ?? 18)
+          : originToken.maxDecimals;
+
+    const amountParts = getWarpRouteAmountParts(parsedMessage.amount, {
+      decimals: effectiveDecimals,
+      scale: originToken.scale,
+    });
+
     return {
-      amount: fromWei(parsedMessage.amount.toString(), originToken.maxDecimals),
+      amount: fromWei(amountParts.amount.toString(), amountParts.decimals),
       transferRecipient: address,
       originToken: originToken,
       destinationToken: destinationToken,

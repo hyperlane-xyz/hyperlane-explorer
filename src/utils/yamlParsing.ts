@@ -145,9 +145,11 @@ export interface WarpToken {
   // Wire format decimals = max decimals among all tokens in this warp route
   // Used for decoding scaled amounts in message body (see og.tsx for details)
   wireDecimals: number;
+  scale?: number;
   logoURI: string;
   chainName: string;
   addressOrDenom: string;
+  standard?: string;
 }
 
 // Map of chainName -> lowercase address -> token info
@@ -157,9 +159,11 @@ interface WarpRouteConfigEntry {
   addressOrDenom?: string;
   chainName?: string;
   decimals?: number;
+  scale?: number;
   symbol?: string;
   name?: string;
   logoURI?: string;
+  standard?: string;
 }
 
 interface WarpRouteConfig {
@@ -209,10 +213,12 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
           addressOrDenom: token.addressOrDenom,
           chainName,
           decimals: token.decimals,
+          scale: token.scale,
           wireDecimals,
           logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
           name: token.name || '',
           symbol: token.symbol,
+          standard: token.standard,
         });
       }
     }
