@@ -65,10 +65,10 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
-    // Determine effective decimals based on token standard:
-    // - If scale is explicitly set, use origin token decimals
-    // - Cosmos standards don't normalize, so use origin decimals
-    // - Other standards (EVM, Sealevel) normalize to maxDecimals
+    // Determine effective decimals for decoding the message amount:
+    // - If scale is set, the router multiplied localAmount by scale, so we use origin decimals
+    // - Cosmos standards don't normalize amounts, so message is in origin decimals
+    // - EVM/Sealevel standards normalize to maxDecimals (max across all tokens in route)
     const isCosmosRoute =
       COSMOS_STANDARDS.has(originToken.standard) || COSMOS_STANDARDS.has(destinationToken.standard);
     const effectiveDecimals =
