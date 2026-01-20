@@ -186,8 +186,9 @@ export async function buildWarpRouteChainAddressMap(
   return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
     if (!tokens.length) return acc;
 
-    // Calculate the max decimals across all tokens in this warp route
-    const maxDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
+    // Calculate the wire decimals (max across all tokens in this warp route)
+    // This is the normalized decimal format used in the message body for EVM/Sealevel routes
+    const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
 
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
@@ -195,7 +196,7 @@ export async function buildWarpRouteChainAddressMap(
       acc[chainName] ||= {};
       acc[chainName][addressOrDenom] = {
         ...token,
-        maxDecimals,
+        wireDecimals,
       };
     });
     return acc;

@@ -15,6 +15,7 @@ import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
+import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
@@ -63,9 +64,15 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
-    // The amount in warp route messages is normalized to the max decimals across all chains in the route
+    const effectiveDecimals = getEffectiveDecimals(originToken, destinationToken);
+
+    const amountParts = getWarpRouteAmountParts(parsedMessage.amount, {
+      decimals: effectiveDecimals,
+      scale: originToken.scale,
+    });
+
     return {
-      amount: fromWei(parsedMessage.amount.toString(), originToken.maxDecimals),
+      amount: fromWei(amountParts.amount.toString(), amountParts.decimals),
       transferRecipient: address,
       originToken: originToken,
       destinationToken: destinationToken,
