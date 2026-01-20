@@ -351,6 +351,7 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
         }
 
         const chainMap = map.get(chainName)!;
+        // Normalize to hex for consistent lookups: bech32 (cosmos) and hex (cosmosnative) both become hex
         const normalizedAddress = normalizeAddressToHex(token.addressOrDenom);
         const logoURI = token.logoURI || '';
 
