@@ -93,6 +93,7 @@ export function getWarpRouteAmountParts(
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
   const scaleValue = parseScale(scale) ?? 1n;
+  // bigint division truncates toward zero (floor for positive token amounts)
   return {
     amount: messageAmount / scaleValue,
     decimals: tokenDecimals,
