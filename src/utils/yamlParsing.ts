@@ -64,6 +64,76 @@ function normalizeAddressToHex(address: string): string {
   }
 }
 
+const BECH32_ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+
+function convertBits(data: Uint8Array, fromBits: number, toBits: number, pad: boolean): number[] {
+  let acc = 0;
+  let bits = 0;
+  const result: number[] = [];
+  const maxv = (1 << toBits) - 1;
+
+  for (const value of data) {
+    acc = (acc << fromBits) | value;
+    bits += fromBits;
+    while (bits >= toBits) {
+      bits -= toBits;
+      result.push((acc >> bits) & maxv);
+    }
+  }
+
+  if (pad && bits > 0) {
+    result.push((acc << (toBits - bits)) & maxv);
+  }
+
+  return result;
+}
+
+function bech32Checksum(hrp: string, data: number[]): number[] {
+  const values = [
+    ...hrp.split('').map((c) => c.charCodeAt(0) >> 5),
+    0,
+    ...hrp.split('').map((c) => c.charCodeAt(0) & 31),
+    ...data,
+  ];
+  let chk = 1;
+  for (const v of values) {
+    const top = chk >> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v;
+    for (let i = 0; i < 5; i++) {
+      if ((top >> i) & 1) {
+        chk ^= [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3][i];
+      }
+    }
+  }
+  chk ^= 1;
+  return [0, 1, 2, 3, 4, 5].map((i) => (chk >> (5 * (5 - i))) & 31);
+}
+
+function bech32Encode(prefix: string, data: Uint8Array): string {
+  const words = convertBits(data, 8, 5, true);
+  const checksum = bech32Checksum(prefix, words);
+  return prefix + '1' + [...words, ...checksum].map((d) => BECH32_ALPHABET[d]).join('');
+}
+
+export function bytes32ToProtocolAddress(
+  bytes32Hex: string,
+  protocol: string,
+  bech32Prefix?: string,
+): string {
+  const hex = bytes32Hex.replace(/^0x/i, '').toLowerCase();
+
+  if (protocol === 'cosmos' && bech32Prefix) {
+    const addressHex = hex.slice(-40);
+    const bytes = new Uint8Array(20);
+    for (let i = 0; i < 20; i++) {
+      bytes[i] = parseInt(addressHex.slice(i * 2, i * 2 + 2), 16);
+    }
+    return bech32Encode(bech32Prefix, bytes);
+  }
+
+  return '0x' + hex;
+}
+
 // ============================================================================
 // Chain Metadata Parsing
 // ============================================================================
@@ -71,6 +141,8 @@ function normalizeAddressToHex(address: string): string {
 export interface ChainDisplayNames {
   displayName: string;
   displayNameShort?: string;
+  protocol?: string;
+  bech32Prefix?: string;
 }
 
 /**
@@ -83,13 +155,15 @@ export function parseChainMetadataYaml(yamlStr: string): Map<string, ChainDispla
   try {
     const data = YAML.parse(yamlStr) as Record<
       string,
-      { displayName?: string; displayNameShort?: string }
+      { displayName?: string; displayNameShort?: string; protocol?: string; bech32Prefix?: string }
     >;
     for (const [chainName, metadata] of Object.entries(data)) {
       if (metadata?.displayName) {
         map.set(chainName, {
           displayName: metadata.displayName,
           displayNameShort: metadata.displayNameShort,
+          protocol: metadata.protocol,
+          bech32Prefix: metadata.bech32Prefix,
         });
       }
     }

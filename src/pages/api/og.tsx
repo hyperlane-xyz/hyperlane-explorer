@@ -11,16 +11,18 @@ import {
 import { formatAmountWithCommas } from '../../utils/amount';
 import {
   adjustColorForBackground,
-  type ChainColors,
   DEFAULT_CHAIN_COLORS,
   extractChainColors,
+  type ChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
 import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 import {
+  bytes32ToProtocolAddress,
   fetchChainMetadata,
   fetchWarpRouteMap,
   getChainDisplayName,
+  type ChainDisplayNames,
   type WarpRouteMap,
   type WarpToken,
 } from '../../utils/yamlParsing';
@@ -78,34 +80,10 @@ function sanitizeSymbol(symbol: string): string {
  * Parse warp route message body to extract recipient and amount.
  * Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage.
  *
- * IMPORTANT: Decimal Scaling in Warp Routes
- * -----------------------------------------
- * The amount in the message body is NORMALIZED by each router's scale factor.
- * When scale matches 10^(maxDecimals - localDecimals), this aligns with wire decimals.
- *
- * EVM Implementation (TokenRouter.sol):
- *   - Uses `scale = 10^(maxDecimals - localDecimals)` set at deployment
- *   - Outbound: `messageAmount = localAmount * scale`
- *   - Inbound: `localAmount = messageAmount / scale`
- *
- * Sealevel Implementation (Rust):
- *   - Stores both `decimals` (local) and `remote_decimals` (wire format)
- *   - Uses convert_decimals() to transform between local and wire formats
- *
- * Example: USDC (6 decimals) bridging to an 18-decimal token
- *   - Wire format = max(6, 18) = 18 decimals
- *   - Scale for USDC = 10^(18-6) = 10^12
- *   - Local amount: 1_000_000 (1 USDC in 6 decimals)
- *   - Wire amount: 1_000_000 * 10^12 = 10^18 (1 USDC in 18 decimals)
- *
- * Example: USDC (6 decimals) bridging to another 6-decimal token
- *   - Wire format = max(6, 6) = 6 decimals
- *   - Scale = 10^(6-6) = 1
- *   - Local amount: 1_000_000 (1 USDC)
- *   - Wire amount: 1_000_000 (unchanged)
- *
- * We determine wireDecimals by finding the max decimals among all tokens in each
- * warp route config (see yamlParsing.ts). This matches how the contracts calculate scale.
+ * The amount in the message body depends on the token standard:
+ * - If scale is explicitly set, amount = localAmount * scale
+ * - Cosmos standards: amount is in origin token's native decimals (no normalization)
+ * - EVM/Sealevel standards: amount may be normalized to wire decimals (max in route)
  */
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
@@ -166,26 +144,42 @@ const COSMOS_STANDARDS = new Set([
   'CosmosNativeHypSynthetic',
 ]);
 
-// Get warp transfer details if this is a warp route message
 function getWarpTransferDetails(
   messageData: MessageOGData,
   originChainName: string,
   destChainName: string,
   warpRouteMap: WarpRouteMap,
+  chainMetadata: Map<string, ChainDisplayNames>,
 ): WarpTransferDetails | null {
   if (!messageData.body) return null;
 
-  // The sender is the warp router contract on the origin chain
   const originChainTokens = warpRouteMap.get(originChainName);
   if (!originChainTokens) return null;
 
-  // Look up token by sender address (lowercase for case-insensitive matching)
-  const originToken = originChainTokens.get(messageData.sender.toLowerCase());
+  const originMeta = chainMetadata.get(originChainName);
+  const destMeta = chainMetadata.get(destChainName);
+
+  const normalizedSender = originMeta
+    ? bytes32ToProtocolAddress(
+        messageData.sender,
+        originMeta.protocol || 'ethereum',
+        originMeta.bech32Prefix,
+      )
+    : messageData.sender;
+
+  const originToken = originChainTokens.get(normalizedSender.toLowerCase());
   if (!originToken) return null;
 
-  // Look up destination token by recipient address
+  const normalizedRecipient = destMeta
+    ? bytes32ToProtocolAddress(
+        messageData.recipient,
+        destMeta.protocol || 'ethereum',
+        destMeta.bech32Prefix,
+      )
+    : messageData.recipient;
+
   const destChainTokens = warpRouteMap.get(destChainName);
-  const destToken = destChainTokens?.get(messageData.recipient.toLowerCase());
+  const destToken = destChainTokens?.get(normalizedRecipient.toLowerCase());
 
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
@@ -276,12 +270,12 @@ export default async function handler(req: NextRequest) {
   const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
   const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
 
-  // Check if this is a warp route transfer
   const warpTransfer = getWarpTransferDetails(
     messageData,
     originChainName,
     destChainName,
     warpRouteMap,
+    chainMetadata,
   );
 
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;

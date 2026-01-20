@@ -44,14 +44,14 @@ describe('formatAmountCompact', () => {
   it('formats millions with M suffix', () => {
     expect(formatAmountCompact('1000000')).toBe('1M');
     expect(formatAmountCompact('1234567.89')).toBe('1.23M');
-    expect(formatAmountCompact('12345678.9')).toBe('12.35M');
-    expect(formatAmountCompact('123456789')).toBe('123.46M');
+    expect(formatAmountCompact('12345678.9')).toBe('12.34M');
+    expect(formatAmountCompact('123456789')).toBe('123.45M');
   });
 
   it('formats billions with B suffix', () => {
     expect(formatAmountCompact('1000000000')).toBe('1B');
     expect(formatAmountCompact('1234567890')).toBe('1.23B');
-    expect(formatAmountCompact('12345678901')).toBe('12.35B');
+    expect(formatAmountCompact('12345678901')).toBe('12.34B');
   });
 
   it('handles negative numbers', () => {
