@@ -12,17 +12,14 @@ export type WarpRouteAmountParts = {
   decimals: number;
 };
 
-/**
- * Token info needed to determine effective decimals for amount decoding.
- * Designed to work with both SDK TokenArgs (maxDecimals) and Edge-compatible WarpToken (wireDecimals).
- */
 export interface EffectiveDecimalsToken {
   decimals?: number;
   scale?: number;
   standard?: string;
-  // maxDecimals (SDK) or wireDecimals (Edge) - both mean "max decimals in route"
-  maxDecimals?: number;
+  // Wire decimals = max decimals across all tokens in a warp route.
+  // Both fields supported for compatibility: wireDecimals (preferred) and maxDecimals (legacy).
   wireDecimals?: number;
+  maxDecimals?: number;
 }
 
 /**
@@ -88,7 +85,7 @@ function parseScale(scale: WarpRouteAmountConfig['scale']): bigint | null {
  * 1. Routes with explicit scale (e.g., VRA: BSC scale=10, ETH scale=1)
  * 2. Routes without scale - amount is in origin decimals
  *    - Cosmos routes: origin token doesn't normalize, uses native decimals
- *    - EVM/Sealevel routes: typically normalized to maxDecimals by caller
+ *    - EVM/Sealevel routes: typically normalized to wireDecimals by caller
  */
 export function getWarpRouteAmountParts(
   messageAmount: bigint,

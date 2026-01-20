@@ -57,7 +57,7 @@ describe('getWarpRouteAmountParts caller context scenarios', () => {
     expect(result).toEqual({ amount: 1_020_000_000_000_000_000n, decimals: 18 });
   });
 
-  it('non-Cosmos route (origin 6, dest 18): caller passes maxDecimals', () => {
+  it('non-Cosmos route (origin 6, dest 18): caller passes wireDecimals', () => {
     const messageAmount = 1_020_000_000_000_000_000n;
     const result = getWarpRouteAmountParts(messageAmount, { decimals: 18 });
     expect(result).toEqual({ amount: 1_020_000_000_000_000_000n, decimals: 18 });
@@ -74,7 +74,7 @@ describe('getEffectiveDecimals', () => {
   describe('scale takes priority', () => {
     it('returns origin decimals when scale is set', () => {
       const result = getEffectiveDecimals(
-        { decimals: 6, scale: 10, maxDecimals: 18 },
+        { decimals: 6, scale: 10, wireDecimals: 18 },
         { standard: 'EvmHypCollateral' },
       );
       expect(result).toBe(6);
@@ -97,7 +97,7 @@ describe('getEffectiveDecimals', () => {
   describe('Cosmos standards use origin decimals', () => {
     it('returns origin decimals when origin is CW20', () => {
       const result = getEffectiveDecimals(
-        { decimals: 6, standard: 'CW20', maxDecimals: 18 },
+        { decimals: 6, standard: 'CW20', wireDecimals: 18 },
         { standard: 'EvmHypSynthetic' },
       );
       expect(result).toBe(6);
@@ -113,7 +113,7 @@ describe('getEffectiveDecimals', () => {
 
     it('returns origin decimals when destination is Cosmos', () => {
       const result = getEffectiveDecimals(
-        { decimals: 18, standard: 'EvmHypCollateral', maxDecimals: 18 },
+        { decimals: 18, standard: 'EvmHypCollateral', wireDecimals: 18 },
         { standard: 'CosmosIcs20' },
       );
       expect(result).toBe(18);
@@ -121,7 +121,7 @@ describe('getEffectiveDecimals', () => {
 
     it('handles CosmosNative standard', () => {
       const result = getEffectiveDecimals(
-        { decimals: 6, standard: 'CosmosNative', maxDecimals: 18 },
+        { decimals: 6, standard: 'CosmosNative', wireDecimals: 18 },
         undefined,
       );
       expect(result).toBe(6);
@@ -129,15 +129,7 @@ describe('getEffectiveDecimals', () => {
   });
 
   describe('EVM/Sealevel use wireDecimals (max in route)', () => {
-    it('returns maxDecimals for EVM→EVM route', () => {
-      const result = getEffectiveDecimals(
-        { decimals: 6, standard: 'EvmHypCollateral', maxDecimals: 18 },
-        { standard: 'EvmHypSynthetic' },
-      );
-      expect(result).toBe(18);
-    });
-
-    it('returns wireDecimals when available', () => {
+    it('returns wireDecimals for EVM→EVM route', () => {
       const result = getEffectiveDecimals(
         { decimals: 6, standard: 'EvmHypCollateral', wireDecimals: 18 },
         { standard: 'EvmHypSynthetic' },
@@ -145,12 +137,20 @@ describe('getEffectiveDecimals', () => {
       expect(result).toBe(18);
     });
 
-    it('prefers wireDecimals over maxDecimals', () => {
+    it('prefers wireDecimals over maxDecimals (legacy)', () => {
       const result = getEffectiveDecimals(
         { decimals: 6, wireDecimals: 12, maxDecimals: 18 },
         undefined,
       );
       expect(result).toBe(12);
+    });
+
+    it('falls back to maxDecimals when wireDecimals not set', () => {
+      const result = getEffectiveDecimals(
+        { decimals: 6, standard: 'EvmHypCollateral', maxDecimals: 18 },
+        { standard: 'EvmHypSynthetic' },
+      );
+      expect(result).toBe(18);
     });
 
     it('falls back to origin decimals when no wire/max decimals', () => {
@@ -169,7 +169,7 @@ describe('getEffectiveDecimals', () => {
     });
 
     it('handles undefined destination token', () => {
-      const result = getEffectiveDecimals({ decimals: 6, maxDecimals: 18 }, undefined);
+      const result = getEffectiveDecimals({ decimals: 6, wireDecimals: 18 }, undefined);
       expect(result).toBe(18);
     });
   });

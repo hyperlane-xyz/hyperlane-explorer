@@ -1,4 +1,4 @@
-// Cosmos warp standards don't normalize amounts to maxDecimals.
+// Cosmos warp standards don't normalize amounts to wireDecimals.
 // These tokens use their native decimals in the message body.
 export const COSMOS_STANDARDS = new Set([
   // CosmWasm token standards
