@@ -8,6 +8,7 @@ import {
   fetchMessageForOG,
   type MessageOGData,
 } from '../../features/messages/queries/serverFetch';
+import { formatAmountWithCommas } from '../../utils/amount';
 import {
   adjustColorForBackground,
   type ChainColors,
@@ -168,7 +169,7 @@ function getWarpTransferDetails(
   return {
     token,
     // Use wireDecimals (max decimals in this warp route) since message amounts are scaled
-    amount: formatTokenAmount(parsed.amount, token.wireDecimals),
+    amount: formatAmountWithCommas(formatTokenAmount(parsed.amount, token.wireDecimals)),
   };
 }
 

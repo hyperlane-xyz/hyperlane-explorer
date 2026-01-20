@@ -10,6 +10,7 @@ import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
+import { formatAmountCompact } from '../../utils/amount';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
@@ -127,7 +128,13 @@ export function MessageSummaryRow({
         {warpRouteDetails ? (
           <>
             <TokenIcon token={warpRouteDetails.originToken} size={20} />
-            <div className={styles.iconText}>{warpRouteDetails.originToken.symbol}</div>
+            <div
+              className={styles.iconText}
+              data-tooltip-id="root-tooltip"
+              data-tooltip-content={`${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}`}
+            >
+              {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
+            </div>
           </>
         ) : null}
       </LinkCell>
