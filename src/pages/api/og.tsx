@@ -18,7 +18,6 @@ import {
 import { logger } from '../../utils/logger';
 import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 import {
-  bytes32ToProtocolAddress,
   fetchChainMetadata,
   fetchWarpRouteMap,
   getChainDisplayName,
@@ -131,38 +130,20 @@ function getWarpTransferDetails(
   originChainName: string,
   destChainName: string,
   warpRouteMap: WarpRouteMap,
-  chainMetadata: Map<string, ChainDisplayNames>,
+  _chainMetadata: Map<string, ChainDisplayNames>,
 ): WarpTransferDetails | null {
   if (!messageData.body) return null;
 
   const originChainTokens = warpRouteMap.get(originChainName);
   if (!originChainTokens) return null;
 
-  const originMeta = chainMetadata.get(originChainName);
-  const destMeta = chainMetadata.get(destChainName);
-
-  const normalizedSender = originMeta
-    ? normalizeAddressToHex(
-        bytes32ToProtocolAddress(
-          messageData.sender,
-          originMeta.protocol || 'ethereum',
-          originMeta.bech32Prefix,
-        ),
-      )
-    : normalizeAddressToHex(messageData.sender);
+  // Sender/recipient are bytes32 hex; warp route map keys are also normalized hex
+  const normalizedSender = normalizeAddressToHex(messageData.sender);
 
   const originToken = originChainTokens.get(normalizedSender);
   if (!originToken) return null;
 
-  const normalizedRecipient = destMeta
-    ? normalizeAddressToHex(
-        bytes32ToProtocolAddress(
-          messageData.recipient,
-          destMeta.protocol || 'ethereum',
-          destMeta.bech32Prefix,
-        ),
-      )
-    : normalizeAddressToHex(messageData.recipient);
+  const normalizedRecipient = normalizeAddressToHex(messageData.recipient);
 
   const destChainTokens = warpRouteMap.get(destChainName);
   const destToken = destChainTokens?.get(normalizedRecipient);

@@ -124,25 +124,37 @@ function convertBitsToBytes(data: number[], fromBits: number, toBits: number): U
   return new Uint8Array(result);
 }
 
-function bech32Checksum(hrp: string, data: number[]): number[] {
-  const values = [
-    ...hrp.split('').map((c) => c.charCodeAt(0) >> 5),
-    0,
-    ...hrp.split('').map((c) => c.charCodeAt(0) & 31),
-    ...data,
-  ];
+function bech32Polymod(values: number[]): number {
+  const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
   let chk = 1;
   for (const v of values) {
     const top = chk >> 25;
     chk = ((chk & 0x1ffffff) << 5) ^ v;
     for (let i = 0; i < 5; i++) {
       if ((top >> i) & 1) {
-        chk ^= [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3][i];
+        chk ^= GEN[i];
       }
     }
   }
-  chk ^= 1;
-  return [0, 1, 2, 3, 4, 5].map((i) => (chk >> (5 * (5 - i))) & 31);
+  return chk;
+}
+
+function bech32HrpExpand(hrp: string): number[] {
+  return [
+    ...hrp.split('').map((c) => c.charCodeAt(0) >> 5),
+    0,
+    ...hrp.split('').map((c) => c.charCodeAt(0) & 31),
+  ];
+}
+
+function bech32VerifyChecksum(hrp: string, data: number[]): boolean {
+  return bech32Polymod([...bech32HrpExpand(hrp), ...data]) === 1;
+}
+
+function bech32CreateChecksum(hrp: string, data: number[]): number[] {
+  const values = [...bech32HrpExpand(hrp), ...data, 0, 0, 0, 0, 0, 0];
+  const polymod = bech32Polymod(values) ^ 1;
+  return [0, 1, 2, 3, 4, 5].map((i) => (polymod >> (5 * (5 - i))) & 31);
 }
 
 function bech32Decode(address: string): Uint8Array | null {
@@ -160,20 +172,15 @@ function bech32Decode(address: string): Uint8Array | null {
     data.push(value);
   }
 
-  if (data.length < 6) return null;
-  const payload = data.slice(0, -6);
-  const checksum = data.slice(-6);
-  const expected = bech32Checksum(hrp, payload);
-  for (let i = 0; i < 6; i++) {
-    if (checksum[i] !== expected[i]) return null;
-  }
+  if (!bech32VerifyChecksum(hrp, data)) return null;
 
+  const payload = data.slice(0, -6);
   return convertBitsToBytes(payload, 5, 8);
 }
 
 function bech32Encode(prefix: string, data: Uint8Array): string {
   const words = convertBits(data, 8, 5, true);
-  const checksum = bech32Checksum(prefix, words);
+  const checksum = bech32CreateChecksum(prefix, words);
   return prefix + '1' + [...words, ...checksum].map((d) => BECH32_ALPHABET[d]).join('');
 }
 
