@@ -196,6 +196,9 @@ export function bytes32ToProtocolAddress(
   const hex = bytes32Hex.replace(/^0x/i, '').toLowerCase();
 
   if (protocol === 'cosmos' && bech32Prefix) {
+    // Cosmos SDK account addresses are 20 bytes. When stored as bytes32, they're
+    // left-padded with 12 zero bytes. Detect this and extract the 20-byte address.
+    // Contract addresses (32 bytes) don't have this padding and are used as-is.
     const paddedHex = hex.padStart(64, '0');
     const isPaddedAccount = paddedHex.startsWith('000000000000000000000000');
     const addressHex = isPaddedAccount ? paddedHex.slice(-40) : paddedHex;
