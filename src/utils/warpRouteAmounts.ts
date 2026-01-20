@@ -34,7 +34,9 @@ function parseScale(scale: WarpRouteAmountConfig['scale']): bigint | null {
  *
  * This handles two patterns:
  * 1. Routes with explicit scale (e.g., VRA: BSC scale=10, ETH scale=1)
- * 2. Routes without scale (e.g., TIA Stride↔Forma) - amount is in origin decimals
+ * 2. Routes without scale - amount is in origin decimals
+ *    - Cosmos routes: origin token doesn't normalize, uses native decimals
+ *    - EVM/Sealevel routes: typically normalized to maxDecimals by caller
  */
 export function getWarpRouteAmountParts(
   messageAmount: bigint,

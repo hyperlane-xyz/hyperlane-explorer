@@ -17,15 +17,23 @@ import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
 import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 
-// Cosmos warp standards don't normalize amounts to maxDecimals
+// Cosmos warp standards don't normalize amounts to maxDecimals.
+// These tokens use their native decimals in the message body.
 const COSMOS_STANDARDS = new Set([
+  // CosmWasm token standards
   'CW20',
   'CWNative',
   'CW721',
   'CwHypNative',
   'CwHypCollateral',
   'CwHypSynthetic',
+  // Cosmos native/IBC standards
+  'CosmosNative',
   'CosmosIbc',
+  'CosmosIcs20',
+  'CosmosIcs721',
+  'CosmosNativeHypCollateral',
+  'CosmosNativeHypSynthetic',
 ]);
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
@@ -77,7 +85,7 @@ export function parseWarpRouteMessageDetails(
 
     // Determine effective decimals based on token standard:
     // - If scale is explicitly set, use origin token decimals
-    // - Cosmos standards don't normalize, so use min decimals
+    // - Cosmos standards don't normalize, so use origin decimals
     // - Other standards (EVM, Sealevel) normalize to maxDecimals
     const isCosmosRoute =
       COSMOS_STANDARDS.has(originToken.standard) || COSMOS_STANDARDS.has(destinationToken.standard);
@@ -85,7 +93,7 @@ export function parseWarpRouteMessageDetails(
       originToken.scale !== undefined
         ? originToken.decimals
         : isCosmosRoute
-          ? Math.min(originToken.decimals ?? 18, destinationToken.decimals ?? 18)
+          ? (originToken.decimals ?? 18)
           : originToken.maxDecimals;
 
     const amountParts = getWarpRouteAmountParts(parsedMessage.amount, {

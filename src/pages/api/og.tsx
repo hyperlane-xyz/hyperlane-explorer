@@ -147,15 +147,23 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
 
   return `${integerPart}.${trimmed}`;
 }
-// Cosmos warp standards don't normalize amounts to maxDecimals
+// Cosmos warp standards don't normalize amounts to maxDecimals.
+// These tokens use their native decimals in the message body.
 const COSMOS_STANDARDS = new Set([
+  // CosmWasm token standards
   'CW20',
   'CWNative',
   'CW721',
   'CwHypNative',
   'CwHypCollateral',
   'CwHypSynthetic',
+  // Cosmos native/IBC standards
+  'CosmosNative',
   'CosmosIbc',
+  'CosmosIcs20',
+  'CosmosIcs721',
+  'CosmosNativeHypCollateral',
+  'CosmosNativeHypSynthetic',
 ]);
 
 // Get warp transfer details if this is a warp route message
@@ -184,7 +192,7 @@ function getWarpTransferDetails(
 
   // Determine effective decimals based on token standard:
   // - If scale is explicitly set, use origin token decimals
-  // - Cosmos standards don't normalize, so use min decimals
+  // - Cosmos standards don't normalize, so use origin decimals
   // - Other standards (EVM, Sealevel) normalize to wireDecimals (max)
   const isCosmosRoute =
     COSMOS_STANDARDS.has(originToken.standard || '') ||
@@ -193,7 +201,7 @@ function getWarpTransferDetails(
     originToken.scale !== undefined
       ? originToken.decimals
       : isCosmosRoute
-        ? Math.min(originToken.decimals, destToken?.decimals ?? originToken.decimals)
+        ? originToken.decimals
         : originToken.wireDecimals;
 
   const amountParts = getWarpRouteAmountParts(parsed.amount, {
@@ -207,7 +215,6 @@ function getWarpTransferDetails(
     amount: formatAmountWithCommas(formattedAmount),
   };
 }
-
 
 // Get chain logo URL from registry CDN
 function getChainLogoUrl(chainName: string): string {
