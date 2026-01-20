@@ -19,20 +19,13 @@ export function formatAmountCompact(amount: string): string {
   const absNum = Math.abs(num);
   if (absNum === 0) return '0';
   if (absNum < 0.0001) return '<0.0001';
+  if (absNum < 1) return num.toFixed(4).replace(/\.?0+$/, '');
 
-  if (absNum >= 1_000) {
-    return new Intl.NumberFormat('en-US', {
-      notation: 'compact',
-      maximumFractionDigits: 2,
-    }).format(num);
-  }
-
-  if (absNum >= 1) {
-    return num.toFixed(2);
-  }
-
-  // Small amounts between 0.0001 and 1
-  return num.toFixed(4).replace(/\.?0+$/, '');
+  return new Intl.NumberFormat('en-US', {
+    notation: absNum >= 1_000 ? 'compact' : 'standard',
+    minimumFractionDigits: absNum >= 1_000 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(num);
 }
 
 /**
