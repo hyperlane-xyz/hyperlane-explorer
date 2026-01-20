@@ -8,6 +8,7 @@ import {
   fetchMessageForOG,
   type MessageOGData,
 } from '../../features/messages/queries/serverFetch';
+import { formatAmountCompact } from '../../utils/amount';
 import {
   adjustColorForBackground,
   type ChainColors,
@@ -15,7 +16,6 @@ import {
   extractChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
-import { formatAmountCompact } from '../../utils/amount';
 import {
   fetchChainMetadata,
   fetchWarpRouteMap,
