@@ -8,6 +8,7 @@ import {
   fetchMessageForOG,
   type MessageOGData,
 } from '../../features/messages/queries/serverFetch';
+import { COSMOS_STANDARDS } from '../../consts/tokenStandards';
 import { formatAmountWithCommas } from '../../utils/amount';
 import {
   adjustColorForBackground,
@@ -125,25 +126,6 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
 
   return `${integerPart}.${trimmed}`;
 }
-// Cosmos warp standards don't normalize amounts to maxDecimals.
-// These tokens use their native decimals in the message body.
-const COSMOS_STANDARDS = new Set([
-  // CosmWasm token standards
-  'CW20',
-  'CWNative',
-  'CW721',
-  'CwHypNative',
-  'CwHypCollateral',
-  'CwHypSynthetic',
-  // Cosmos native/IBC standards
-  'CosmosNative',
-  'CosmosIbc',
-  'CosmosIcs20',
-  'CosmosIcs721',
-  'CosmosNativeHypCollateral',
-  'CosmosNativeHypSynthetic',
-]);
-
 function getWarpTransferDetails(
   messageData: MessageOGData,
   originChainName: string,

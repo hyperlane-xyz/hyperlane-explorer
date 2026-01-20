@@ -12,29 +12,11 @@ import { Mailbox__factory } from '@hyperlane-xyz/core';
 import { messageId } from '@hyperlane-xyz/utils';
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../types';
+import { COSMOS_STANDARDS } from '../../consts/tokenStandards';
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
 import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
-
-// Cosmos warp standards don't normalize amounts to maxDecimals.
-// These tokens use their native decimals in the message body.
-const COSMOS_STANDARDS = new Set([
-  // CosmWasm token standards
-  'CW20',
-  'CWNative',
-  'CW721',
-  'CwHypNative',
-  'CwHypCollateral',
-  'CwHypSynthetic',
-  // Cosmos native/IBC standards
-  'CosmosNative',
-  'CosmosIbc',
-  'CosmosIcs20',
-  'CosmosIcs721',
-  'CosmosNativeHypCollateral',
-  'CosmosNativeHypSynthetic',
-]);
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
