@@ -67,14 +67,18 @@ export function normalizeAddressToHex(address: string): string {
     }
   }
 
-  // Assume base58 (Solana/SVM address)
-  try {
-    const bytes = base58Decode(address);
-    return bytesToHex(bytes);
-  } catch {
-    // If decoding fails, return as-is lowercase
-    return lower;
+  // Try base58 only for strings that look like Solana addresses (32-44 chars)
+  // Short strings like cosmos denoms (uatom, utia) should not be decoded
+  if (address.length >= 32 && address.length <= 50) {
+    try {
+      const bytes = base58Decode(address);
+      return bytesToHex(bytes);
+    } catch {
+      // fall through
+    }
   }
+
+  return lower;
 }
 
 const BECH32_ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
