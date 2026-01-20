@@ -11,9 +11,16 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('0.0')).toBe('0');
   });
 
-  it('formats small amounts with significant figures', () => {
-    expect(formatAmountCompact('0.0001234')).toBe('0.0001234');
-    expect(formatAmountCompact('0.00005678')).toBe('0.00005678');
+  it('shows <0.0001 for dust amounts', () => {
+    expect(formatAmountCompact('0.00000001')).toBe('<0.0001');
+    expect(formatAmountCompact('0.00001')).toBe('<0.0001');
+    expect(formatAmountCompact('9e-11')).toBe('<0.0001');
+  });
+
+  it('formats small amounts (0.0001 to 1) with up to 4 decimals', () => {
+    expect(formatAmountCompact('0.0001')).toBe('0.0001');
+    expect(formatAmountCompact('0.000123')).toBe('0.0001');
+    expect(formatAmountCompact('0.001')).toBe('0.001');
     expect(formatAmountCompact('0.9999')).toBe('0.9999');
   });
 

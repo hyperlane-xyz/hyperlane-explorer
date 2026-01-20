@@ -1,9 +1,10 @@
 /**
  * Format a token amount with abbreviations for large numbers.
- * Shows <0.0001 for dust amounts, 2 decimals for normal amounts, K/M/B for large.
+ * Shows <0.0001 for dust amounts, up to 4 decimals for small amounts, K/M/B for large.
  *
  * Examples:
  *   0.00000001  → "<0.0001"
+ *   0.000123    → "0.0001"
  *   0.001       → "0.001"
  *   1.5         → "1.5"
  *   999.99      → "999.99"

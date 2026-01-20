@@ -131,7 +131,9 @@ export function MessageSummaryRow({
             <div
               className={styles.iconText}
               data-tooltip-id="root-tooltip"
-              data-tooltip-content={`${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}`}
+              data-tooltip-content={
+                `${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}`
+              }
             >
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>
