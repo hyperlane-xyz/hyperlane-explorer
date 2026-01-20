@@ -15,6 +15,7 @@ import {
   extractChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
+import { formatAmountCompact } from '../../utils/amount';
 import {
   fetchChainMetadata,
   fetchWarpRouteMap,
@@ -168,7 +169,7 @@ function getWarpTransferDetails(
   return {
     token,
     // Use wireDecimals (max decimals in this warp route) since message amounts are scaled
-    amount: formatTokenAmount(parsed.amount, token.wireDecimals),
+    amount: formatAmountCompact(formatTokenAmount(parsed.amount, token.wireDecimals)),
   };
 }
 
