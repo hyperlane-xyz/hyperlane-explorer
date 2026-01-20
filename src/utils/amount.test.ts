@@ -24,8 +24,9 @@ describe('formatAmountCompact', () => {
     expect(formatAmountCompact('0.9999')).toBe('0.9999');
   });
 
-  it('formats normal amounts (1-999) with exactly 2 decimals', () => {
-    expect(formatAmountCompact('1')).toBe('1.00');
+  it('formats normal amounts (1-999) with 2 decimals only when fractional', () => {
+    expect(formatAmountCompact('1')).toBe('1');
+    expect(formatAmountCompact('300')).toBe('300');
     expect(formatAmountCompact('1.5')).toBe('1.50');
     expect(formatAmountCompact('1.23456789')).toBe('1.23');
     expect(formatAmountCompact('999.99')).toBe('999.99');

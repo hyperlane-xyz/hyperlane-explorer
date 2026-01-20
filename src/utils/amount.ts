@@ -6,6 +6,7 @@
  *   0.00000001  → "<0.0001"
  *   0.000123    → "0.0001"
  *   0.001       → "0.001"
+ *   1           → "1"
  *   1.5         → "1.50"
  *   999.99      → "999.99"
  *   1234.56     → "1.23K"
@@ -21,9 +22,12 @@ export function formatAmountCompact(amount: string): string {
   if (absNum < 0.0001) return '<0.0001';
   if (absNum < 1) return num.toFixed(4).replace(/\.?0+$/, '');
 
+  const isCompact = absNum >= 1_000;
+  const isWholeNumber = Number.isInteger(num);
+
   return new Intl.NumberFormat('en-US', {
-    notation: absNum >= 1_000 ? 'compact' : 'standard',
-    minimumFractionDigits: absNum >= 1_000 ? 0 : 2,
+    notation: isCompact ? 'compact' : 'standard',
+    minimumFractionDigits: isCompact || isWholeNumber ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(num);
 }
