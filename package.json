@@ -16,11 +16,11 @@
     "@ethersproject/transactions": "^5.7.0",
     "@ethersproject/web": "^5.7.0",
     "@headlessui/react": "^2.2.0",
-    "@hyperlane-xyz/core": "10.0.5",
+    "@hyperlane-xyz/core": "10.1.5-preview.9c72f6fb2deb13238aa68a4a83bff7a7156047e6",
     "@hyperlane-xyz/registry": "23.9.0",
-    "@hyperlane-xyz/sdk": "20.1.0",
-    "@hyperlane-xyz/utils": "20.1.0",
-    "@hyperlane-xyz/widgets": "20.1.0",
+    "@hyperlane-xyz/sdk": "21.1.0-preview.9c72f6fb2deb13238aa68a4a83bff7a7156047e6",
+    "@hyperlane-xyz/utils": "21.1.0-preview.9c72f6fb2deb13238aa68a4a83bff7a7156047e6",
+    "@hyperlane-xyz/widgets": "21.1.0-preview.9c72f6fb2deb13238aa68a4a83bff7a7156047e6",
     "@tanstack/query-core": "^5.62.3",
     "@tanstack/react-query": "^5.62.3",
     "@vercel/og": "^0.8.5",
@@ -93,7 +93,8 @@
       "cipher-base": "1.0.5",
       "elliptic": "6.6.1",
       "pbkdf2": "3.1.3",
-      "form-data": "4.0.4"
+      "form-data": "4.0.4",
+      "@hyperlane-xyz/sdk": "21.1.0-preview.9c72f6fb2deb13238aa68a4a83bff7a7156047e6"
     },
     "onlyBuiltDependencies": []
   }

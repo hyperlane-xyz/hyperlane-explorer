@@ -8,6 +8,7 @@ interface MessageDeliveryResult {
 export interface MessageDeliverySuccessResult extends MessageDeliveryResult {
   status: MessageStatus.Delivered;
   deliveryTransaction: MessageTx;
+  debugResult?: MessageDebugResult; // Optional ISM/validator details
 }
 
 export interface MessageDeliveryFailingResult extends MessageDeliveryResult {
