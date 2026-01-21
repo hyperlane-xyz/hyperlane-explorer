@@ -40,7 +40,9 @@ interface WarpTransferDetails {
 // ============================================================================
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
+  // Use max duration for OG image generation
+  maxDuration: 30,
 };
 
 // Global font cache to avoid reloading on every request

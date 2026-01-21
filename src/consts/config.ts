@@ -3,6 +3,7 @@ const version = process?.env?.NEXT_PUBLIC_VERSION ?? null;
 const registryUrl = process?.env?.NEXT_PUBLIC_REGISTRY_URL || undefined;
 const registryBranch = process?.env?.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
 const explorerApiKeys = JSON.parse(process?.env?.EXPLORER_API_KEYS || '{}');
+const walletConnectProjectId = process?.env?.NEXT_PUBLIC_WALLET_CONNECT_ID || '';
 
 interface Config {
   debug: boolean;
@@ -12,6 +13,7 @@ interface Config {
   githubProxy?: string;
   registryUrl: string | undefined; // Optional URL to use a custom registry instead of the published canonical version
   registryBranch?: string | undefined; // Optional customization of the registry branch instead of main
+  walletConnectProjectId: string; // WalletConnect project ID for wallet connections
 }
 
 export const config: Config = Object.freeze({
@@ -22,6 +24,7 @@ export const config: Config = Object.freeze({
   githubProxy: 'https://proxy.hyperlane.xyz',
   registryBranch,
   registryUrl,
+  walletConnectProjectId,
 });
 
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts
