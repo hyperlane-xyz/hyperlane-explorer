@@ -1,4 +1,4 @@
-import { ChainMap, TokenArgs } from '@hyperlane-xyz/sdk';
+import { ChainMap, TokenArgs, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -72,3 +72,6 @@ export interface WarpRouteDetails {
 }
 
 export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgsWithWireDecimals>>;
+
+// Map of warp route ID (e.g., "USDC/mainnet-cctp") to its configuration
+export type WarpRouteConfigs = Record<string, WarpCoreConfig>;
