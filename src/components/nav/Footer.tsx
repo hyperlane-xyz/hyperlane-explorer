@@ -13,12 +13,8 @@ const footerLinks1 = [
 ];
 
 const footerLinks2 = [
+  { title: 'Support', url: 'https://help.hyperlane.xyz/en/', external: true },
   { title: 'Careers', url: 'https://jobs.lever.co/Hyperlane', external: true },
-  {
-    title: 'Bounty',
-    url: 'https://github.com/search?q=org%3Ahyperlane-xyz+label%3Abounty+is%3Aopen+is%3Aissue&type=issues&s=&o=desc',
-    external: true,
-  },
   { title: 'Brand', url: links.brand, external: true },
 ];
 
