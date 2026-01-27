@@ -16,11 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-
-      - uses: pnpm/action-setup@v4
+          node-version-file: '.nvmrc'
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -53,11 +53,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-
-      - uses: pnpm/action-setup@v4
+          node-version-file: '.nvmrc'
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -84,11 +84,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-
-      - uses: pnpm/action-setup@v4
+          node-version-file: '.nvmrc'
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -121,11 +121,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-
-      - uses: pnpm/action-setup@v4
+          node-version-file: '.nvmrc'
 
       - name: Get pnpm store directory
         id: pnpm-cache
