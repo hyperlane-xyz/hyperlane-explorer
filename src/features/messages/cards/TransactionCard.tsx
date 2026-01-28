@@ -212,7 +212,7 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
   return (
-    <Card className="flex min-w-[400px] flex-1 basis-0 flex-col space-y-3">
+    <Card className="flex w-full flex-1 basis-0 flex-col space-y-3 sm:min-w-[400px]">
       <div className="flex items-center justify-between">
         <div className="relative -left-0.5 -top-px">
           <ChainLogo chainName={chainName} />
@@ -266,6 +266,7 @@ function TransactionDetails({
         displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
+        link={txExplorerLink}
       />
       <KeyValueRow
         label="From:"
@@ -310,16 +311,6 @@ function TransactionDetails({
           displayWidth="w-60 sm:w-64"
           blurValue={blur}
         />
-      )}
-      {txExplorerLink && (
-        <a
-          className={`block ${styles.textLink}`}
-          href={txExplorerLink}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View in block explorer
-        </a>
       )}
     </>
   );

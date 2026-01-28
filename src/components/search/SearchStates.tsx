@@ -129,3 +129,22 @@ export function SearchChainError({ show }: { show: boolean }) {
     />
   );
 }
+
+export function SearchRedirecting({ show }: { show: boolean }) {
+  return (
+    <div className="absolute left-0 right-0 top-10">
+      <Fade show={show}>
+        <div className="my-10 flex justify-center">
+          <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
+            <div className="flex items-center justify-center">
+              <SpinnerIcon width={40} height={40} />
+            </div>
+            <div className="mt-4 text-center font-light leading-loose text-gray-700">
+              Found it! Redirecting...
+            </div>
+          </div>
+        </div>
+      </Fade>
+    </div>
+  );
+}
