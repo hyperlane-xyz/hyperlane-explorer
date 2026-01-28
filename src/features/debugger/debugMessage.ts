@@ -25,7 +25,7 @@ import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
-import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
+import { decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
@@ -389,38 +389,27 @@ async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
-  originDomainId: DomainId,
-  destinationProvider: Provider,
+  _originDomainId: DomainId,
+  _destinationProvider: Provider,
 ) {
   if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 
-  const decodedBody = tryDecodeIcaBody(body);
+  const decodedBody = decodeIcaBody(body);
   if (!decodedBody) return null;
 
-  const { sender: originalSender, calls } = decodedBody;
-
-  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender, destinationProvider);
-  if (!icaAddress) return null;
-
-  for (let i = 0; i < calls.length; i++) {
-    const call = calls[i];
-    logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
-    const errorReason = await tryCheckIcaCall(
-      icaAddress,
-      call.destinationAddress,
-      call.callBytes,
-      destinationProvider,
-    );
-    if (errorReason) {
-      return `ICA call ${i + 1} of ${calls.length} cannot be executed. ${errorReason}`;
-    }
+  // Only debug CALLS type messages - COMMITMENT and REVEAL have different flows
+  if (decodedBody.messageType !== IcaMessageType.CALLS) {
+    logger.debug('Skipping ICA debug for non-CALLS message type');
+    return null;
   }
+
+  logger.info('Skipping ICA call check until derived ICA address is implemented');
 
   return null;
 }
 
-async function tryCheckIcaCall(
+export async function tryCheckIcaCall(
   icaAddress: string,
   destinationAddress: string,
   callBytes: string,
