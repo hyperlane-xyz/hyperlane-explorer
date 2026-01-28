@@ -1,6 +1,7 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -19,7 +20,7 @@ import { useIsIcaMessage } from './icaUtils';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { useMessageQuery } from './queries/useMessageQuery';
+import { useMessageQuery, useTransactionMessageCount } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const ContentDetailsCard = dynamic(
@@ -117,6 +118,8 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [chainMetadataResolver, message, warpRouteChainAddressMap],
   );
+  const txMessageCount = useTransactionMessageCount(origin.hash);
+  const showTxLink = txMessageCount > 1;
   const handleRuntimeStateChange = useCallback(
     (value: MessageDetailsRuntimeState) =>
       setRuntimeState((prev) => {
@@ -140,11 +143,19 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   return (
     <>
       <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-3 shadow-accent-glow">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="h-2.5 w-2.5 rounded-full bg-cream-300" />
           <h2 className="text-lg font-medium text-white">{`${
             isIcaMsg ? 'ICA ' : ''
           }Message to ${getChainDisplayName(chainMetadataResolver, destinationChainName)}`}</h2>
+          {showTxLink && (
+            <Link
+              href={`/tx/${origin.hash}`}
+              className="text-sm font-medium text-cream-300 transition-colors hover:text-white"
+            >
+              View all {txMessageCount} messages in tx
+            </Link>
+          )}
         </div>
         <StatusHeader
           messageStatus={status}

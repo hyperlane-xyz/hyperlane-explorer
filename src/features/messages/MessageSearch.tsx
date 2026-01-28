@@ -1,4 +1,5 @@
 import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
+import { useRouter } from 'next/router';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,6 +11,7 @@ import {
   SearchEmptyError,
   SearchFetching,
   SearchInvalidError,
+  SearchRedirecting,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
@@ -221,6 +223,56 @@ export function MessageSearch() {
   const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
 
+  // Compute redirect URL for direct message/tx lookups
+  const router = useRouter();
+  const redirectUrl = useMemo(() => {
+    // Wait for queries to complete
+    if (!hasAllRun || isAnyFetching) return null;
+
+    // Only redirect searches entered by the user.
+    if (!hasInput) return null;
+
+    // Don't redirect if filters are applied
+    if (originChainFilter || destinationChainFilter || startTimeFilter || endTimeFilter)
+      return null;
+
+    // Only GraphQL-backed results can be shown on the tx page today.
+    if (!isMessagesFound || !messageList.length) return null;
+
+    const firstMessage = messageList[0];
+
+    // Single result → always go to message page
+    if (messageList.length === 1) {
+      return `/message/${firstMessage.msgId}`;
+    }
+
+    // Multiple results + origin tx hash match → go to tx page
+    const inputLower = sanitizedInput.toLowerCase();
+    if (firstMessage.origin?.hash?.toLowerCase() === inputLower) {
+      return `/tx/${firstMessage.origin.hash}`;
+    }
+
+    return null;
+  }, [
+    destinationChainFilter,
+    endTimeFilter,
+    hasAllRun,
+    hasInput,
+    isAnyFetching,
+    isMessagesFound,
+    messageList,
+    originChainFilter,
+    sanitizedInput,
+    startTimeFilter,
+  ]);
+
+  // Perform the redirect
+  useEffect(() => {
+    if (redirectUrl) {
+      router.push(redirectUrl).catch((e) => logger.error('Error redirecting search result', e));
+    }
+  }, [redirectUrl, router]);
+
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
     !isAnyError &&
@@ -281,7 +333,8 @@ export function MessageSearch() {
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
-        <Fade show={showMessageTable}>
+        <SearchRedirecting show={!!redirectUrl} />
+        <Fade show={showMessageTable && !redirectUrl}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
@@ -289,7 +342,7 @@ export function MessageSearch() {
           isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
-          show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
+          show={!redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
           hasInput={hasInput}
           allowAddress={true}
         />
