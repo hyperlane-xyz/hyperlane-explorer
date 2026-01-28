@@ -72,3 +72,20 @@ export interface WarpRouteDetails {
 }
 
 export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgsWithWireDecimals>>;
+
+// ICA (Interchain Account) types
+// Map of chainName -> ICA router address
+export type IcaRouterAddressMap = ChainMap<Address>;
+
+// Decoded ICA call (from SDK's CallData type)
+export interface IcaCall {
+  to: Address; // Decoded address (from bytes32)
+  value: string; // uint256 as string (wei)
+  data: string; // Hex encoded call data
+}
+
+// Decoded ICA message body
+export interface IcaMessageDetails {
+  salt: string; // 32-byte hex salt (first 66 chars including 0x, or 64 hex chars)
+  calls: IcaCall[];
+}

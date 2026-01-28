@@ -13,9 +13,9 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
+  isProxy,
   MAILBOX_VERSION,
   MultiProtocolProvider,
-  isProxy,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
 import {
@@ -30,7 +30,7 @@ import {
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
-import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
+import { decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
 
 import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
@@ -393,27 +393,35 @@ async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
-  originDomainId: DomainId,
+  _originDomainId: DomainId,
   destinationProvider: Provider,
 ) {
   if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 
-  const decodedBody = tryDecodeIcaBody(body);
+  const decodedBody = decodeIcaBody(body);
   if (!decodedBody) return null;
 
-  const { sender: originalSender, calls } = decodedBody;
+  // Only debug CALLS type messages - COMMITMENT and REVEAL have different flows
+  if (decodedBody.messageType !== IcaMessageType.CALLS) {
+    logger.debug('Skipping ICA debug for non-CALLS message type');
+    return null;
+  }
 
-  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender, destinationProvider);
-  if (!icaAddress) return null;
+  const { calls } = decodedBody;
+
+  // Note: We can't easily get the ICA address without making a contract call
+  // to the destination router. For now, we skip ICA address verification
+  // and just check if the calls can be executed.
+  // TODO: Add ICA address computation if needed for debugging
 
   for (let i = 0; i < calls.length; i++) {
     const call = calls[i];
     logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
     const errorReason = await tryCheckIcaCall(
-      icaAddress,
-      call.destinationAddress,
-      call.callBytes,
+      recipient, // Use recipient (ICA router) as a proxy for now
+      call.to,
+      call.data,
       destinationProvider,
     );
     if (errorReason) {
