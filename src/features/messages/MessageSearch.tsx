@@ -247,8 +247,9 @@ export function MessageSearch() {
     }
 
     // Multiple results + origin tx hash match → go to tx page
+    // Only redirect if GraphQL found results (tx page uses GraphQL only, not PI)
     const inputLower = sanitizedInput.toLowerCase();
-    if (firstMessage.origin?.hash?.toLowerCase() === inputLower) {
+    if (isMessagesFound && firstMessage.origin?.hash?.toLowerCase() === inputLower) {
       return `/tx/${firstMessage.origin.hash}`;
     }
 
