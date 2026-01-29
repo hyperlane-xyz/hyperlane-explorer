@@ -18,7 +18,7 @@ import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
 import { links } from './consts/links';
 import { DomainsEntry } from './features/chains/queries/fragments';
-import { WarpRouteChainAddressMap } from './types';
+import { TokenArgsWithWireDecimals, WarpRouteChainAddressMap, WarpRouteIdToAddressesMap } from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -41,6 +41,8 @@ interface AppState {
   setBanner: (className: string) => void;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
   setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
+  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
+  setWarpRouteIdToAddressesMap: (warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -55,12 +57,15 @@ export const useStore = create<AppState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         logger.debug('Setting chain overrides in store');
-        const { multiProvider, warpRouteChainAddressMap } = await buildMultiProvider(
-          get().registry,
-          overrides,
-        );
+        const { multiProvider, warpRouteChainAddressMap, warpRouteIdToAddressesMap } =
+          await buildMultiProvider(get().registry, overrides);
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
-        set({ chainMetadataOverrides: filtered, multiProvider, warpRouteChainAddressMap });
+        set({
+          chainMetadataOverrides: filtered,
+          multiProvider,
+          warpRouteChainAddressMap,
+          warpRouteIdToAddressesMap,
+        });
       },
       multiProvider: new MultiProtocolProvider({}),
       setMultiProvider: (multiProvider: MultiProtocolProvider) => {
@@ -81,6 +86,10 @@ export const useStore = create<AppState>()(
       setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
         set({ warpRouteChainAddressMap });
       },
+      warpRouteIdToAddressesMap: {},
+      setWarpRouteIdToAddressesMap: (warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap) => {
+        set({ warpRouteIdToAddressesMap });
+      },
     }),
     {
       name: 'hyperlane', // name in storage
@@ -94,10 +103,11 @@ export const useStore = create<AppState>()(
             return;
           }
           buildMultiProvider(state.registry, state.chainMetadataOverrides)
-            .then(({ metadata, multiProvider, warpRouteChainAddressMap }) => {
+            .then(({ metadata, multiProvider, warpRouteChainAddressMap, warpRouteIdToAddressesMap }) => {
               state.setChainMetadata(metadata);
               state.setMultiProvider(multiProvider);
               state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
+              state.setWarpRouteIdToAddressesMap(warpRouteIdToAddressesMap);
               logger.debug('Rehydration complete');
             })
             .catch((e) => logger.error('Error building MultiProtocolProvider', e));
@@ -159,46 +169,70 @@ async function buildMultiProvider(
     },
   );
 
-  const warpRouteChainAddressMap = await buildWarpRouteChainAddressMap(registry);
+  const { warpRouteChainAddressMap, warpRouteIdToAddressesMap } =
+    await buildWarpRouteMaps(registry);
 
   return {
     metadata: mergedMetadata,
     multiProvider: new MultiProtocolProvider(mergedMetadata),
     warpRouteChainAddressMap,
+    warpRouteIdToAddressesMap,
   };
 }
 
-export async function buildWarpRouteChainAddressMap(
-  registry: IRegistry,
-): Promise<WarpRouteChainAddressMap> {
+export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
+}> {
   let warpRouteConfigs: Record<string, WarpCoreConfig>;
 
   try {
-    logger.debug('Building warp route map from GithubRegistry');
+    logger.debug('Building warp route maps from GithubRegistry');
     warpRouteConfigs = await registry.getWarpRoutes();
   } catch {
     logger.debug(
-      'Failed to build warp route map from GithubRegistry. Using published warp route configs.',
+      'Failed to build warp route maps from GithubRegistry. Using published warp route configs.',
     );
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
 
-  return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
-    if (!tokens.length) return acc;
+  const warpRouteChainAddressMap: WarpRouteChainAddressMap = {};
+  const warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap = {};
+
+  Object.entries(warpRouteConfigs).forEach(([routeId, { tokens }]) => {
+    if (!tokens.length) return;
 
     // Calculate the wire decimals (max across all tokens in this warp route)
     // This is the normalized decimal format used in the message body for EVM/Sealevel routes
     const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
 
+    // Store route ID -> addresses mapping (lowercase for case-insensitive lookup)
+    const routeIdLower = routeId.toLowerCase();
+    warpRouteIdToAddressesMap[routeIdLower] = [];
+
     tokens.forEach((token) => {
       const { chainName, addressOrDenom } = token;
       if (!addressOrDenom) return;
-      acc[chainName] ||= {};
-      acc[chainName][addressOrDenom] = {
+
+      // Build chain address map
+      warpRouteChainAddressMap[chainName] ||= {};
+      warpRouteChainAddressMap[chainName][addressOrDenom] = {
         ...token,
+        addressOrDenom, // Override with non-null value
         wireDecimals,
-      };
+      } as TokenArgsWithWireDecimals;
+
+      // Build route ID to addresses map
+      warpRouteIdToAddressesMap[routeIdLower].push({
+        chainName,
+        address: addressOrDenom,
+      });
     });
-    return acc;
-  }, {});
+  });
+
+  return { warpRouteChainAddressMap, warpRouteIdToAddressesMap };
+}
+
+export function useWarpRouteIdToAddressesMap() {
+  return useStore((s) => s.warpRouteIdToAddressesMap);
 }

@@ -16,6 +16,7 @@ import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
+import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
 
@@ -28,6 +29,8 @@ interface Props {
   onChangeStartTimestamp: (value: number | null) => void;
   endTimestamp: number | null;
   onChangeEndTimestamp: (value: number | null) => void;
+  statusFilter: MessageStatusFilter;
+  onChangeStatus: (value: MessageStatusFilter) => void;
 }
 
 export function SearchFilterBar({
@@ -39,9 +42,11 @@ export function SearchFilterBar({
   onChangeStartTimestamp,
   endTimestamp,
   onChangeEndTimestamp,
+  statusFilter,
+  onChangeStatus,
 }: Props) {
   return (
-    <div className="flex items-center space-x-2 md:space-x-4">
+    <div className="flex flex-wrap items-center gap-2 md:gap-4">
       <ChainSelector text="Origin" value={originChain} onChangeValue={onChangeOrigin} />
       <ChainSelector
         text="Destination"
@@ -54,6 +59,7 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
+      <StatusSelector value={statusFilter} onChangeValue={onChangeStatus} />
     </div>
   );
 }
@@ -207,3 +213,70 @@ function ClearButton({ onClick }: { onClick: () => void }) {
     </div>
   );
 }
+
+const STATUS_OPTIONS: { value: MessageStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'pending', label: 'Pending' },
+];
+
+function StatusSelector({
+  value,
+  onChangeValue,
+}: {
+  value: MessageStatusFilter;
+  onChangeValue: (value: MessageStatusFilter) => void;
+}) {
+  const currentLabel = STATUS_OPTIONS.find((opt) => opt.value === value)?.label || 'All';
+  const hasValue = value !== 'all';
+
+  return (
+    <div className="relative">
+      <Popover
+        button={
+          <>
+            <span>{hasValue ? currentLabel : 'Status'}</span>
+            {!hasValue && (
+              <ChevronIcon
+                direction="s"
+                width={9}
+                height={5}
+                className="ml-2 opacity-80"
+                color={Color.pink}
+              />
+            )}
+          </>
+        }
+        buttonClassname={clsx(
+          'flex items-center justify-center rounded-lg border border-pink-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
+        )}
+        panelClassname="w-36"
+      >
+        {({ close }) => (
+          <div className="p-2" key="status-selector">
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={clsx(
+                  'w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100',
+                  value === option.value && 'bg-pink-50 font-medium text-pink-500',
+                )}
+                onClick={() => {
+                  onChangeValue(option.value);
+                  close();
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </Popover>
+      {hasValue && <ClearButton onClick={() => onChangeValue('all')} />}
+    </div>
+  );
+}
+
+

@@ -1,20 +1,25 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'urql';
 
+import { useInterval } from '@hyperlane-xyz/widgets';
+
 import { useMultiProvider } from '../../../store';
-import { MessageStatus } from '../../../types';
+import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
-import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
 import { parseMessageQueryResult, parseMessageStubResult } from './parse';
 
-const SEARCH_AUTO_REFRESH_DELAY = 15_000; // 15s
-const MSG_AUTO_REFRESH_DELAY = 10_000; // 10s
-const LATEST_QUERY_LIMIT = 100;
-const SEARCH_QUERY_LIMIT = 50;
+const SEARCH_AUTO_REFRESH_DELAY = 15_000;
+const MSG_AUTO_REFRESH_DELAY = 10_000;
+
+// Batch sizes for progressive loading.
+// Pending filter uses larger batches since most messages are delivered quickly,
+// so we need to fetch more to find pending ones.
+const PENDING_FILTER_BATCH_SIZE = 500;
+const DEFAULT_BATCH_SIZE = 100;
 
 export function isValidSearchQuery(input: string) {
   if (!input) return false;
@@ -27,6 +32,8 @@ export function useMessageSearchQuery(
   destinationChainNameFilter: string | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
+  statusFilter: MessageStatusFilter = 'all',
+  warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
 ) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useMultiProvider();
@@ -50,16 +57,68 @@ export function useMessageSearchQuery(
   const isValidOrigin = !originChainNameFilter || originDomainId !== null;
   const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
 
-  // Assemble GraphQL query
+  const warpAddresses = warpRouteAddresses.map((a) => a.address);
+
+  // For pending filter, we use client-side filtering because the DB query for
+  // is_delivered=false is slow (no index on absence of delivered_message record).
+  // Instead, we fetch all messages and filter client-side.
+  const isPendingFilter = statusFilter === 'pending';
+  const dbStatusFilter = isPendingFilter ? 'all' : statusFilter;
+
+  // Pagination state for progressive loading (used with pending filter)
+  const [currentOffset, setCurrentOffset] = useState(0);
+  const [accumulatedMessages, setAccumulatedMessages] = useState<MessageStub[]>([]);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Reset pagination when any filter changes
+  const filterKey = useMemo(
+    () =>
+      [
+        sanitizedInput,
+        originChainNameFilter,
+        destinationChainNameFilter,
+        startTimeFilter,
+        endTimeFilter,
+        statusFilter,
+        warpAddresses.join(','),
+      ].join('-'),
+    [
+      sanitizedInput,
+      originChainNameFilter,
+      destinationChainNameFilter,
+      startTimeFilter,
+      endTimeFilter,
+      statusFilter,
+      warpAddresses,
+    ],
+  );
+  const prevFilterKeyRef = useRef(filterKey);
+
+  useEffect(() => {
+    if (prevFilterKeyRef.current !== filterKey) {
+      setCurrentOffset(0);
+      setAccumulatedMessages([]);
+      setHasMorePages(true);
+      setIsLoadingMore(false);
+      prevFilterKeyRef.current = filterKey;
+    }
+  }, [filterKey]);
+
+  const batchSize = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : DEFAULT_BATCH_SIZE;
+
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,
     isValidDestination ? destDomainId : null,
     startTimeFilter,
     endTimeFilter,
-    hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
+    batchSize,
     true,
     mainnetDomainIds,
+    dbStatusFilter,
+    warpAddresses,
+    currentOffset,
   );
 
   // Execute query
@@ -70,46 +129,88 @@ export function useMessageSearchQuery(
   });
   const { data, fetching: isFetching, error } = result;
 
-  // Parse results
-  const unfilteredMessageList = useMemo(
-    () => parseMessageStubResult(multiProvider, scrapedChains, data),
-    [multiProvider, scrapedChains, data],
-  );
+  // Accumulate messages across paginated requests
+  useEffect(() => {
+    if (!data) return;
 
-  // Filter recent messages during DB backfilling period
-  // TODO remove this once backfilling is complete
-  const hasFilter = !!(
-    originChainNameFilter ||
-    destinationChainNameFilter ||
-    startTimeFilter ||
-    endTimeFilter
-  );
+    const currentBatch = parseMessageStubResult(multiProvider, scrapedChains, data);
+
+    // Hide "Load More" only when API returns zero results (exhausted data)
+    if (currentBatch.length === 0) {
+      setHasMorePages(false);
+    }
+
+    if (currentOffset === 0) {
+      setAccumulatedMessages(currentBatch);
+    } else {
+      // Append new messages, deduplicating by id
+      setAccumulatedMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMessages = currentBatch.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...newMessages];
+      });
+    }
+    setIsLoadingMore(false);
+  }, [data, currentOffset, multiProvider, scrapedChains]);
+
+  const hasAnyFilter =
+    !!originChainNameFilter ||
+    !!destinationChainNameFilter ||
+    !!startTimeFilter ||
+    !!endTimeFilter ||
+    statusFilter !== 'all' ||
+    warpRouteAddresses.length > 0;
+
   const messageList = useMemo(() => {
-    if (hasInput || hasFilter) return unfilteredMessageList;
-    return unfilteredMessageList
-      .filter((m) => Date.now() - m.origin.timestamp < 1000 * 60 * 60) // filter out messages older than 1 hour
-      .slice(0, 20);
-  }, [hasInput, hasFilter, unfilteredMessageList]);
+    let result = accumulatedMessages;
+
+    // Apply client-side pending filter
+    if (isPendingFilter) {
+      result = result.filter((m) => m.status === MessageStatus.Pending);
+    }
+
+    // For vanilla queries (no search, no filters), show only recent messages
+    if (!hasInput && !hasAnyFilter) {
+      const ONE_HOUR_MS = 60 * 60 * 1000;
+      result = result
+        .filter((m) => Date.now() - m.origin.timestamp < ONE_HOUR_MS)
+        .slice(0, 20);
+    }
+
+    return result;
+  }, [hasInput, hasAnyFilter, accumulatedMessages, isPendingFilter]);
 
   const isMessagesFound = messageList.length > 0;
 
-  // Setup interval to re-query
-  const reExecutor = useCallback(() => {
+  // Load next page of results (for pending filter progressive loading)
+  const loadMore = useCallback(() => {
+    if (!hasMorePages || isFetching || isLoadingMore) return;
+    setIsLoadingMore(true);
+    setCurrentOffset((prev) => prev + batchSize);
+  }, [hasMorePages, isFetching, isLoadingMore, batchSize]);
+
+  // Auto-refresh query periodically (only first page to avoid confusion)
+  const refresh = useCallback(() => {
     if (!query || !isValidInput || !isWindowVisible()) return;
+    if (currentOffset > 0) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [reexecuteQuery, query, isValidInput]);
-  useInterval(reExecutor, SEARCH_AUTO_REFRESH_DELAY);
+  }, [reexecuteQuery, query, isValidInput, currentOffset]);
+  useInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
-    isFetching,
+    isValidOrigin,
+    isValidDestination,
+    isFetching: isFetching || isLoadingMore,
     isError: !!error,
     hasRun: !!data,
     isMessagesFound,
     messageList,
-    isValidOrigin,
-    isValidDestination,
-    refetch: reExecutor,
+    refetch: refresh,
+    // Progressive loading for pending filter
+    loadMore,
+    hasMore: hasMorePages,
+    isLoadingMore,
   };
 }
 

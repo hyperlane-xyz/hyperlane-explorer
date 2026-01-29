@@ -1,5 +1,6 @@
 import { isAddress } from '@hyperlane-xyz/utils';
 
+import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
@@ -71,24 +72,39 @@ export function buildMessageSearchQuery(
   limit: number,
   useStub = false,
   mainnetDomainIds?: number[],
+  statusFilter: MessageStatusFilter = 'all',
+  warpRouteAddresses: string[] = [],
+  offset: number = 0,
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
-  const variables = {
+
+  // Convert warp route addresses to bytea format
+  const warpAddressesBytea = warpRouteAddresses.map((addr) => searchValueToPostgresBytea(addr));
+
+  const variables: Record<string, unknown> = {
     search: searchValueToPostgresBytea(searchInput),
     originChains,
     destinationChains,
     startTime,
     endTime,
   };
+
+  // Only add warpAddresses to variables if there are addresses to filter
+  if (warpAddressesBytea.length > 0) {
+    variables.warpAddresses = warpAddressesBytea;
+  }
+
   const hasFilters = !!(
     originDomainIdFilter ||
     destDomainIdFilter ||
     startTimeFilter ||
     endTimeFilter ||
-    searchInput
+    searchInput ||
+    statusFilter !== 'all' ||
+    warpRouteAddresses.length > 0
   );
   const whereClauses = buildSearchWhereClauses(searchInput);
   const originDomainWhereClause = buildDomainIdWhereClause(
@@ -104,6 +120,12 @@ export function buildMessageSearchQuery(
     mainnetDomainIds,
   );
 
+  // Build status filter clause
+  const statusWhereClause = buildStatusWhereClause(statusFilter);
+
+  // Build warp route address filter clause
+  const warpRouteWhereClause = buildWarpRouteWhereClause(warpRouteAddresses);
+
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
   const queries = whereClauses.map(
@@ -115,20 +137,50 @@ export function buildMessageSearchQuery(
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
+        ${statusWhereClause}
+        ${warpRouteWhereClause}
         ${whereClause}
       ]
     },
     order_by: {id: desc},
-    limit: ${limit}
+    limit: ${limit},
+    offset: ${offset}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,
   );
 
-  const query = `query ($search: bytea, $originChains: [Int!], $destinationChains: [Int!], $startTime: timestamp, $endTime: timestamp) @cached(ttl: 5) {
+  // Build the variable declarations for the query
+  const variableDeclarations = [
+    '$search: bytea',
+    '$originChains: [Int!]',
+    '$destinationChains: [Int!]',
+    '$startTime: timestamp',
+    '$endTime: timestamp',
+  ];
+  if (warpAddressesBytea.length > 0) {
+    variableDeclarations.push('$warpAddresses: [bytea!]');
+  }
+
+  const query = `query (${variableDeclarations.join(', ')}) @cached(ttl: 5) {
     ${queries.join('\n')}
   }`;
   return { query, variables };
+}
+
+function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
+  if (statusFilter === 'delivered') {
+    return '{is_delivered: {_eq: true}},';
+  } else if (statusFilter === 'pending') {
+    return '{is_delivered: {_eq: false}},';
+  }
+  return '';
+}
+
+function buildWarpRouteWhereClause(warpRouteAddresses: string[]): string {
+  if (warpRouteAddresses.length === 0) return '';
+  // Filter messages where sender OR recipient is in the warp route addresses
+  return '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},';
 }
 
 function buildSearchWhereClauses(searchInput: string) {
