@@ -15,6 +15,13 @@ import { logger } from '../../../utils/logger';
 import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
 
 /**
+ * Normalize address for comparison - only lowercase hex addresses
+ */
+function normalizeAddress(value: string): string {
+  return value.startsWith('0x') ? value.toLowerCase() : value;
+}
+
+/**
  * Find the warp route config that contains the given token address on the given chain
  */
 function findWarpRouteConfig(
@@ -26,7 +33,8 @@ function findWarpRouteConfig(
     const match = config.tokens.find(
       (t) =>
         t.chainName === chainName &&
-        t.addressOrDenom?.toLowerCase() === tokenAddress.toLowerCase(),
+        t.addressOrDenom &&
+        normalizeAddress(t.addressOrDenom) === normalizeAddress(tokenAddress),
     );
     if (match) return { routeId, config };
   }
@@ -114,9 +122,7 @@ async function fetchAllTokenDerivedConfigs(
 /**
  * Hook to get warp route visualization data for a message
  */
-export function useWarpRouteVisualization(
-  warpRouteDetails: WarpRouteDetails | undefined,
-): {
+export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
   visualization: WarpRouteVisualization | undefined;
   isLoading: boolean;
   error: string | undefined;
@@ -146,6 +152,7 @@ export function useWarpRouteVisualization(
     isLoading,
     error,
   } = useQuery({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- warpRoute is derived from warpRouteDetails (stable), multiProvider is stable, warpRoute.config is part of warpRoute
     queryKey,
     queryFn: async () => {
       if (!warpRoute) return undefined;
@@ -167,7 +174,7 @@ export function useWarpRouteVisualization(
         chainName: token.chainName,
         addressOrDenom: token.addressOrDenom || '',
         symbol: token.symbol || '',
-        decimals: token.decimals || 18,
+        decimals: token.decimals ?? 18,
         standard: token.standard,
         logoURI: token.logoURI,
         tokenType: derived?.tokenType,

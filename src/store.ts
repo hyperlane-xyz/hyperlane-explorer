@@ -56,12 +56,15 @@ export const useStore = create<AppState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         logger.debug('Setting chain overrides in store');
-        const { multiProvider, warpRouteChainAddressMap, warpRouteConfigs } = await buildMultiProvider(
-          get().registry,
-          overrides,
-        );
+        const { multiProvider, warpRouteChainAddressMap, warpRouteConfigs } =
+          await buildMultiProvider(get().registry, overrides);
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
-        set({ chainMetadataOverrides: filtered, multiProvider, warpRouteChainAddressMap, warpRouteConfigs });
+        set({
+          chainMetadataOverrides: filtered,
+          multiProvider,
+          warpRouteChainAddressMap,
+          warpRouteConfigs,
+        });
       },
       multiProvider: new MultiProtocolProvider({}),
       setMultiProvider: (multiProvider: MultiProtocolProvider) => {
@@ -175,9 +178,10 @@ async function buildMultiProvider(
   };
 }
 
-export async function buildWarpRouteData(
-  registry: IRegistry,
-): Promise<{ warpRouteChainAddressMap: WarpRouteChainAddressMap; warpRouteConfigs: WarpRouteConfigs }> {
+export async function buildWarpRouteData(registry: IRegistry): Promise<{
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  warpRouteConfigs: WarpRouteConfigs;
+}> {
   let warpRouteConfigs: WarpRouteConfigs;
 
   try {
@@ -190,30 +194,27 @@ export async function buildWarpRouteData(
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
 
-  const warpRouteChainAddressMap = Object.values(warpRouteConfigs).reduce(
-    (acc, { tokens }) => {
-      if (!tokens.length) return acc;
+  const warpRouteChainAddressMap = Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
+    if (!tokens.length) return acc;
 
-      // Calculate the wire decimals (max across all tokens in this warp route)
-      // This is the normalized decimal format used in the message body for EVM/Sealevel routes
-      const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
+    // Calculate the wire decimals (max across all tokens in this warp route)
+    // This is the normalized decimal format used in the message body for EVM/Sealevel routes
+    const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
 
-      tokens.forEach((token) => {
-        const { chainName, addressOrDenom, connections: _connections, ...rest } = token;
-        if (!addressOrDenom) return;
-        acc[chainName] ||= {};
-        // Omit connections to avoid type incompatibility, and ensure addressOrDenom is non-null
-        acc[chainName][addressOrDenom] = {
-          ...rest,
-          chainName,
-          addressOrDenom,
-          wireDecimals,
-        };
-      });
-      return acc;
-    },
-    {} as WarpRouteChainAddressMap,
-  );
+    tokens.forEach((token) => {
+      const { chainName, addressOrDenom, connections: _connections, ...rest } = token;
+      if (!addressOrDenom) return;
+      acc[chainName] ||= {};
+      // Omit connections to avoid type incompatibility, and ensure addressOrDenom is non-null
+      acc[chainName][addressOrDenom] = {
+        ...rest,
+        chainName,
+        addressOrDenom,
+        wireDecimals,
+      };
+    });
+    return acc;
+  }, {} as WarpRouteChainAddressMap);
 
   return { warpRouteChainAddressMap, warpRouteConfigs };
 }

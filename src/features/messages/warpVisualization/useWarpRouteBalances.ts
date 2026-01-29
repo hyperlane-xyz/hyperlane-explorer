@@ -27,9 +27,7 @@ const SUPPORTED_COLLATERAL_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypXERC20Lockbox,
 ];
 
-const SUPPORTED_SYNTHETIC_STANDARDS: TokenStandard[] = [
-  TokenStandard.EvmHypSynthetic,
-];
+const SUPPORTED_SYNTHETIC_STANDARDS: TokenStandard[] = [TokenStandard.EvmHypSynthetic];
 
 /**
  * Check if a token standard is a supported collateral standard
@@ -204,6 +202,7 @@ export function useWarpRouteBalances(
     isLoading,
     error,
   } = useQuery({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
     queryFn: () => fetchAllBalances(multiProvider, tokensToFetch),
     enabled: tokensToFetch.length > 0 && !!routeId,

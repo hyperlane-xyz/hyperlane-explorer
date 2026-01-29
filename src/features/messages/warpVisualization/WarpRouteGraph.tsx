@@ -1,6 +1,6 @@
 import { fromWei } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
@@ -166,7 +166,11 @@ function CompactChainNode({
     transferAmount !== undefined &&
     balance < transferAmount;
 
-  const tokenExplorerUrl = getExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom);
+  const tokenExplorerUrl = getExplorerAddressUrl(
+    multiProvider,
+    token.chainName,
+    token.addressOrDenom,
+  );
 
   return (
     <div
@@ -187,7 +191,12 @@ function CompactChainNode({
         <span className="font-mono text-[9px] text-gray-500">
           {truncateAddress(token.addressOrDenom)}
         </span>
-        <CopyButton copyValue={token.addressOrDenom} width={10} height={10} className="opacity-50" />
+        <CopyButton
+          copyValue={token.addressOrDenom}
+          width={10}
+          height={10}
+          className="opacity-50"
+        />
         {tokenExplorerUrl && (
           <a
             href={tokenExplorerUrl}
@@ -351,6 +360,14 @@ export function WarpRouteGraph({
   // For routes with many chains, collapse by default
   const shouldCollapseByDefault = tokens.length > COLLAPSE_THRESHOLD;
   const [isExpanded, setIsExpanded] = useState(!shouldCollapseByDefault);
+  const [hasUserToggled, setHasUserToggled] = useState(false);
+
+  // Sync expanded state when tokens load asynchronously (unless user has manually toggled)
+  useEffect(() => {
+    if (!hasUserToggled) {
+      setIsExpanded(!shouldCollapseByDefault);
+    }
+  }, [hasUserToggled, shouldCollapseByDefault]);
 
   // Find origin and destination indices
   const originIndex = tokens.findIndex((t) => t.chainName === originChain);
@@ -469,7 +486,10 @@ export function WarpRouteGraph({
         transferAmountDisplay={transferAmountDisplay}
         tokenSymbol={tokenSymbol}
         multiProvider={multiProvider}
-        onExpand={() => setIsExpanded(true)}
+        onExpand={() => {
+          setHasUserToggled(true);
+          setIsExpanded(true);
+        }}
       />
     );
   }
@@ -479,7 +499,10 @@ export function WarpRouteGraph({
       {/* Collapse button for large routes */}
       {shouldCollapseByDefault && isExpanded && (
         <button
-          onClick={() => setIsExpanded(false)}
+          onClick={() => {
+            setHasUserToggled(true);
+            setIsExpanded(false);
+          }}
           className="absolute -top-2 right-0 z-10 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-200"
         >
           Collapse

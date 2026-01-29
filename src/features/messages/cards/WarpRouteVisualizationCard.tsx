@@ -1,5 +1,6 @@
 import { toWei } from '@hyperlane-xyz/utils';
 import { ChevronIcon, CopyButton, RefreshIcon, SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
@@ -34,7 +35,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
     visualization?.tokens,
     visualization?.routeId,
     warpRouteDetails
-      ? BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals || 18))
+      ? BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18))
       : undefined,
   );
 
@@ -52,7 +53,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   // Calculate transfer amount in base units for comparison
   const transferAmount = useMemo(() => {
     if (!warpRouteDetails) return undefined;
-    return BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals || 18));
+    return BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18));
   }, [warpRouteDetails]);
 
   // Don't render if no warp route details or visualization
@@ -71,7 +72,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   }
 
   return (
-    <Card className={`w-full ${blur ? 'blur-xs' : ''}`}>
+    <Card className={clsx('w-full', blur && 'blur-xs')}>
       {/* Collapsible Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
