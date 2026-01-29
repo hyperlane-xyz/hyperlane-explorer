@@ -1,4 +1,3 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import { useEffect, useMemo, useState } from 'react';
@@ -6,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
 import { formatAmountCompact } from '../../../utils/amount';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 
 import { WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard, isCollateralTokenType } from './useWarpRouteVisualization';
@@ -105,45 +103,21 @@ function formatBalance(balance: bigint, decimals: number): string {
 }
 
 /**
- * Hook to fetch explorer URLs for tokens
+ * Get explorer URL for an address on a chain (synchronous, uses local metadata)
  */
-function useExplorerUrls(
-  multiProvider: MultiProtocolProvider,
-  tokens: WarpRouteTokenVisualization[],
-): Record<string, { tokenUrl?: string; ownerUrl?: string }> {
-  const [explorerUrls, setExplorerUrls] = useState<
-    Record<string, { tokenUrl?: string; ownerUrl?: string }>
-  >({});
-
-  useEffect(() => {
-    const fetchUrls = async () => {
-      const urls: Record<string, { tokenUrl?: string; ownerUrl?: string }> = {};
-
-      await Promise.all(
-        tokens.map(async (token) => {
-          const tokenUrl =
-            (await tryGetBlockExplorerAddressUrl(
-              multiProvider,
-              token.chainName,
-              token.addressOrDenom,
-            )) ?? undefined;
-          const ownerUrl = token.owner
-            ? ((await tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner)) ??
-              undefined)
-            : undefined;
-          urls[token.chainName] = { tokenUrl, ownerUrl };
-        }),
-      );
-
-      setExplorerUrls(urls);
-    };
-
-    if (tokens.length > 0) {
-      fetchUrls();
-    }
-  }, [multiProvider, tokens]);
-
-  return explorerUrls;
+function getExplorerAddressUrl(
+  multiProvider: ReturnType<typeof useMultiProvider>,
+  chainName: string,
+  address: string,
+): string | undefined {
+  try {
+    const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
+    if (!chainMetadata?.blockExplorers?.[0]?.url) return undefined;
+    const explorerUrl = chainMetadata.blockExplorers[0].url;
+    return `${explorerUrl}/address/${address}`;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -154,13 +128,13 @@ function CompactChainNode({
   balance,
   transferAmount,
   borderColor,
-  explorerUrl,
+  multiProvider,
 }: {
   token: WarpRouteTokenVisualization | undefined;
   balance: bigint | undefined;
   transferAmount: bigint | undefined;
   borderColor: string;
-  explorerUrl?: string;
+  multiProvider: ReturnType<typeof useMultiProvider>;
 }) {
   if (!token) return null;
 
@@ -171,6 +145,8 @@ function CompactChainNode({
     balance !== undefined &&
     transferAmount !== undefined &&
     balance < transferAmount;
+
+  const explorerUrl = getExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom);
 
   return (
     <div
@@ -256,7 +232,7 @@ function CollapsedRouteView({
   transferAmount,
   transferAmountDisplay,
   tokenSymbol,
-  explorerUrls,
+  multiProvider,
   onExpand,
 }: {
   tokens: WarpRouteTokenVisualization[];
@@ -266,7 +242,7 @@ function CollapsedRouteView({
   transferAmount: bigint | undefined;
   transferAmountDisplay: string | undefined;
   tokenSymbol: string | undefined;
-  explorerUrls: Record<string, { tokenUrl?: string; ownerUrl?: string }>;
+  multiProvider: ReturnType<typeof useMultiProvider>;
   onExpand: () => void;
 }) {
   const originBalance = originToken ? balances[originToken.chainName] : undefined;
@@ -293,7 +269,7 @@ function CollapsedRouteView({
           balance={originBalance}
           transferAmount={transferAmount}
           borderColor="border-blue-500"
-          explorerUrl={originToken ? explorerUrls[originToken.chainName]?.tokenUrl : undefined}
+          multiProvider={multiProvider}
         />
 
         {/* Arrow with transfer amount */}
@@ -316,7 +292,7 @@ function CollapsedRouteView({
           balance={destBalance}
           transferAmount={transferAmount}
           borderColor="border-blue-500"
-          explorerUrl={destToken ? explorerUrls[destToken.chainName]?.tokenUrl : undefined}
+          multiProvider={multiProvider}
         />
       </div>
 
@@ -345,9 +321,6 @@ export function WarpRouteGraph({
   tokenSymbol,
 }: WarpRouteGraphProps) {
   const multiProvider = useMultiProvider();
-
-  // Fetch explorer URLs for all tokens
-  const explorerUrls = useExplorerUrls(multiProvider, tokens);
 
   // For routes with many chains, collapse by default
   const shouldCollapseByDefault = tokens.length > COLLAPSE_THRESHOLD;
@@ -477,7 +450,7 @@ export function WarpRouteGraph({
         transferAmount={transferAmount}
         transferAmountDisplay={transferAmountDisplay}
         tokenSymbol={tokenSymbol}
-        explorerUrls={explorerUrls}
+        multiProvider={multiProvider}
         onExpand={() => {
           setHasUserToggled(true);
           setIsExpanded(true);
@@ -571,8 +544,14 @@ export function WarpRouteGraph({
           transferAmount !== undefined &&
           balance < transferAmount;
 
-        const tokenExplorerUrl = explorerUrls[node.token.chainName]?.tokenUrl;
-        const ownerExplorerUrl = explorerUrls[node.token.chainName]?.ownerUrl;
+        const tokenExplorerUrl = getExplorerAddressUrl(
+          multiProvider,
+          node.token.chainName,
+          node.token.addressOrDenom,
+        );
+        const ownerExplorerUrl = node.token.owner
+          ? getExplorerAddressUrl(multiProvider, node.token.chainName, node.token.owner)
+          : undefined;
 
         return (
           <div
