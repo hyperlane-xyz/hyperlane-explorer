@@ -8,8 +8,8 @@ import {
   TokenStandard,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
@@ -184,7 +184,6 @@ export function useWarpRouteBalances(
   transferAmount?: bigint,
 ): WarpRouteBalances {
   const multiProvider = useMultiProvider();
-  const queryClient = useQueryClient();
 
   const tokensToFetch = useMemo(() => tokens?.filter(shouldFetchSupply) || [], [tokens]);
 
@@ -201,6 +200,7 @@ export function useWarpRouteBalances(
     data: balances,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
@@ -212,10 +212,6 @@ export function useWarpRouteBalances(
     refetchOnReconnect: false,
   });
 
-  const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey });
-  }, [queryClient, queryKey]);
-
   const balancesWithSufficiency = useMemo(() => {
     if (!balances || !transferAmount) return balances || {};
     return { ...balances };
@@ -225,7 +221,7 @@ export function useWarpRouteBalances(
     balances: balancesWithSufficiency || {},
     isLoading,
     error: error ? String(error) : undefined,
-    refresh,
+    refetch,
   };
 }
 

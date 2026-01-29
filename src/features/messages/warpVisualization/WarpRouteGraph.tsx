@@ -1,9 +1,12 @@
-import { fromWei } from '@hyperlane-xyz/utils';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
+import { formatAmountCompact } from '../../../utils/amount';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 
 import { WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard, isCollateralTokenType } from './useWarpRouteVisualization';
@@ -94,47 +97,53 @@ function isSyntheticToken(token: WarpRouteTokenVisualization): boolean {
 }
 
 /**
- * Format a balance in a compact form (e.g., 1.2M, 500K)
+ * Format a balance in a compact form using the shared utility
  */
-function formatCompactBalance(balance: bigint, decimals: number): string {
-  const value = Number(fromWei(balance.toString(), decimals));
-
-  if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(1)}B`;
-  }
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}K`;
-  }
-  if (value >= 1) {
-    return value.toFixed(2);
-  }
-  if (value >= 0.01) {
-    return value.toFixed(4);
-  }
-  return value.toExponential(2);
+function formatBalance(balance: bigint, decimals: number): string {
+  const value = fromWei(balance.toString(), decimals);
+  return formatAmountCompact(value);
 }
 
-function truncateAddress(address: string): string {
-  if (address.length <= 10) return address;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
+/**
+ * Hook to fetch explorer URLs for tokens
+ */
+function useExplorerUrls(
+  multiProvider: MultiProtocolProvider,
+  tokens: WarpRouteTokenVisualization[],
+): Record<string, { tokenUrl?: string; ownerUrl?: string }> {
+  const [explorerUrls, setExplorerUrls] = useState<
+    Record<string, { tokenUrl?: string; ownerUrl?: string }>
+  >({});
 
-function getExplorerAddressUrl(
-  multiProvider: ReturnType<typeof useMultiProvider>,
-  chainName: string,
-  address: string,
-): string | undefined {
-  try {
-    const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-    if (!chainMetadata?.blockExplorers?.[0]?.url) return undefined;
-    const explorerUrl = chainMetadata.blockExplorers[0].url;
-    return `${explorerUrl}/address/${address}`;
-  } catch {
-    return undefined;
-  }
+  useEffect(() => {
+    const fetchUrls = async () => {
+      const urls: Record<string, { tokenUrl?: string; ownerUrl?: string }> = {};
+
+      await Promise.all(
+        tokens.map(async (token) => {
+          const tokenUrl =
+            (await tryGetBlockExplorerAddressUrl(
+              multiProvider,
+              token.chainName,
+              token.addressOrDenom,
+            )) ?? undefined;
+          const ownerUrl = token.owner
+            ? ((await tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner)) ??
+              undefined)
+            : undefined;
+          urls[token.chainName] = { tokenUrl, ownerUrl };
+        }),
+      );
+
+      setExplorerUrls(urls);
+    };
+
+    if (tokens.length > 0) {
+      fetchUrls();
+    }
+  }, [multiProvider, tokens]);
+
+  return explorerUrls;
 }
 
 /**
@@ -142,35 +151,26 @@ function getExplorerAddressUrl(
  */
 function CompactChainNode({
   token,
-  label,
   balance,
   transferAmount,
-  multiProvider,
   borderColor,
+  explorerUrl,
 }: {
   token: WarpRouteTokenVisualization | undefined;
-  label: 'Origin' | 'Destination';
   balance: bigint | undefined;
   transferAmount: bigint | undefined;
-  multiProvider: ReturnType<typeof useMultiProvider>;
   borderColor: string;
+  explorerUrl?: string;
 }) {
   if (!token) return null;
 
   const isCollateral = isCollateralToken(token);
   const isSynthetic = isSyntheticToken(token);
   const hasInsufficientBalance =
-    label === 'Destination' &&
     isCollateral &&
     balance !== undefined &&
     transferAmount !== undefined &&
     balance < transferAmount;
-
-  const tokenExplorerUrl = getExplorerAddressUrl(
-    multiProvider,
-    token.chainName,
-    token.addressOrDenom,
-  );
 
   return (
     <div
@@ -189,7 +189,7 @@ function CompactChainNode({
       {/* Token address with link */}
       <div className="mt-1 flex items-center gap-0.5">
         <span className="font-mono text-[9px] text-gray-500">
-          {truncateAddress(token.addressOrDenom)}
+          {shortenAddress(token.addressOrDenom)}
         </span>
         <CopyButton
           copyValue={token.addressOrDenom}
@@ -197,9 +197,9 @@ function CompactChainNode({
           height={10}
           className="opacity-50"
         />
-        {tokenExplorerUrl && (
+        {explorerUrl && (
           <a
-            href={tokenExplorerUrl}
+            href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="opacity-50 hover:opacity-100"
@@ -220,19 +220,10 @@ function CompactChainNode({
                 : 'bg-gray-100 text-gray-700'
           }`}
         >
-          {formatCompactBalance(balance, token.decimals)} {token.symbol}
+          {formatBalance(balance, token.decimals)} {token.symbol}
           {isSynthetic && <span className="ml-1 text-[8px]">(supply)</span>}
         </div>
       )}
-
-      {/* Label */}
-      <span
-        className={`mt-1 rounded px-1.5 py-0.5 text-[9px] font-medium ${
-          label === 'Origin' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 }
@@ -265,7 +256,7 @@ function CollapsedRouteView({
   transferAmount,
   transferAmountDisplay,
   tokenSymbol,
-  multiProvider,
+  explorerUrls,
   onExpand,
 }: {
   tokens: WarpRouteTokenVisualization[];
@@ -275,7 +266,7 @@ function CollapsedRouteView({
   transferAmount: bigint | undefined;
   transferAmountDisplay: string | undefined;
   tokenSymbol: string | undefined;
-  multiProvider: ReturnType<typeof useMultiProvider>;
+  explorerUrls: Record<string, { tokenUrl?: string; ownerUrl?: string }>;
   onExpand: () => void;
 }) {
   const originBalance = originToken ? balances[originToken.chainName] : undefined;
@@ -299,11 +290,10 @@ function CollapsedRouteView({
         {/* Origin */}
         <CompactChainNode
           token={originToken}
-          label="Origin"
           balance={originBalance}
           transferAmount={transferAmount}
-          multiProvider={multiProvider}
-          borderColor="border-green-500"
+          borderColor="border-blue-500"
+          explorerUrl={originToken ? explorerUrls[originToken.chainName]?.tokenUrl : undefined}
         />
 
         {/* Arrow with transfer amount */}
@@ -323,11 +313,10 @@ function CollapsedRouteView({
         {/* Destination */}
         <CompactChainNode
           token={destToken}
-          label="Destination"
           balance={destBalance}
           transferAmount={transferAmount}
-          multiProvider={multiProvider}
           borderColor="border-blue-500"
+          explorerUrl={destToken ? explorerUrls[destToken.chainName]?.tokenUrl : undefined}
         />
       </div>
 
@@ -356,6 +345,9 @@ export function WarpRouteGraph({
   tokenSymbol,
 }: WarpRouteGraphProps) {
   const multiProvider = useMultiProvider();
+
+  // Fetch explorer URLs for all tokens
+  const explorerUrls = useExplorerUrls(multiProvider, tokens);
 
   // For routes with many chains, collapse by default
   const shouldCollapseByDefault = tokens.length > COLLAPSE_THRESHOLD;
@@ -485,7 +477,7 @@ export function WarpRouteGraph({
         transferAmount={transferAmount}
         transferAmountDisplay={transferAmountDisplay}
         tokenSymbol={tokenSymbol}
-        multiProvider={multiProvider}
+        explorerUrls={explorerUrls}
         onExpand={() => {
           setHasUserToggled(true);
           setIsExpanded(true);
@@ -579,14 +571,8 @@ export function WarpRouteGraph({
           transferAmount !== undefined &&
           balance < transferAmount;
 
-        const tokenExplorerUrl = getExplorerAddressUrl(
-          multiProvider,
-          node.token.chainName,
-          node.token.addressOrDenom,
-        );
-        const ownerExplorerUrl = node.token.owner
-          ? getExplorerAddressUrl(multiProvider, node.token.chainName, node.token.owner)
-          : undefined;
+        const tokenExplorerUrl = explorerUrls[node.token.chainName]?.tokenUrl;
+        const ownerExplorerUrl = explorerUrls[node.token.chainName]?.ownerUrl;
 
         return (
           <div
@@ -599,13 +585,11 @@ export function WarpRouteGraph({
           >
             <div
               className={`flex min-w-[120px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm ${
-                isOrigin
-                  ? 'border-green-500'
-                  : isDestination
-                    ? hasInsufficientBalance
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-blue-500'
-                    : 'border-gray-200'
+                isOrigin || isDestination
+                  ? hasInsufficientBalance
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-blue-500'
+                  : 'border-gray-200'
               }`}
             >
               {/* Chain logo and name */}
@@ -622,7 +606,7 @@ export function WarpRouteGraph({
               {/* Token address with link */}
               <div className="mt-1 flex items-center gap-0.5">
                 <span className="font-mono text-[9px] text-gray-500">
-                  {truncateAddress(node.token.addressOrDenom)}
+                  {shortenAddress(node.token.addressOrDenom)}
                 </span>
                 <CopyButton
                   copyValue={node.token.addressOrDenom}
@@ -647,7 +631,7 @@ export function WarpRouteGraph({
                 <div className="mt-0.5 flex items-center gap-0.5">
                   <span className="text-[8px] text-gray-400">Owner:</span>
                   <span className="font-mono text-[8px] text-gray-500">
-                    {truncateAddress(node.token.owner)}
+                    {shortenAddress(node.token.owner)}
                   </span>
                   <CopyButton
                     copyValue={node.token.owner}
@@ -679,21 +663,9 @@ export function WarpRouteGraph({
                         : 'bg-gray-100 text-gray-700'
                   }`}
                 >
-                  {formatCompactBalance(balance, node.token.decimals)} {node.token.symbol}
+                  {formatBalance(balance, node.token.decimals)} {node.token.symbol}
                   {isSynthetic && <span className="ml-1 text-[8px]">(supply)</span>}
                 </div>
-              )}
-
-              {/* Origin/Destination labels */}
-              {isOrigin && (
-                <span className="mt-1 rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">
-                  Origin
-                </span>
-              )}
-              {isDestination && (
-                <span className="mt-1 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700">
-                  Destination
-                </span>
               )}
             </div>
           </div>

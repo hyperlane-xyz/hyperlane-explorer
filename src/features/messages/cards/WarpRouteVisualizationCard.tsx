@@ -26,11 +26,11 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   const { visualization, isLoading: isVisualizationLoading } =
     useWarpRouteVisualization(warpRouteDetails);
 
-  // Get balances with manual refresh
+  // Get balances with manual refetch
   const {
     balances,
     isLoading: isBalancesLoading,
-    refresh: refreshBalances,
+    refetch: refetchBalances,
   } = useWarpRouteBalances(
     visualization?.tokens,
     visualization?.routeId,
@@ -88,7 +88,10 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
         </div>
         <div className="flex items-center gap-2">
           {/* Route ID pill */}
-          <div className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">
+          <div
+            className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1"
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className="font-mono text-xs text-gray-600">{visualization.routeId}</span>
             <CopyButton
               copyValue={visualization.routeId}
@@ -127,7 +130,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                refreshBalances();
+                refetchBalances();
               }}
               disabled={isBalancesLoading}
               className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"

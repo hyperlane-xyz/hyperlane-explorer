@@ -31,5 +31,5 @@ export interface WarpRouteBalances {
   balances: Record<string, bigint>;
   isLoading: boolean;
   error?: string;
-  refresh: () => void;
+  refetch: () => void;
 }
