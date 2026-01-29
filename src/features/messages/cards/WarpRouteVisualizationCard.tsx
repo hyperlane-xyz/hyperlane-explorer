@@ -56,20 +56,20 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
     return BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18));
   }, [warpRouteDetails]);
 
-  // Don't render if no warp route details or visualization
-  if (!warpRouteDetails || !visualization) {
-    if (isVisualizationLoading) {
-      return (
-        <Card className="w-full">
-          <div className="flex items-center justify-center py-8">
-            <SpinnerIcon width={24} height={24} />
-            <span className="ml-2 text-gray-500">Loading warp route...</span>
-          </div>
-        </Card>
-      );
-    }
-    return null;
+  // Show loading state while fetching visualization
+  if (isVisualizationLoading) {
+    return (
+      <Card className="w-full">
+        <div className="flex items-center justify-center py-8">
+          <SpinnerIcon width={24} height={24} />
+          <span className="ml-2 text-gray-500">Loading warp route...</span>
+        </div>
+      </Card>
+    );
   }
+
+  // Don't render if no warp route details or visualization
+  if (!warpRouteDetails || !visualization) return null;
 
   return (
     <Card className={clsx('w-full', blur && 'blur-xs')}>
