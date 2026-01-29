@@ -208,7 +208,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         {debugResult?.ismDetails && (
           <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
         )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
       </div>
     </>
   );

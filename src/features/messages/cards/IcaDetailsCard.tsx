@@ -9,6 +9,7 @@ import { MAILBOX_VERSION } from '../../../consts/mailbox';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { IcaCall, Message, MessageStatus, MessageStub } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { MessageDebugResult } from '../../debugger/types';
 import {
   decodeIcaBody,
   IcaMessageType,
@@ -42,6 +43,7 @@ function extractAddressFromSalt(salt: string | undefined): string | null {
 interface Props {
   message: Message | MessageStub;
   blur: boolean;
+  debugResult?: MessageDebugResult;
 }
 
 function getFormattedCallValue(value: string) {
@@ -56,7 +58,7 @@ function getFormattedCallValue(value: string) {
   }
 }
 
-export function IcaDetailsCard({ message, blur }: Props) {
+export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   const {
     body,
     msgId,
@@ -149,6 +151,9 @@ export function IcaDetailsCard({ message, blur }: Props) {
     }
     return [];
   }, [decodeResult, revealCalls]);
+
+  // Get the failed call index from debug result (-1 if no failure or not available)
+  const failedCallIndex = debugResult?.icaDetails?.failedCallIndex ?? -1;
 
   // Get block explorer URLs for call targets and ICA address
   const [explorerUrls, setExplorerUrls] = useState<Record<string, string | null>>({});
@@ -601,6 +606,7 @@ export function IcaDetailsCard({ message, blur }: Props) {
                     total={displayCalls.length}
                     explorerUrl={explorerUrls[`call-${i}`]}
                     blur={blur}
+                    failedCallIndex={failedCallIndex}
                   />
                 ))}
 
@@ -629,21 +635,33 @@ function IcaCallDetails({
   total,
   explorerUrl,
   blur,
+  failedCallIndex,
 }: {
   call: IcaCall;
   index: number;
   total: number;
   explorerUrl: string | null | undefined;
   blur: boolean;
+  failedCallIndex: number;
 }) {
   const { hasValue, formattedValue } = useMemo(
     () => getFormattedCallValue(call.value),
     [call.value],
   );
 
+  // Determine call state for styling
+  const isFailed = failedCallIndex === index;
+
+  // Determine styling based on state
+  const borderClass = isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50';
+  const labelClass = isFailed ? 'text-red-600' : 'text-gray-600';
+  const statusSuffix = isFailed ? ' - Failed' : '';
+
   return (
-    <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-      <label className="text-xs font-medium text-gray-600">{`Call ${index + 1} of ${total}`}</label>
+    <div className={`rounded-md border p-3 ${borderClass}`}>
+      <label className={`text-xs font-medium ${labelClass}`}>
+        {`Call ${index + 1} of ${total}${statusSuffix}`}
+      </label>
       <div className="mt-2 space-y-2">
         <KeyValueRow
           label="Target:"
