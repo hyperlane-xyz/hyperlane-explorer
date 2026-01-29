@@ -153,7 +153,10 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
       return fetchAllTokenDerivedConfigs(multiProvider, warpRoute.config);
     },
     enabled: !!warpRoute,
-    staleTime: 5 * 60 * 1000, // 5 minutes - config doesn't change often
+    staleTime: Infinity, // Config doesn't change - only refetch manually
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Build the visualization data
