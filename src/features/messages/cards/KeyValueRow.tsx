@@ -31,8 +31,10 @@ export function KeyValueRow({
   const useFallbackVal = isZeroish(display) && !allowZeroish;
   return (
     <div className={`flex items-center pl-px font-light ${classes}`}>
-      <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div className={`ml-1 truncate text-sm ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
+      <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
+      <div
+        className={`ml-1 min-w-0 flex-1 truncate text-sm ${displayWidth || ''} ${blurValue && 'blur-xs'}`}
+      >
         <span>{!useFallbackVal ? display : 'Unknown'}</span>
         {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
       </div>
