@@ -11,6 +11,7 @@ import AccountStar from '../../../images/icons/account-star.svg';
 import { useMultiProvider } from '../../../store';
 import { IcaCall, Message, MessageStatus } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { MessageDebugResult } from '../../debugger/types';
 import {
   decodeIcaBody,
   IcaMessageType,
@@ -44,9 +45,10 @@ function extractAddressFromSalt(salt: string | undefined): string | null {
 interface Props {
   message: Message;
   blur: boolean;
+  debugResult?: MessageDebugResult;
 }
 
-export function IcaDetailsCard({ message, blur }: Props) {
+export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   const {
     body,
     msgId,
@@ -136,6 +138,9 @@ export function IcaDetailsCard({ message, blur }: Props) {
     }
     return [];
   }, [decodeResult, revealCalls]);
+
+  // Get the failed call index from debug result (-1 if no failure or not available)
+  const failedCallIndex = debugResult?.icaDetails?.failedCallIndex ?? -1;
 
   // Get block explorer URLs for call targets and ICA address
   const [explorerUrls, setExplorerUrls] = useState<Record<string, string | null>>({});
@@ -574,6 +579,7 @@ export function IcaDetailsCard({ message, blur }: Props) {
                     explorerUrl={explorerUrls[`call-${i}`]}
                     blur={blur}
                     isDelivered={isDelivered}
+                    failedCallIndex={failedCallIndex}
                   />
                 ))}
 
@@ -601,6 +607,7 @@ function IcaCallDetails({
   explorerUrl,
   blur,
   isDelivered,
+  failedCallIndex,
 }: {
   call: IcaCall;
   index: number;
@@ -608,19 +615,46 @@ function IcaCallDetails({
   explorerUrl: string | null | undefined;
   blur: boolean;
   isDelivered: boolean;
+  failedCallIndex: number; // -1 if no failure, otherwise 0-based index of failed call
 }) {
-  const hasValue = BigNumber.from(call.value).gt(0);
-  const formattedValue = hasValue ? fromWei(call.value, 18) : '0';
+  // Defensive handling for BigNumber conversion - malformed values shouldn't crash the card
+  let hasValue = false;
+  let formattedValue = '0';
+  try {
+    hasValue = BigNumber.from(call.value).gt(0);
+    formattedValue = hasValue ? fromWei(call.value, 18) : '0';
+  } catch {
+    // Malformed value, use defaults
+  }
+
+  // Determine call state for styling
+  const isFailed = failedCallIndex === index;
+
+  // Determine styling based on state
+  let borderClass: string;
+  let labelClass: string;
+  let statusSuffix = '';
+
+  if (isDelivered) {
+    // All calls succeeded
+    borderClass = 'border-green-200 bg-green-50';
+    labelClass = 'text-green-600';
+  } else if (isFailed) {
+    // This specific call failed
+    borderClass = 'border-red-200 bg-red-50';
+    labelClass = 'text-red-600';
+    statusSuffix = ' — Failed';
+  } else {
+    // Pending (either not checked yet, or after a failed call)
+    borderClass = 'border-amber-200 bg-amber-50';
+    labelClass = 'text-amber-600';
+  }
 
   return (
-    <div
-      className={`rounded-md border p-3 ${
-        isDelivered ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
-      }`}
-    >
-      <label
-        className={`text-xs font-medium ${isDelivered ? 'text-green-600' : 'text-amber-600'}`}
-      >{`Call ${index + 1} of ${total}`}</label>
+    <div className={`rounded-md border p-3 ${borderClass}`}>
+      <label className={`text-xs font-medium ${labelClass}`}>
+        {`Call ${index + 1} of ${total}${statusSuffix}`}
+      </label>
       <div className="mt-2 space-y-2">
         <KeyValueRow
           label="Target:"
