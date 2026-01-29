@@ -211,7 +211,8 @@ export function MessageSearch() {
   // even when chain metadata hasn't loaded yet
   // For warp routes, preserve the original input with "/" instead of sanitized version
   useSyncQueryParam({
-    [MESSAGE_QUERY_PARAMS.SEARCH]: detectedWarpRouteId || looksLikeWarpRoute ? trimmedInput : sanitizedInput,
+    [MESSAGE_QUERY_PARAMS.SEARCH]:
+      detectedWarpRouteId || looksLikeWarpRoute ? trimmedInput : sanitizedInput,
     [MESSAGE_QUERY_PARAMS.ORIGIN]: originChainFilter || '',
     [MESSAGE_QUERY_PARAMS.DESTINATION]: destinationChainFilter || '',
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
@@ -272,7 +273,10 @@ export function MessageSearch() {
           allowAddress={true}
         />
         <SearchUnknownError show={isAnyError && isValidInput} />
-        <SearchInvalidError show={!isValidInput && !detectedWarpRouteId && !looksLikeWarpRoute} allowAddress={true} />
+        <SearchInvalidError
+          show={!isValidInput && !detectedWarpRouteId && !looksLikeWarpRoute}
+          allowAddress={true}
+        />
         {looksLikeWarpRoute && !isWarpRouteMapLoaded && (
           <div className="absolute left-0 right-0 top-10">
             <div className="my-10 flex justify-center">

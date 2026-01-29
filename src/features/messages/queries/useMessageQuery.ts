@@ -172,9 +172,7 @@ export function useMessageSearchQuery(
     // For vanilla queries (no search, no filters), show only recent messages
     if (!hasInput && !hasAnyFilter) {
       const ONE_HOUR_MS = 60 * 60 * 1000;
-      result = result
-        .filter((m) => Date.now() - m.origin.timestamp < ONE_HOUR_MS)
-        .slice(0, 20);
+      result = result.filter((m) => Date.now() - m.origin.timestamp < ONE_HOUR_MS).slice(0, 20);
     }
 
     return result;

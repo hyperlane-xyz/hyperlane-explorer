@@ -18,7 +18,11 @@ import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
 import { links } from './consts/links';
 import { DomainsEntry } from './features/chains/queries/fragments';
-import { TokenArgsWithWireDecimals, WarpRouteChainAddressMap, WarpRouteIdToAddressesMap } from './types';
+import {
+  TokenArgsWithWireDecimals,
+  WarpRouteChainAddressMap,
+  WarpRouteIdToAddressesMap,
+} from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -103,13 +107,20 @@ export const useStore = create<AppState>()(
             return;
           }
           buildMultiProvider(state.registry, state.chainMetadataOverrides)
-            .then(({ metadata, multiProvider, warpRouteChainAddressMap, warpRouteIdToAddressesMap }) => {
-              state.setChainMetadata(metadata);
-              state.setMultiProvider(multiProvider);
-              state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
-              state.setWarpRouteIdToAddressesMap(warpRouteIdToAddressesMap);
-              logger.debug('Rehydration complete');
-            })
+            .then(
+              ({
+                metadata,
+                multiProvider,
+                warpRouteChainAddressMap,
+                warpRouteIdToAddressesMap,
+              }) => {
+                state.setChainMetadata(metadata);
+                state.setMultiProvider(multiProvider);
+                state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
+                state.setWarpRouteIdToAddressesMap(warpRouteIdToAddressesMap);
+                logger.debug('Rehydration complete');
+              },
+            )
             .catch((e) => logger.error('Error building MultiProtocolProvider', e));
         };
       },
