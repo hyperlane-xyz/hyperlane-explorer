@@ -1,6 +1,7 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { Card } from '../../components/layout/Card';
@@ -21,7 +22,7 @@ import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { useMessageQuery } from './queries/useMessageQuery';
+import { useMessageQuery, useTransactionMessageCount } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
 
 interface Props {
@@ -96,15 +97,29 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     [message, warpRouteChainAddressMap, multiProvider],
   );
 
+  // Check if there are multiple messages in this origin transaction
+  const txMessageCount = useTransactionMessageCount(origin?.hash);
+  const showTxLink = txMessageCount > 1;
+
   return (
     <>
       <Card className="flex items-center justify-between rounded-full px-1">
-        <h2 className="font-medium text-blue-500">{`${
-          isIcaMsg ? 'ICA ' : ''
-        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
-          multiProvider,
-          destinationChainName,
-        )}`}</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-medium text-blue-500">{`${
+            isIcaMsg ? 'ICA ' : ''
+          } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
+            multiProvider,
+            destinationChainName,
+          )}`}</h2>
+          {showTxLink && (
+            <Link
+              href={`/tx/${origin.hash}`}
+              className="text-sm text-gray-500 transition-colors hover:text-gray-700"
+            >
+              View all {txMessageCount} messages in tx →
+            </Link>
+          )}
+        </div>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}

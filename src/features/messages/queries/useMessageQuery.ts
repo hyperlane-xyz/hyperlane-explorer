@@ -153,6 +153,45 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   };
 }
 
+/**
+ * Hook to count messages in a given origin transaction.
+ * Used to determine if we should show the "View all messages in this transaction" link.
+ */
+export function useTransactionMessageCount(originTxHash: string | undefined) {
+  const { scrapedDomains: scrapedChains } = useScrapedDomains();
+  const multiProvider = useMultiProvider();
+
+  // Build query for origin tx hash
+  const { query, variables } = useMemo(() => {
+    if (!originTxHash) {
+      // Return a no-op query
+      return buildMessageQuery(
+        MessageIdentifierType.OriginTxHash,
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        1,
+        true,
+      );
+    }
+    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 1000, true);
+  }, [originTxHash]);
+
+  // Execute query
+  const [{ data }] = useQuery<MessagesStubQueryResult>({
+    query,
+    variables,
+    pause: !originTxHash,
+  });
+
+  // Parse results
+  const messageCount = useMemo(() => {
+    if (!data || !originTxHash) return 0;
+    const messages = parseMessageStubResult(multiProvider, scrapedChains, data);
+    return messages.length;
+  }, [data, multiProvider, scrapedChains, originTxHash]);
+
+  return messageCount;
+}
+
 function isWindowVisible() {
   return document.visibilityState === 'visible';
 }
