@@ -164,9 +164,6 @@ export function MessageSearch() {
     messageList,
     isMessagesFound,
     refetch,
-    loadMore,
-    hasMore,
-    isLoadingMore,
   } = useMessageSearchQuery(
     searchInputForQuery,
     originChainFilter,
@@ -252,17 +249,6 @@ export function MessageSearch() {
         <Fade show={showMessageTable}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
-        {statusFilter === 'pending' && hasMore && hasRun && !isAnyError && (
-          <div className="flex justify-center py-4">
-            <button
-              onClick={loadMore}
-              disabled={isLoadingMore || isFetching}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoadingMore ? 'Loading...' : 'Load More'}
-            </button>
-          </div>
-        )}
         <SearchFetching
           show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
           isPiFetching={isPiFetching}

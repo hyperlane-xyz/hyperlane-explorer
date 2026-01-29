@@ -74,15 +74,16 @@ export function buildMessageSearchQuery(
   mainnetDomainIds?: number[],
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
-  offset: number = 0,
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
   const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
 
-  // Convert warp route addresses to bytea format
-  const warpAddressesBytea = warpRouteAddresses.map((addr) => searchValueToPostgresBytea(addr));
+  // Convert warp route addresses to bytea format, filtering out any invalid addresses
+  const warpAddressesBytea = warpRouteAddresses
+    .map((addr) => searchValueToPostgresBytea(addr))
+    .filter((addr): addr is string => !!addr);
 
   const variables: Record<string, unknown> = {
     search: searchValueToPostgresBytea(searchInput),
@@ -92,7 +93,7 @@ export function buildMessageSearchQuery(
     endTime,
   };
 
-  // Only add warpAddresses to variables if there are addresses to filter
+  // Only add warpAddresses to variables if there are valid addresses to filter
   if (warpAddressesBytea.length > 0) {
     variables.warpAddresses = warpAddressesBytea;
   }
@@ -104,7 +105,7 @@ export function buildMessageSearchQuery(
     endTimeFilter ||
     searchInput ||
     statusFilter !== 'all' ||
-    warpRouteAddresses.length > 0
+    warpAddressesBytea.length > 0
   );
   const whereClauses = buildSearchWhereClauses(searchInput);
   const originDomainWhereClause = buildDomainIdWhereClause(
@@ -124,7 +125,7 @@ export function buildMessageSearchQuery(
   const statusWhereClause = buildStatusWhereClause(statusFilter);
 
   // Build warp route address filter clause
-  const warpRouteWhereClause = buildWarpRouteWhereClause(warpRouteAddresses);
+  const warpRouteWhereClause = buildWarpRouteWhereClause(warpAddressesBytea);
 
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
@@ -143,8 +144,7 @@ export function buildMessageSearchQuery(
       ]
     },
     order_by: {id: desc},
-    limit: ${limit},
-    offset: ${offset}
+    limit: ${limit}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,
@@ -177,8 +177,8 @@ function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
   return '';
 }
 
-function buildWarpRouteWhereClause(warpRouteAddresses: string[]): string {
-  if (warpRouteAddresses.length === 0) return '';
+function buildWarpRouteWhereClause(warpAddressesBytea: string[]): string {
+  if (warpAddressesBytea.length === 0) return '';
   // Filter messages where sender OR recipient is in the warp route addresses
   return '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},';
 }
