@@ -134,10 +134,13 @@ export function useIsIcaMessage({
  * - Bytes 33-65: Commitment (bytes32)
  */
 export function decodeIcaBody(body: string): DecodedIcaMessage | null {
-  if (!body || BigNumber.from(body).isZero()) return null;
+  if (!body) return null;
 
   try {
     const bodyHex = strip0x(body);
+
+    // Safe zero check - handles any length payload without throwing
+    if (!bodyHex || /^0*$/.test(bodyHex)) return null;
 
     // Minimum length to read message type: 1 byte = 2 hex chars
     if (bodyHex.length < 2) {
@@ -830,7 +833,7 @@ export function useRelatedIcaMessage(
         true,
       );
     }
-    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 10, true);
+    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 1000, true);
   }, [shouldSearch, originTxHash]);
 
   // Execute the query

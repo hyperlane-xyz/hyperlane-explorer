@@ -172,7 +172,7 @@ export function useTransactionMessageCount(originTxHash: string | undefined) {
         true,
       );
     }
-    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 10, true);
+    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 1000, true);
   }, [originTxHash]);
 
   // Execute query

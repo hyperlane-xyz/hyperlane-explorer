@@ -138,6 +138,9 @@ export function MessageSearch() {
     // Wait for queries to complete
     if (!hasAllRun || isAnyFetching) return null;
 
+    // Don't redirect without user input (prevents redirect on homepage with latest messages)
+    if (!hasInput) return null;
+
     // Don't redirect if filters are applied
     if (originChainFilter || destinationChainFilter || startTimeFilter || endTimeFilter)
       return null;
@@ -153,8 +156,9 @@ export function MessageSearch() {
     }
 
     // Multiple results + origin tx hash match → go to tx page
+    // Only redirect if GraphQL found results (tx page uses GraphQL only, not PI)
     const inputLower = sanitizedInput.toLowerCase();
-    if (firstMessage.origin?.hash?.toLowerCase() === inputLower) {
+    if (isMessagesFound && firstMessage.origin?.hash?.toLowerCase() === inputLower) {
       return `/tx/${firstMessage.origin.hash}`;
     }
 
