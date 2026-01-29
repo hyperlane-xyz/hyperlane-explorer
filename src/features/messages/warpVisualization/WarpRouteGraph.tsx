@@ -148,12 +148,16 @@ function CompactChainNode({
 
   const explorerUrl = getExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom);
 
+  // Get display name from multiProvider if available
+  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
+  const displayName = chainMetadata?.displayName || token.chainName;
+
   return (
     <div
-      className={`flex min-w-[130px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm ${borderColor} ${hasInsufficientBalance ? 'bg-red-50' : ''}`}
+      className={`flex w-[140px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm ${borderColor} ${hasInsufficientBalance ? 'bg-red-50' : ''}`}
     >
       <ChainLogo chainName={token.chainName} size={24} />
-      <span className="mt-1 text-xs font-semibold">{token.chainName}</span>
+      <span className="mt-1 text-center text-xs font-semibold">{displayName}</span>
 
       {/* Token type badge */}
       <span
@@ -207,11 +211,20 @@ function CompactChainNode({
 /**
  * Minimal chain node - just logo, name, and type badge
  */
-function MinimalChainNode({ token }: { token: WarpRouteTokenVisualization }) {
+function MinimalChainNode({
+  token,
+  multiProvider,
+}: {
+  token: WarpRouteTokenVisualization;
+  multiProvider: ReturnType<typeof useMultiProvider>;
+}) {
+  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
+  const displayName = chainMetadata?.displayName || token.chainName;
+
   return (
-    <div className="flex flex-col items-center rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm">
+    <div className="flex w-[80px] flex-col items-center rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm">
       <ChainLogo chainName={token.chainName} size={20} />
-      <span className="mt-0.5 text-[9px] font-medium">{token.chainName}</span>
+      <span className="mt-0.5 text-center text-[9px] font-medium">{displayName}</span>
       <span
         className={`mt-0.5 rounded border px-1 py-0.5 text-[7px] font-medium ${getTokenTypeColor(token.tokenType, token.standard)}`}
       >
@@ -302,7 +315,7 @@ function CollapsedRouteView({
           <div className="text-[10px] text-gray-500">Other connected chains:</div>
           <div className="flex flex-wrap justify-center gap-2">
             {otherTokens.map((token) => (
-              <MinimalChainNode key={token.chainName} token={token} />
+              <MinimalChainNode key={token.chainName} token={token} multiProvider={multiProvider} />
             ))}
           </div>
         </div>

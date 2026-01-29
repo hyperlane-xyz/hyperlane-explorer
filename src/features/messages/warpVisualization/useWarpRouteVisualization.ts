@@ -11,15 +11,9 @@ import { useMemo } from 'react';
 import { useMultiProvider, useStore } from '../../../store';
 import { WarpRouteConfigs, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
+import { normalizeAddressToHex } from '../../../utils/yamlParsing';
 
 import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
-
-/**
- * Normalize address for comparison - only lowercase hex addresses
- */
-function normalizeAddress(value: string): string {
-  return value.startsWith('0x') ? value.toLowerCase() : value;
-}
 
 /**
  * Find the warp route config that contains the given token address on the given chain
@@ -34,7 +28,7 @@ function findWarpRouteConfig(
       (t) =>
         t.chainName === chainName &&
         t.addressOrDenom &&
-        normalizeAddress(t.addressOrDenom) === normalizeAddress(tokenAddress),
+        normalizeAddressToHex(t.addressOrDenom) === normalizeAddressToHex(tokenAddress),
     );
     if (match) return { routeId, config };
   }
