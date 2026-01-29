@@ -20,44 +20,52 @@ export function TransactionDetails({ txHash }: Props) {
   // Loading state
   if (isFetching && !hasRun) {
     return (
-      <Card className="flex min-h-[20rem] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <SpinnerIcon width={40} height={40} />
-          <p className="text-gray-500">Loading transaction messages...</p>
-        </div>
-      </Card>
+      <div className="mx-auto max-w-2xl">
+        <Card className="flex min-h-[20rem] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <SpinnerIcon width={40} height={40} />
+            <p className="text-gray-500">Loading transaction messages...</p>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   // Error state
   if (isError) {
     return (
-      <Card className="flex min-h-[20rem] items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-red-500">Error loading transaction</p>
-          <p className="text-sm text-gray-500">Please check the transaction hash and try again.</p>
-        </div>
-      </Card>
+      <div className="mx-auto max-w-2xl">
+        <Card className="flex min-h-[20rem] items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <p className="text-red-500">Error loading transaction</p>
+            <p className="text-sm text-gray-500">
+              Please check the transaction hash and try again.
+            </p>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   // Not found state
   if (hasRun && !isMessagesFound) {
     return (
-      <Card className="flex min-h-[20rem] items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-gray-700">No messages found</p>
-          <p className="max-w-md text-sm text-gray-500">
-            No Hyperlane messages were found for this transaction hash. The transaction may not have
-            dispatched any messages, or it may not be indexed yet.
-          </p>
-        </div>
-      </Card>
+      <div className="mx-auto max-w-2xl">
+        <Card className="flex min-h-[20rem] items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <p className="text-gray-700">No messages found</p>
+            <p className="max-w-md text-sm text-gray-500">
+              No Hyperlane messages were found for this transaction hash. The transaction may not
+              have dispatched any messages, or it may not be indexed yet.
+            </p>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="mx-auto max-w-2xl">
       {/* Origin Transaction Card - reuse existing component */}
       {originInfo && (
         <OriginTransactionCard
@@ -106,6 +114,6 @@ export function TransactionDetails({ txHash }: Props) {
           </div>
         )}
       </Card>
-    </>
+    </div>
   );
 }
