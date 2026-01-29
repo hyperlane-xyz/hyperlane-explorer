@@ -9,7 +9,8 @@ export function ErrorBoundary({ children }: PropsWithChildren<unknown>) {
 function SupportLink() {
   return (
     <a href={links.help} target="_blank" rel="noopener noreferrer" className="mt-5 text-sm">
-      For support, visit the <span className="underline underline-offset-2">Hyperlane Help Center</span>
+      For support, visit the{' '}
+      <span className="underline underline-offset-2">Hyperlane Help Center</span>
     </a>
   );
 }
