@@ -1,7 +1,9 @@
+// eslint-disable-next-line camelcase
+import { InterchainAccountRouter__factory } from '@hyperlane-xyz/core';
 import { chainAddresses } from '@hyperlane-xyz/registry';
-import { bytes32ToAddress, strip0x } from '@hyperlane-xyz/utils';
+import { addressToBytes32, bytes32ToAddress, strip0x } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
-import { BigNumber, Contract, utils } from 'ethers';
+import { BigNumber, Contract, providers, utils } from 'ethers';
 import { useMemo } from 'react';
 import { useQuery as useUrqlQuery } from 'urql';
 
@@ -252,6 +254,55 @@ export function parseIcaMessageDetails(message: Message | MessageStub): DecodedI
  */
 export function getIcaRouterAddress(chainName: string): Address | undefined {
   return ICA_ROUTER_MAP[chainName];
+}
+
+/**
+ * Compute the ICA address for a given owner on the destination chain.
+ * This is a non-hook version for use in non-React contexts like the debugger.
+ *
+ * @param originDomainId - The origin chain's domain ID
+ * @param owner - The owner address on the origin chain
+ * @param originRouter - The ICA router address on the origin chain
+ * @param destRouter - The ICA router address on the destination chain
+ * @param ism - Optional ISM address (uses default if not specified)
+ * @param salt - Optional salt (uses zero salt if not specified)
+ * @param destProvider - Provider for the destination chain
+ * @returns The derived ICA address, or null if computation fails
+ */
+export async function computeIcaAddress(
+  originDomainId: number,
+  owner: string,
+  originRouter: string,
+  destRouter: string,
+  ism: string | undefined,
+  salt: string | undefined,
+  destProvider: providers.Provider,
+): Promise<string | null> {
+  try {
+    // eslint-disable-next-line camelcase
+    const router = InterchainAccountRouter__factory.connect(destRouter, destProvider);
+
+    // Use zero address for ISM if not specified (will use default ISM)
+    const ismAddress = ism || '0x0000000000000000000000000000000000000000';
+    const userSalt = salt || '0x' + '0'.repeat(64);
+
+    // Get the ICA address using the contract with salt
+    // Signature: getLocalInterchainAccount(uint32,bytes32,bytes32,address,bytes32)
+    const icaAddress = await router[
+      'getLocalInterchainAccount(uint32,bytes32,bytes32,address,bytes32)'
+    ](
+      originDomainId,
+      addressToBytes32(owner),
+      addressToBytes32(originRouter),
+      ismAddress,
+      userSalt,
+    );
+
+    return icaAddress;
+  } catch (error) {
+    logger.error('Error computing ICA address', error);
+    return null;
+  }
 }
 
 /**
@@ -560,12 +611,9 @@ export async function fetchRevealCalls(
           }
         }
 
-        // If we couldn't match by message ID, return the first one (fallback)
-        logger.debug('Could not match message ID, using first process call');
-        const revealData = decodeRevealMetadata(processCalls[0].metadata);
-        if (revealData) {
-          return revealData.calls;
-        }
+        // If we couldn't match by message ID, return null to avoid showing potentially incorrect data
+        // (the first process call might belong to a different message in a batched transaction)
+        logger.debug('Could not match message ID, calls unavailable');
       }
       return null;
     }
@@ -644,49 +692,27 @@ export function useIcaAddress(
         return null;
       }
 
-      try {
-        // Get the ICA router addresses for both chains
-        const originRouter = getIcaRouterAddress(originChainName);
-        const destRouter = getIcaRouterAddress(destinationChainName);
+      // Get the ICA router addresses for both chains
+      const originRouter = getIcaRouterAddress(originChainName);
+      const destRouter = getIcaRouterAddress(destinationChainName);
 
-        if (!originRouter || !destRouter) {
-          logger.debug('ICA router not found for chains', originChainName, destinationChainName);
-          return null;
-        }
-
-        // Use the contract directly to get the ICA address
-        // eslint-disable-next-line camelcase
-        const { InterchainAccountRouter__factory } = await import('@hyperlane-xyz/core');
-        const provider = multiProvider.getEthersV5Provider(destinationChainName);
-        // eslint-disable-next-line camelcase
-        const router = InterchainAccountRouter__factory.connect(destRouter, provider);
-
-        const originDomainId = multiProvider.getDomainId(originChainName);
-
-        // Use zero address for ISM if not specified (will use default ISM)
-        const ismAddress = ism || '0x0000000000000000000000000000000000000000';
-
-        // Use the 5-parameter version that includes salt
-        const userSalt = salt || '0x' + '0'.repeat(64);
-
-        // Get the ICA address using the contract with salt
-        // Signature: getLocalInterchainAccount(uint32,bytes32,bytes32,address,bytes32)
-        const { addressToBytes32 } = await import('@hyperlane-xyz/utils');
-        const icaAddress = await router[
-          'getLocalInterchainAccount(uint32,bytes32,bytes32,address,bytes32)'
-        ](
-          originDomainId,
-          addressToBytes32(owner),
-          addressToBytes32(originRouter),
-          ismAddress,
-          userSalt,
-        );
-
-        return icaAddress;
-      } catch (error) {
-        logger.error('Error fetching ICA address', error);
+      if (!originRouter || !destRouter) {
+        logger.debug('ICA router not found for chains', originChainName, destinationChainName);
         return null;
       }
+
+      const provider = multiProvider.getEthersV5Provider(destinationChainName);
+      const originDomainId = multiProvider.getDomainId(originChainName);
+
+      return computeIcaAddress(
+        originDomainId,
+        owner,
+        originRouter,
+        destRouter,
+        ism,
+        salt,
+        provider,
+      );
     },
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes

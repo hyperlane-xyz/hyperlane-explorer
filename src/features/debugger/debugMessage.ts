@@ -30,7 +30,7 @@ import {
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
-import { decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
+import { computeIcaAddress, decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
 
 import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
@@ -207,12 +207,19 @@ async function debugMessageDelivery(
       };
     }
 
-    const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
-    if (icaCallErr) {
+    const icaDebugResult = await tryDebugIcaMsg(
+      sender,
+      recipient,
+      body,
+      originDomain,
+      destProvider,
+    );
+    if (icaDebugResult) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
-        description: icaCallErr,
+        description: `ICA call ${icaDebugResult.failedCallIndex + 1} of ${icaDebugResult.totalCalls} cannot be executed. ${icaDebugResult.errorReason}`,
         calldataDetails,
+        icaDetails: icaDebugResult,
       };
     }
 
@@ -389,13 +396,19 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
   }
 }
 
+interface IcaDebugResult {
+  failedCallIndex: number;
+  totalCalls: number;
+  errorReason: string;
+}
+
 async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
-  _originDomainId: DomainId,
+  originDomainId: DomainId,
   destinationProvider: Provider,
-) {
+): Promise<IcaDebugResult | null> {
   if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 
@@ -408,24 +421,43 @@ async function tryDebugIcaMsg(
     return null;
   }
 
-  const { calls } = decodedBody;
+  const { calls, owner, ism, salt } = decodedBody;
 
-  // Note: We can't easily get the ICA address without making a contract call
-  // to the destination router. For now, we skip ICA address verification
-  // and just check if the calls can be executed.
-  // TODO: Add ICA address computation if needed for debugging
+  // Compute the actual ICA address for accurate gas estimation
+  // sender is the origin ICA router, recipient is the destination ICA router
+  const icaAddress = await computeIcaAddress(
+    originDomainId,
+    owner!, // owner is defined for CALLS type
+    sender, // origin router (sender of ICA message)
+    recipient, // destination router
+    ism,
+    salt,
+    destinationProvider,
+  );
+
+  if (!icaAddress) {
+    logger.debug('Could not compute ICA address, skipping call checks');
+    return null;
+  }
+
+  logger.debug(`Computed ICA address: ${icaAddress}`);
 
   for (let i = 0; i < calls.length; i++) {
     const call = calls[i];
-    logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
+    logger.debug(`Checking ICA call ${i + 1} of ${calls.length}`);
     const errorReason = await tryCheckIcaCall(
-      recipient, // Use recipient (ICA router) as a proxy for now
+      icaAddress,
       call.to,
       call.data,
+      call.value,
       destinationProvider,
     );
     if (errorReason) {
-      return `ICA call ${i + 1} of ${calls.length} cannot be executed. ${errorReason}`;
+      return {
+        failedCallIndex: i,
+        totalCalls: calls.length,
+        errorReason,
+      };
     }
   }
 
@@ -436,6 +468,7 @@ async function tryCheckIcaCall(
   icaAddress: string,
   destinationAddress: string,
   callBytes: string,
+  callValue: string,
   destinationProvider: Provider,
 ) {
   try {
@@ -443,6 +476,7 @@ async function tryCheckIcaCall(
       to: destinationAddress,
       data: callBytes,
       from: icaAddress,
+      value: BigNumber.from(callValue),
     });
     logger.debug(`No call error found for call from ${icaAddress} to ${destinationAddress}`);
     return null;

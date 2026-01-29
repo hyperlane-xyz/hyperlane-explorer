@@ -153,7 +153,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           warpRouteDetails={warpRouteDetails}
           blur={blur}
         />
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}

@@ -83,9 +83,3 @@ export interface IcaCall {
   value: string; // uint256 as string (wei)
   data: string; // Hex encoded call data
 }
-
-// Decoded ICA message body
-export interface IcaMessageDetails {
-  salt: string; // 32-byte hex salt (first 66 chars including 0x, or 64 hex chars)
-  calls: IcaCall[];
-}

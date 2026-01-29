@@ -18,7 +18,7 @@ import { persist } from 'zustand/middleware';
 import { config } from './consts/config';
 import { links } from './consts/links';
 import { DomainsEntry } from './features/chains/queries/fragments';
-import { IcaRouterAddressMap, WarpRouteChainAddressMap } from './types';
+import { WarpRouteChainAddressMap } from './types';
 import { logger } from './utils/logger';
 
 // Increment this when persist state has breaking changes
@@ -41,8 +41,6 @@ interface AppState {
   setBanner: (className: string) => void;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
   setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
-  icaRouterAddressMap: IcaRouterAddressMap;
-  setIcaRouterAddressMap: (icaRouterAddressMap: IcaRouterAddressMap) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -82,10 +80,6 @@ export const useStore = create<AppState>()(
       warpRouteChainAddressMap: {},
       setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
         set({ warpRouteChainAddressMap });
-      },
-      icaRouterAddressMap: {},
-      setIcaRouterAddressMap: (icaRouterAddressMap: IcaRouterAddressMap) => {
-        set({ icaRouterAddressMap });
       },
     }),
     {
