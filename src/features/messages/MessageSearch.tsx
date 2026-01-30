@@ -16,7 +16,7 @@ import { useReadyMultiProvider, useWarpRouteIdToAddressesMap } from '../../store
 import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
-import { sanitizeString } from '../../utils/string';
+import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
 import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
@@ -25,15 +25,6 @@ import { useMessageSearchQuery } from './queries/useMessageQuery';
 function parseStatusFilter(value: string): MessageStatusFilter {
   if (value === 'delivered' || value === 'pending') return value;
   return 'all';
-}
-
-// Check if input looks like a warp route ID (e.g., "USDC/mainnet-cctp", "ETH/ethereum-arbitrum")
-function isWarpRouteIdFormat(input: string): boolean {
-  // Warp route IDs have format: SYMBOL/route-name (contains exactly one slash, no 0x prefix)
-  const trimmed = input.trim();
-  if (trimmed.startsWith('0x')) return false;
-  const slashCount = (trimmed.match(/\//g) || []).length;
-  return slashCount === 1 && trimmed.length > 2;
 }
 
 // Check if the input matches a known warp route ID (case-insensitive)
