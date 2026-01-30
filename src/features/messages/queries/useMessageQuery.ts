@@ -80,6 +80,7 @@ export function useMessageSearchQuery(
     mainnetDomainIds,
     dbStatusFilter,
     warpAddresses,
+    isPendingFilter,
   );
 
   // Execute query

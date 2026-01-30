@@ -74,6 +74,7 @@ export function buildMessageSearchQuery(
   mainnetDomainIds?: number[],
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
+  isPendingFilter = false,
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
@@ -105,7 +106,8 @@ export function buildMessageSearchQuery(
     endTimeFilter ||
     searchInput ||
     statusFilter !== 'all' ||
-    warpAddressesBytea.length > 0
+    warpAddressesBytea.length > 0 ||
+    isPendingFilter
   );
   const whereClauses = buildSearchWhereClauses(searchInput);
   const originDomainWhereClause = buildDomainIdWhereClause(
