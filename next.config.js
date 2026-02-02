@@ -61,7 +61,20 @@ const nextConfig = {
         ...config.resolve.alias,
         pino: require.resolve('./src/utils/pino-noop.js'),
       };
+
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@provablehq/wasm': false,
+        '@provablehq/sdk': false,
+      };
     }
+
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+
     return config;
   },
 
