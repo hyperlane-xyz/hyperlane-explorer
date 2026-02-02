@@ -18,8 +18,11 @@ export function formatTxHash(hash: string, domainId: number, multiProvider: Mult
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
       return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
-    case ProtocolType.Cosmos:
+    case (ProtocolType.Cosmos, ProtocolType.CosmosNative):
       return strip0x(hash);
+    case ProtocolType.Aleo:
+      // radix and aleo use both bech32m, we use this method until the aleo one is released
+      return hexToRadixCustomPrefix(hash, 'txid', 'at');
     default:
       return hash;
   }
