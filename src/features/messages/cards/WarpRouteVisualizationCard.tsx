@@ -23,14 +23,10 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Get warp route visualization data
-  // Only fetch derived configs (RPC calls) when the card is expanded to avoid excessive RPC load
-  const { visualization, isLoading: isVisualizationLoading } = useWarpRouteVisualization(
-    warpRouteDetails,
-    isExpanded, // Only fetch derived configs when expanded
-  );
+  const { visualization, isLoading: isVisualizationLoading } =
+    useWarpRouteVisualization(warpRouteDetails);
 
   // Get balances with manual refetch
-  // Only fetch when expanded to avoid excessive RPC calls
   const {
     balances,
     isLoading: isBalancesLoading,
@@ -41,7 +37,6 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
     warpRouteDetails
       ? BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18))
       : undefined,
-    isExpanded, // Only fetch balances when expanded
   );
 
   // Get chain names

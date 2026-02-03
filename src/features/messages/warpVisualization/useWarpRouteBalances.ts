@@ -177,28 +177,26 @@ async function fetchAllBalances(
 
 /**
  * Hook to get collateral balances for all tokens in a warp route visualization
- * @param tokens - The tokens to fetch balances for
- * @param routeId - The warp route ID for cache key
- * @param transferAmount - Optional transfer amount for sufficiency check
- * @param enabled - Whether to fetch balances. Set to false to defer RPC calls until needed.
  */
 export function useWarpRouteBalances(
   tokens: WarpRouteTokenVisualization[] | undefined,
   routeId: string | undefined,
   transferAmount?: bigint,
-  enabled = true,
 ): WarpRouteBalances {
   const multiProvider = useMultiProvider();
 
   const tokensToFetch = useMemo(() => tokens?.filter(shouldFetchSupply) || [], [tokens]);
 
+  // Create a stable string key from tokens - this prevents queryKey from changing
+  // when tokensToFetch array reference changes but content is the same
+  const tokensKey = useMemo(
+    () => tokensToFetch.map((t) => `${t.chainName}:${t.addressOrDenom}`).join(','),
+    [tokensToFetch],
+  );
+
   const queryKey = useMemo(
-    () => [
-      'warpRouteBalances',
-      routeId,
-      tokensToFetch.map((t) => `${t.chainName}:${t.addressOrDenom}`).join(','),
-    ],
-    [routeId, tokensToFetch],
+    () => ['warpRouteBalances', routeId, tokensKey],
+    [routeId, tokensKey],
   );
 
   const {
@@ -210,7 +208,7 @@ export function useWarpRouteBalances(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
     queryFn: () => fetchAllBalances(multiProvider, tokensToFetch),
-    enabled: enabled && tokensToFetch.length > 0 && !!routeId,
+    enabled: tokensToFetch.length > 0 && !!routeId,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

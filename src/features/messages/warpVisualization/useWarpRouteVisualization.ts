@@ -116,14 +116,8 @@ async function fetchAllTokenDerivedConfigs(
 
 /**
  * Hook to get warp route visualization data for a message
- * @param warpRouteDetails - The warp route details from the message
- * @param fetchDerivedConfigs - Whether to fetch derived configs (owner, tokenType, fees) via RPC.
- *                              Set to false initially to avoid RPC calls, then true when user expands the visualization.
  */
-export function useWarpRouteVisualization(
-  warpRouteDetails: WarpRouteDetails | undefined,
-  fetchDerivedConfigs = false,
-): {
+export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
   visualization: WarpRouteVisualization | undefined;
   isLoading: boolean;
   error: string | undefined;
@@ -132,20 +126,20 @@ export function useWarpRouteVisualization(
   const warpRouteConfigs = useStore((s) => s.warpRouteConfigs);
 
   // Find the matching warp route config
-  const warpRoute = useMemo(() => {
-    if (!warpRouteDetails?.originToken.addressOrDenom) return undefined;
-    return findWarpRouteConfig(
-      warpRouteConfigs,
-      warpRouteDetails.originToken.addressOrDenom,
-      warpRouteDetails.originToken.chainName,
-    );
-  }, [warpRouteConfigs, warpRouteDetails]);
+  // Memoize based on the actual values that matter, not the object references
+  const originTokenAddress = warpRouteDetails?.originToken.addressOrDenom;
+  const originChainName = warpRouteDetails?.originToken.chainName;
 
-  // Query key based on route ID
-  const queryKey = useMemo(
-    () => ['warpRouteVisualization', warpRoute?.routeId],
-    [warpRoute?.routeId],
-  );
+  const warpRoute = useMemo(() => {
+    if (!originTokenAddress) return undefined;
+    return findWarpRouteConfig(warpRouteConfigs, originTokenAddress, originChainName!);
+  }, [warpRouteConfigs, originTokenAddress, originChainName]);
+
+  // Extract routeId as a stable primitive for the query key
+  const routeId = warpRoute?.routeId;
+
+  // Query key based on route ID (primitive string, stable)
+  const queryKey = useMemo(() => ['warpRouteVisualization', routeId], [routeId]);
 
   // Fetch derived configs for all tokens in the route
   // Only fetch when explicitly enabled to avoid excessive RPC calls
@@ -160,7 +154,7 @@ export function useWarpRouteVisualization(
       if (!warpRoute) return undefined;
       return fetchAllTokenDerivedConfigs(multiProvider, warpRoute.config);
     },
-    enabled: !!warpRoute && fetchDerivedConfigs,
+    enabled: !!warpRoute,
     staleTime: Infinity, // Config doesn't change - only refetch manually
     refetchOnMount: false,
     refetchOnWindowFocus: false,
