@@ -15,7 +15,7 @@ import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 
 import { WarpRouteBalances, WarpRouteTokenVisualization } from './types';
-import { isCollateralTokenStandard, isCollateralTokenType } from './useWarpRouteVisualization';
+import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
 // Token standards that support balance fetching
 // NOTE: Only EVM chains are supported for balance fetching.
@@ -62,7 +62,6 @@ function createHypAdapter(
 
   const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
   if (!chainMetadata) {
-    logger.debug(`Chain ${chainName} not found in multiProvider`);
     return undefined;
   }
 
@@ -70,7 +69,6 @@ function createHypAdapter(
 
   // Only EVM adapters are supported
   if (protocol !== ProtocolType.Ethereum) {
-    logger.debug(`Non-EVM chain ${chainName} (${protocol}) - balance fetching not supported`);
     return undefined;
   }
 
@@ -98,58 +96,28 @@ async function fetchTokenBridgedSupply(
   try {
     const adapter = createHypAdapter(multiProvider, token);
     if (!adapter) {
-      logger.debug(`No adapter available for ${token.chainName}:${token.standard}`);
       return undefined;
     }
 
     const bridgedSupply = await adapter.getBridgedSupply();
-
-    if (bridgedSupply === undefined) {
-      logger.debug(`No bridged supply returned for ${token.chainName}:${token.symbol}`);
-      return undefined;
-    }
-
-    logger.debug('Fetched bridged supply', {
-      chain: token.chainName,
-      token: token.symbol,
-      balance: bridgedSupply.toString(),
-    });
-
     return bridgedSupply;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.debug(`Failed to fetch bridged supply for ${token.chainName}:${token.symbol}`, {
-      standard: token.standard,
-      error: errorMessage,
-    });
+    logger.debug(`Failed to fetch bridged supply for ${token.chainName}:${token.symbol}`, error);
     return undefined;
   }
 }
 
 /**
- * Check if a token should have its supply fetched
+ * Check if a token should have its supply fetched based on its standard
  */
 function shouldFetchSupply(token: WarpRouteTokenVisualization): boolean {
-  // Check tokenType if available (fetched from contract)
-  if (token.tokenType && isCollateralTokenType(token.tokenType)) {
-    return true;
-  }
-  // Check for synthetic tokenType
-  if (token.tokenType?.toLowerCase().includes('synthetic')) {
-    return true;
-  }
-  // Fall back to checking the standard from the config
-  if (token.standard && isCollateralTokenStandard(token.standard)) {
-    return true;
-  }
-  // Check using supported standards lists
-  if (token.standard && isSupportedCollateralStandard(token.standard)) {
-    return true;
-  }
-  if (token.standard && isSupportedSyntheticStandard(token.standard)) {
-    return true;
-  }
-  return false;
+  if (!token.standard) return false;
+  // Check if it's a collateral or synthetic standard we can fetch
+  return (
+    isCollateralTokenStandard(token.standard) ||
+    isSupportedCollateralStandard(token.standard) ||
+    isSupportedSyntheticStandard(token.standard)
+  );
 }
 
 /**
@@ -161,10 +129,7 @@ async function fetchAllBalances(
 ): Promise<Record<string, bigint>> {
   const balances: Record<string, bigint> = {};
 
-  const tokensToFetch = tokens.filter(shouldFetchSupply);
-  logger.debug(`Fetching supplies for ${tokensToFetch.length} tokens`);
-
-  const promises = tokensToFetch.map(async (token) => {
+  const promises = tokens.map(async (token) => {
     const balance = await fetchTokenBridgedSupply(multiProvider, token);
     if (balance !== undefined) {
       balances[token.chainName] = balance;
@@ -177,11 +142,16 @@ async function fetchAllBalances(
 
 /**
  * Hook to get collateral balances for all tokens in a warp route visualization
+ * @param tokens - The tokens to fetch balances for
+ * @param routeId - The warp route ID for cache key
+ * @param transferAmount - Optional transfer amount for sufficiency check
+ * @param enabled - Whether to fetch balances. Set to false to defer RPC calls until needed.
  */
 export function useWarpRouteBalances(
   tokens: WarpRouteTokenVisualization[] | undefined,
   routeId: string | undefined,
   transferAmount?: bigint,
+  enabled = true,
 ): WarpRouteBalances {
   const multiProvider = useMultiProvider();
 
@@ -208,7 +178,7 @@ export function useWarpRouteBalances(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
     queryFn: () => fetchAllBalances(multiProvider, tokensToFetch),
-    enabled: tokensToFetch.length > 0 && !!routeId,
+    enabled: enabled && tokensToFetch.length > 0 && !!routeId,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

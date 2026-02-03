@@ -22,11 +22,10 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   const multiProvider = useMultiProvider();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Get warp route visualization data
-  const { visualization, isLoading: isVisualizationLoading } =
-    useWarpRouteVisualization(warpRouteDetails);
+  // Get warp route visualization data (from registry, no RPC calls)
+  const { visualization } = useWarpRouteVisualization(warpRouteDetails);
 
-  // Get balances with manual refetch
+  // Get balances with manual refetch - only fetch when expanded
   const {
     balances,
     isLoading: isBalancesLoading,
@@ -37,6 +36,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
     warpRouteDetails
       ? BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18))
       : undefined,
+    isExpanded, // Only fetch balances when expanded
   );
 
   // Get chain names
@@ -55,18 +55,6 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
     if (!warpRouteDetails) return undefined;
     return BigInt(toWei(warpRouteDetails.amount, warpRouteDetails.originToken.decimals ?? 18));
   }, [warpRouteDetails]);
-
-  // Show loading state while fetching visualization
-  if (isVisualizationLoading) {
-    return (
-      <Card className="w-full">
-        <div className="flex items-center justify-center py-8">
-          <SpinnerIcon width={24} height={24} />
-          <span className="ml-2 text-gray-500">Loading warp route...</span>
-        </div>
-      </Card>
-    );
-  }
 
   // Don't render if no warp route details or visualization
   if (!warpRouteDetails || !visualization) return null;

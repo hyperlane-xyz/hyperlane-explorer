@@ -1,6 +1,6 @@
 import { TokenStandard, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 
-// Extended token info with runtime-fetched data for visualization
+// Token info from registry for visualization
 export interface WarpRouteTokenVisualization {
   // From WarpCoreConfig token
   chainName: string;
@@ -9,13 +9,7 @@ export interface WarpRouteTokenVisualization {
   decimals: number;
   standard?: TokenStandard;
   logoURI?: string;
-  // Fetched via EvmERC20WarpRouteReader.deriveWarpRouteConfig()
-  tokenType?: string; // TokenType from SDK (synthetic, collateral, native, etc.)
-  owner?: string;
-  // Fee config (simplified display)
-  feeType?: string; // LinearFee, RoutingFee, etc.
-  feeBps?: number; // Basis points for linear fees
-  // Collateral balance (for collateral-type tokens)
+  // Balance data (fetched via adapters when expanded)
   collateralBalance?: bigint;
   isCollateralInsufficient?: boolean;
 }

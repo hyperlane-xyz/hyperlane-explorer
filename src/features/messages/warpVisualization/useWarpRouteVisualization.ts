@@ -1,17 +1,8 @@
-import {
-  EvmERC20WarpRouteReader,
-  MultiProtocolProvider,
-  MultiProvider,
-  TokenType,
-  WarpCoreConfig,
-} from '@hyperlane-xyz/sdk';
-import { ProtocolType } from '@hyperlane-xyz/utils';
-import { useQuery } from '@tanstack/react-query';
+import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { useMemo } from 'react';
 
-import { useMultiProvider, useStore } from '../../../store';
+import { useStore } from '../../../store';
 import { WarpRouteConfigs, WarpRouteDetails } from '../../../types';
-import { logger } from '../../../utils/logger';
 import { normalizeAddressToHex } from '../../../utils/yamlParsing';
 
 import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
@@ -37,92 +28,12 @@ function findWarpRouteConfig(
 }
 
 /**
- * Fetch derived config (owner, token type, fee config) for a single token
- */
-async function fetchTokenDerivedConfig(
-  multiProvider: MultiProtocolProvider,
-  chainName: string,
-  tokenAddress: string,
-): Promise<{
-  tokenType?: string;
-  owner?: string;
-  feeType?: string;
-  feeBps?: number;
-}> {
-  try {
-    // Check if this is an EVM chain
-    const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-    if (!chainMetadata || chainMetadata.protocol !== ProtocolType.Ethereum) {
-      logger.debug(`Skipping non-EVM chain ${chainName} for derived config`);
-      return {};
-    }
-
-    // Create an EVM MultiProvider from the chain metadata
-    // MultiProvider requires RPC URLs which are in the chainMetadata
-    const evmMultiProvider = new MultiProvider({ [chainName]: chainMetadata });
-
-    const reader = new EvmERC20WarpRouteReader(evmMultiProvider, chainName);
-    const derivedConfig = await reader.deriveWarpRouteConfig(tokenAddress);
-
-    const result: {
-      tokenType?: string;
-      owner?: string;
-      feeType?: string;
-      feeBps?: number;
-    } = {
-      tokenType: derivedConfig.type,
-      owner: derivedConfig.owner,
-    };
-
-    // Extract fee info if present
-    if (derivedConfig.tokenFee) {
-      result.feeType = derivedConfig.tokenFee.type;
-      if ('bps' in derivedConfig.tokenFee && derivedConfig.tokenFee.bps !== undefined) {
-        result.feeBps = Number(derivedConfig.tokenFee.bps);
-      }
-    }
-
-    return result;
-  } catch (error) {
-    logger.warn(`Failed to fetch derived config for ${chainName}:${tokenAddress}`, error);
-    return {};
-  }
-}
-
-/**
- * Fetch derived configs for all tokens in a warp route
- */
-async function fetchAllTokenDerivedConfigs(
-  multiProvider: MultiProtocolProvider,
-  config: WarpCoreConfig,
-): Promise<Map<string, Awaited<ReturnType<typeof fetchTokenDerivedConfig>>>> {
-  const results = new Map<string, Awaited<ReturnType<typeof fetchTokenDerivedConfig>>>();
-
-  // Fetch all in parallel
-  const promises = config.tokens.map(async (token) => {
-    if (!token.addressOrDenom) return;
-    const key = `${token.chainName}:${token.addressOrDenom}`;
-    const derivedConfig = await fetchTokenDerivedConfig(
-      multiProvider,
-      token.chainName,
-      token.addressOrDenom,
-    );
-    results.set(key, derivedConfig);
-  });
-
-  await Promise.all(promises);
-  return results;
-}
-
-/**
- * Hook to get warp route visualization data for a message
+ * Hook to get warp route visualization data for a message.
+ * Uses only registry data (no RPC calls) for token type information.
  */
 export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
   visualization: WarpRouteVisualization | undefined;
-  isLoading: boolean;
-  error: string | undefined;
 } {
-  const multiProvider = useMultiProvider();
   const warpRouteConfigs = useStore((s) => s.warpRouteConfigs);
 
   // Find the matching warp route config
@@ -135,79 +46,28 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
     return findWarpRouteConfig(warpRouteConfigs, originTokenAddress, originChainName!);
   }, [warpRouteConfigs, originTokenAddress, originChainName]);
 
-  // Extract routeId as a stable primitive for the query key
-  const routeId = warpRoute?.routeId;
-
-  // Query key based on route ID (primitive string, stable)
-  const queryKey = useMemo(() => ['warpRouteVisualization', routeId], [routeId]);
-
-  // Fetch derived configs for all tokens in the route
-  // Only fetch when explicitly enabled to avoid excessive RPC calls
-  const {
-    data: derivedConfigs,
-    isLoading,
-    error,
-  } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- warpRoute is derived from warpRouteDetails (stable), multiProvider is stable, warpRoute.config is part of warpRoute
-    queryKey,
-    queryFn: async () => {
-      if (!warpRoute) return undefined;
-      return fetchAllTokenDerivedConfigs(multiProvider, warpRoute.config);
-    },
-    enabled: !!warpRoute,
-    staleTime: Infinity, // Config doesn't change - only refetch manually
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  // Build the visualization data
+  // Build the visualization data directly from registry config
   const visualization = useMemo((): WarpRouteVisualization | undefined => {
     if (!warpRoute) return undefined;
 
-    const tokens: WarpRouteTokenVisualization[] = warpRoute.config.tokens.map((token) => {
-      const key = `${token.chainName}:${token.addressOrDenom}`;
-      const derived = derivedConfigs?.get(key);
-
-      return {
-        chainName: token.chainName,
-        addressOrDenom: token.addressOrDenom || '',
-        symbol: token.symbol || '',
-        decimals: token.decimals ?? 18,
-        standard: token.standard,
-        logoURI: token.logoURI,
-        tokenType: derived?.tokenType,
-        owner: derived?.owner,
-        feeType: derived?.feeType,
-        feeBps: derived?.feeBps,
-      };
-    });
+    const tokens: WarpRouteTokenVisualization[] = warpRoute.config.tokens.map((token) => ({
+      chainName: token.chainName,
+      addressOrDenom: token.addressOrDenom || '',
+      symbol: token.symbol || '',
+      decimals: token.decimals ?? 18,
+      standard: token.standard,
+      logoURI: token.logoURI,
+    }));
 
     return {
       routeId: warpRoute.routeId,
       config: warpRoute.config,
       tokens,
     };
-  }, [warpRoute, derivedConfigs]);
+  }, [warpRoute]);
 
-  return {
-    visualization,
-    isLoading,
-    error: error ? String(error) : undefined,
-  };
+  return { visualization };
 }
-
-// Token types that hold collateral (locked funds) - using SDK TokenType enum
-const COLLATERAL_TOKEN_TYPES = [
-  TokenType.collateral,
-  TokenType.collateralVault,
-  TokenType.collateralVaultRebase,
-  TokenType.collateralFiat,
-  TokenType.collateralUri,
-  TokenType.XERC20Lockbox,
-  TokenType.native,
-  TokenType.nativeScaled,
-];
 
 // Token standards that indicate collateral-backed tokens
 const COLLATERAL_TOKEN_STANDARDS = [
@@ -224,14 +84,6 @@ const COLLATERAL_TOKEN_STANDARDS = [
   'StarknetHypCollateral',
   'StarknetHypNative',
 ];
-
-/**
- * Check if a token type is a collateral type that holds funds
- */
-export function isCollateralTokenType(tokenType: string | undefined): boolean {
-  if (!tokenType) return false;
-  return (COLLATERAL_TOKEN_TYPES as string[]).includes(tokenType);
-}
 
 /**
  * Check if a token standard indicates a collateral-backed token

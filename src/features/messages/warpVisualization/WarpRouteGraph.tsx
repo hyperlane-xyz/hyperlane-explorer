@@ -1,4 +1,3 @@
-import { TokenType } from '@hyperlane-xyz/sdk';
 import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
@@ -10,7 +9,7 @@ import { formatAmountCompact } from '../../../utils/amount';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 
 import { WarpRouteTokenVisualization } from './types';
-import { isCollateralTokenStandard, isCollateralTokenType } from './useWarpRouteVisualization';
+import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
 // Routes with more than this many chains will be collapsed by default
 const COLLAPSE_THRESHOLD = 6;
@@ -31,71 +30,38 @@ interface NodePosition {
   token: WarpRouteTokenVisualization;
 }
 
-// Color coding for token types or standards
-function getTokenTypeColor(tokenType: string | undefined, standard: string | undefined): string {
-  const type = tokenType || standard || '';
+// Color coding for token standards
+function getTokenTypeColor(standard: string | undefined): string {
+  if (!standard) return 'bg-gray-100 text-gray-700 border-gray-300';
 
-  if (type.toLowerCase().includes('synthetic') || type.includes('HypSynthetic'))
-    return 'bg-purple-100 text-purple-700 border-purple-300';
-  if (
-    type.toLowerCase().includes('collateral') ||
-    type === 'xERC20Lockbox' ||
-    type.includes('HypCollateral')
-  )
+  if (standard.includes('Synthetic')) return 'bg-purple-100 text-purple-700 border-purple-300';
+  if (standard.includes('Collateral') || standard.includes('Lockbox'))
     return 'bg-blue-100 text-blue-700 border-blue-300';
-  if (type.toLowerCase().includes('native') || type.includes('HypNative'))
-    return 'bg-orange-100 text-orange-700 border-orange-300';
-  if (type.toLowerCase().includes('xerc20') || type.includes('XERC20'))
-    return 'bg-indigo-100 text-indigo-700 border-indigo-300';
+  if (standard.includes('Native')) return 'bg-orange-100 text-orange-700 border-orange-300';
+  if (standard.includes('XERC20')) return 'bg-indigo-100 text-indigo-700 border-indigo-300';
 
   return 'bg-gray-100 text-gray-700 border-gray-300';
 }
 
-function getTokenTypeLabel(tokenType: string | undefined, standard: string | undefined): string {
-  if (tokenType) {
-    // Use TokenType enum values from SDK for type-safe labels
-    const labels: Record<string, string> = {
-      [TokenType.synthetic]: 'Synthetic',
-      [TokenType.syntheticRebase]: 'Synthetic',
-      [TokenType.syntheticUri]: 'Synthetic',
-      [TokenType.collateral]: 'Collateral',
-      [TokenType.collateralVault]: 'Collateral',
-      [TokenType.collateralVaultRebase]: 'Collateral',
-      [TokenType.collateralFiat]: 'Collateral',
-      [TokenType.collateralUri]: 'Collateral',
-      [TokenType.collateralCctp]: 'CCTP',
-      [TokenType.collateralEverclear]: 'Everclear',
-      [TokenType.XERC20]: 'xERC20',
-      [TokenType.XERC20Lockbox]: 'Lockbox',
-      [TokenType.native]: 'Native',
-      [TokenType.nativeScaled]: 'Native',
-      [TokenType.nativeOpL2]: 'OP L2',
-      [TokenType.nativeOpL1]: 'OP L1',
-      [TokenType.ethEverclear]: 'Everclear',
-    };
-    return labels[tokenType] || tokenType;
-  }
+function getTokenTypeLabel(standard: string | undefined): string {
+  if (!standard) return 'Unknown';
 
-  if (standard) {
-    if (standard.includes('Synthetic')) return 'Synthetic';
-    if (standard.includes('Collateral')) return 'Collateral';
-    if (standard.includes('Native')) return 'Native';
-    if (standard.includes('XERC20')) return 'xERC20';
-    return standard.replace(/^(Evm|Sealevel|Cw|Cosmos)Hyp/, '');
-  }
+  if (standard.includes('Synthetic')) return 'Synthetic';
+  if (standard.includes('Collateral')) return 'Collateral';
+  if (standard.includes('Native')) return 'Native';
+  if (standard.includes('XERC20')) return 'xERC20';
+  if (standard.includes('Lockbox')) return 'Lockbox';
 
-  return 'Unknown';
+  // Strip protocol prefix (Evm, Sealevel, Cw, Cosmos, Starknet)
+  return standard.replace(/^(Evm|Sealevel|Cw|Cosmos|Starknet)Hyp/, '');
 }
 
 function isCollateralToken(token: WarpRouteTokenVisualization): boolean {
-  if (token.tokenType && isCollateralTokenType(token.tokenType)) return true;
-  if (token.standard && isCollateralTokenStandard(token.standard)) return true;
-  return false;
+  return token.standard ? isCollateralTokenStandard(token.standard) : false;
 }
 
 function isSyntheticToken(token: WarpRouteTokenVisualization): boolean {
-  const type = token.tokenType || token.standard || '';
-  return type.toLowerCase().includes('synthetic');
+  return token.standard ? token.standard.includes('Synthetic') : false;
 }
 
 /**
@@ -157,9 +123,9 @@ function CompactChainNode({
 
       {/* Token type badge */}
       <span
-        className={`mt-1 rounded border px-1.5 py-0.5 text-[9px] font-medium ${getTokenTypeColor(token.tokenType, token.standard)}`}
+        className={`mt-1 rounded border px-1.5 py-0.5 text-[9px] font-medium ${getTokenTypeColor(token.standard)}`}
       >
-        {getTokenTypeLabel(token.tokenType, token.standard)}
+        {getTokenTypeLabel(token.standard)}
       </span>
 
       {/* Token address with link */}
@@ -222,9 +188,9 @@ function MinimalChainNode({
       <ChainLogo chainName={token.chainName} size={20} />
       <span className="mt-0.5 text-center text-[9px] font-medium">{displayName}</span>
       <span
-        className={`mt-0.5 rounded border px-1 py-0.5 text-[7px] font-medium ${getTokenTypeColor(token.tokenType, token.standard)}`}
+        className={`mt-0.5 rounded border px-1 py-0.5 text-[7px] font-medium ${getTokenTypeColor(token.standard)}`}
       >
-        {getTokenTypeLabel(token.tokenType, token.standard)}
+        {getTokenTypeLabel(token.standard)}
       </span>
     </div>
   );
@@ -349,7 +315,7 @@ export function WarpRouteGraph({
     }
   }, [hasUserToggled, shouldCollapseByDefault]);
 
-  // Fetch explorer URLs for all tokens and owners
+  // Fetch explorer URLs for all tokens
   useEffect(() => {
     const fetchExplorerUrls = async () => {
       const urls: Record<string, string | null> = {};
@@ -366,15 +332,6 @@ export function WarpRouteGraph({
             token.addressOrDenom,
           ),
         });
-
-        // Fetch URL for owner if present
-        if (token.owner) {
-          const ownerKey = `${token.chainName}:${token.owner}`;
-          fetchTasks.push({
-            key: ownerKey,
-            promise: tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner),
-          });
-        }
       }
 
       // Use Promise.allSettled to handle failures gracefully
@@ -605,9 +562,6 @@ export function WarpRouteGraph({
 
         const tokenExplorerUrl =
           explorerUrls[`${node.token.chainName}:${node.token.addressOrDenom}`];
-        const ownerExplorerUrl = node.token.owner
-          ? explorerUrls[`${node.token.chainName}:${node.token.owner}`]
-          : undefined;
 
         return (
           <div
@@ -637,9 +591,9 @@ export function WarpRouteGraph({
 
               {/* Token type badge */}
               <span
-                className={`mt-1 rounded border px-1.5 py-0.5 text-[9px] font-medium ${getTokenTypeColor(node.token.tokenType, node.token.standard)}`}
+                className={`mt-1 rounded border px-1.5 py-0.5 text-[9px] font-medium ${getTokenTypeColor(node.token.standard)}`}
               >
-                {getTokenTypeLabel(node.token.tokenType, node.token.standard)}
+                {getTokenTypeLabel(node.token.standard)}
               </span>
 
               {/* Token address with link */}
@@ -664,32 +618,6 @@ export function WarpRouteGraph({
                   </a>
                 )}
               </div>
-
-              {/* Owner with link */}
-              {node.token.owner && (
-                <div className="mt-0.5 flex items-center gap-0.5">
-                  <span className="text-[8px] text-gray-400">Owner:</span>
-                  <span className="font-mono text-[8px] text-gray-500">
-                    {shortenAddress(node.token.owner)}
-                  </span>
-                  <CopyButton
-                    copyValue={node.token.owner}
-                    width={8}
-                    height={8}
-                    className="opacity-50"
-                  />
-                  {ownerExplorerUrl && (
-                    <a
-                      href={ownerExplorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="opacity-50 hover:opacity-100"
-                    >
-                      <BoxArrowIcon width={8} height={8} />
-                    </a>
-                  )}
-                </div>
-              )}
 
               {/* Balance/Supply - shown for both collateral and synthetic tokens */}
               {balance !== undefined && (isCollateral || isSynthetic) && (
