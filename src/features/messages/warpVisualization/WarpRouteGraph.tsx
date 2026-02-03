@@ -1,11 +1,12 @@
 import { TokenType } from '@hyperlane-xyz/sdk';
-import { fromWei, isZeroishAddress, shortenAddress } from '@hyperlane-xyz/utils';
+import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
 import { formatAmountCompact } from '../../../utils/amount';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 
 import { WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard, isCollateralTokenType } from './useWarpRouteVisualization';
@@ -105,27 +106,6 @@ function formatBalance(balance: bigint, decimals: number): string {
 }
 
 /**
- * Get explorer URL for an address on a chain (synchronous, uses local metadata)
- * Mirrors behavior of tryGetBlockExplorerAddressUrl from utils/url.ts but synchronous
- */
-function getExplorerAddressUrl(
-  multiProvider: ReturnType<typeof useMultiProvider>,
-  chainName: string,
-  address: string,
-): string | undefined {
-  try {
-    // Skip zeroish addresses (matches tryGetBlockExplorerAddressUrl behavior)
-    if (!address || isZeroishAddress(address)) return undefined;
-    const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-    if (!chainMetadata?.blockExplorers?.[0]?.url) return undefined;
-    const explorerUrl = chainMetadata.blockExplorers[0].url;
-    return `${explorerUrl}/address/${address}`;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
  * Compact node component for collapsed view
  */
 function CompactChainNode({
@@ -134,12 +114,14 @@ function CompactChainNode({
   transferAmount,
   borderColor,
   multiProvider,
+  explorerUrls,
 }: {
   token: WarpRouteTokenVisualization | undefined;
   balance: bigint | undefined;
   transferAmount: bigint | undefined;
   borderColor: string;
   multiProvider: ReturnType<typeof useMultiProvider>;
+  explorerUrls: Record<string, string | null>;
 }) {
   if (!token) return null;
 
@@ -151,7 +133,7 @@ function CompactChainNode({
     transferAmount !== undefined &&
     balance < transferAmount;
 
-  const explorerUrl = getExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom);
+  const explorerUrl = explorerUrls[`${token.chainName}:${token.addressOrDenom}`];
 
   // Get display name from multiProvider if available
   const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
@@ -251,6 +233,7 @@ function CollapsedRouteView({
   transferAmountDisplay,
   tokenSymbol,
   multiProvider,
+  explorerUrls,
   onExpand,
 }: {
   tokens: WarpRouteTokenVisualization[];
@@ -261,6 +244,7 @@ function CollapsedRouteView({
   transferAmountDisplay: string | undefined;
   tokenSymbol: string | undefined;
   multiProvider: ReturnType<typeof useMultiProvider>;
+  explorerUrls: Record<string, string | null>;
   onExpand: () => void;
 }) {
   const originBalance = originToken ? balances[originToken.chainName] : undefined;
@@ -288,6 +272,7 @@ function CollapsedRouteView({
           transferAmount={transferAmount}
           borderColor="border-blue-500"
           multiProvider={multiProvider}
+          explorerUrls={explorerUrls}
         />
 
         {/* Arrow with transfer amount */}
@@ -311,6 +296,7 @@ function CollapsedRouteView({
           transferAmount={transferAmount}
           borderColor="border-blue-500"
           multiProvider={multiProvider}
+          explorerUrls={explorerUrls}
         />
       </div>
 
@@ -344,6 +330,7 @@ export function WarpRouteGraph({
   const shouldCollapseByDefault = tokens.length > COLLAPSE_THRESHOLD;
   const [isExpanded, setIsExpanded] = useState(!shouldCollapseByDefault);
   const [hasUserToggled, setHasUserToggled] = useState(false);
+  const [explorerUrls, setExplorerUrls] = useState<Record<string, string | null>>({});
 
   // Sync expanded state when tokens load asynchronously (unless user has manually toggled)
   useEffect(() => {
@@ -351,6 +338,45 @@ export function WarpRouteGraph({
       setIsExpanded(!shouldCollapseByDefault);
     }
   }, [hasUserToggled, shouldCollapseByDefault]);
+
+  // Fetch explorer URLs for all tokens and owners
+  useEffect(() => {
+    const fetchExplorerUrls = async () => {
+      const urls: Record<string, string | null> = {};
+      const promises: Promise<void>[] = [];
+
+      for (const token of tokens) {
+        // Fetch URL for token address
+        const tokenKey = `${token.chainName}:${token.addressOrDenom}`;
+        promises.push(
+          tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom).then(
+            (url) => {
+              urls[tokenKey] = url;
+            },
+          ),
+        );
+
+        // Fetch URL for owner if present
+        if (token.owner) {
+          const ownerKey = `${token.chainName}:${token.owner}`;
+          promises.push(
+            tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner).then(
+              (url) => {
+                urls[ownerKey] = url;
+              },
+            ),
+          );
+        }
+      }
+
+      await Promise.all(promises);
+      setExplorerUrls(urls);
+    };
+
+    if (tokens.length > 0) {
+      fetchExplorerUrls();
+    }
+  }, [tokens, multiProvider]);
 
   // Find origin and destination indices
   const originIndex = tokens.findIndex((t) => t.chainName === originChain);
@@ -469,6 +495,7 @@ export function WarpRouteGraph({
         transferAmountDisplay={transferAmountDisplay}
         tokenSymbol={tokenSymbol}
         multiProvider={multiProvider}
+        explorerUrls={explorerUrls}
         onExpand={() => {
           setHasUserToggled(true);
           setIsExpanded(true);
@@ -562,13 +589,10 @@ export function WarpRouteGraph({
           transferAmount !== undefined &&
           balance < transferAmount;
 
-        const tokenExplorerUrl = getExplorerAddressUrl(
-          multiProvider,
-          node.token.chainName,
-          node.token.addressOrDenom,
-        );
+        const tokenExplorerUrl =
+          explorerUrls[`${node.token.chainName}:${node.token.addressOrDenom}`];
         const ownerExplorerUrl = node.token.owner
-          ? getExplorerAddressUrl(multiProvider, node.token.chainName, node.token.owner)
+          ? explorerUrls[`${node.token.chainName}:${node.token.owner}`]
           : undefined;
 
         return (
