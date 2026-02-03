@@ -170,11 +170,11 @@ export function buildMessageSearchQuery(
   return { query, variables };
 }
 
+// Note: Only 'delivered' filter is applied at DB level. 'pending' uses client-side
+// filtering (see useMessageQuery.ts) because DB query for is_delivered=false is slow.
 function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
   if (statusFilter === 'delivered') {
     return '{is_delivered: {_eq: true}},';
-  } else if (statusFilter === 'pending') {
-    return '{is_delivered: {_eq: false}},';
   }
   return '';
 }
