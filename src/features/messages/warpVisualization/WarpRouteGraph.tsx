@@ -115,6 +115,7 @@ function CompactChainNode({
   borderColor,
   multiProvider,
   explorerUrls,
+  isDestination = false,
 }: {
   token: WarpRouteTokenVisualization | undefined;
   balance: bigint | undefined;
@@ -122,12 +123,15 @@ function CompactChainNode({
   borderColor: string;
   multiProvider: ReturnType<typeof useMultiProvider>;
   explorerUrls: Record<string, string | null>;
+  isDestination?: boolean;
 }) {
   if (!token) return null;
 
   const isCollateral = isCollateralToken(token);
   const isSynthetic = isSyntheticToken(token);
+  // Only mark as insufficient if this is the destination chain
   const hasInsufficientBalance =
+    isDestination &&
     isCollateral &&
     balance !== undefined &&
     transferAmount !== undefined &&
@@ -297,6 +301,7 @@ function CollapsedRouteView({
           borderColor="border-blue-500"
           multiProvider={multiProvider}
           explorerUrls={explorerUrls}
+          isDestination={true}
         />
       </div>
 
@@ -343,33 +348,37 @@ export function WarpRouteGraph({
   useEffect(() => {
     const fetchExplorerUrls = async () => {
       const urls: Record<string, string | null> = {};
-      const promises: Promise<void>[] = [];
+      const fetchTasks: { key: string; promise: Promise<string | null> }[] = [];
 
       for (const token of tokens) {
         // Fetch URL for token address
         const tokenKey = `${token.chainName}:${token.addressOrDenom}`;
-        promises.push(
-          tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.addressOrDenom).then(
-            (url) => {
-              urls[tokenKey] = url;
-            },
+        fetchTasks.push({
+          key: tokenKey,
+          promise: tryGetBlockExplorerAddressUrl(
+            multiProvider,
+            token.chainName,
+            token.addressOrDenom,
           ),
-        );
+        });
 
         // Fetch URL for owner if present
         if (token.owner) {
           const ownerKey = `${token.chainName}:${token.owner}`;
-          promises.push(
-            tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner).then(
-              (url) => {
-                urls[ownerKey] = url;
-              },
-            ),
-          );
+          fetchTasks.push({
+            key: ownerKey,
+            promise: tryGetBlockExplorerAddressUrl(multiProvider, token.chainName, token.owner),
+          });
         }
       }
 
-      await Promise.all(promises);
+      // Use Promise.allSettled to handle failures gracefully
+      const results = await Promise.allSettled(fetchTasks.map((t) => t.promise));
+      results.forEach((result, i) => {
+        const key = fetchTasks[i].key;
+        urls[key] = result.status === 'fulfilled' ? result.value : null;
+      });
+
       setExplorerUrls(urls);
     };
 
