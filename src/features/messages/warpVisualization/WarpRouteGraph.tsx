@@ -615,7 +615,10 @@ export function WarpRouteGraph({
             >
               {/* Chain logo and name */}
               <ChainLogo chainName={node.token.chainName} size={24} />
-              <span className="mt-1 text-xs font-semibold">{node.token.chainName}</span>
+              <span className="mt-1 text-xs font-semibold">
+                {multiProvider.tryGetChainMetadata(node.token.chainName)?.displayName ||
+                  node.token.chainName}
+              </span>
 
               {/* Token type badge */}
               <span
