@@ -2,6 +2,7 @@ import {
   EvmERC20WarpRouteReader,
   MultiProtocolProvider,
   MultiProvider,
+  TokenType,
   WarpCoreConfig,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
@@ -195,16 +196,16 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
   };
 }
 
-// Token types that hold collateral (locked funds)
+// Token types that hold collateral (locked funds) - using SDK TokenType enum
 const COLLATERAL_TOKEN_TYPES = [
-  'collateral',
-  'collateralVault',
-  'collateralVaultRebase',
-  'collateralFiat',
-  'collateralUri',
-  'xERC20Lockbox',
-  'native',
-  'nativeScaled',
+  TokenType.collateral,
+  TokenType.collateralVault,
+  TokenType.collateralVaultRebase,
+  TokenType.collateralFiat,
+  TokenType.collateralUri,
+  TokenType.XERC20Lockbox,
+  TokenType.native,
+  TokenType.nativeScaled,
 ];
 
 // Token standards that indicate collateral-backed tokens
@@ -228,7 +229,7 @@ const COLLATERAL_TOKEN_STANDARDS = [
  */
 export function isCollateralTokenType(tokenType: string | undefined): boolean {
   if (!tokenType) return false;
-  return COLLATERAL_TOKEN_TYPES.includes(tokenType);
+  return (COLLATERAL_TOKEN_TYPES as string[]).includes(tokenType);
 }
 
 /**

@@ -1,4 +1,5 @@
-import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
+import { TokenType } from '@hyperlane-xyz/sdk';
+import { fromWei, isZeroishAddress, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -50,24 +51,25 @@ function getTokenTypeColor(tokenType: string | undefined, standard: string | und
 
 function getTokenTypeLabel(tokenType: string | undefined, standard: string | undefined): string {
   if (tokenType) {
+    // Use TokenType enum values from SDK for type-safe labels
     const labels: Record<string, string> = {
-      synthetic: 'Synthetic',
-      syntheticRebase: 'Synthetic',
-      syntheticUri: 'Synthetic',
-      collateral: 'Collateral',
-      collateralVault: 'Collateral',
-      collateralVaultRebase: 'Collateral',
-      collateralFiat: 'Collateral',
-      collateralUri: 'Collateral',
-      collateralCctp: 'CCTP',
-      collateralEverclear: 'Everclear',
-      xERC20: 'xERC20',
-      xERC20Lockbox: 'Lockbox',
-      native: 'Native',
-      nativeScaled: 'Native',
-      nativeOpL2: 'OP L2',
-      nativeOpL1: 'OP L1',
-      ethEverclear: 'Everclear',
+      [TokenType.synthetic]: 'Synthetic',
+      [TokenType.syntheticRebase]: 'Synthetic',
+      [TokenType.syntheticUri]: 'Synthetic',
+      [TokenType.collateral]: 'Collateral',
+      [TokenType.collateralVault]: 'Collateral',
+      [TokenType.collateralVaultRebase]: 'Collateral',
+      [TokenType.collateralFiat]: 'Collateral',
+      [TokenType.collateralUri]: 'Collateral',
+      [TokenType.collateralCctp]: 'CCTP',
+      [TokenType.collateralEverclear]: 'Everclear',
+      [TokenType.XERC20]: 'xERC20',
+      [TokenType.XERC20Lockbox]: 'Lockbox',
+      [TokenType.native]: 'Native',
+      [TokenType.nativeScaled]: 'Native',
+      [TokenType.nativeOpL2]: 'OP L2',
+      [TokenType.nativeOpL1]: 'OP L1',
+      [TokenType.ethEverclear]: 'Everclear',
     };
     return labels[tokenType] || tokenType;
   }
@@ -104,6 +106,7 @@ function formatBalance(balance: bigint, decimals: number): string {
 
 /**
  * Get explorer URL for an address on a chain (synchronous, uses local metadata)
+ * Mirrors behavior of tryGetBlockExplorerAddressUrl from utils/url.ts but synchronous
  */
 function getExplorerAddressUrl(
   multiProvider: ReturnType<typeof useMultiProvider>,
@@ -111,6 +114,8 @@ function getExplorerAddressUrl(
   address: string,
 ): string | undefined {
   try {
+    // Skip zeroish addresses (matches tryGetBlockExplorerAddressUrl behavior)
+    if (!address || isZeroishAddress(address)) return undefined;
     const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
     if (!chainMetadata?.blockExplorers?.[0]?.url) return undefined;
     const explorerUrl = chainMetadata.blockExplorers[0].url;
