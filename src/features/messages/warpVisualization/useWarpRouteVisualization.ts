@@ -116,8 +116,14 @@ async function fetchAllTokenDerivedConfigs(
 
 /**
  * Hook to get warp route visualization data for a message
+ * @param warpRouteDetails - The warp route details from the message
+ * @param fetchDerivedConfigs - Whether to fetch derived configs (owner, tokenType, fees) via RPC.
+ *                              Set to false initially to avoid RPC calls, then true when user expands the visualization.
  */
-export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
+export function useWarpRouteVisualization(
+  warpRouteDetails: WarpRouteDetails | undefined,
+  fetchDerivedConfigs = false,
+): {
   visualization: WarpRouteVisualization | undefined;
   isLoading: boolean;
   error: string | undefined;
@@ -142,6 +148,7 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
   );
 
   // Fetch derived configs for all tokens in the route
+  // Only fetch when explicitly enabled to avoid excessive RPC calls
   const {
     data: derivedConfigs,
     isLoading,
@@ -153,7 +160,7 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
       if (!warpRoute) return undefined;
       return fetchAllTokenDerivedConfigs(multiProvider, warpRoute.config);
     },
-    enabled: !!warpRoute,
+    enabled: !!warpRoute && fetchDerivedConfigs,
     staleTime: Infinity, // Config doesn't change - only refetch manually
     refetchOnMount: false,
     refetchOnWindowFocus: false,
