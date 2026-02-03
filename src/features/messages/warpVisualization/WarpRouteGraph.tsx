@@ -1,6 +1,7 @@
 import { TokenType } from '@hyperlane-xyz/sdk';
 import { fromWei, shortenAddress } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -45,7 +46,7 @@ function getTokenTypeColor(tokenType: string | undefined, standard: string | und
   if (type.toLowerCase().includes('native') || type.includes('HypNative'))
     return 'bg-orange-100 text-orange-700 border-orange-300';
   if (type.toLowerCase().includes('xerc20') || type.includes('XERC20'))
-    return 'bg-green-100 text-green-700 border-green-300';
+    return 'bg-indigo-100 text-indigo-700 border-indigo-300';
 
   return 'bg-gray-100 text-gray-700 border-gray-300';
 }
@@ -145,7 +146,11 @@ function CompactChainNode({
 
   return (
     <div
-      className={`flex w-[140px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm ${borderColor} ${hasInsufficientBalance ? 'bg-red-50' : ''}`}
+      className={clsx(
+        'flex w-[140px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm',
+        borderColor,
+        hasInsufficientBalance && 'bg-red-50',
+      )}
     >
       <ChainLogo chainName={token.chainName} size={24} />
       <span className="mt-1 text-center text-xs font-semibold">{displayName}</span>
@@ -614,13 +619,14 @@ export function WarpRouteGraph({
             }}
           >
             <div
-              className={`flex min-w-[120px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm ${
+              className={clsx(
+                'flex min-w-[120px] flex-col items-center rounded-lg border-2 bg-white p-2 shadow-sm',
                 isOrigin || isDestination
                   ? hasInsufficientBalance
                     ? 'border-red-500 bg-red-50'
                     : 'border-blue-500'
-                  : 'border-gray-200'
-              }`}
+                  : 'border-gray-200',
+              )}
             >
               {/* Chain logo and name */}
               <ChainLogo chainName={node.token.chainName} size={24} />
