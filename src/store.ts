@@ -187,9 +187,10 @@ export async function buildWarpRouteData(registry: IRegistry): Promise<{
   try {
     logger.debug('Building warp route data from GithubRegistry');
     warpRouteConfigs = await registry.getWarpRoutes();
-  } catch {
-    logger.debug(
+  } catch (err) {
+    logger.warn(
       'Failed to build warp route data from GithubRegistry. Using published warp route configs.',
+      err,
     );
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
