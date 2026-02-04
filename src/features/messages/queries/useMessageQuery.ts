@@ -1,20 +1,25 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
+import { useInterval } from '@hyperlane-xyz/widgets';
+
 import { useMultiProvider } from '../../../store';
-import { MessageStatus } from '../../../types';
+import { MessageStatus, MessageStatusFilter } from '../../../types';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 
-import { useInterval } from '@hyperlane-xyz/widgets';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
 import { parseMessageQueryResult, parseMessageStubResult } from './parse';
 
-const SEARCH_AUTO_REFRESH_DELAY = 15_000; // 15s
-const MSG_AUTO_REFRESH_DELAY = 10_000; // 10s
+const SEARCH_AUTO_REFRESH_DELAY = 15_000;
+const MSG_AUTO_REFRESH_DELAY = 10_000;
 const LATEST_QUERY_LIMIT = 100;
 const SEARCH_QUERY_LIMIT = 50;
+
+// Larger batch size for pending filter since most messages are delivered quickly,
+// so we need to fetch more to find pending ones.
+const PENDING_FILTER_BATCH_SIZE = 500;
 
 export function isValidSearchQuery(input: string) {
   if (!input) return false;
@@ -27,6 +32,8 @@ export function useMessageSearchQuery(
   destinationChainNameFilter: string | null,
   startTimeFilter: number | null,
   endTimeFilter: number | null,
+  statusFilter: MessageStatusFilter = 'all',
+  warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
 ) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useMultiProvider();
@@ -46,20 +53,34 @@ export function useMessageSearchQuery(
     ? multiProvider.tryGetDomainId(destinationChainNameFilter)
     : null;
 
-  // validating filters
+  // Validating filters
   const isValidOrigin = !originChainNameFilter || originDomainId !== null;
   const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
 
-  // Assemble GraphQL query
+  const warpAddresses = warpRouteAddresses.map((a) => a.address);
+
+  // For pending filter, we use client-side filtering because the DB query for
+  // is_delivered=false is slow (no index on absence of delivered_message record).
+  // Instead, we fetch more messages and filter client-side.
+  const isPendingFilter = statusFilter === 'pending';
+  const dbStatusFilter = isPendingFilter ? 'all' : statusFilter;
+
+  // Use larger batch size for pending filter to find more pending messages
+  const baseLimit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
+  const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : baseLimit;
+
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,
     isValidDestination ? destDomainId : null,
     startTimeFilter,
     endTimeFilter,
-    hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT,
+    queryLimit,
     true,
     mainnetDomainIds,
+    dbStatusFilter,
+    warpAddresses,
+    isPendingFilter,
   );
 
   // Execute query
@@ -76,40 +97,33 @@ export function useMessageSearchQuery(
     [multiProvider, scrapedChains, data],
   );
 
-  // Filter recent messages during DB backfilling period
-  // TODO remove this once backfilling is complete
-  const hasFilter = !!(
-    originChainNameFilter ||
-    destinationChainNameFilter ||
-    startTimeFilter ||
-    endTimeFilter
-  );
+  // Apply client-side pending filter if needed
   const messageList = useMemo(() => {
-    if (hasInput || hasFilter) return unfilteredMessageList;
-    return unfilteredMessageList
-      .filter((m) => Date.now() - m.origin.timestamp < 1000 * 60 * 60) // filter out messages older than 1 hour
-      .slice(0, 20);
-  }, [hasInput, hasFilter, unfilteredMessageList]);
+    if (isPendingFilter) {
+      return unfilteredMessageList.filter((m) => m.status === MessageStatus.Pending);
+    }
+    return unfilteredMessageList;
+  }, [unfilteredMessageList, isPendingFilter]);
 
   const isMessagesFound = messageList.length > 0;
 
-  // Setup interval to re-query
-  const reExecutor = useCallback(() => {
+  // Auto-refresh query periodically
+  const refresh = useCallback(() => {
     if (!query || !isValidInput || !isWindowVisible()) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
-  useInterval(reExecutor, SEARCH_AUTO_REFRESH_DELAY);
+  useInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
+    isValidOrigin,
+    isValidDestination,
     isFetching,
     isError: !!error,
     hasRun: !!data,
     isMessagesFound,
     messageList,
-    isValidOrigin,
-    isValidDestination,
-    refetch: reExecutor,
+    refetch: refresh,
   };
 }
 

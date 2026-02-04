@@ -73,5 +73,14 @@ export interface WarpRouteDetails {
 
 export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgsWithWireDecimals>>;
 
+// Maps warp route ID (lowercase) to array of token addresses for that route
+export type WarpRouteIdToAddressesMap = Record<
+  string,
+  Array<{ chainName: string; address: Address }>
+>;
+
 // Map of warp route ID (e.g., "USDC/mainnet-cctp") to its configuration
 export type WarpRouteConfigs = Record<string, WarpCoreConfig>;
+
+// Status filter options for message search
+export type MessageStatusFilter = 'all' | 'delivered' | 'pending';
