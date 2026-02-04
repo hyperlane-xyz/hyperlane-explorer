@@ -50,8 +50,21 @@ const nextConfig = {
 
   reactStrictMode: true,
 
-  // Transpile hyperlane packages to apply webpack aliases
-  transpilePackages: ['@hyperlane-xyz/utils', '@hyperlane-xyz/widgets'],
+  // Transpile ESM packages for Jest compatibility and webpack aliases
+  transpilePackages: [
+    '@hyperlane-xyz/core',
+    '@hyperlane-xyz/cosmos-sdk',
+    '@hyperlane-xyz/cosmos-types',
+    '@hyperlane-xyz/deploy-sdk',
+    '@hyperlane-xyz/provider-sdk',
+    '@hyperlane-xyz/radix-sdk',
+    '@hyperlane-xyz/registry',
+    '@hyperlane-xyz/sdk',
+    '@hyperlane-xyz/starknet-core',
+    '@hyperlane-xyz/utils',
+    '@hyperlane-xyz/widgets',
+    'lodash-es',
+  ],
 
   // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
   webpack: (config, { isServer }) => {
