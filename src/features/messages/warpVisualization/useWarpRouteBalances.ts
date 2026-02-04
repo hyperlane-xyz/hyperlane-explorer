@@ -164,10 +164,7 @@ export function useWarpRouteBalances(
     [tokensToFetch],
   );
 
-  const queryKey = useMemo(
-    () => ['warpRouteBalances', routeId, tokensKey],
-    [routeId, tokensKey],
-  );
+  const queryKey = useMemo(() => ['warpRouteBalances', routeId, tokensKey], [routeId, tokensKey]);
 
   const {
     data: balances,
