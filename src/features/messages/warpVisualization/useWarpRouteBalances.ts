@@ -2,6 +2,7 @@ import {
   EvmHypCollateralAdapter,
   EvmHypNativeAdapter,
   EvmHypSyntheticAdapter,
+  EvmHypXERC20Adapter,
   EvmHypXERC20LockboxAdapter,
   IHypTokenAdapter,
   MultiProtocolProvider,
@@ -14,7 +15,7 @@ import { useMemo } from 'react';
 import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 
-import { WarpRouteBalances, WarpRouteTokenVisualization } from './types';
+import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
 // Token standards that support balance fetching
@@ -25,6 +26,7 @@ const SUPPORTED_COLLATERAL_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypCollateral,
   TokenStandard.EvmHypNative,
   TokenStandard.EvmHypXERC20Lockbox,
+  TokenStandard.EvmHypXERC20,
 ];
 
 const SUPPORTED_SYNTHETIC_STANDARDS: TokenStandard[] = [TokenStandard.EvmHypSynthetic];
@@ -79,6 +81,8 @@ function createHypAdapter(
       return new EvmHypNativeAdapter(chainName, multiProvider, { token: addressOrDenom });
     case TokenStandard.EvmHypSynthetic:
       return new EvmHypSyntheticAdapter(chainName, multiProvider, { token: addressOrDenom });
+    case TokenStandard.EvmHypXERC20:
+      return new EvmHypXERC20Adapter(chainName, multiProvider, { token: addressOrDenom });
     case TokenStandard.EvmHypXERC20Lockbox:
       return new EvmHypXERC20LockboxAdapter(chainName, multiProvider, { token: addressOrDenom });
     default:
@@ -87,12 +91,12 @@ function createHypAdapter(
 }
 
 /**
- * Fetch the bridged supply for a single token
+ * Fetch the balance data for a single token
  */
-async function fetchTokenBridgedSupply(
+async function fetchTokenBalance(
   multiProvider: MultiProtocolProvider,
   token: WarpRouteTokenVisualization,
-): Promise<bigint | undefined> {
+): Promise<ChainBalance | undefined> {
   try {
     const adapter = createHypAdapter(multiProvider, token);
     if (!adapter) {
@@ -100,9 +104,35 @@ async function fetchTokenBridgedSupply(
     }
 
     const bridgedSupply = await adapter.getBridgedSupply();
-    return bridgedSupply;
+    if (bridgedSupply === undefined) {
+      return undefined;
+    }
+
+    const result: ChainBalance = { balance: bridgedSupply };
+
+    // For xERC20 lockbox, get both lockbox balance and total xERC20 supply
+    if (token.standard === TokenStandard.EvmHypXERC20Lockbox) {
+      const lockboxAdapter = adapter as EvmHypXERC20LockboxAdapter;
+      try {
+        // getBridgedSupply returns lockbox balance for lockbox adapter
+        result.lockboxBalance = bridgedSupply;
+        // Get total xERC20 supply from the underlying xERC20 token
+        const xerc20 = await lockboxAdapter.getXERC20();
+        const totalSupply = await xerc20.totalSupply();
+        result.xerc20Supply = BigInt(totalSupply.toString());
+      } catch (error) {
+        logger.debug(`Failed to fetch xERC20 details for ${token.chainName}`, error);
+      }
+    }
+
+    // For xERC20 (non-lockbox), getBridgedSupply returns total supply
+    if (token.standard === TokenStandard.EvmHypXERC20) {
+      result.xerc20Supply = bridgedSupply;
+    }
+
+    return result;
   } catch (error) {
-    logger.debug(`Failed to fetch bridged supply for ${token.chainName}:${token.symbol}`, error);
+    logger.debug(`Failed to fetch balance for ${token.chainName}:${token.symbol}`, error);
     return undefined;
   }
 }
@@ -126,11 +156,11 @@ function shouldFetchSupply(token: WarpRouteTokenVisualization): boolean {
 async function fetchAllBalances(
   multiProvider: MultiProtocolProvider,
   tokens: WarpRouteTokenVisualization[],
-): Promise<Record<string, bigint>> {
-  const balances: Record<string, bigint> = {};
+): Promise<Record<string, ChainBalance>> {
+  const balances: Record<string, ChainBalance> = {};
 
   const promises = tokens.map(async (token) => {
-    const balance = await fetchTokenBridgedSupply(multiProvider, token);
+    const balance = await fetchTokenBalance(multiProvider, token);
     if (balance !== undefined) {
       balances[token.chainName] = balance;
     }
