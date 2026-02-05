@@ -50,6 +50,10 @@ const nextConfig = {
 
   reactStrictMode: true,
 
+  // Skip linting and type checking during builds — CI runs these separately
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+
   // Transpile ESM packages for Jest compatibility and webpack aliases
   transpilePackages: [
     '@hyperlane-xyz/core',
