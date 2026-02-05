@@ -28,7 +28,7 @@ const securityHeaders = [
   },
   {
     key: 'Content-Security-Policy',
-    value: `default-src 'self'; script-src 'self'${
+    value: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${
       isDev ? " 'unsafe-eval'" : ''
     }; connect-src *; img-src 'self' data: ${IMG_SRC_HOSTS.join(' ')}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
   },
@@ -70,13 +70,15 @@ const nextConfig = {
     'lodash-es',
   ],
 
-  // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
+  // Configure webpack to mock modules that break during SSR
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Replace pino with a mock module to avoid SSR errors with pino-pretty transport
       config.resolve.alias = {
         ...config.resolve.alias,
+        // Replace pino with a mock to avoid pino-pretty transport issues
         pino: require.resolve('./src/utils/pino-noop.js'),
+        // Replace aleo-sdk with a mock to avoid @provablehq/wasm top-level fetch() error
+        '@hyperlane-xyz/aleo-sdk': require.resolve('./src/utils/aleo-sdk-noop.js'),
       };
     }
     return config;
