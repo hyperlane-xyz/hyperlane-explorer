@@ -62,24 +62,18 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   return (
     <Card className={clsx('w-full', blur && 'blur-xs')}>
       {/* Collapsible Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between"
-      >
-        <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between">
+        <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-2">
           <Image src={HubIcon} width={28} height={28} alt="" className="opacity-80" />
           <h3 className="text-md font-medium text-blue-500">Warp Route Overview</h3>
           <Tooltip
             id="warp-route-overview-info"
             content="Visualization of the warp route showing all connected chains, their configuration, and collateral balances"
           />
-        </div>
+        </button>
         <div className="flex items-center gap-2">
-          {/* Route ID pill */}
-          <div
-            className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1"
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* Route ID pill - outside button to prevent toggle on copy */}
+          <div className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">
             <span className="font-mono text-xs text-gray-600">{visualization.routeId}</span>
             <CopyButton
               copyValue={visualization.routeId}
@@ -88,14 +82,16 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
               className="opacity-60"
             />
           </div>
-          <ChevronIcon
-            width={20}
-            height={20}
-            direction={isExpanded ? 'n' : 's'}
-            className="text-gray-400"
-          />
+          <button onClick={() => setIsExpanded(!isExpanded)}>
+            <ChevronIcon
+              width={20}
+              height={20}
+              direction={isExpanded ? 'n' : 's'}
+              className="text-gray-400"
+            />
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Expandable Content */}
       {isExpanded && (

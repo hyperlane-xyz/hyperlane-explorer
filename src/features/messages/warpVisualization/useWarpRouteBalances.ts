@@ -180,7 +180,7 @@ async function fetchAllBalances(
 export function useWarpRouteBalances(
   tokens: WarpRouteTokenVisualization[] | undefined,
   routeId: string | undefined,
-  transferAmount?: bigint,
+  _transferAmount?: bigint,
   enabled = true,
 ): WarpRouteBalances {
   const multiProvider = useMultiProvider();
@@ -212,13 +212,8 @@ export function useWarpRouteBalances(
     refetchOnReconnect: false,
   });
 
-  const balancesWithSufficiency = useMemo(() => {
-    if (!balances || !transferAmount) return balances || {};
-    return { ...balances };
-  }, [balances, transferAmount]);
-
   return {
-    balances: balancesWithSufficiency || {},
+    balances: balances || {},
     isLoading,
     error: error ? String(error) : undefined,
     refetch,
