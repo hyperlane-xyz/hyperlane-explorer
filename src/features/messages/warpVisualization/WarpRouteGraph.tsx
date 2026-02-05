@@ -166,7 +166,7 @@ function CompactChainNode({
       )}
 
       {/* xERC20 display: total supply + lockbox if applicable */}
-      {isXERC20 && chainBalance && (
+      {isXERC20 && !!chainBalance && (
         <div className="mt-1 flex flex-col items-center gap-0.5">
           {chainBalance.xerc20Supply !== undefined && (
             <div className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
@@ -228,7 +228,7 @@ function MinimalChainNode({
       )}
 
       {/* xERC20 display */}
-      {isXERC20 && chainBalance && (
+      {isXERC20 && !!chainBalance && (
         <div className="mt-0.5 flex flex-col items-center gap-0.5">
           {chainBalance.xerc20Supply !== undefined && (
             <div className="rounded bg-indigo-100 px-1 py-0.5 text-[8px] font-medium text-indigo-700">
