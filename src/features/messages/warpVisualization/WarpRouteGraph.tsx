@@ -327,11 +327,13 @@ export function WarpRouteGraph({
         <div className="flex flex-col items-center">
           <div className="flex items-center">
             <div className="h-0.5 w-8 bg-blue-500" />
-            <div className="rounded border border-blue-500 bg-white px-2 py-1">
-              <span className="text-xs font-medium text-blue-600">
-                {transferAmountDisplay} {tokenSymbol}
-              </span>
-            </div>
+            {transferAmountDisplay && tokenSymbol && (
+              <div className="rounded border border-blue-500 bg-white px-2 py-1">
+                <span className="text-xs font-medium text-blue-600">
+                  {transferAmountDisplay} {tokenSymbol}
+                </span>
+              </div>
+            )}
             <div className="h-0.5 w-8 bg-blue-500" />
             <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-blue-500 border-t-transparent" />
           </div>
