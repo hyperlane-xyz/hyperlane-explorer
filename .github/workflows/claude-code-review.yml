@@ -8,6 +8,10 @@ on:
   issue_comment:
     types: [created]
 
+env:
+  CLAUDE_OPUS_MODEL: claude-opus-4-6
+  CLAUDE_SONNET_MODEL: claude-sonnet-4-5
+
 concurrency:
   group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
@@ -60,24 +64,15 @@ jobs:
           ref: ${{ steps.pr-sha.outputs.head_sha }}
           fetch-depth: 0
 
-      - name: Read code review prompt
-        id: prompt
-        run: |
-          {
-            echo 'content<<EOF'
-            cat .github/prompts/code-review.md
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: ${{ steps.prompt.outputs.content }}
+          prompt: Run /claude-review
           track_progress: true
           use_sticky_comment: true
           claude_args: |
-            --model claude-opus-4-5
+            --model ${{ env.CLAUDE_OPUS_MODEL }}
             --max-turns 30
 
   security-review:
@@ -135,7 +130,7 @@ jobs:
           upload-results: true
           exclude-directories: 'node_modules,dist,.next,coverage,cache'
           claudecode-timeout: '15'
-          claude-model: claude-opus-4-5
+          claude-model: ${{ env.CLAUDE_OPUS_MODEL }}
           custom-security-scan-instructions: '.github/prompts/security-scan.md'
 
   interactive:
@@ -204,5 +199,5 @@ jobs:
           track_progress: true
           use_sticky_comment: true
           claude_args: |
-            --model claude-sonnet-4-5
+            --model ${{ env.CLAUDE_SONNET_MODEL }}
             --max-turns 20
