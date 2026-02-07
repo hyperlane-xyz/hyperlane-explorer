@@ -266,9 +266,9 @@ Hyperlane Widget Overrides
 ==========================
 */
 
-/* Timeline stages - bright purple to match card header bars */
+/* Timeline stages - deeper purple to match dark bg */
 [class*='htw-bg-blue-'] {
-  background-color: #9a0dff !important;
+  background-color: #4c1d95 !important;
 }
 
 /* Override widget icon SVG fills - blue to purple */
@@ -277,7 +277,7 @@ svg path[fill='#2362C1'],
 svg path[fill='#2764c1'],
 svg path[fill='#2362c1'],
 svg path[fill='rgb(39, 100, 193)'] {
-  fill: #9a0dff !important;
+  fill: #4c1d95 !important;
 }
 
 /* Override widget icon SVG strokes - blue to purple */
@@ -287,13 +287,13 @@ svg path[stroke='#2764c1'],
 svg path[stroke='#2362c1'],
 svg [stroke='#2764C1'],
 svg [stroke='#2764c1'] {
-  stroke: #9a0dff !important;
+  stroke: #4c1d95 !important;
 }
 
 /* Chevron polygon fills */
 svg polygon[fill='#2764C1'],
 svg polygon[fill='#2764c1'] {
-  fill: #9a0dff !important;
+  fill: #4c1d95 !important;
 }
 
 /* White chevrons - cream to blend with card bg */
@@ -356,10 +356,10 @@ svg path[fill='white'] {
 /* Widget hover states - match message table accent colors */
 [class*='htw-']:hover.hover\:htw-bg-gray-100,
 .hover\:htw-bg-gray-100:hover {
-  background-color: #F9D5FB !important; /* accent-50 */
+  background-color: #f9d5fb !important; /* accent-50 */
 }
 
 [class*='htw-']:hover.hover\:htw-bg-gray-200,
 .hover\:htw-bg-gray-200:hover {
-  background-color: #FABAF8 !important; /* accent-100 */
+  background-color: #fabaf8 !important; /* accent-100 */
 }
