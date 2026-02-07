@@ -155,12 +155,14 @@ function ValidatorList({
       <div className="flex items-center space-x-2">
         <div className="relative h-2 flex-1 rounded-full bg-gray-200">
           {/* Threshold marker */}
-          <div
-            className="absolute left-0 top-0 h-full rounded-full bg-blue-200"
-            style={{ width: `${(threshold / validators.length) * 100}%` }}
-          />
+          {validators.length > 0 && (
+            <div
+              className="absolute left-0 top-0 h-full rounded-full bg-blue-200"
+              style={{ width: `${(threshold / validators.length) * 100}%` }}
+            />
+          )}
           {/* Signed progress */}
-          {signedCount > 0 && (
+          {signedCount > 0 && validators.length > 0 && (
             <div
               className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
                 hasQuorum ? 'bg-green-500' : 'bg-blue-500'

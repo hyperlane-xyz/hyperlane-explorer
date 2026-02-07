@@ -1,3 +1,5 @@
+import type { Address, AddressTo, HexString } from '@hyperlane-xyz/utils';
+
 export enum MessageDebugStatus {
   NoErrorsFound = 'noErrorsFound',
   RecipientNotContract = 'recipientNotContract',

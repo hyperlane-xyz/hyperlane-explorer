@@ -11,7 +11,7 @@ import { useQueryParam } from '../../utils/queryParams';
 const CHAIN_CONFIGS_KEY = 'chains';
 
 // Use z.any() to avoid TypeScript infinite recursion with deep zod schemas
-// Runtime validation still happens via ChainMetadataSchema internally
+// Note: This skips validation of individual items - caller is responsible for data integrity
 const ChainMetadataArraySchema = z.array(z.any());
 
 // Look for chainMetadata in the query string and merge them into the store

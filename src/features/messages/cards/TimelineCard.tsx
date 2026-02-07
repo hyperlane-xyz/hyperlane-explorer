@@ -252,15 +252,19 @@ function ValidatorDropdown({
 
       {/* Progress bar */}
       <div className="relative mb-3 h-2 w-full rounded-full bg-gray-200">
-        <div
-          className="absolute left-0 top-0 h-full rounded-full bg-blue-500 transition-all duration-300"
-          style={{ width: `${(signedCount / validators.length) * 100}%` }}
-        />
-        <div
-          className="absolute top-0 h-full w-0.5 bg-gray-600"
-          style={{ left: `${(threshold / validators.length) * 100}%` }}
-          title={`Threshold: ${threshold}`}
-        />
+        {validators.length > 0 && (
+          <>
+            <div
+              className="absolute left-0 top-0 h-full rounded-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${(signedCount / validators.length) * 100}%` }}
+            />
+            <div
+              className="absolute top-0 h-full w-0.5 bg-gray-600"
+              style={{ left: `${(threshold / validators.length) * 100}%` }}
+              title={`Threshold: ${threshold}`}
+            />
+          </>
+        )}
       </div>
 
       {/* Validator list */}

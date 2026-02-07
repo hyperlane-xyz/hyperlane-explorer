@@ -371,19 +371,23 @@ function ValidatorStatusSummary({
       </div>
       {/* Progress bar */}
       <div className="relative h-2 w-full rounded-full bg-gray-200">
-        {/* Threshold marker */}
-        <div
-          className="absolute top-0 h-full w-0.5 bg-gray-600"
-          style={{ left: `${(threshold / validators.length) * 100}%` }}
-          title={`Threshold: ${threshold}`}
-        />
-        {/* Signed progress */}
-        <div
-          className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
-            hasQuorum ? 'bg-green-500' : 'bg-blue-500'
-          }`}
-          style={{ width: `${(signedCount / validators.length) * 100}%` }}
-        />
+        {validators.length > 0 && (
+          <>
+            {/* Threshold marker */}
+            <div
+              className="absolute top-0 h-full w-0.5 bg-gray-600"
+              style={{ left: `${(threshold / validators.length) * 100}%` }}
+              title={`Threshold: ${threshold}`}
+            />
+            {/* Signed progress */}
+            <div
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
+                hasQuorum ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${(signedCount / validators.length) * 100}%` }}
+            />
+          </>
+        )}
       </div>
       {!hasQuorum && (
         <p className="mt-2 text-center text-xs text-gray-500">Waiting for validators to sign...</p>
