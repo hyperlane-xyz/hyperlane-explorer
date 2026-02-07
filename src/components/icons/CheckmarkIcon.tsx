@@ -1,5 +1,7 @@
 import { memo } from 'react';
 
+import { Color } from '../../styles/Color';
+
 interface Props {
   width?: number;
   height?: number;
@@ -7,8 +9,7 @@ interface Props {
   className?: string;
 }
 
-// Default color is primary-500 (#9A0DFF) purple
-function _CheckmarkIcon({ width = 16, height = 16, color = '#9A0DFF', className }: Props) {
+function _CheckmarkIcon({ width = 16, height = 16, color = Color.primary, className }: Props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

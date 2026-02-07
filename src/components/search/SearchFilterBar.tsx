@@ -8,6 +8,7 @@ import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
+import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
@@ -99,7 +100,7 @@ function ChainSelector({
             width={9}
             height={5}
             className="ml-2 opacity-80"
-            color="#DA46CA"
+            color={Color.accentDark}
           />
         )}
       </button>
@@ -155,7 +156,7 @@ function DatetimeSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color="#DA46CA"
+                color={Color.accentDark}
               />
             )}
           </>
@@ -236,7 +237,7 @@ function StatusSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color="#DA46CA"
+                color={Color.accentDark}
               />
             )}
           </>
