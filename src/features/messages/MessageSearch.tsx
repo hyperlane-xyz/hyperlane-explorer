@@ -284,7 +284,7 @@ export function MessageSearch() {
 
 function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   return (
-    <IconButton onClick={onClick} className="rounded-lg bg-accent-700 p-1" disabled={loading}>
+    <IconButton onClick={onClick} className="rounded-lg bg-accent-600 p-1" disabled={loading}>
       <RefreshIcon color="white" height={20} width={20} />
     </IconButton>
   );
