@@ -28,7 +28,7 @@ const securityHeaders = [
   },
   {
     key: 'Content-Security-Policy',
-    value: `default-src 'self'; script-src 'self'${
+    value: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${
       isDev ? " 'unsafe-eval'" : ''
     }; connect-src *; img-src 'self' data: ${IMG_SRC_HOSTS.join(' ')}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
   },
@@ -50,16 +50,35 @@ const nextConfig = {
 
   reactStrictMode: true,
 
-  // Transpile hyperlane packages to apply webpack aliases
-  transpilePackages: ['@hyperlane-xyz/utils', '@hyperlane-xyz/widgets'],
+  // Skip linting and type checking during builds — CI runs these separately
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
 
-  // Configure webpack to mock pino during SSR to avoid pino-pretty transport issues
+  // Transpile ESM packages for Jest compatibility and webpack aliases
+  transpilePackages: [
+    '@hyperlane-xyz/core',
+    '@hyperlane-xyz/cosmos-sdk',
+    '@hyperlane-xyz/cosmos-types',
+    '@hyperlane-xyz/deploy-sdk',
+    '@hyperlane-xyz/provider-sdk',
+    '@hyperlane-xyz/radix-sdk',
+    '@hyperlane-xyz/registry',
+    '@hyperlane-xyz/sdk',
+    '@hyperlane-xyz/starknet-core',
+    '@hyperlane-xyz/utils',
+    '@hyperlane-xyz/widgets',
+    'lodash-es',
+  ],
+
+  // Configure webpack to mock modules that break during SSR
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Replace pino with a mock module to avoid SSR errors with pino-pretty transport
       config.resolve.alias = {
         ...config.resolve.alias,
+        // Replace pino with a mock to avoid pino-pretty transport issues
         pino: require.resolve('./src/utils/pino-noop.js'),
+        // Replace aleo-sdk with a mock to avoid @provablehq/wasm top-level fetch() error
+        '@hyperlane-xyz/aleo-sdk': require.resolve('./src/utils/aleo-sdk-noop.js'),
       };
     }
     return config;
