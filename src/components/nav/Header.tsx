@@ -106,7 +106,7 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white bg-accent-700 px-4 py-1">
+    <div className="flex flex-col items-center rounded-lg border border-white bg-primary-500 px-4 py-1">
       <WideChevronIcon
         width={10}
         height={14}
@@ -141,7 +141,7 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="flex cursor-pointer items-center py-4 pl-3 decoration-accent-700 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
+      className="flex cursor-pointer items-center py-4 pl-3 decoration-primary-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
       onClick={closeDropdown}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
@@ -153,7 +153,7 @@ function MobileNavLink({
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-accent-700 underline-offset-[3px] transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-primary-500 underline-offset-[3px] transition-all',
   dropdownOption:
     'flex items-center cursor-pointer p-2 mt-1 rounded text-primary-600 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };
