@@ -284,8 +284,12 @@ export function MessageSearch() {
 
 function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   return (
-    <IconButton onClick={onClick} className="rounded-lg bg-accent-600 p-1" disabled={loading}>
-      <RefreshIcon color="white" height={20} width={20} />
+    <IconButton
+      onClick={onClick}
+      className="flex h-[30px] w-[30px] items-center justify-center rounded bg-accent-600 duration-500 hover:bg-accent-700"
+      disabled={loading}
+    >
+      <RefreshIcon color="white" height={18} width={18} />
     </IconButton>
   );
 }
