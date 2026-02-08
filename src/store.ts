@@ -21,6 +21,7 @@ import { DomainsEntry } from './features/chains/queries/fragments';
 import {
   TokenArgsWithWireDecimals,
   WarpRouteChainAddressMap,
+  WarpRouteConfigs,
   WarpRouteIdToAddressesMap,
 } from './types';
 import { logger } from './utils/logger';
@@ -47,6 +48,8 @@ interface AppState {
   setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
   warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
   setWarpRouteIdToAddressesMap: (warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap) => void;
+  warpRouteConfigs: WarpRouteConfigs;
+  setWarpRouteConfigs: (warpRouteConfigs: WarpRouteConfigs) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -61,14 +64,19 @@ export const useStore = create<AppState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         logger.debug('Setting chain overrides in store');
-        const { multiProvider, warpRouteChainAddressMap, warpRouteIdToAddressesMap } =
-          await buildMultiProvider(get().registry, overrides);
+        const {
+          multiProvider,
+          warpRouteChainAddressMap,
+          warpRouteIdToAddressesMap,
+          warpRouteConfigs,
+        } = await buildMultiProvider(get().registry, overrides);
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
         set({
           chainMetadataOverrides: filtered,
           multiProvider,
           warpRouteChainAddressMap,
           warpRouteIdToAddressesMap,
+          warpRouteConfigs,
         });
       },
       multiProvider: new MultiProtocolProvider({}),
@@ -94,6 +102,10 @@ export const useStore = create<AppState>()(
       setWarpRouteIdToAddressesMap: (warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap) => {
         set({ warpRouteIdToAddressesMap });
       },
+      warpRouteConfigs: {},
+      setWarpRouteConfigs: (warpRouteConfigs: WarpRouteConfigs) => {
+        set({ warpRouteConfigs });
+      },
     }),
     {
       name: 'hyperlane', // name in storage
@@ -113,11 +125,13 @@ export const useStore = create<AppState>()(
                 multiProvider,
                 warpRouteChainAddressMap,
                 warpRouteIdToAddressesMap,
+                warpRouteConfigs,
               }) => {
                 state.setChainMetadata(metadata);
                 state.setMultiProvider(multiProvider);
                 state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
                 state.setWarpRouteIdToAddressesMap(warpRouteIdToAddressesMap);
+                state.setWarpRouteConfigs(warpRouteConfigs);
                 logger.debug('Rehydration complete');
               },
             )
@@ -180,7 +194,7 @@ async function buildMultiProvider(
     },
   );
 
-  const { warpRouteChainAddressMap, warpRouteIdToAddressesMap } =
+  const { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs } =
     await buildWarpRouteMaps(registry);
 
   return {
@@ -188,12 +202,14 @@ async function buildMultiProvider(
     multiProvider: new MultiProtocolProvider(mergedMetadata),
     warpRouteChainAddressMap,
     warpRouteIdToAddressesMap,
+    warpRouteConfigs,
   };
 }
 
 export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
   warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
+  warpRouteConfigs: WarpRouteConfigs;
 }> {
   let warpRouteConfigs: Record<string, WarpCoreConfig>;
 
@@ -222,14 +238,15 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
     warpRouteIdToAddressesMap[routeIdLower] = [];
 
     tokens.forEach((token) => {
-      const { chainName, addressOrDenom } = token;
+      const { chainName, addressOrDenom, connections: _connections, ...rest } = token;
       if (!addressOrDenom) return;
 
       // Build chain address map
       warpRouteChainAddressMap[chainName] ||= {};
       warpRouteChainAddressMap[chainName][addressOrDenom] = {
-        ...token,
-        addressOrDenom, // Override with non-null value
+        ...rest,
+        chainName,
+        addressOrDenom,
         wireDecimals,
       } as TokenArgsWithWireDecimals;
 
@@ -241,7 +258,7 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
     });
   });
 
-  return { warpRouteChainAddressMap, warpRouteIdToAddressesMap };
+  return { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs };
 }
 
 export function useWarpRouteIdToAddressesMap() {
