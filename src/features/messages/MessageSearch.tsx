@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
@@ -10,6 +11,7 @@ import {
   SearchEmptyError,
   SearchFetching,
   SearchInvalidError,
+  SearchRedirecting,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useReadyMultiProvider, useWarpRouteIdToAddressesMap } from '../../store';
@@ -186,6 +188,46 @@ export function MessageSearch() {
   const isAnyMessageFound = isMessagesFound || isPiMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piMessageList;
 
+  // Compute redirect URL for direct message/tx lookups
+  const router = useRouter();
+  const redirectUrl = (() => {
+    // Wait for queries to complete
+    if (!hasAllRun || isAnyFetching) return null;
+
+    // Don't redirect without user input (prevents redirect on homepage with latest messages)
+    if (!hasInput) return null;
+
+    // Don't redirect if filters are applied
+    if (originChainFilter || destinationChainFilter || startTimeFilter || endTimeFilter)
+      return null;
+
+    // Need at least one result
+    if (!messageListResult.length) return null;
+
+    const firstMessage = messageListResult[0];
+
+    // Single result → always go to message page
+    if (messageListResult.length === 1) {
+      return `/message/${firstMessage.msgId}`;
+    }
+
+    // Multiple results + origin tx hash match → go to tx page
+    // Only redirect if GraphQL found results (tx page uses GraphQL only, not PI)
+    const inputLower = sanitizedInput.toLowerCase();
+    if (isMessagesFound && firstMessage.origin?.hash?.toLowerCase() === inputLower) {
+      return `/tx/${firstMessage.origin.hash}`;
+    }
+
+    return null;
+  })();
+
+  // Perform the redirect
+  useEffect(() => {
+    if (redirectUrl) {
+      router.replace(redirectUrl);
+    }
+  }, [redirectUrl, router]);
+
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
     !isAnyError &&
@@ -237,21 +279,22 @@ export function MessageSearch() {
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
-        <Fade show={showMessageTable}>
+        <SearchRedirecting show={!!redirectUrl} />
+        <Fade show={showMessageTable && !redirectUrl}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
-          show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
+          show={!redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
           isPiFetching={isPiFetching}
         />
         <SearchEmptyError
-          show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
+          show={!redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
           hasInput={hasInput}
           allowAddress={true}
         />
-        <SearchUnknownError show={isAnyError && isValidInput} />
+        <SearchUnknownError show={!redirectUrl && isAnyError && isValidInput} />
         <SearchInvalidError
-          show={!isValidInput && !detectedWarpRouteId && !looksLikeWarpRoute}
+          show={!redirectUrl && !isValidInput && !detectedWarpRouteId && !looksLikeWarpRoute}
           allowAddress={true}
         />
         {looksLikeWarpRoute && !isWarpRouteMapLoaded && (
@@ -275,7 +318,12 @@ export function MessageSearch() {
           </div>
         )}
         <SearchChainError
-          show={(!isValidOrigin || !isValidDestination) && isValidInput && !!multiProvider}
+          show={
+            !redirectUrl &&
+            (!isValidOrigin || !isValidDestination) &&
+            isValidInput &&
+            !!multiProvider
+          }
         />
       </Card>
     </>

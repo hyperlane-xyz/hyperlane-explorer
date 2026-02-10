@@ -1,5 +1,6 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
+import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -22,7 +23,7 @@ import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { useMessageQuery } from './queries/useMessageQuery';
+import { useMessageQuery, useTransactionMessageCount } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
 
 interface Props {
@@ -99,6 +100,10 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     [message, warpRouteChainAddressMap, multiProvider],
   );
 
+  // Check if there are multiple messages in this origin transaction
+  const txMessageCount = useTransactionMessageCount(origin?.hash);
+  const showTxLink = txMessageCount > 1;
+
   return (
     <>
       <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-2 shadow-accent-glow">
@@ -107,6 +112,14 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           <h2 className="text-md font-medium text-white">{`${
             isIcaMsg ? 'ICA ' : ''
           }Message to ${getChainDisplayName(multiProvider, destinationChainName)}`}</h2>
+          {showTxLink && (
+            <Link
+              href={`/tx/${origin.hash}`}
+              className="text-sm text-cream-300 transition-colors hover:text-white"
+            >
+              View all {txMessageCount} messages in tx →
+            </Link>
+          )}
         </div>
         <StatusHeader
           messageStatus={status}

@@ -210,6 +210,16 @@ Common animations
 }
 
 /*
+Tooltips
+========
+*/
+/* Ensure tooltips appear above the sticky header (z-10) */
+[role='tooltip'],
+.htw-tooltip {
+  z-index: 50 !important;
+}
+
+/*
 Toasts
 ======
 */
