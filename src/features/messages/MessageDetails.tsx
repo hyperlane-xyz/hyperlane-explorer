@@ -17,6 +17,7 @@ import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { IsmDetailsCard, extractValidatorInfo } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
+import { WarpRouteVisualizationCard } from './cards/WarpRouteVisualizationCard';
 import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
@@ -144,6 +145,11 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           />
         )}
         <WarpTransferDetailsCard
+          message={message}
+          warpRouteDetails={warpRouteDetails}
+          blur={blur}
+        />
+        <WarpRouteVisualizationCard
           message={message}
           warpRouteDetails={warpRouteDetails}
           blur={blur}
