@@ -60,7 +60,11 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   if (!warpRouteDetails || !visualization) return null;
 
   return (
-    <SectionCard title="Warp Route Overview" icon={HubIcon} className={clsx('w-full', blur && 'blur-xs')}>
+    <SectionCard
+      title="Warp Route Overview"
+      icon={HubIcon}
+      className={clsx('w-full', blur && 'blur-xs')}
+    >
       {/* Collapsible Header */}
       <div className="flex w-full items-center justify-between">
         <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-2">
