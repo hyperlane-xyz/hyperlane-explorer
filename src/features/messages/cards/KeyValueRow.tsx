@@ -64,7 +64,7 @@ export function KeyValueRow({
 
 function LinkIcon({ href }: { href: string }) {
   return (
-    <a target="_blank" rel="noopener noreferrer" href={href}>
+    <a target="_blank" rel="noopener noreferrer" href={href} className="shrink-0">
       <BoxArrowIcon width={13} height={13} className="ml-1.5" />
     </a>
   );

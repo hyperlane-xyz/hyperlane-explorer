@@ -60,7 +60,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
   const blur = !isMessageFound;
-  const isIcaMsg = useIsIcaMessage(_message);
+  const isIcaMsg = useIsIcaMessage({ sender: _message.sender, recipient: _message.recipient });
 
   // If message isn't delivered, attempt to check for
   // more recent updates and possibly debug info
@@ -154,6 +154,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           warpRouteDetails={warpRouteDetails}
           blur={blur}
         />
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
@@ -161,7 +162,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           blur={blur}
         />
         {ismDetails && <IsmDetailsCard result={ismDetails} blur={blur} />}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
   );

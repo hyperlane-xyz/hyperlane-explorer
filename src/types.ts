@@ -84,3 +84,14 @@ export type WarpRouteConfigs = Record<string, WarpCoreConfig>;
 
 // Status filter options for message search
 export type MessageStatusFilter = 'all' | 'delivered' | 'pending';
+
+// ICA (Interchain Account) types
+// Map of chainName -> ICA router address
+export type IcaRouterAddressMap = ChainMap<Address>;
+
+// Decoded ICA call (from SDK's CallData type)
+export interface IcaCall {
+  to: Address; // Decoded address (from bytes32)
+  value: string; // uint256 as string (wei)
+  data: string; // Hex encoded call data
+}

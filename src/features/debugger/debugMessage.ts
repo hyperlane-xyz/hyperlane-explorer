@@ -13,9 +13,9 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
+  isProxy,
   MAILBOX_VERSION,
   MultiProtocolProvider,
-  isProxy,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
 import {
@@ -30,7 +30,7 @@ import {
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
-import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
+import { computeIcaAddress, decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
 
 import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
@@ -207,12 +207,19 @@ async function debugMessageDelivery(
       };
     }
 
-    const icaCallErr = await tryDebugIcaMsg(sender, recipient, body, originDomain, destProvider);
-    if (icaCallErr) {
+    const icaDebugResult = await tryDebugIcaMsg(
+      sender,
+      recipient,
+      body,
+      originDomain,
+      destProvider,
+    );
+    if (icaDebugResult) {
       return {
         status: MessageDebugStatus.IcaCallFailure,
-        description: icaCallErr,
+        description: `ICA call ${icaDebugResult.failedCallIndex + 1} of ${icaDebugResult.totalCalls} cannot be executed. ${icaDebugResult.errorReason}`,
         calldataDetails,
+        icaDetails: icaDebugResult,
       };
     }
 
@@ -389,35 +396,68 @@ async function tryCheckBytecodeHandle(provider: Provider, recipientAddress: stri
   }
 }
 
+interface IcaDebugResult {
+  failedCallIndex: number;
+  totalCalls: number;
+  errorReason: string;
+}
+
 async function tryDebugIcaMsg(
   sender: Address,
   recipient: Address,
   body: string,
   originDomainId: DomainId,
   destinationProvider: Provider,
-) {
+): Promise<IcaDebugResult | null> {
   if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 
-  const decodedBody = tryDecodeIcaBody(body);
+  const decodedBody = decodeIcaBody(body);
   if (!decodedBody) return null;
 
-  const { sender: originalSender, calls } = decodedBody;
+  // Only debug CALLS type messages - COMMITMENT and REVEAL have different flows
+  if (decodedBody.messageType !== IcaMessageType.CALLS) {
+    logger.debug('Skipping ICA debug for non-CALLS message type');
+    return null;
+  }
 
-  const icaAddress = await tryFetchIcaAddress(originDomainId, originalSender, destinationProvider);
-  if (!icaAddress) return null;
+  const { calls, owner, ism, salt } = decodedBody;
+
+  // Compute the actual ICA address for accurate gas estimation
+  // sender is the origin ICA router, recipient is the destination ICA router
+  const icaAddress = await computeIcaAddress(
+    originDomainId,
+    owner!, // owner is defined for CALLS type
+    sender, // origin router (sender of ICA message)
+    recipient, // destination router
+    ism,
+    salt,
+    destinationProvider,
+  );
+
+  if (!icaAddress) {
+    logger.debug('Could not compute ICA address, skipping call checks');
+    return null;
+  }
+
+  logger.debug(`Computed ICA address: ${icaAddress}`);
 
   for (let i = 0; i < calls.length; i++) {
     const call = calls[i];
-    logger.debug(`Checking ica call ${i + 1} of ${calls.length}`);
+    logger.debug(`Checking ICA call ${i + 1} of ${calls.length}`);
     const errorReason = await tryCheckIcaCall(
       icaAddress,
-      call.destinationAddress,
-      call.callBytes,
+      call.to,
+      call.data,
+      call.value,
       destinationProvider,
     );
     if (errorReason) {
-      return `ICA call ${i + 1} of ${calls.length} cannot be executed. ${errorReason}`;
+      return {
+        failedCallIndex: i,
+        totalCalls: calls.length,
+        errorReason,
+      };
     }
   }
 
@@ -428,6 +468,7 @@ async function tryCheckIcaCall(
   icaAddress: string,
   destinationAddress: string,
   callBytes: string,
+  callValue: string,
   destinationProvider: Provider,
 ) {
   try {
@@ -435,6 +476,7 @@ async function tryCheckIcaCall(
       to: destinationAddress,
       data: callBytes,
       from: icaAddress,
+      value: BigNumber.from(callValue),
     });
     logger.debug(`No call error found for call from ${icaAddress} to ${destinationAddress}`);
     return null;
