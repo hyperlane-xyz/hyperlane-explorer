@@ -2,10 +2,10 @@ import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useMemo } from 'react';
+import { PropsWithChildren, ReactNode, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
@@ -73,13 +73,22 @@ export function MessageSummaryRow({
   const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, mp);
 
-  let statusIcon = undefined;
+  let statusIcon: ReactNode = null;
   let statusTitle = '';
   if (status === MessageStatus.Delivered) {
-    statusIcon = CheckmarkIcon;
+    statusIcon = <CheckmarkIcon width={18} height={18} className="pt-px" />;
     statusTitle = 'Delivered';
   } else if (status === MessageStatus.Failing) {
-    statusIcon = ErrorIcon;
+    statusIcon = (
+      <Image
+        src={ErrorIcon}
+        width={18}
+        height={18}
+        alt={statusTitle}
+        title={statusTitle}
+        className="pt-px"
+      />
+    );
     statusTitle = 'Failing';
   }
 
@@ -139,18 +148,7 @@ export function MessageSummaryRow({
         ) : null}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="w-8">
-        {statusIcon && (
-          <span>
-            <Image
-              src={statusIcon}
-              width={18}
-              height={18}
-              alt={statusTitle}
-              title={statusTitle}
-              className="pt-px"
-            />
-          </span>
-        )}
+        {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
       </LinkCell>
     </>
   );
