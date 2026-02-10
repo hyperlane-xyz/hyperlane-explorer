@@ -231,7 +231,7 @@ function TransactionCard({
         </div>
       }
     >
-      <div className="space-y-2">{children}</div>
+      <div className="space-y-3">{children}</div>
     </SectionCard>
   );
 }
