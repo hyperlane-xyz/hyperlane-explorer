@@ -172,7 +172,7 @@ function ValidatorList({
         </div>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            hasQuorum ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+            hasQuorum ? 'bg-green-100 text-green-800' : 'bg-primary-25 text-primary-800'
           }`}
         >
           {signedCount}/{validators.length} ({threshold} required)
@@ -180,7 +180,7 @@ function ValidatorList({
       </div>
 
       {/* Validator rows */}
-      <div className="max-h-40 space-y-1 overflow-y-auto">
+      <div className="space-y-1">
         {validators.map((validator, index) => (
           <ValidatorRow key={validator.address || index} validator={validator} />
         ))}

@@ -2,6 +2,7 @@ import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import { useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
+import { SectionCard } from '../../components/layout/SectionCard';
 import { OriginTransactionCard } from '../messages/cards/TransactionCard';
 
 import { MessageSummaryRow } from './MessageSummaryRow';
@@ -77,10 +78,9 @@ export function TransactionDetails({ txHash }: Props) {
       )}
 
       {/* Messages Section */}
-      <Card className="mt-4 space-y-4">
+      <SectionCard title={`Messages (${messageList.length})`} className="mt-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-md font-medium text-blue-500">Messages ({messageList.length})</h3>
             <Tooltip
               id="messages-info"
               content="All Hyperlane messages dispatched in this transaction."
@@ -113,7 +113,7 @@ export function TransactionDetails({ txHash }: Props) {
             <span>Refreshing...</span>
           </div>
         )}
-      </Card>
+      </SectionCard>
     </div>
   );
 }

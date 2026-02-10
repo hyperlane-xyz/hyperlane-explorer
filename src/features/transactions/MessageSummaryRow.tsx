@@ -151,7 +151,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
               <Link
                 href={`/message/${message.msgId}`}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xs text-blue-500 transition-colors hover:text-blue-600"
+                className="text-xs text-primary-600 transition-colors hover:text-primary-500"
               >
                 ↗
               </Link>

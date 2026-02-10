@@ -178,7 +178,7 @@ function StageBar({
 
   return (
     <div
-      className={`relative flex h-6 w-full items-center justify-center bg-blue-500 ${opacityClass} ${
+      className={`relative flex h-6 w-full items-center justify-center bg-primary-800 ${opacityClass} ${
         isFirst ? 'rounded-l' : ''
       } ${isLast ? 'rounded-r' : ''}`}
     >
@@ -186,7 +186,7 @@ function StageBar({
       {/* Icon above */}
       <div className="absolute -top-12 flex flex-col items-center">
         <StageIcon stage={stage} />
-        <div className="h-4 w-0.5 bg-blue-500" />
+        <div className="h-4 w-0.5 bg-primary-800" />
       </div>
       {/* Chevrons */}
       {!isFirst && <ChevronWhite />}
@@ -204,7 +204,7 @@ function StageIcon({ stage }: { stage: MessageStage }) {
   };
 
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-800 text-white">
       {iconMap[stage] || '•'}
     </div>
   );
@@ -221,7 +221,7 @@ function ChevronWhite() {
 function ChevronBlue() {
   return (
     <div className="absolute -right-3 top-0 h-6 w-3 overflow-hidden">
-      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-blue-500" />
+      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-primary-800" />
     </div>
   );
 }
@@ -238,7 +238,7 @@ function ValidatorDropdown({
   const hasQuorum = signedCount >= threshold && threshold > 0;
 
   return (
-    <div className="mx-auto mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+    <div className="mx-auto mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-white p-3">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-gray-700">Validator Signatures</span>
         <span
@@ -255,7 +255,7 @@ function ValidatorDropdown({
         {validators.length > 0 && (
           <>
             <div
-              className="absolute left-0 top-0 h-full rounded-full bg-blue-500 transition-all duration-300"
+              className="absolute left-0 top-0 h-full rounded-full bg-primary-800 transition-all duration-300"
               style={{ width: `${(signedCount / validators.length) * 100}%` }}
             />
             <div
@@ -268,7 +268,7 @@ function ValidatorDropdown({
       </div>
 
       {/* Validator list */}
-      <div className="max-h-48 space-y-1.5 overflow-y-auto">
+      <div className="space-y-1.5">
         {validators.map((validator, index) => (
           <div
             key={validator.address || index}

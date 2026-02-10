@@ -1,10 +1,10 @@
 import { toWei } from '@hyperlane-xyz/utils';
 import { ChevronIcon, CopyButton, RefreshIcon, SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
-import Image from 'next/image';
+
 import { useMemo, useState } from 'react';
 
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, WarpRouteDetails } from '../../../types';
@@ -60,12 +60,10 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   if (!warpRouteDetails || !visualization) return null;
 
   return (
-    <Card className={clsx('w-full', blur && 'blur-xs')}>
+    <SectionCard title="Warp Route Overview" icon={HubIcon} className={clsx('w-full', blur && 'blur-xs')}>
       {/* Collapsible Header */}
       <div className="flex w-full items-center justify-between">
         <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-2">
-          <Image src={HubIcon} width={28} height={28} alt="" className="opacity-80" />
-          <h3 className="text-md font-medium text-blue-500">Warp Route Overview</h3>
           <Tooltip
             id="warp-route-overview-info"
             content="Visualization of the warp route showing all connected chains, their configuration, and collateral balances"
@@ -129,6 +127,6 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
           </div>
         </div>
       )}
-    </Card>
+    </SectionCard>
   );
 }
