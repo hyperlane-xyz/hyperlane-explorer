@@ -143,52 +143,20 @@ export function ContentDetailsCard({
             truncateMiddle={true}
           />
         </div>
-      </div>
-      <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 sm:gap-x-6">
-        <KeyValueRow
-          label="Identifier:"
-          labelWidth="w-20"
-          display={msgId}
-          displayWidth="w-44 sm:w-48"
-          showCopy={true}
-          blurValue={blur}
-          truncateMiddle={true}
-        />
-        <KeyValueRow label="Nonce:" labelWidth="w-20" display={nonce.toString()} blurValue={blur} />
-        <KeyValueRow
-          label="Sender:"
-          labelWidth="w-20"
-          display={formattedSender}
-          displayWidth="w-44 sm:w-48"
-          showCopy={true}
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.sender}
-          truncateMiddle={true}
-        />
-        <KeyValueRow
-          label="Recipient:"
-          labelWidth="w-20"
-          display={formattedRecipient}
-          displayWidth="w-44 sm:w-48"
-          showCopy={true}
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.recipient}
-          truncateMiddle={true}
-        />
-      </div>
-      <div>
-        <div className="flex items-center">
-          <label className="text-sm text-gray-500">Body:</label>
-          <SelectField
-            classes="w-14 h-6 py-0.5 ml-2 text-xs"
-            options={decodeOptions}
-            value={bodyDecodeType}
-            onValueSelect={onChangeBodyDecode}
-          />
+        <div>
+          <div className="flex items-center">
+            <label className="text-sm text-gray-500">Body:</label>
+            <SelectField
+              classes="w-14 h-6 py-0.5 ml-2 text-xs"
+              options={decodeOptions}
+              value={bodyDecodeType}
+              onValueSelect={onChangeBodyDecode}
+            />
+          </div>
+          <CodeBlock value={bodyDisplay} />
         </div>
-        <CodeBlock value={bodyDisplay} />
+        <CollapsibleLabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
       </div>
-      <CollapsibleLabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
     </SectionCard>
   );
 }
