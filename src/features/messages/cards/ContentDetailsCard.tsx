@@ -109,7 +109,7 @@ export function ContentDetailsCard({
       }
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-2 sm:gap-x-6">
+        <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 sm:gap-x-6">
           <KeyValueRow
             label="Identifier:"
             labelWidth="w-20"
@@ -144,7 +144,7 @@ export function ContentDetailsCard({
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-2 sm:gap-x-6">
+      <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 sm:gap-x-6">
         <KeyValueRow
           label="Identifier:"
           labelWidth="w-20"

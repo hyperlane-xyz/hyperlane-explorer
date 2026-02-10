@@ -92,7 +92,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             Learn more about gas on Hyperlane.
           </a>
         </p>
-        <div className="mr-28 flex flex-wrap gap-x-4 gap-y-2">
+        <div className="mr-28 flex flex-wrap gap-x-4 gap-y-3">
           <KeyValueRow
             label="Payment count:"
             labelWidth="w-28"

@@ -81,7 +81,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               locked collateral on the destination chain
             </div>
           )}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <KeyValueRow
               label="Amount:"
               labelWidth="w-28 sm:w-32"
