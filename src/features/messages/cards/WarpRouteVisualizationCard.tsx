@@ -18,7 +18,7 @@ interface Props {
 
 export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: Props) {
   const multiProvider = useMultiProvider();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Get warp route visualization data (from registry, no RPC calls)
   const { visualization } = useWarpRouteVisualization(warpRouteDetails);
