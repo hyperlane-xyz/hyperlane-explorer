@@ -1,4 +1,4 @@
-import type { Address, AddressTo, HexString } from '@hyperlane-xyz/utils';
+import type { Address, HexString } from '@hyperlane-xyz/utils';
 
 export enum MessageDebugStatus {
   NoErrorsFound = 'noErrorsFound',

@@ -12,8 +12,6 @@ import { useState } from 'react';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
 
-import { KeyValueRow } from './KeyValueRow';
-
 interface Props {
   result: MetadataBuildResult | null | undefined;
   blur: boolean;
