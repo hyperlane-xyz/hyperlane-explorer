@@ -151,10 +151,10 @@ module.exports = {
       },
       borderRadius: {
         none: '0',
-        sm: '0.2rem',
-        DEFAULT: '0.3rem',
-        md: '0.4rem',
-        lg: '0.5rem',
+        sm: '0.375rem',
+        DEFAULT: '0.5rem',
+        md: '0.625rem',
+        lg: '0.75rem',
         full: '9999px',
       },
       blur: {
