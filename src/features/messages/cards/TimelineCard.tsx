@@ -178,7 +178,7 @@ function StageBar({
 
   return (
     <div
-      className={`relative flex h-6 w-full items-center justify-center bg-primary-800 ${opacityClass} ${
+      className={`relative flex h-6 w-full items-center justify-center bg-primary-600 ${opacityClass} ${
         isFirst ? 'rounded-l' : ''
       } ${isLast ? 'rounded-r' : ''}`}
     >
@@ -186,7 +186,7 @@ function StageBar({
       {/* Icon above */}
       <div className="absolute -top-12 flex flex-col items-center">
         <StageIcon stage={stage} />
-        <div className="h-4 w-0.5 bg-primary-800" />
+        <div className="h-4 w-0.5 bg-primary-600" />
       </div>
       {/* Chevrons */}
       {!isFirst && <ChevronWhite />}
@@ -196,16 +196,20 @@ function StageBar({
 }
 
 function StageIcon({ stage }: { stage: MessageStage }) {
-  const iconMap: Partial<Record<MessageStage, string>> = {
-    [MessageStage.Sent]: '✈',
-    [MessageStage.Finalized]: '🔒',
-    [MessageStage.Validated]: '🛡',
-    [MessageStage.Relayed]: '✉',
-  };
-
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-800 text-white">
-      {iconMap[stage] || '•'}
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-600">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+        {stage === MessageStage.Sent && <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />}
+        {stage === MessageStage.Finalized && (
+          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+        )}
+        {stage === MessageStage.Validated && (
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+        )}
+        {stage === MessageStage.Relayed && (
+          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+        )}
+      </svg>
     </div>
   );
 }
@@ -221,7 +225,7 @@ function ChevronWhite() {
 function ChevronBlue() {
   return (
     <div className="absolute -right-3 top-0 h-6 w-3 overflow-hidden">
-      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-primary-800" />
+      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-primary-600" />
     </div>
   );
 }
@@ -255,7 +259,7 @@ function ValidatorDropdown({
         {validators.length > 0 && (
           <>
             <div
-              className="absolute left-0 top-0 h-full rounded-full bg-primary-800 transition-all duration-300"
+              className="absolute left-0 top-0 h-full rounded-full bg-primary-600 transition-all duration-300"
               style={{ width: `${(signedCount / validators.length) * 100}%` }}
             />
             <div
