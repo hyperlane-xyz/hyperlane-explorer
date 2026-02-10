@@ -1,11 +1,9 @@
 import { toWei } from '@hyperlane-xyz/utils';
 import { ChevronIcon, CopyButton, RefreshIcon, SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
 import { SectionCard } from '../../../components/layout/SectionCard';
-import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, WarpRouteDetails } from '../../../types';
 import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
@@ -62,7 +60,6 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   return (
     <SectionCard
       title="Warp Route Overview"
-      icon={<Image src={HubIcon} width={16} height={16} alt="" />}
       className={clsx('w-full', blur && 'blur-xs')}
     >
       {/* Collapsible Header */}
