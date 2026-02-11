@@ -1,5 +1,10 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { hexToRadixCustomPrefix, ProtocolType, strip0x } from '@hyperlane-xyz/utils';
+import {
+  hexToBech32mPrefix,
+  hexToRadixCustomPrefix,
+  ProtocolType,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 
 export function formatAddress(
   address: string,
@@ -20,6 +25,10 @@ export function formatTxHash(hash: string, domainId: number, multiProvider: Mult
       return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
     case ProtocolType.Cosmos:
       return strip0x(hash);
+    case ProtocolType.CosmosNative:
+      return strip0x(hash);
+    case ProtocolType.Aleo:
+      return hexToBech32mPrefix(hash, 'at');
     default:
       return hash;
   }
