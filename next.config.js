@@ -80,7 +80,20 @@ const nextConfig = {
         // Replace aleo-sdk with a mock to avoid @provablehq/wasm top-level fetch() error
         '@hyperlane-xyz/aleo-sdk': require.resolve('./src/utils/aleo-sdk-noop.js'),
       };
+
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@provablehq/wasm': false,
+        '@provablehq/sdk': false,
+      };
     }
+
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+
     return config;
   },
 
