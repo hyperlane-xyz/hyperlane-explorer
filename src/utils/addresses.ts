@@ -1,5 +1,10 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { hexToRadixCustomPrefix, ProtocolType, strip0x } from '@hyperlane-xyz/utils';
+import {
+  hexToBech32mPrefix,
+  hexToRadixCustomPrefix,
+  ProtocolType,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 
 export function formatAddress(
   address: string,
@@ -7,9 +12,15 @@ export function formatAddress(
   multiProvider: MultiProtocolProvider,
 ) {
   const metadata = multiProvider.tryGetChainMetadata(domainId);
-  if (metadata?.protocol === ProtocolType.Radix)
-    return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
-  return address;
+
+  switch (metadata?.protocol) {
+    case ProtocolType.Radix:
+      return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+    case ProtocolType.Aleo:
+      return address.split('/')[1];
+    default:
+      return address;
+  }
 }
 
 export function formatTxHash(hash: string, domainId: number, multiProvider: MultiProtocolProvider) {
@@ -20,6 +31,10 @@ export function formatTxHash(hash: string, domainId: number, multiProvider: Mult
       return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
     case ProtocolType.Cosmos:
       return strip0x(hash);
+    case ProtocolType.CosmosNative:
+      return strip0x(hash);
+    case ProtocolType.Aleo:
+      return hexToBech32mPrefix(hash, 'at');
     default:
       return hash;
   }
