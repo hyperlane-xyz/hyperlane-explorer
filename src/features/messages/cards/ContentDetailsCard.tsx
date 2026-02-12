@@ -1,17 +1,15 @@
 import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card } from '../../../components/layout/Card';
-import EnvelopeInfo from '../../../images/icons/envelope-info.svg';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { useMultiProvider } from '../../../store';
 import { Message } from '../../../types';
 import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
+import { CodeBlock, CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
@@ -100,61 +98,66 @@ export function ContentDetailsCard({
   }, [getBlockExplorerLinks]);
 
   return (
-    <Card className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Message Details</h3>
-          <Tooltip
-            id="message-info"
-            content="Immutable information about the message itself such as its contents."
+    <SectionCard
+      className="w-full"
+      title="Message Details"
+      icon={
+        <Tooltip
+          id="message-info"
+          content="Immutable information about the message itself such as its contents."
+        />
+      }
+    >
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 sm:gap-x-6">
+          <KeyValueRow
+            label="Identifier:"
+            labelWidth="w-20"
+            display={msgId}
+            showCopy={true}
+            blurValue={blur}
+            truncateMiddle={true}
+          />
+          <KeyValueRow
+            label="Nonce:"
+            labelWidth="w-20"
+            display={nonce.toString()}
+            blurValue={blur}
+          />
+          <KeyValueRow
+            label="Sender:"
+            labelWidth="w-20"
+            display={formattedSender}
+            showCopy={true}
+            blurValue={blur}
+            link={blockExplorerAddressUrls?.sender}
+            truncateMiddle={true}
+          />
+          <KeyValueRow
+            label="Recipient:"
+            labelWidth="w-20"
+            display={formattedRecipient}
+            showCopy={true}
+            blurValue={blur}
+            link={blockExplorerAddressUrls?.recipient}
+            truncateMiddle={true}
           />
         </div>
-      </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-4">
-        <KeyValueRow
-          label="Identifier:"
-          labelWidth="w-16"
-          display={msgId}
-          displayWidth="w-64 sm:w-72"
-          showCopy={true}
-          blurValue={blur}
-          copyButtonClasses={blockExplorerAddressUrls?.sender && 'sm:ml-6'}
-        />
-        <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
-        <KeyValueRow
-          label="Sender:"
-          labelWidth="w-16"
-          display={formattedSender}
-          displayWidth="w-64 sm:w-72"
-          showCopy={true}
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.sender}
-        />
-        <KeyValueRow
-          label="Recipient:"
-          labelWidth="w-16"
-          display={formattedRecipient}
-          displayWidth="w-64 sm:w-72"
-          showCopy={true}
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.recipient}
-        />
-      </div>
-      <div>
-        <div className="flex items-center">
-          <label className="text-sm text-gray-500">Message Content:</label>
-          <SelectField
-            classes="w-16 h-7 py-0.5 ml-3 mb-0.5"
-            options={decodeOptions}
-            value={bodyDecodeType}
-            onValueSelect={onChangeBodyDecode}
-          />
+        <div>
+          <div className="flex items-center">
+            <label className="text-sm text-gray-500">Body:</label>
+            <SelectField
+              classes="w-14 h-6 py-0.5 ml-2 text-xs"
+              options={decodeOptions}
+              value={bodyDecodeType}
+              onValueSelect={onChangeBodyDecode}
+            />
+          </div>
+          <CodeBlock value={bodyDisplay} />
         </div>
-        <CodeBlock value={bodyDisplay} />
+        <CollapsibleLabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
       </div>
-      <LabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
-    </Card>
+    </SectionCard>
   );
 }
 

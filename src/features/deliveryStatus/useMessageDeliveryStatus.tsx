@@ -24,7 +24,7 @@ export function useMessageDeliveryStatus({
   const { data, error, isFetching } = useQuery({
     queryKey: ['messageDeliveryStatus', message, !!multiProvider, registry, chainMetadataOverrides],
     queryFn: async () => {
-      if (!multiProvider || message.status == MessageStatus.Delivered) {
+      if (!multiProvider) {
         return { message };
       }
 
@@ -46,12 +46,19 @@ export function useMessageDeliveryStatus({
       );
 
       if (deliverStatus.status === MessageStatus.Delivered) {
+        // Only use frontend-fetched destination data if the backend didn't already provide it
+        // Backend data is more complete (has indexed tx details), so prefer it when available
+        const hasBackendDestination = message.destination && message.destination.hash;
         return {
           message: {
             ...message,
             status: MessageStatus.Delivered,
-            destination: deliverStatus.deliveryTransaction,
+            destination: hasBackendDestination
+              ? message.destination
+              : deliverStatus.deliveryTransaction,
           },
+          // Include debug result for delivered messages too (for validator info display)
+          debugResult: deliverStatus.debugResult,
         };
       } else if (
         deliverStatus.status === MessageStatus.Failing ||

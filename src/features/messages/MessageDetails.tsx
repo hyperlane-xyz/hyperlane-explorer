@@ -1,27 +1,29 @@
-import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
+import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { Card } from '../../components/layout/Card';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useMultiProvider, useStore } from '../../store';
+import { Color } from '../../styles/Color';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
+import { useIsmDetails } from '../debugger/useIsmDetails';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
 import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
-import { IsmDetailsCard } from './cards/IsmDetailsCard';
+import { IsmDetailsCard, extractValidatorInfo } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
+import { WarpRouteVisualizationCard } from './cards/WarpRouteVisualizationCard';
 import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { useMessageQuery } from './queries/useMessageQuery';
+import { useMessageQuery, useTransactionMessageCount } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
 
 interface Props {
@@ -59,7 +61,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
   const blur = !isMessageFound;
-  const isIcaMsg = useIsIcaMessage(_message);
+  const isIcaMsg = useIsIcaMessage({ sender: _message.sender, recipient: _message.recipient });
 
   // If message isn't delivered, attempt to check for
   // more recent updates and possibly debug info
@@ -72,8 +74,10 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     enabled: isMessageFound,
   });
 
-  const { msgId, status, originDomainId, destinationDomainId, origin, destination, isPiMsg } =
-    message;
+  const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
+
+  // Fetch ISM details from backend API (includes real validator signature status)
+  const { data: ismDetails } = useIsmDetails(isMessageFound ? message : null);
 
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
@@ -96,22 +100,35 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     [message, warpRouteChainAddressMap, multiProvider],
   );
 
+  // Check if there are multiple messages in this origin transaction
+  const txMessageCount = useTransactionMessageCount(origin?.hash);
+  const showTxLink = txMessageCount > 1;
+
   return (
     <>
-      <Card className="flex items-center justify-between rounded-full px-1">
-        <h2 className="font-medium text-blue-500">{`${
-          isIcaMsg ? 'ICA ' : ''
-        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
-          multiProvider,
-          destinationChainName,
-        )}`}</h2>
+      <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-2 shadow-accent-glow">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-cream-300" />
+          <h2 className="text-md font-medium text-white">{`${
+            isIcaMsg ? 'ICA ' : ''
+          }Message to ${getChainDisplayName(multiProvider, destinationChainName)}`}</h2>
+          {showTxLink && (
+            <Link
+              href={`/tx/${origin.hash}`}
+              className="text-sm text-cream-300 transition-colors hover:text-white"
+            >
+              View all {txMessageCount} messages in tx →
+            </Link>
+          )}
+        </div>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
+          duration={duration}
         />
-      </Card>
+      </div>
       <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
         <OriginTransactionCard
           chainName={originChainName}
@@ -124,30 +141,40 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           domainId={destinationDomainId}
           status={status}
           transaction={destination}
-          duration={duration}
           debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={isPiMsg}
           blur={blur}
           message={message}
           warpRouteDetails={warpRouteDetails}
+          validatorInfo={ismDetails ? extractValidatorInfo(ismDetails) : null}
         />
-        {showTimeline && <TimelineCard message={message} blur={blur} />}
+        {showTimeline && (
+          <TimelineCard
+            message={message}
+            blur={blur}
+            debugResult={debugResult}
+            ismResult={ismDetails}
+          />
+        )}
         <WarpTransferDetailsCard
           message={message}
           warpRouteDetails={warpRouteDetails}
           blur={blur}
         />
+        <WarpRouteVisualizationCard
+          message={message}
+          warpRouteDetails={warpRouteDetails}
+          blur={blur}
+        />
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
         <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-        )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+        {ismDetails && <IsmDetailsCard result={ismDetails} blur={blur} />}
       </div>
     </>
   );
@@ -158,11 +185,13 @@ function StatusHeader({
   isMessageFound,
   isFetching,
   isError,
+  duration,
 }: {
   messageStatus: MessageStatus;
   isMessageFound: boolean;
   isFetching: boolean;
   isError: boolean;
+  duration?: string;
 }) {
   let text: string;
   if (isMessageFound) {
@@ -177,11 +206,11 @@ function StatusHeader({
   if (isFetching) {
     icon = (
       <div className="flex items-center justify-center">
-        <SpinnerIcon width={20} height={20} />
+        <SpinnerIcon width={20} height={20} color={Color.white} />
       </div>
     );
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
-    icon = <Image src={CheckmarkIcon} width={24} height={24} alt="" />;
+    icon = <CheckmarkIcon width={24} height={24} color={Color.white} />;
   } else {
     // icon = <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
     icon = null;
@@ -189,7 +218,8 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="lg mr-3 font-medium text-blue-500">{text}</h3>
+      <h3 className="mr-2 text-md font-medium text-white">{text}</h3>
+      {duration && <span className="mr-3 text-sm text-cream-300">({duration})</span>}
       {icon}
     </div>
   );

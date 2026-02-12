@@ -1,3 +1,5 @@
+import type { Address, HexString } from '@hyperlane-xyz/utils';
+
 export enum MessageDebugStatus {
   NoErrorsFound = 'noErrorsFound',
   RecipientNotContract = 'recipientNotContract',
@@ -9,6 +11,28 @@ export enum MessageDebugStatus {
   InvalidIsmDefinition = 'invalidIsmDefinition',
 }
 
+// Validator signature status for multisig ISMs
+export interface ValidatorStatus {
+  address: Address;
+  alias?: string;
+  status: 'signed' | 'pending' | 'error';
+  error?: string;
+}
+
+// Detailed ISM information including validator status
+export interface IsmDetails {
+  ismAddress: Address;
+  moduleType: IsmModuleTypes;
+  // Multisig-specific fields
+  threshold?: number;
+  validators?: ValidatorStatus[];
+  checkpointIndex?: number;
+  // For aggregation ISMs
+  subModules?: IsmDetails[];
+  // For routing ISMs
+  selectedModule?: IsmDetails;
+}
+
 export interface MessageDebugResult {
   status: MessageDebugStatus;
   description: string;
@@ -16,14 +40,16 @@ export interface MessageDebugResult {
     deliveryGasEstimate?: string;
     contractToPayments?: AddressTo<GasPayment[]>;
   };
-  ismDetails?: {
-    ismAddress: Address;
-    moduleType: IsmModuleTypes;
-  };
+  ismDetails?: IsmDetails;
   calldataDetails?: {
     handleCalldata: HexString;
     contract: Address;
     mailbox: Address;
+  };
+  icaDetails?: {
+    failedCallIndex: number; // 0-based index of the failed call
+    totalCalls: number;
+    errorReason: string;
   };
 }
 

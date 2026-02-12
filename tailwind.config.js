@@ -1,14 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 
-const defaultTheme = require('tailwindcss/defaultTheme')
+const defaultTheme = require('tailwindcss/defaultTheme');
+const defaultColors = require('tailwindcss/colors');
 
 module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     fontFamily: {
-      sans: ['var(--font-main)'],
-      serif: ['Garamond', 'serif'],
-      mono: ['Courier New', 'monospace'],
+      sans: ['PP Valve', 'system-ui', 'sans-serif'],
+      mono: ['PP Fraktion Mono', 'system-ui', 'monospace'],
+      secondary: ['PP Fraktion Mono', 'system-ui', 'sans-serif'],
     },
     screens: {
       all: '1px',
@@ -17,20 +18,64 @@ module.exports = {
     },
     extend: {
       colors: {
-        black: '#010101',
-        white: '#ffffff',
-        gray: {...defaultTheme.colors.gray, 150: '#EBEDF0', 250: '#404040', 350: '#6B6B6B'},
+        black: '#3d304c',
+        white: '#f8f8ff',
+        cream: {
+          100: '#FDFBFF',
+          200: '#FCF9FE',
+          300: '#F8F8FF',
+        },
+        gray: {
+          ...defaultColors.gray,
+          150: '#EBEDF0',
+          250: '#404040',
+          300: '#D9D9D9',
+          350: '#6B6B6B',
+          400: '#BFBFBF',
+          450: '#B6B6B6',
+          900: '#332840',
+          950: '#221A2D',
+        },
+        primary: {
+          25: '#E2C4FC',
+          50: '#E8CAFF',
+          100: '#D9A4FF',
+          200: '#C97EFF',
+          300: '#B959FF',
+          400: '#AA33FF',
+          500: '#9A0DFF',
+          600: '#860FDC',
+          700: '#7211B9',
+          800: '#5E1396',
+          900: '#4A1673',
+          950: '#1a0a28',
+        },
+        accent: {
+          25: '#F8F0FF',
+          50: '#F9D5FB',
+          100: '#FABAF8',
+          200: '#FCA0F4',
+          300: '#FD85F0',
+          400: '#FE6AED',
+          500: '#FF4FE9',
+          600: '#DA46CA',
+          700: '#B53DAA',
+          800: '#91358B',
+          900: '#6C2C6C',
+        },
         blue: {
-          50: '#E6EDF9',
-          100: '#CDDCF4',
-          200: '#A7C2EC',
-          300: '#82A8E4',
-          400: '#5385D2',
-          500: '#2764c1',
-          600: '#1D4685',
-          700: '#162A4A',
-          800: '#11213B',
-          900: '#0D192C',
+          25: '#F8F0FF',
+          50: '#DBD6FF',
+          100: '#BFBBFF',
+          200: '#A2A1FF',
+          300: '#8687FF',
+          400: '#696DFF',
+          500: '#4C52FF',
+          600: '#4549DC',
+          700: '#3E40B9',
+          800: '#373696',
+          900: '#302D73',
+          950: '#292350',
         },
         beige: {
           100: '#F6F4F1',
@@ -67,7 +112,7 @@ module.exports = {
           900: '#390806',
         },
         green: {
-          50: '#D3E3DB',
+          50: '#00C467',
           100: '#BED5C9',
           200: '#93BAA6',
           300: '#679F82',
@@ -92,6 +137,9 @@ module.exports = {
         },
       },
       fontSize: {
+        xxs: '0.7rem',
+        xs: '0.775rem',
+        sm: '0.85rem',
         md: '0.95rem',
       },
       spacing: {
@@ -103,14 +151,39 @@ module.exports = {
       },
       borderRadius: {
         none: '0',
-        sm: '0.2rem',
-        DEFAULT: '0.3rem',
-        md: '0.4rem',
-        lg: '0.5rem',
+        sm: '0.375rem',
+        DEFAULT: '0.5rem',
+        md: '0.625rem',
+        lg: '0.75rem',
         full: '9999px',
       },
       blur: {
         xs: '3px',
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;',
+      },
+      backgroundImage: ({ theme }) => ({
+        'app-gradient': `radial-gradient(81.94% 51.02% at 50% 100%, ${theme('colors.primary.100')} 0%, ${theme('colors.cream.300')} 100%)`,
+        'accent-gradient': `radial-gradient(61.48% 118.8% at 50.08% 92%, ${theme('colors.primary.200')} 0%, ${theme('colors.primary.500')} 100%)`,
+        'card-gradient': `linear-gradient(180deg, ${theme('colors.white')} 0%, ${theme('colors.cream.200')} 100%)`,
+        'brand-gradient': `radial-gradient(ellipse 200% 150% at 50% 100%, ${theme('colors.primary.800')} 0%, ${theme('colors.primary.950')} 40%, #0d0612 100%)`,
+      }),
+      boxShadow: ({ theme }) => ({
+        'accent-glow': `inset 0 0 20px 0 rgba(154, 13, 255, 0.35)`,
+        card: `0px 4px 6px ${theme('colors.gray.950')}1A`,
+        button: `0 4px 6px ${theme('colors.gray.950')}1A`,
+        input: `0 0 4px ${theme('colors.gray.400')}4D`,
+      }),
+      dropShadow: ({ theme }) => ({
+        button: `0 4px 6px ${theme('colors.gray.950')}0D`,
+      }),
+      transitionProperty: {
+        height: 'height, max-height',
+        spacing: 'margin, padding',
+      },
+      maxWidth: {
+        'xl-1': '39.5rem',
       },
     },
   },

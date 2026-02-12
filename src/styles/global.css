@@ -3,6 +3,30 @@
 @tailwind utilities;
 
 /*
+Custom Fonts (falls back to system fonts if not available)
+Place font files in public/fonts/ directory
+===========================================================
+*/
+
+/* PP Valve - Primary font (variable) */
+@font-face {
+  font-family: 'PP Valve';
+  src: url('/fonts/PPValve-PlainVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* PP Fraktion Mono - Secondary/Mono font (variable) */
+@font-face {
+  font-family: 'PP Fraktion Mono';
+  src: url('/fonts/PPFraktionMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
 Normalization
 =============
 */
@@ -43,7 +67,7 @@ Background
 ==========
 */
 body {
-  background-color: #f3f4f6;
+  background-color: #f8f8ff;
 }
 
 /*
@@ -63,6 +87,24 @@ Scrollbar Overrides
 body {
   scroll-behavior: smooth;
   scrollbar-width: thin;
+  scrollbar-color: #e8caff transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e8caff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4a3ff;
 }
 
 /* phones */
@@ -168,11 +210,21 @@ Common animations
 }
 
 /*
+Tooltips
+========
+*/
+/* Ensure tooltips appear above the sticky header (z-10) */
+[role='tooltip'],
+.htw-tooltip {
+  z-index: 50 !important;
+}
+
+/*
 Toasts
 ======
 */
 :root {
-  --toastify-color-light: #ffffff;
+  --toastify-color-light: #f8f8ff;
   --toastify-color-dark: #2e3338;
   --toastify-color-info: #3498db;
   --toastify-color-success: #35d07f;
@@ -217,4 +269,107 @@ Toasts
   --toastify-color-progress-success: var(--toastify-color-success);
   --toastify-color-progress-warning: var(--toastify-color-warning);
   --toastify-color-progress-error: var(--toastify-color-error);
+}
+
+/*
+Hyperlane Widget Overrides
+==========================
+*/
+
+/* Timeline stages - deeper purple to match dark bg */
+[class*='htw-bg-blue-'] {
+  background-color: #4c1d95 !important;
+}
+
+/* Override widget icon SVG fills - blue to purple */
+svg path[fill='#2764C1'],
+svg path[fill='#2362C1'],
+svg path[fill='#2764c1'],
+svg path[fill='#2362c1'],
+svg path[fill='rgb(39, 100, 193)'] {
+  fill: #4c1d95 !important;
+}
+
+/* Override widget icon SVG strokes - blue to purple */
+svg path[stroke='#2764C1'],
+svg path[stroke='#2362C1'],
+svg path[stroke='#2764c1'],
+svg path[stroke='#2362c1'],
+svg [stroke='#2764C1'],
+svg [stroke='#2764c1'] {
+  stroke: #4c1d95 !important;
+}
+
+/* Chevron polygon fills */
+svg polygon[fill='#2764C1'],
+svg polygon[fill='#2764c1'] {
+  fill: #4c1d95 !important;
+}
+
+/* White chevrons - cream to blend with card bg */
+svg path[fill='#ffffff'],
+svg path[fill='#FFFFFF'],
+svg path[fill='white'] {
+  fill: #f8f8ff !important;
+}
+
+/* Timeline hole elements - off-white for visibility */
+.htw-rounded-full.htw-bg-white {
+  background-color: #f8f8ff !important;
+}
+
+/* Widget text styling - default to primary font */
+[class*='htw-'] {
+  font-family: 'PP Valve', system-ui, sans-serif;
+}
+
+/* Chain picker subtitles (Mainnet/Testnet labels) - mono */
+.htw-text-gray-500.htw-text-xs {
+  font-family: 'PP Fraktion Mono', system-ui, monospace !important;
+}
+
+/* Explicitly set mono for technical content */
+.htw-font-mono,
+[class*='htw-'] input,
+[class*='htw-'] textarea,
+[class*='htw-'] a[href^='http'],
+[class*='htw-'] a[href^='https'] {
+  font-family: 'PP Fraktion Mono', system-ui, monospace !important;
+}
+
+/* Modal and panel backgrounds - cream instead of pure white */
+.htw-bg-white {
+  background-color: #f8f8ff !important;
+}
+
+/* Input backgrounds in widgets */
+[class*='htw-'] input {
+  background-color: #f8f8ff !important;
+}
+
+/* Modal backdrop - darker fade and proper z-index */
+.htw-bg-black\/25 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  z-index: 30 !important;
+}
+
+/* Modal panel container - above backdrop */
+.htw-z-20 {
+  z-index: 40 !important;
+}
+
+/* Widget gray backgrounds - match cream white */
+.htw-bg-gray-100 {
+  background-color: #f8f8ff !important; /* same as our white */
+}
+
+/* Widget hover states - match message table accent colors */
+[class*='htw-']:hover.hover\:htw-bg-gray-100,
+.hover\:htw-bg-gray-100:hover {
+  background-color: #f9d5fb !important; /* accent-50 */
+}
+
+[class*='htw-']:hover.hover\:htw-bg-gray-200,
+.hover\:htw-bg-gray-200:hover {
+  background-color: #fabaf8 !important; /* accent-100 */
 }

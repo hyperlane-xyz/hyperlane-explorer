@@ -1,5 +1,6 @@
 import { isZeroish } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import { truncateString } from '../../../utils/string';
 
 interface Props {
   label: string;
@@ -13,6 +14,7 @@ interface Props {
   allowZeroish?: boolean;
   link?: string | null;
   copyButtonClasses?: string | null;
+  truncateMiddle?: boolean;
 }
 
 export function KeyValueRow({
@@ -27,31 +29,42 @@ export function KeyValueRow({
   allowZeroish = false,
   link,
   copyButtonClasses = '',
+  truncateMiddle = false,
 }: Props) {
   const useFallbackVal = isZeroish(display) && !allowZeroish;
+  const displayValue = !useFallbackVal
+    ? truncateMiddle
+      ? truncateString(display)
+      : display
+    : 'Unknown';
+
   return (
-    <div className={`flex items-center pl-px font-light ${classes}`}>
-      <label className={`text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div className={`ml-1 truncate text-sm ${displayWidth || ''} ${blurValue && 'blur-xs'}`}>
-        <span>{!useFallbackVal ? display : 'Unknown'}</span>
-        {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
+    <div className={`flex items-center gap-2 font-light ${classes}`}>
+      <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
+      <div className={`flex min-w-0 items-center ${displayWidth || ''}`}>
+        <span
+          className={`font-mono text-sm ${!truncateMiddle ? 'truncate' : ''} ${blurValue && 'blur-xs'}`}
+        >
+          {displayValue}
+          {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
+        </span>
+        {showCopy && !useFallbackVal && (
+          <CopyButton
+            copyValue={display}
+            width={12}
+            height={12}
+            className={`ml-1.5 shrink-0 opacity-60 ${copyButtonClasses}`}
+          />
+        )}
+        {link && <LinkIcon href={link} />}
       </div>
-      {showCopy && !useFallbackVal && (
-        <CopyButton
-          copyValue={display}
-          width={13}
-          height={13}
-          className={`ml-1.5 opacity-60 ${copyButtonClasses}`}
-        />
-      )}
-      {link && <LinkIcon href={link} />}
     </div>
   );
 }
 
 function LinkIcon({ href }: { href: string }) {
   return (
-    <a target="_blank" rel="noopener noreferrer" href={href}>
+    <a target="_blank" rel="noopener noreferrer" href={href} className="shrink-0">
       <BoxArrowIcon width={13} height={13} className="ml-1.5" />
     </a>
   );

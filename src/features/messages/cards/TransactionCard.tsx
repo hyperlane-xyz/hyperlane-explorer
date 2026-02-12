@@ -1,14 +1,15 @@
+import type { ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
+import { Color } from '../../../styles/Color';
 import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
-import { formatAddress, formatTxHash } from '../../../utils/addresses';
+import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
@@ -48,25 +49,25 @@ export function DestinationTransactionCard({
   domainId,
   status,
   transaction,
-  duration,
   debugResult,
   isStatusFetching,
   isPiMsg,
   blur,
   message,
   warpRouteDetails,
+  validatorInfo,
 }: {
   chainName: string;
   domainId: DomainId;
   status: MessageStatus;
   transaction?: MessageTx;
-  duration?: string;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
   message?: Message;
   warpRouteDetails?: WarpRouteDetails;
+  validatorInfo?: { validators: ValidatorInfo[]; threshold: number } | null;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
@@ -82,7 +83,6 @@ export function DestinationTransactionCard({
           chainName={chainName}
           domainId={domainId}
           transaction={transaction}
-          duration={duration}
           blur={blur}
         />
         {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
@@ -98,7 +98,7 @@ export function DestinationTransactionCard({
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
         <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} />
+          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
@@ -172,9 +172,18 @@ export function DestinationTransactionCard({
                   Please ensure a relayer is running for this chain.
                 </div>
               )}
-              <div className="mt-6 flex items-center justify-center">
-                <SpinnerIcon width={40} height={40} />
-              </div>
+              {/* Validator signature status */}
+              {validatorInfo && validatorInfo.validators.length > 0 && (
+                <ValidatorStatusSummary
+                  validators={validatorInfo.validators}
+                  threshold={validatorInfo.threshold}
+                />
+              )}
+              {(!validatorInfo || validatorInfo.validators.length === 0) && (
+                <div className="mt-6 flex items-center justify-center">
+                  <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+                </div>
+              )}
               <CallDataModal debugResult={debugResult} />
             </div>
           </DeliveryStatus>
@@ -212,18 +221,18 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
   return (
-    <Card className="flex min-w-[400px] flex-1 basis-0 flex-col space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="relative -left-0.5 -top-px">
-          <ChainLogo chainName={chainName} />
-        </div>
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
+    <SectionCard
+      className="flex min-w-[340px] flex-1 basis-0 flex-col"
+      title={title}
+      icon={
+        <div className="flex items-center gap-1.5">
           <Tooltip id="transaction-info" content={helpText} />
+          <ChainLogo chainName={chainName} size={20} />
         </div>
-      </div>
-      {children}
-    </Card>
+      }
+    >
+      <div className="space-y-2">{children}</div>
+    </SectionCard>
   );
 }
 
@@ -231,25 +240,31 @@ function TransactionDetails({
   chainName,
   domainId,
   transaction,
-  duration,
   blur,
 }: {
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx;
-  duration?: string;
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { hash, from, timestamp, blockNumber, mailbox } = transaction;
+  const { hash, from, timestamp, blockNumber } = transaction;
 
   const formattedHash = formatTxHash(hash, domainId, multiProvider);
-  const formattedMailbox = formatAddress(mailbox, domainId, multiProvider);
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
       ? multiProvider.tryGetExplorerTxUrl(chainName, { hash: formattedHash })
       : null;
+
+  const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
+  useEffect(() => {
+    if (!from) return;
+    multiProvider
+      .tryGetExplorerAddressUrl(chainName, from)
+      .then(setFromExplorerLink)
+      .catch(() => setFromExplorerLink(null));
+  }, [multiProvider, chainName, from]);
 
   return (
     <>
@@ -260,38 +275,29 @@ function TransactionDetails({
         blur={blur}
       />
       <KeyValueRow
-        label="Tx hash:"
+        label="Tx:"
         labelWidth="w-16"
         display={formattedHash}
-        displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
+        link={txExplorerLink}
+        truncateMiddle={true}
       />
       <KeyValueRow
         label="From:"
         labelWidth="w-16"
         display={from}
-        displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
+        link={fromExplorerLink}
+        truncateMiddle={true}
       />
-      {mailbox && isAddress(mailbox) && !isZeroish(mailbox) && (
-        <KeyValueRow
-          label="Mailbox:"
-          labelWidth="w-16"
-          display={formattedMailbox}
-          displayWidth="w-60 sm:w-64"
-          showCopy={true}
-          blurValue={blur}
-        />
-      )}
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
           labelWidth="w-16"
           display={getHumanReadableTimeString(timestamp)}
           subDisplay={`(${getDateTimeString(timestamp)})`}
-          displayWidth="w-60 sm:w-64"
           blurValue={blur}
         />
       )}
@@ -299,28 +305,8 @@ function TransactionDetails({
         label="Block:"
         labelWidth="w-16"
         display={blockNumber?.toString()}
-        displayWidth="w-60 sm:w-64"
         blurValue={blur}
       />
-      {duration && (
-        <KeyValueRow
-          label="Duration:"
-          labelWidth="w-16"
-          display={duration}
-          displayWidth="w-60 sm:w-64"
-          blurValue={blur}
-        />
-      )}
-      {txExplorerLink && (
-        <a
-          className={`block ${styles.textLink}`}
-          href={txExplorerLink}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View in block explorer
-        </a>
-      )}
     </>
   );
 }
@@ -332,6 +318,60 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
         <div className="max-w-sm">{children}</div>
       </div>
     </>
+  );
+}
+
+function ValidatorStatusSummary({
+  validators,
+  threshold,
+}: {
+  validators: ValidatorInfo[];
+  threshold: number;
+}) {
+  const signedCount = validators.filter((v) => v.status === 'signed').length;
+  const hasQuorum = signedCount >= threshold && threshold > 0;
+
+  return (
+    <div className="mt-4 w-full max-w-xs">
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="text-gray-600">Validator Signatures</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            hasQuorum ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          }`}
+        >
+          {signedCount}/{validators.length} ({threshold} required)
+        </span>
+      </div>
+      {/* Progress bar */}
+      <div className="relative h-2 w-full rounded-full bg-gray-200">
+        {validators.length > 0 && (
+          <>
+            {/* Threshold marker */}
+            <div
+              className="absolute top-0 h-full w-0.5 bg-gray-600"
+              style={{ left: `${(threshold / validators.length) * 100}%` }}
+              title={`Threshold: ${threshold}`}
+            />
+            {/* Signed progress */}
+            <div
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
+                hasQuorum ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${(signedCount / validators.length) * 100}%` }}
+            />
+          </>
+        )}
+      </div>
+      {!hasQuorum && (
+        <p className="mt-2 text-center text-xs text-gray-500">Waiting for validators to sign...</p>
+      )}
+      {hasQuorum && (
+        <p className="mt-2 text-center text-xs text-green-600">
+          ✓ Quorum reached, waiting for relayer
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -349,7 +389,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
           <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle is reverting, try debugging it with `}
             <a
-              className={`${styles.textLink} all:text-blue-500`}
+              className={`${styles.textLink} all:text-primary-600`}
               href={links.tenderlySimDocs}
               target="_blank"
               rel="noopener noreferrer"
@@ -392,13 +432,7 @@ function ChainDescriptionRow({
     false,
   )} (${idString})`;
   return (
-    <KeyValueRow
-      label="Chain:"
-      labelWidth="w-16"
-      display={chainDescription}
-      displayWidth="w-60 sm:w-64"
-      blurValue={blur}
-    />
+    <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
   );
 }
 
