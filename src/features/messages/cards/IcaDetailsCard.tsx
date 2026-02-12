@@ -294,11 +294,11 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md border border-blue-100/40 bg-blue-50/15 p-3">
+                <div className="rounded-md border border-primary-100/40 bg-primary-25/20 p-3">
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-400">⏳</span>
+                    <span className="text-primary-200">⏳</span>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-blue-500">
+                      <div className="text-sm font-medium text-primary-300">
                         {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
                           ? 'Reveal Pending Delivery'
                           : 'Commitment Pending Reveal'}
@@ -314,7 +314,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                           className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
                         />
                       </div>
-                      <div className="mt-2 text-xs text-blue-400">
+                      <div className="mt-2 text-xs text-primary-200">
                         {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
                           ? 'The REVEAL message is waiting to be delivered on the destination chain.'
                           : 'A subsequent REVEAL message with matching calls must be sent to execute.'}
@@ -323,14 +323,14 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                         <div className="mt-2">
                           <Link
                             href={`/message/${relatedMessage.msgId}`}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-500 underline hover:text-blue-400"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary-300 underline hover:text-primary-200"
                           >
                             View REVEAL message →
                           </Link>
                         </div>
                       )}
                       {isRelatedFetching && (
-                        <div className="mt-2 text-xs text-blue-300">
+                        <div className="mt-2 text-xs text-primary-100">
                           Looking for related REVEAL message...
                         </div>
                       )}
@@ -380,11 +380,13 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md border border-blue-100/40 bg-blue-50/15 p-3">
+                <div className="rounded-md border border-primary-100/40 bg-primary-25/20 p-3">
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-400">⏳</span>
+                    <span className="text-primary-200">⏳</span>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-blue-500">Revealing Commitment</div>
+                      <div className="text-sm font-medium text-primary-300">
+                        Revealing Commitment
+                      </div>
                       <div className="mt-2 flex items-start gap-2">
                         <div className="min-w-0 flex-1 break-all font-mono text-xs text-gray-600">
                           {decodeResult.commitment}
@@ -396,21 +398,21 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                           className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
                         />
                       </div>
-                      <div className="mt-2 text-xs text-blue-400">
+                      <div className="mt-2 text-xs text-primary-200">
                         Waiting for message to be delivered on the destination chain.
                       </div>
                       {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
                         <div className="mt-2">
                           <Link
                             href={`/message/${relatedMessage.msgId}`}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-500 underline hover:text-blue-400"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary-300 underline hover:text-primary-200"
                           >
                             ← View corresponding COMMITMENT message
                           </Link>
                         </div>
                       )}
                       {isRelatedFetching && (
-                        <div className="mt-2 text-xs text-blue-300">
+                        <div className="mt-2 text-xs text-primary-100">
                           Looking for related COMMITMENT message...
                         </div>
                       )}
@@ -445,7 +447,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     The secret calls must be posted to this gateway by the commitment sender, who
                     specifies which relayers are authorized to fetch and deliver the calls.
                   </div>
-                  <div className="mt-2 text-xs text-blue-400">
+                  <div className="mt-2 text-xs text-primary-200">
                     If delivery is failing, the calls may not have been posted to the gateway, or no
                     authorized relayer is available.
                   </div>
@@ -533,7 +535,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
             decodeResult.messageType === IcaMessageType.REVEAL) && (
             <div className="space-y-3 pt-2">
               <label
-                className={`text-sm font-medium ${isDelivered ? 'text-green-500' : 'text-blue-500'}`}
+                className={`text-sm font-medium ${isDelivered ? 'text-green-500' : 'text-primary-300'}`}
               >
                 {isDelivered ? 'Calls executed:' : 'Calls to execute:'}
               </label>
@@ -641,8 +643,8 @@ function IcaCallDetails({
     statusSuffix = ' — Failed';
   } else {
     // Pending (either not checked yet, or after a failed call)
-    borderClass = 'border-blue-100/40 bg-blue-50/15';
-    labelClass = 'text-blue-500';
+    borderClass = 'border-primary-100/40 bg-primary-25/20';
+    labelClass = 'text-primary-300';
   }
 
   return (
