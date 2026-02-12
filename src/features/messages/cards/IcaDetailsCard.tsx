@@ -1,7 +1,14 @@
-import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
-import { addressToBytes32, formatMessage, fromWei, strip0x } from '@hyperlane-xyz/utils';
+import { MAILBOX_VERSION, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import {
+  addressToBytes32,
+  bytes32ToAddress,
+  formatMessage,
+  fromWei,
+  shortenAddress,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
-import { BigNumber } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -577,6 +584,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     blur={blur}
                     isDelivered={isDelivered}
                     failedCallIndex={failedCallIndex}
+                    multiProvider={multiProvider}
                   />
                 ))}
 
@@ -597,6 +605,83 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   );
 }
 
+// Known function selectors for calldata decoding
+const KNOWN_SELECTORS: Record<string, { name: string; sig: string }> = {
+  '0x095ea7b3': { name: 'approve', sig: 'approve(address,uint256)' },
+  '0xa9059cbb': { name: 'transfer', sig: 'transfer(address,uint256)' },
+  '0x81b4e8b4': { name: 'transferRemote', sig: 'transferRemote(uint32,bytes32,uint256)' },
+  '0x51debffc': {
+    name: 'transferRemote',
+    sig: 'transferRemote(uint32,bytes32,uint256,bytes,address)',
+  },
+  '0x3593564c': { name: 'execute', sig: 'execute(bytes,bytes[],uint256)' },
+};
+
+interface DecodedCallInfo {
+  functionName: string;
+  summary: string; // Human-readable one-liner
+}
+
+function tryDecodeCallData(
+  data: string,
+  multiProvider: MultiProtocolProvider,
+): DecodedCallInfo | null {
+  if (!data || data.length < 10) return null;
+
+  const selector = data.slice(0, 10).toLowerCase();
+  const known = KNOWN_SELECTORS[selector];
+  if (!known) return null;
+
+  try {
+    const iface = new utils.Interface([`function ${known.sig}`]);
+    const decoded = iface.decodeFunctionData(known.name, data);
+
+    switch (known.name) {
+      case 'approve': {
+        const spender = shortenAddress(decoded[0] as string);
+        const amount = formatTokenAmount(decoded[1] as BigNumber);
+        return { functionName: 'approve', summary: `Approve ${spender} to spend ${amount}` };
+      }
+      case 'transfer': {
+        const to = shortenAddress(decoded[0] as string);
+        const amount = formatTokenAmount(decoded[1] as BigNumber);
+        return { functionName: 'transfer', summary: `Transfer ${amount} to ${to}` };
+      }
+      case 'transferRemote': {
+        const destDomain = (decoded[0] as number) || BigNumber.from(decoded[0]).toNumber();
+        const recipient = shortenAddress(bytes32ToAddress(decoded[1] as string));
+        const amount = formatTokenAmount(decoded[2] as BigNumber);
+        const chainName = multiProvider.tryGetChainName(destDomain);
+        const dest = chainName || `domain ${destDomain}`;
+        return {
+          functionName: 'transferRemote',
+          summary: `Bridge ${amount} to ${recipient} on ${dest}`,
+        };
+      }
+      case 'execute': {
+        return { functionName: 'execute', summary: 'Uniswap swap' };
+      }
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+function formatTokenAmount(amount: BigNumber): string {
+  // Try common decimals (18, then 6) to produce a reasonable display
+  const wei18 = fromWei(amount.toString(), 18);
+  const num18 = parseFloat(wei18);
+  // If 18-decimal interpretation is extremely small, try 6 decimals
+  if (num18 > 0 && num18 < 0.000001) {
+    const wei6 = fromWei(amount.toString(), 6);
+    return `${parseFloat(wei6).toLocaleString()} tokens`;
+  }
+  if (num18 === 0) return '0';
+  return `${num18.toLocaleString()} tokens`;
+}
+
 function IcaCallDetails({
   call,
   index,
@@ -605,6 +690,7 @@ function IcaCallDetails({
   blur,
   isDelivered,
   failedCallIndex,
+  multiProvider,
 }: {
   call: IcaCall;
   index: number;
@@ -613,6 +699,7 @@ function IcaCallDetails({
   blur: boolean;
   isDelivered: boolean;
   failedCallIndex: number; // -1 if no failure, otherwise 0-based index of failed call
+  multiProvider: MultiProtocolProvider;
 }) {
   // Defensive handling for BigNumber conversion - malformed values shouldn't crash the card
   let hasValue = false;
@@ -623,6 +710,12 @@ function IcaCallDetails({
   } catch {
     // Malformed value, use defaults
   }
+
+  // Try to decode the calldata
+  const decoded = useMemo(
+    () => tryDecodeCallData(call.data, multiProvider),
+    [call.data, multiProvider],
+  );
 
   // Determine call state for styling
   const isFailed = failedCallIndex === index;
@@ -649,9 +742,16 @@ function IcaCallDetails({
 
   return (
     <div className={`rounded-md border p-3 ${borderClass}`}>
-      <label className={`text-xs font-medium ${labelClass}`}>
-        {`Call ${index + 1} of ${total}${statusSuffix}`}
-      </label>
+      <div className="flex items-baseline gap-2">
+        <label className={`text-xs font-medium ${labelClass}`}>
+          {`Call ${index + 1} of ${total}${statusSuffix}`}
+        </label>
+        {decoded && (
+          <span className="text-xs text-gray-500">
+            {decoded.functionName}() — {decoded.summary}
+          </span>
+        )}
+      </div>
       <div className="mt-2 space-y-2">
         <KeyValueRow
           label="Target:"
