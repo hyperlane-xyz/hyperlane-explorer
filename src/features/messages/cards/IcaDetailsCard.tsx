@@ -8,7 +8,8 @@ import {
   strip0x,
 } from '@hyperlane-xyz/utils';
 import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
-import { BigNumber, utils } from 'ethers';
+import { useQuery } from '@tanstack/react-query';
+import { BigNumber, Contract, utils } from 'ethers';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -585,6 +586,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     isDelivered={isDelivered}
                     failedCallIndex={failedCallIndex}
                     multiProvider={multiProvider}
+                    destinationChainName={destinationChainName}
                   />
                 ))}
 
@@ -619,7 +621,50 @@ const KNOWN_SELECTORS: Record<string, { name: string; sig: string }> = {
 
 interface DecodedCallInfo {
   functionName: string;
-  summary: string; // Human-readable one-liner
+  summary: string;
+  // For Uniswap swaps: token addresses to resolve symbols
+  swapTokenIn?: string;
+  swapTokenOut?: string;
+}
+
+/**
+ * Extract swap token addresses from Uniswap Universal Router execute() calldata.
+ * Supports V3_SWAP_EXACT_IN (0x00) and V3_SWAP_EXACT_OUT (0x01).
+ */
+function decodeUniswapSwap(data: string): { tokenIn: string; tokenOut: string } | null {
+  try {
+    const iface = new utils.Interface(['function execute(bytes,bytes[],uint256)']);
+    const decoded = iface.decodeFunctionData('execute', data);
+    const commands = strip0x(decoded[0] as string);
+    const inputs = decoded[1] as string[];
+
+    for (let i = 0; i < commands.length / 2; i++) {
+      const cmd = parseInt(commands.slice(i * 2, i * 2 + 2), 16);
+
+      if (cmd === 0x00) {
+        // V3_SWAP_EXACT_IN: (address, uint256, uint256, bytes path, bool)
+        const args = utils.defaultAbiCoder.decode(
+          ['address', 'uint256', 'uint256', 'bytes', 'bool'],
+          utils.hexDataSlice(inputs[i], 0),
+        );
+        const path = strip0x(args[3] as string);
+        return { tokenIn: '0x' + path.slice(0, 40), tokenOut: '0x' + path.slice(-40) };
+      }
+
+      if (cmd === 0x01) {
+        // V3_SWAP_EXACT_OUT: path is reversed (tokenOut first)
+        const args = utils.defaultAbiCoder.decode(
+          ['address', 'uint256', 'uint256', 'bytes', 'bool'],
+          utils.hexDataSlice(inputs[i], 0),
+        );
+        const path = strip0x(args[3] as string);
+        return { tokenIn: '0x' + path.slice(-40), tokenOut: '0x' + path.slice(0, 40) };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function tryDecodeCallData(
@@ -659,6 +704,15 @@ function tryDecodeCallData(
         };
       }
       case 'execute': {
+        const swap = decodeUniswapSwap(data);
+        if (swap) {
+          return {
+            functionName: 'swap',
+            summary: `Swap ${shortenAddress(swap.tokenIn)} → ${shortenAddress(swap.tokenOut)}`,
+            swapTokenIn: swap.tokenIn,
+            swapTokenOut: swap.tokenOut,
+          };
+        }
         return { functionName: 'execute', summary: 'Uniswap swap' };
       }
       default:
@@ -682,6 +736,30 @@ function formatTokenAmount(amount: BigNumber): string {
   return `${num18.toLocaleString()} tokens`;
 }
 
+const ERC20_SYMBOL_ABI = ['function symbol() view returns (string)'];
+
+/**
+ * Resolve an ERC20 token symbol via RPC. Cached indefinitely since symbols don't change.
+ */
+function useTokenSymbol(
+  chainName: string | undefined,
+  tokenAddress: string | undefined,
+  multiProvider: MultiProtocolProvider,
+) {
+  return useQuery({
+    queryKey: ['tokenSymbol', chainName, tokenAddress],
+    queryFn: async () => {
+      if (!chainName || !tokenAddress) return null;
+      const provider = multiProvider.getEthersV5Provider(chainName);
+      const contract = new Contract(tokenAddress, ERC20_SYMBOL_ABI, provider);
+      return (await contract.symbol()) as string;
+    },
+    enabled: !!chainName && !!tokenAddress,
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
 function IcaCallDetails({
   call,
   index,
@@ -691,6 +769,7 @@ function IcaCallDetails({
   isDelivered,
   failedCallIndex,
   multiProvider,
+  destinationChainName,
 }: {
   call: IcaCall;
   index: number;
@@ -700,6 +779,7 @@ function IcaCallDetails({
   isDelivered: boolean;
   failedCallIndex: number; // -1 if no failure, otherwise 0-based index of failed call
   multiProvider: MultiProtocolProvider;
+  destinationChainName: string | undefined;
 }) {
   // Defensive handling for BigNumber conversion - malformed values shouldn't crash the card
   let hasValue = false;
@@ -716,6 +796,29 @@ function IcaCallDetails({
     () => tryDecodeCallData(call.data, multiProvider),
     [call.data, multiProvider],
   );
+
+  // Resolve token symbols for swap calls
+  const { data: symbolIn } = useTokenSymbol(
+    destinationChainName,
+    decoded?.swapTokenIn,
+    multiProvider,
+  );
+  const { data: symbolOut } = useTokenSymbol(
+    destinationChainName,
+    decoded?.swapTokenOut,
+    multiProvider,
+  );
+
+  // Build display summary, enriching with resolved symbols
+  const displaySummary = useMemo(() => {
+    if (!decoded) return null;
+    if (decoded.swapTokenIn && (symbolIn || symbolOut)) {
+      const tokenIn = symbolIn || shortenAddress(decoded.swapTokenIn);
+      const tokenOut = symbolOut || shortenAddress(decoded.swapTokenOut!);
+      return `Swap ${tokenIn} → ${tokenOut}`;
+    }
+    return decoded.summary;
+  }, [decoded, symbolIn, symbolOut]);
 
   // Determine call state for styling
   const isFailed = failedCallIndex === index;
@@ -748,7 +851,7 @@ function IcaCallDetails({
         </label>
         {decoded && (
           <span className="text-xs text-gray-500">
-            {decoded.functionName}() — {decoded.summary}
+            {decoded.functionName}() — {displaySummary}
           </span>
         )}
       </div>
