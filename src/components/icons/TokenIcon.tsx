@@ -21,18 +21,22 @@ export function TokenIcon({ token, size = 32 }: Props) {
       ? (Buffer.from(token.addressOrDenom).at(0) || 0) % 5
       : undefined;
 
+  if (imageSrc && !fallbackToText) {
+    return (
+      <img
+        src={imageSrc}
+        style={{ width: size, height: size }}
+        alt={title || ''}
+        title={title}
+        onError={() => setFallbackToText(true)}
+        loading="lazy"
+      />
+    );
+  }
+
   return (
     <Circle size={size} bgColorSeed={bgColorSeed} title={title}>
-      {imageSrc && !fallbackToText ? (
-        <img
-          src={imageSrc}
-          className="h-full w-full"
-          onError={() => setFallbackToText(true)}
-          loading="lazy"
-        />
-      ) : (
-        <div className={`text-[${fontSize}px]`}>{character}</div>
-      )}
+      <div style={{ fontSize }}>{character}</div>
     </Circle>
   );
 }

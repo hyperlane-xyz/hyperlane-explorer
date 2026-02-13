@@ -11,7 +11,7 @@ import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { CodeBlock, LabelAndCodeBlock } from './CodeBlock';
+import { CodeBlock, CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
@@ -114,17 +114,17 @@ export function ContentDetailsCard({
       <div className="flex flex-wrap gap-x-6 gap-y-4">
         <KeyValueRow
           label="Identifier:"
-          labelWidth="w-16"
+          labelWidth="w-20"
           display={msgId}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
           blurValue={blur}
           copyButtonClasses={blockExplorerAddressUrls?.sender && 'sm:ml-6'}
         />
-        <KeyValueRow label="Nonce:" labelWidth="w-16" display={nonce.toString()} blurValue={blur} />
+        <KeyValueRow label="Nonce:" labelWidth="w-20" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
           label="Sender:"
-          labelWidth="w-16"
+          labelWidth="w-20"
           display={formattedSender}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
@@ -133,7 +133,7 @@ export function ContentDetailsCard({
         />
         <KeyValueRow
           label="Recipient:"
-          labelWidth="w-16"
+          labelWidth="w-20"
           display={formattedRecipient}
           displayWidth="w-64 sm:w-72"
           showCopy={true}
@@ -143,7 +143,7 @@ export function ContentDetailsCard({
       </div>
       <div>
         <div className="flex items-center">
-          <label className="text-sm text-gray-500">Message Content:</label>
+          <label className="text-sm text-gray-500">Body:</label>
           <SelectField
             classes="w-16 h-7 py-0.5 ml-3 mb-0.5"
             options={decodeOptions}
@@ -153,7 +153,7 @@ export function ContentDetailsCard({
         </div>
         <CodeBlock value={bodyDisplay} />
       </div>
-      <LabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
+      <CollapsibleLabelAndCodeBlock label="Raw bytes:" value={rawBytes} />
     </Card>
   );
 }

@@ -1,14 +1,13 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
-import { formatAddress, formatTxHash } from '../../../utils/addresses';
+import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
@@ -48,7 +47,6 @@ export function DestinationTransactionCard({
   domainId,
   status,
   transaction,
-  duration,
   debugResult,
   isStatusFetching,
   isPiMsg,
@@ -60,7 +58,6 @@ export function DestinationTransactionCard({
   domainId: DomainId;
   status: MessageStatus;
   transaction?: MessageTx;
-  duration?: string;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
@@ -82,7 +79,6 @@ export function DestinationTransactionCard({
           chainName={chainName}
           domainId={domainId}
           transaction={transaction}
-          duration={duration}
           blur={blur}
         />
         {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
@@ -231,25 +227,31 @@ function TransactionDetails({
   chainName,
   domainId,
   transaction,
-  duration,
   blur,
 }: {
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx;
-  duration?: string;
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { hash, from, timestamp, blockNumber, mailbox } = transaction;
+  const { hash, from, timestamp, blockNumber } = transaction;
 
   const formattedHash = formatTxHash(hash, domainId, multiProvider);
-  const formattedMailbox = formatAddress(mailbox, domainId, multiProvider);
 
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
       ? multiProvider.tryGetExplorerTxUrl(chainName, { hash: formattedHash })
       : null;
+
+  const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
+  useEffect(() => {
+    if (!from) return;
+    multiProvider
+      .tryGetExplorerAddressUrl(chainName, from)
+      .then(setFromExplorerLink)
+      .catch(() => setFromExplorerLink(null));
+  }, [multiProvider, chainName, from]);
 
   return (
     <>
@@ -260,12 +262,13 @@ function TransactionDetails({
         blur={blur}
       />
       <KeyValueRow
-        label="Tx hash:"
+        label="Tx:"
         labelWidth="w-16"
         display={formattedHash}
         displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
+        link={txExplorerLink}
       />
       <KeyValueRow
         label="From:"
@@ -274,17 +277,8 @@ function TransactionDetails({
         displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
+        link={fromExplorerLink}
       />
-      {mailbox && isAddress(mailbox) && !isZeroish(mailbox) && (
-        <KeyValueRow
-          label="Mailbox:"
-          labelWidth="w-16"
-          display={formattedMailbox}
-          displayWidth="w-60 sm:w-64"
-          showCopy={true}
-          blurValue={blur}
-        />
-      )}
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
@@ -302,25 +296,6 @@ function TransactionDetails({
         displayWidth="w-60 sm:w-64"
         blurValue={blur}
       />
-      {duration && (
-        <KeyValueRow
-          label="Duration:"
-          labelWidth="w-16"
-          display={duration}
-          displayWidth="w-60 sm:w-64"
-          blurValue={blur}
-        />
-      )}
-      {txExplorerLink && (
-        <a
-          className={`block ${styles.textLink}`}
-          href={txExplorerLink}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View in block explorer
-        </a>
-      )}
     </>
   );
 }
