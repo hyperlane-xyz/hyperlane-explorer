@@ -10,8 +10,11 @@ export function getTokenFromWarpRouteChainAddressMap(
   const { name } = chainMetadata;
   if (objKeys(warpRouteChainAddressMap).includes(name)) {
     const chain = warpRouteChainAddressMap[name];
-    if (objKeys(chain).includes(address)) {
-      return chain[address];
+    for (const tokenAddress of objKeys(chain)) {
+      // There are cases where the chain record has some prefix to the token address, so we only check if the token address ends with the address we're looking for
+      if (tokenAddress.endsWith(address)) {
+        return chain[tokenAddress];
+      }
     }
   }
 
