@@ -26,6 +26,6 @@ export const config: Config = Object.freeze({
 
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/testnet4/agent.ts
-export const unscrapedChainsInDb = ['proteustestnet', 'viction'];
+export const unscrapedChainsInDb = ['proteustestnet'];
 
 export const debugIgnoredChains = ['treasure', 'treasuretopaz'];
