@@ -40,28 +40,176 @@ function base58Decode(str: string): Uint8Array {
   return new Uint8Array(bytes.reverse());
 }
 
+function bytesToHex(bytes: Uint8Array): string {
+  return (
+    '0x' +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+  );
+}
+
 /**
  * Convert address to lowercase hex format.
- * Handles both 0x-prefixed hex and base58 (Solana) addresses.
+ * Handles 0x-prefixed hex, bech32 (Cosmos), and base58 (Solana) addresses.
  */
-function normalizeAddressToHex(address: string): string {
-  if (address.startsWith('0x')) {
-    return address.toLowerCase();
+export function normalizeAddressToHex(address: string): string {
+  const lower = address.toLowerCase();
+
+  if (lower.startsWith('0x')) {
+    return lower;
   }
 
-  // Assume base58 (Solana/SVM address)
-  try {
-    const bytes = base58Decode(address);
-    const hex =
-      '0x' +
-      Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-    return hex.toLowerCase();
-  } catch {
-    // If decoding fails, return as-is lowercase
-    return address.toLowerCase();
+  if (BECH32_REGEX.test(lower)) {
+    const decoded = bech32Decode(lower);
+    if (decoded) {
+      return bytesToHex(decoded);
+    }
   }
+
+  // Try base58 only for strings that look like Solana addresses (32-44 chars)
+  // Short strings like cosmos denoms (uatom, utia) should not be decoded
+  if (address.length >= 32 && address.length <= 50) {
+    try {
+      const bytes = base58Decode(address);
+      return bytesToHex(bytes);
+    } catch {
+      // fall through
+    }
+  }
+
+  return lower;
+}
+
+const BECH32_ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+const BECH32_REGEX = /^[a-z]+1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/;
+
+function convertBits(data: Uint8Array, fromBits: number, toBits: number, pad: boolean): number[] {
+  let acc = 0;
+  let bits = 0;
+  const result: number[] = [];
+  const maxv = (1 << toBits) - 1;
+
+  for (const value of data) {
+    acc = (acc << fromBits) | value;
+    bits += fromBits;
+    while (bits >= toBits) {
+      bits -= toBits;
+      result.push((acc >> bits) & maxv);
+    }
+  }
+
+  if (pad && bits > 0) {
+    result.push((acc << (toBits - bits)) & maxv);
+  }
+
+  return result;
+}
+
+function convertBitsToBytes(data: number[], fromBits: number, toBits: number): Uint8Array | null {
+  let acc = 0;
+  let bits = 0;
+  const result: number[] = [];
+  const maxv = (1 << toBits) - 1;
+
+  for (const value of data) {
+    if (value < 0 || value >> fromBits !== 0) return null;
+    acc = (acc << fromBits) | value;
+    bits += fromBits;
+    while (bits >= toBits) {
+      bits -= toBits;
+      result.push((acc >> bits) & maxv);
+    }
+  }
+
+  if (bits >= fromBits) return null;
+  if ((acc << (toBits - bits)) & maxv) return null;
+
+  return new Uint8Array(result);
+}
+
+function bech32Polymod(values: number[]): number {
+  const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+  let chk = 1;
+  for (const v of values) {
+    const top = chk >> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v;
+    for (let i = 0; i < 5; i++) {
+      if ((top >> i) & 1) {
+        chk ^= GEN[i];
+      }
+    }
+  }
+  return chk;
+}
+
+function bech32HrpExpand(hrp: string): number[] {
+  return [
+    ...hrp.split('').map((c) => c.charCodeAt(0) >> 5),
+    0,
+    ...hrp.split('').map((c) => c.charCodeAt(0) & 31),
+  ];
+}
+
+function bech32VerifyChecksum(hrp: string, data: number[]): boolean {
+  return bech32Polymod([...bech32HrpExpand(hrp), ...data]) === 1;
+}
+
+function bech32CreateChecksum(hrp: string, data: number[]): number[] {
+  const values = [...bech32HrpExpand(hrp), ...data, 0, 0, 0, 0, 0, 0];
+  const polymod = bech32Polymod(values) ^ 1;
+  return [0, 1, 2, 3, 4, 5].map((i) => (polymod >> (5 * (5 - i))) & 31);
+}
+
+function bech32Decode(address: string): Uint8Array | null {
+  const lower = address.toLowerCase();
+  const sep = lower.lastIndexOf('1');
+  if (sep <= 0 || sep + 7 > lower.length) return null;
+
+  const hrp = lower.slice(0, sep);
+  const dataPart = lower.slice(sep + 1);
+  const data: number[] = [];
+
+  for (const char of dataPart) {
+    const value = BECH32_ALPHABET.indexOf(char);
+    if (value === -1) return null;
+    data.push(value);
+  }
+
+  if (!bech32VerifyChecksum(hrp, data)) return null;
+
+  const payload = data.slice(0, -6);
+  return convertBitsToBytes(payload, 5, 8);
+}
+
+function bech32Encode(prefix: string, data: Uint8Array): string {
+  const words = convertBits(data, 8, 5, true);
+  const checksum = bech32CreateChecksum(prefix, words);
+  return prefix + '1' + [...words, ...checksum].map((d) => BECH32_ALPHABET[d]).join('');
+}
+
+export function bytes32ToProtocolAddress(
+  bytes32Hex: string,
+  protocol: string,
+  bech32Prefix?: string,
+): string {
+  const hex = bytes32Hex.replace(/^0x/i, '').toLowerCase();
+
+  if (protocol === 'cosmos' && bech32Prefix) {
+    // Cosmos SDK account addresses are 20 bytes. When stored as bytes32, they're
+    // left-padded with 12 zero bytes. Detect this and extract the 20-byte address.
+    // Contract addresses (32 bytes) don't have this padding and are used as-is.
+    const paddedHex = hex.padStart(64, '0');
+    const isPaddedAccount = paddedHex.startsWith('000000000000000000000000');
+    const addressHex = isPaddedAccount ? paddedHex.slice(-40) : paddedHex;
+    const bytes = new Uint8Array(addressHex.length / 2);
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(addressHex.slice(i * 2, i * 2 + 2), 16);
+    }
+    return bech32Encode(bech32Prefix, bytes);
+  }
+
+  return '0x' + hex;
 }
 
 // ============================================================================
@@ -71,6 +219,8 @@ function normalizeAddressToHex(address: string): string {
 export interface ChainDisplayNames {
   displayName: string;
   displayNameShort?: string;
+  protocol?: string;
+  bech32Prefix?: string;
 }
 
 /**
@@ -83,13 +233,15 @@ export function parseChainMetadataYaml(yamlStr: string): Map<string, ChainDispla
   try {
     const data = YAML.parse(yamlStr) as Record<
       string,
-      { displayName?: string; displayNameShort?: string }
+      { displayName?: string; displayNameShort?: string; protocol?: string; bech32Prefix?: string }
     >;
     for (const [chainName, metadata] of Object.entries(data)) {
       if (metadata?.displayName) {
         map.set(chainName, {
           displayName: metadata.displayName,
           displayNameShort: metadata.displayNameShort,
+          protocol: metadata.protocol,
+          bech32Prefix: metadata.bech32Prefix,
         });
       }
     }
@@ -145,9 +297,11 @@ export interface WarpToken {
   // Wire format decimals = max decimals among all tokens in this warp route
   // Used for decoding scaled amounts in message body (see og.tsx for details)
   wireDecimals: number;
+  scale?: number;
   logoURI: string;
   chainName: string;
   addressOrDenom: string;
+  standard?: string;
 }
 
 // Map of chainName -> lowercase address -> token info
@@ -157,9 +311,11 @@ interface WarpRouteConfigEntry {
   addressOrDenom?: string;
   chainName?: string;
   decimals?: number;
+  scale?: number;
   symbol?: string;
   name?: string;
   logoURI?: string;
+  standard?: string;
 }
 
 interface WarpRouteConfig {
@@ -202,6 +358,7 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
         }
 
         const chainMap = map.get(chainName)!;
+        // Normalize to hex for consistent lookups: bech32 (cosmos) and hex (cosmosnative) both become hex
         const normalizedAddress = normalizeAddressToHex(token.addressOrDenom);
         const logoURI = token.logoURI || '';
 
@@ -209,10 +366,12 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
           addressOrDenom: token.addressOrDenom,
           chainName,
           decimals: token.decimals,
+          scale: token.scale,
           wireDecimals,
           logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
           name: token.name || '',
           symbol: token.symbol,
+          standard: token.standard,
         });
       }
     }

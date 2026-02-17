@@ -27,7 +27,10 @@ export default function Document() {
         <meta name="apple-mobile-web-app-title" content="Hyperlane Explorer" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </Head>
-      <body className={`${MAIN_FONT.variable} font-sans text-black`}>
+      <body
+        className={`${MAIN_FONT.variable} font-sans text-black`}
+        style={{ backgroundColor: '#f3f4f6' }}
+      >
         <Main />
         <NextScript />
       </body>

@@ -1,4 +1,4 @@
-import { ChainMap, TokenArgs } from '@hyperlane-xyz/sdk';
+import { ChainMap, TokenArgs, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -62,11 +62,25 @@ export interface ExtendedLog extends providers.Log {
   to?: Address;
 }
 
+export type TokenArgsWithWireDecimals = TokenArgs & { wireDecimals: number };
+
 export interface WarpRouteDetails {
   amount: string;
   transferRecipient: string;
-  originToken: TokenArgs;
-  destinationToken: TokenArgs;
+  originToken: TokenArgsWithWireDecimals;
+  destinationToken: TokenArgsWithWireDecimals;
 }
 
-export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgs>>;
+export type WarpRouteChainAddressMap = ChainMap<Record<Address, TokenArgsWithWireDecimals>>;
+
+// Maps warp route ID (lowercase) to array of token addresses for that route
+export type WarpRouteIdToAddressesMap = Record<
+  string,
+  Array<{ chainName: string; address: Address }>
+>;
+
+// Map of warp route ID (e.g., "USDC/mainnet-cctp") to its configuration
+export type WarpRouteConfigs = Record<string, WarpCoreConfig>;
+
+// Status filter options for message search
+export type MessageStatusFilter = 'all' | 'delivered' | 'pending';

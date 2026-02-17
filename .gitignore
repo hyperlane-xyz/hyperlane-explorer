@@ -35,3 +35,7 @@ npm-debug.log*
 
 # typescript
 *.tsbuildinfo
+public/fonts/
+
+.opencode
+.sisyphus
