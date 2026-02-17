@@ -15,11 +15,11 @@ import {
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
-import { SafeTextMorph } from '../SafeTextMorph';
 import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
+import { SafeTextMorph } from '../SafeTextMorph';
 
 interface Props {
   originChain: string | null;
@@ -236,7 +236,11 @@ function StatusSelector({
       <Popover
         button={
           <>
-            {hasValue ? <SafeTextMorph as="span">{currentLabel}</SafeTextMorph> : <span>Status</span>}
+            {hasValue ? (
+              <SafeTextMorph as="span">{currentLabel}</SafeTextMorph>
+            ) : (
+              <span>Status</span>
+            )}
             {!hasValue && (
               <ChevronIcon
                 direction="s"
