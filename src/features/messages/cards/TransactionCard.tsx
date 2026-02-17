@@ -1,3 +1,4 @@
+import type { ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { isAddress, isZeroish } from '@hyperlane-xyz/utils';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
@@ -55,6 +56,7 @@ export function DestinationTransactionCard({
   blur,
   message,
   warpRouteDetails,
+  validatorInfo,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -67,6 +69,7 @@ export function DestinationTransactionCard({
   blur: boolean;
   message?: Message;
   warpRouteDetails?: WarpRouteDetails;
+  validatorInfo?: { validators: ValidatorInfo[]; threshold: number } | null;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
@@ -172,9 +175,18 @@ export function DestinationTransactionCard({
                   Please ensure a relayer is running for this chain.
                 </div>
               )}
-              <div className="mt-6 flex items-center justify-center">
-                <SpinnerIcon width={40} height={40} />
-              </div>
+              {/* Validator signature status */}
+              {validatorInfo && validatorInfo.validators.length > 0 && (
+                <ValidatorStatusSummary
+                  validators={validatorInfo.validators}
+                  threshold={validatorInfo.threshold}
+                />
+              )}
+              {(!validatorInfo || validatorInfo.validators.length === 0) && (
+                <div className="mt-6 flex items-center justify-center">
+                  <SpinnerIcon width={40} height={40} />
+                </div>
+              )}
               <CallDataModal debugResult={debugResult} />
             </div>
           </DeliveryStatus>
@@ -332,6 +344,60 @@ function DeliveryStatus({ children }: PropsWithChildren<unknown>) {
         <div className="max-w-sm">{children}</div>
       </div>
     </>
+  );
+}
+
+function ValidatorStatusSummary({
+  validators,
+  threshold,
+}: {
+  validators: ValidatorInfo[];
+  threshold: number;
+}) {
+  const signedCount = validators.filter((v) => v.status === 'signed').length;
+  const hasQuorum = signedCount >= threshold && threshold > 0;
+
+  return (
+    <div className="mt-4 w-full max-w-xs">
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="text-gray-600">Validator Signatures</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            hasQuorum ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          }`}
+        >
+          {signedCount}/{validators.length} ({threshold} required)
+        </span>
+      </div>
+      {/* Progress bar */}
+      <div className="relative h-2 w-full rounded-full bg-gray-200">
+        {validators.length > 0 && (
+          <>
+            {/* Threshold marker */}
+            <div
+              className="absolute top-0 h-full w-0.5 bg-gray-600"
+              style={{ left: `${(threshold / validators.length) * 100}%` }}
+              title={`Threshold: ${threshold}`}
+            />
+            {/* Signed progress */}
+            <div
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
+                hasQuorum ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${(signedCount / validators.length) * 100}%` }}
+            />
+          </>
+        )}
+      </div>
+      {!hasQuorum && (
+        <p className="mt-2 text-center text-xs text-gray-500">Waiting for validators to sign...</p>
+      )}
+      {hasQuorum && (
+        <p className="mt-2 text-center text-xs text-green-600">
+          ✓ Quorum reached, waiting for relayer
+        </p>
+      )}
+    </div>
   );
 }
 

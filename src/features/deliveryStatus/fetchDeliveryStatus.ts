@@ -40,11 +40,14 @@ export async function fetchDeliveryStatus(
   );
 
   if (isDelivered) {
-    const txDetails = await fetchTransactionDetails(
-      multiProvider,
-      message.destinationDomainId,
-      transactionHash,
-    );
+    // Fetch both transaction details and debug info (for ISM/validator details)
+    const [txDetails, debugResult] = await Promise.all([
+      fetchTransactionDetails(multiProvider, message.destinationDomainId, transactionHash),
+      debugMessage(multiProvider, registry, overrideChainMetadata, message).catch((err) => {
+        logger.warn('Failed to fetch debug info for delivered message:', err);
+        return undefined;
+      }),
+    ]);
     // If a delivery (aka process) tx is found, mark as success
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
@@ -65,6 +68,7 @@ export async function fetchDeliveryStatus(
         maxFeePerGas: toDecimalNumber(txDetails?.maxFeePerGas || 0),
         maxPriorityPerGas: toDecimalNumber(txDetails?.maxPriorityFeePerGas || 0),
       },
+      debugResult,
     };
     return result;
   } else {
