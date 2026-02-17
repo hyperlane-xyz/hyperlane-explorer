@@ -236,7 +236,7 @@ function StatusSelector({
       <Popover
         button={
           <>
-            <SafeTextMorph as="span">{hasValue ? currentLabel : 'Status'}</SafeTextMorph>
+            {hasValue ? <SafeTextMorph as="span">{currentLabel}</SafeTextMorph> : <span>Status</span>}
             {!hasValue && (
               <ChevronIcon
                 direction="s"
