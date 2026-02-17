@@ -10,7 +10,7 @@
     "jsx": "preserve",
     "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
@@ -29,7 +29,8 @@
   "include": ["next-env.d.ts", "./src/"],
   "ts-node": {
     "compilerOptions": {
-      "module": "commonjs"
+      "module": "commonjs",
+      "moduleResolution": "node"
     }
   }
 }

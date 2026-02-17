@@ -1,10 +1,12 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
+import clsx from 'clsx';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { TokenIcon } from '../../components/icons/TokenIcon';
+import { SafeTextMorph } from '../../components/SafeTextMorph';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
@@ -42,9 +44,10 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${
-              isFetching && 'blur-xs'
-            } transition-all duration-500`}
+            className={clsx(
+              'relative cursor-pointer border-b border-blue-50 transition-all duration-500 last:border-0 hover:bg-pink-50 active:bg-pink-100',
+              { 'blur-xs': isFetching },
+            )}
           >
             <MessageSummaryRow
               message={m}
@@ -96,11 +99,15 @@ export function MessageSummaryRow({
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
+        <div className={styles.iconText}>
+          <SafeTextMorph>{getChainDisplayName(mp, originChainName, true)}</SafeTextMorph>
+        </div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
         <ChainLogo chainName={destinationChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
+        <div className={styles.iconText}>
+          <SafeTextMorph>{getChainDisplayName(mp, destinationChainName, true)}</SafeTextMorph>
+        </div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(formattedSender) || 'Invalid Address'}

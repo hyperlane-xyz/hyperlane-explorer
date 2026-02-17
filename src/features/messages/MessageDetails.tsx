@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { Card } from '../../components/layout/Card';
+import { SafeTextMorph } from '../../components/SafeTextMorph';
 import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
@@ -100,12 +101,12 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   return (
     <>
       <Card className="flex items-center justify-between rounded-full px-1">
-        <h2 className="font-medium text-blue-500">{`${
-          isIcaMsg ? 'ICA ' : ''
-        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
-          multiProvider,
-          destinationChainName,
-        )}`}</h2>
+        <h2 className="font-medium text-blue-500">
+          {`${isIcaMsg ? 'ICA ' : ''} Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
+            multiProvider,
+            destinationChainName,
+          )}`}
+        </h2>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
@@ -195,7 +196,9 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="lg mr-3 font-medium text-blue-500">{text}</h3>
+      <h3 className="lg mr-3 font-medium text-blue-500">
+        <SafeTextMorph>{text}</SafeTextMorph>
+      </h3>
       {icon}
     </div>
   );
