@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import React, { act } from 'react';
+import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { SafeTextMorph } from './SafeTextMorph';
@@ -11,11 +11,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let shouldThrow = false;
 
 jest.mock('torph/react', () => ({
-  TextMorph: ({
-    children,
-    as: Tag = 'span',
-    ...props
-  }: any) => {
+  TextMorph: ({ children, as: Tag = 'span', ...props }: any) => {
     if (shouldThrow) {
       throw new Error('TextMorph animation error');
     }
@@ -51,9 +47,7 @@ describe('SafeTextMorph', () => {
   });
 
   it('renders fallback when TextMorph throws', () => {
-    const consoleSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     shouldThrow = true;
 
     act(() => {
@@ -63,6 +57,7 @@ describe('SafeTextMorph', () => {
     expect(container.textContent).toBe('Fallback Text');
     const span = container.querySelector('span');
     expect(span).not.toBeNull();
+    expect(consoleSpy).toHaveBeenCalledWith('TextMorph error:', expect.any(Error));
 
     consoleSpy.mockRestore();
   });

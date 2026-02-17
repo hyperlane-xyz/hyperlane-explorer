@@ -101,12 +101,10 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     <>
       <Card className="flex items-center justify-between rounded-full px-1">
         <h2 className="font-medium text-blue-500">
-          <SafeTextMorph>{`${
-            isIcaMsg ? 'ICA ' : ''
-          } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
+          {`${isIcaMsg ? 'ICA ' : ''} Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
             multiProvider,
             destinationChainName,
-          )}`}</SafeTextMorph>
+          )}`}
         </h2>
         <StatusHeader
           messageStatus={status}
@@ -192,7 +190,9 @@ function StatusHeader({
 
   return (
     <div className="flex items-center">
-      <h3 className="lg mr-3 font-medium text-blue-500"><SafeTextMorph>{text}</SafeTextMorph></h3>
+      <h3 className="lg mr-3 font-medium text-blue-500">
+        <SafeTextMorph>{text}</SafeTextMorph>
+      </h3>
       {icon}
     </div>
   );
