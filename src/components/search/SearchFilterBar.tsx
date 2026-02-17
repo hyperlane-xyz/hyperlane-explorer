@@ -15,6 +15,7 @@ import {
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
+import { SafeTextMorph } from '../SafeTextMorph';
 import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
@@ -100,7 +101,7 @@ function ChainSelector({
         )}
         onClick={open}
       >
-        <span>{chainDisplayName || text} </span>
+        <SafeTextMorph as="span">{chainDisplayName || text}</SafeTextMorph>
         {!value && (
           <ChevronIcon
             direction="s"
@@ -235,7 +236,7 @@ function StatusSelector({
       <Popover
         button={
           <>
-            <span>{hasValue ? currentLabel : 'Status'}</span>
+            <SafeTextMorph as="span">{hasValue ? currentLabel : 'Status'}</SafeTextMorph>
             {!hasValue && (
               <ChevronIcon
                 direction="s"

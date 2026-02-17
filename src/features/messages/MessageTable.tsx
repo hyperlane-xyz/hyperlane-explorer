@@ -12,6 +12,7 @@ import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../type
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { getHumanReadableTimeString } from '../../utils/time';
+import { SafeTextMorph } from '../../components/SafeTextMorph';
 import { getChainDisplayName } from '../chains/utils';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
@@ -96,11 +97,11 @@ export function MessageSummaryRow({
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
+        <div className={styles.iconText}><SafeTextMorph>{getChainDisplayName(mp, originChainName, true)}</SafeTextMorph></div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
         <ChainLogo chainName={destinationChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
+        <div className={styles.iconText}><SafeTextMorph>{getChainDisplayName(mp, destinationChainName, true)}</SafeTextMorph></div>
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(formattedSender) || 'Invalid Address'}
