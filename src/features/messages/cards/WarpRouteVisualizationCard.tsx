@@ -65,7 +65,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
       <div className="flex w-full items-center justify-between">
         <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-2">
           <Image src={HubIcon} width={28} height={28} alt="" className="opacity-80" />
-          <h3 className="text-md font-medium text-blue-500">Warp Route Overview</h3>
+          <h3 className="text-md font-medium text-primary-800">Warp Route Overview</h3>
           <Tooltip
             id="warp-route-overview-info"
             content="Visualization of the warp route showing all connected chains, their configuration, and collateral balances"
