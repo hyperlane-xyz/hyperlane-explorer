@@ -318,7 +318,7 @@ export function WarpRouteGraph({
           token={originToken}
           chainBalance={originBalance}
           transferAmount={transferAmount}
-          borderColor="border-blue-500"
+          borderColor="border-primary-500"
           multiProvider={multiProvider}
           explorerUrls={explorerUrls}
         />
@@ -326,16 +326,16 @@ export function WarpRouteGraph({
         {/* Arrow with transfer amount */}
         <div className="flex flex-col items-center">
           <div className="flex items-center">
-            <div className="h-0.5 w-8 bg-blue-500" />
+            <div className="h-0.5 w-8 bg-primary-500" />
             {transferAmountDisplay && tokenSymbol && (
-              <div className="rounded border border-blue-500 bg-white px-2 py-1">
-                <span className="text-xs font-medium text-blue-600">
+              <div className="rounded border border-primary-500 bg-white px-2 py-1">
+                <span className="text-xs font-medium text-primary-700">
                   {transferAmountDisplay} {tokenSymbol}
                 </span>
               </div>
             )}
-            <div className="h-0.5 w-8 bg-blue-500" />
-            <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-blue-500 border-t-transparent" />
+            <div className="h-0.5 w-8 bg-primary-500" />
+            <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-primary-500 border-t-transparent" />
           </div>
         </div>
 
@@ -344,7 +344,7 @@ export function WarpRouteGraph({
           token={destToken}
           chainBalance={destBalance}
           transferAmount={transferAmount}
-          borderColor="border-blue-500"
+          borderColor="border-primary-500"
           multiProvider={multiProvider}
           explorerUrls={explorerUrls}
           isDestination={true}
