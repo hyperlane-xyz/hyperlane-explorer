@@ -25,11 +25,11 @@ interface WarpRouteGraphProps {
 function getTokenTypeColor(standard: string | undefined): string {
   if (!standard) return 'bg-gray-100 text-gray-700 border-gray-300';
 
-  if (standard.includes('Synthetic')) return 'bg-purple-100 text-purple-700 border-purple-300';
+  if (standard.includes('Synthetic')) return 'bg-primary-50 text-primary-700 border-primary-200';
   if (standard.includes('Collateral') || standard.includes('Lockbox'))
-    return 'bg-blue-100 text-blue-700 border-blue-300';
-  if (standard.includes('Native')) return 'bg-orange-100 text-orange-700 border-orange-300';
-  if (standard.includes('XERC20')) return 'bg-indigo-100 text-indigo-700 border-indigo-300';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (standard.includes('Native')) return 'bg-accent-50 text-accent-700 border-accent-200';
+  if (standard.includes('XERC20')) return 'bg-pink-50 text-pink-700 border-pink-200';
 
   return 'bg-gray-100 text-gray-700 border-gray-300';
 }
@@ -156,7 +156,7 @@ function CompactChainNode({
             hasInsufficientBalance
               ? 'bg-red-100 text-red-700'
               : isSynthetic
-                ? 'bg-purple-100 text-purple-700'
+                ? 'bg-primary-50 text-primary-700'
                 : 'bg-gray-100 text-gray-700'
           }`}
         >
@@ -169,7 +169,7 @@ function CompactChainNode({
       {isXERC20 && !!chainBalance && (
         <div className="mt-1 flex flex-col items-center gap-0.5">
           {chainBalance.xerc20Supply !== undefined && (
-            <div className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+            <div className="rounded bg-pink-50 px-1.5 py-0.5 text-[10px] font-medium text-pink-700">
               {formatBalance(chainBalance.xerc20Supply, token.decimals)} {token.symbol}
               <span className="ml-1 text-[8px]">(supply)</span>
             </div>
@@ -220,7 +220,7 @@ function MinimalChainNode({
       {balance !== undefined && (isCollateral || isSynthetic) && !isXERC20 && (
         <div
           className={`mt-0.5 rounded px-1 py-0.5 text-[8px] font-medium ${
-            isSynthetic ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+            isSynthetic ? 'bg-primary-50 text-primary-700' : 'bg-gray-100 text-gray-700'
           }`}
         >
           {formatBalance(balance, token.decimals)}
@@ -231,7 +231,7 @@ function MinimalChainNode({
       {isXERC20 && !!chainBalance && (
         <div className="mt-0.5 flex flex-col items-center gap-0.5">
           {chainBalance.xerc20Supply !== undefined && (
-            <div className="rounded bg-indigo-100 px-1 py-0.5 text-[8px] font-medium text-indigo-700">
+            <div className="rounded bg-pink-50 px-1 py-0.5 text-[8px] font-medium text-pink-700">
               {formatBalance(chainBalance.xerc20Supply, token.decimals)}
             </div>
           )}
