@@ -1,7 +1,7 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, ReactNode, useCallback, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
@@ -9,6 +9,7 @@ import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
@@ -245,13 +246,33 @@ function TransactionDetails({
       : null;
 
   const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
+
+  const getFromExplorerLink = useCallback(
+    async (address: string) => {
+      return tryGetBlockExplorerAddressUrl(multiProvider, chainName, address);
+    },
+    [multiProvider, chainName],
+  );
+
   useEffect(() => {
-    if (!from) return;
-    multiProvider
-      .tryGetExplorerAddressUrl(chainName, from)
-      .then(setFromExplorerLink)
-      .catch(() => setFromExplorerLink(null));
-  }, [multiProvider, chainName, from]);
+    let cancelled = false;
+
+    if (!from) {
+      setFromExplorerLink(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      const link = await getFromExplorerLink(from).catch(() => null);
+      if (!cancelled) setFromExplorerLink(link);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [multiProvider, chainName, from, getFromExplorerLink]);
 
   return (
     <>
