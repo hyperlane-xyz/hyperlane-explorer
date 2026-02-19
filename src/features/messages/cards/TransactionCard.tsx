@@ -263,9 +263,7 @@ function TransactionDetails({
       .then((link) => {
         if (!cancelled) setFromExplorerLink(link);
       })
-      .catch(() => {
-        if (!cancelled) setFromExplorerLink(null);
-      });
+      .catch(() => undefined);
 
     return () => {
       cancelled = true;
