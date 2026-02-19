@@ -16,6 +16,7 @@ const footerLinks1 = [
 ];
 
 const footerLinks2 = [
+  { title: 'Stake', url: links.stake, external: true },
   { title: 'Careers', url: links.jobs, external: true },
   { title: 'Brand', url: links.brand, external: true },
 ];
