@@ -1,4 +1,4 @@
-import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
+import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useEffect, useMemo } from 'react';
@@ -73,8 +73,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     enabled: isMessageFound,
   });
 
-  const { msgId, status, originDomainId, destinationDomainId, origin, destination, isPiMsg } =
-    message;
+  const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
 
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
@@ -102,15 +101,13 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
       <Card className="flex items-center justify-between rounded-full px-1">
         <h2 className="font-medium text-blue-500">{`${
           isIcaMsg ? 'ICA ' : ''
-        } Message ${trimToLength(msgId, 6)} to ${getChainDisplayName(
-          multiProvider,
-          destinationChainName,
-        )}`}</h2>
+        }Message to ${getChainDisplayName(multiProvider, destinationChainName)}`}</h2>
         <StatusHeader
           messageStatus={status}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
+          duration={duration}
         />
       </Card>
       <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
@@ -125,7 +122,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           domainId={destinationDomainId}
           status={status}
           transaction={destination}
-          duration={duration}
           debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={isPiMsg}
@@ -164,11 +160,13 @@ function StatusHeader({
   isMessageFound,
   isFetching,
   isError,
+  duration,
 }: {
   messageStatus: MessageStatus;
   isMessageFound: boolean;
   isFetching: boolean;
   isError: boolean;
+  duration?: string;
 }) {
   let text: string;
   if (isMessageFound) {
@@ -196,6 +194,7 @@ function StatusHeader({
   return (
     <div className="flex items-center">
       <h3 className="lg mr-3 font-medium text-blue-500">{text}</h3>
+      {duration && <span className="mr-3 text-sm text-gray-500">({duration})</span>}
       {icon}
     </div>
   );
