@@ -100,52 +100,54 @@ export function ContentDetailsCard({
   }, [getBlockExplorerLinks]);
 
   return (
-    <Card className="w-full space-y-4">
+    <Card className="w-full space-y-3">
       <div className="flex items-center justify-between">
-        <Image src={EnvelopeInfo} width={28} height={28} alt="" className="opacity-80" />
+        <Image src={EnvelopeInfo} width={24} height={24} alt="" />
         <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Message Details</h3>
+          <h3 className="mr-2 text-md font-medium text-primary-800">Message Details</h3>
           <Tooltip
             id="message-info"
             content="Immutable information about the message itself such as its contents."
           />
         </div>
       </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-4">
+      <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-2 sm:gap-x-6">
         <KeyValueRow
           label="Identifier:"
           labelWidth="w-20"
           display={msgId}
-          displayWidth="w-64 sm:w-72"
+          displayWidth="w-44 sm:w-48"
           showCopy={true}
           blurValue={blur}
-          copyButtonClasses={blockExplorerAddressUrls?.sender && 'sm:ml-6'}
+          truncateMiddle={true}
         />
         <KeyValueRow label="Nonce:" labelWidth="w-20" display={nonce.toString()} blurValue={blur} />
         <KeyValueRow
           label="Sender:"
           labelWidth="w-20"
           display={formattedSender}
-          displayWidth="w-64 sm:w-72"
+          displayWidth="w-44 sm:w-48"
           showCopy={true}
           blurValue={blur}
           link={blockExplorerAddressUrls?.sender}
+          truncateMiddle={true}
         />
         <KeyValueRow
           label="Recipient:"
           labelWidth="w-20"
           display={formattedRecipient}
-          displayWidth="w-64 sm:w-72"
+          displayWidth="w-44 sm:w-48"
           showCopy={true}
           blurValue={blur}
           link={blockExplorerAddressUrls?.recipient}
+          truncateMiddle={true}
         />
       </div>
       <div>
         <div className="flex items-center">
           <label className="text-sm text-gray-500">Body:</label>
           <SelectField
-            classes="w-16 h-7 py-0.5 ml-3 mb-0.5"
+            classes="w-14 h-6 py-0.5 ml-2 text-xs"
             options={decodeOptions}
             value={bodyDecodeType}
             onValueSelect={onChangeBodyDecode}

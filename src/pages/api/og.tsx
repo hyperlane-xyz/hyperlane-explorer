@@ -45,25 +45,29 @@ export const config = {
 
 // Global font cache to avoid reloading on every request
 // Edge runtime persists module-level state across requests within the same instance
-let fontCache: ArrayBuffer | null = null;
+let fontCache: { valve: ArrayBuffer; mono: ArrayBuffer } | null = null;
 
-// Load Space Grotesk font for OG images with caching
-async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
+async function loadFonts(baseUrl: string): Promise<{ valve: ArrayBuffer; mono: ArrayBuffer }> {
   if (fontCache) {
     return fontCache;
   }
   try {
-    const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
-    const response = await fetch(fontUrl);
-    if (!response.ok) {
-      logger.error(`Failed to fetch font: ${response.status} ${response.statusText}`);
-      return new ArrayBuffer(0);
+    const [valveRes, monoRes] = await Promise.all([
+      fetch(new URL('/fonts/PPValve-PlainMedium.ttf', baseUrl).toString()),
+      fetch(new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString()),
+    ]);
+    if (!valveRes.ok || !monoRes.ok) {
+      logger.error('Failed to fetch fonts');
+      return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
     }
-    fontCache = await response.arrayBuffer();
+    fontCache = {
+      valve: await valveRes.arrayBuffer(),
+      mono: await monoRes.arrayBuffer(),
+    };
     return fontCache;
   } catch (error) {
-    logger.error('Error loading font for OG image:', error);
-    return new ArrayBuffer(0);
+    logger.error('Error loading fonts for OG image:', error);
+    return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
   }
 }
 
@@ -168,6 +172,15 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
+// Parse delivery latency string to total seconds
+function parseLatencySeconds(latency: string): number {
+  const parts = latency.split(':');
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 // Format delivery latency string (e.g., "00:01:32" -> "1m 32s")
 function formatDeliveryLatency(latency: string): string {
   const parts = latency.split(':');
@@ -183,18 +196,23 @@ export default async function handler(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const messageId = searchParams.get('messageId');
 
-  // Load font from public folder
-  const fontData = await loadFont(origin);
+  const fonts = await loadFonts(origin);
 
   const imageOptions = {
     width: 1200,
     height: 630,
     fonts: [
       {
-        name: 'SpaceGrotesk',
-        data: fontData,
+        name: 'PPValve',
+        data: fonts.valve,
         style: 'normal' as const,
         weight: 500 as const,
+      },
+      {
+        name: 'PPFraktionMono',
+        data: fonts.mono,
+        style: 'normal' as const,
+        weight: 400 as const,
       },
     ],
   };
@@ -247,6 +265,11 @@ export default async function handler(req: NextRequest) {
   const formattedLatency = messageData.deliveryLatency
     ? formatDeliveryLatency(messageData.deliveryLatency)
     : null;
+  const latencyColor = messageData.deliveryLatency
+    ? parseLatencySeconds(messageData.deliveryLatency) < 300
+      ? '#10b981'
+      : '#94A3B8'
+    : '#94A3B8';
 
   const originChainLogo = getChainLogoUrl(originChainName);
   const destChainLogo = getChainLogoUrl(destChainName);
@@ -282,13 +305,14 @@ export default async function handler(req: NextRequest) {
     (
       <div
         style={{
-          background: '#0E1320',
+          background:
+            'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
           padding: '48px 64px',
-          fontFamily: 'SpaceGrotesk, sans-serif',
+          fontFamily: 'PPValve, sans-serif',
           position: 'relative',
         }}
       >
@@ -314,7 +338,7 @@ export default async function handler(req: NextRequest) {
             left: 0,
             right: 0,
             height: '4px',
-            background: 'linear-gradient(90deg, #2362C1 0%, #5F8AFA 50%, #2362C1 100%)',
+            background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
           }}
         />
 
@@ -336,7 +360,7 @@ export default async function handler(req: NextRequest) {
               style={{ marginRight: '16px' }}
             />
             <span
-              style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}
+              style={{ color: 'white', fontSize: '42px', fontWeight: 600, letterSpacing: '-0.5px' }}
             >
               {APP_NAME}
             </span>
@@ -404,6 +428,7 @@ export default async function handler(req: NextRequest) {
                   fontWeight: 500,
                   marginBottom: '12px',
                   letterSpacing: '1px',
+                  fontFamily: 'PPFraktionMono, monospace',
                 }}
               >
                 FROM
@@ -413,7 +438,7 @@ export default async function handler(req: NextRequest) {
                 <span
                   style={{
                     color: 'white',
-                    fontSize: '54px',
+                    fontSize: '46px',
                     fontWeight: 600,
                   }}
                 >
@@ -452,6 +477,7 @@ export default async function handler(req: NextRequest) {
                   fontWeight: 500,
                   marginBottom: '12px',
                   letterSpacing: '1px',
+                  fontFamily: 'PPFraktionMono, monospace',
                 }}
               >
                 TO
@@ -461,7 +487,7 @@ export default async function handler(req: NextRequest) {
                 <span
                   style={{
                     color: 'white',
-                    fontSize: '54px',
+                    fontSize: '46px',
                     fontWeight: 600,
                   }}
                 >
@@ -490,7 +516,13 @@ export default async function handler(req: NextRequest) {
                   style={{ height: '64px' }}
                 />
               )}
-              <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
+              <span
+                style={{
+                  color: '#94A3B8',
+                  fontSize: '50px',
+                  fontWeight: 500,
+                }}
+              >
                 {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
               </span>
             </div>
@@ -502,17 +534,19 @@ export default async function handler(req: NextRequest) {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
+            alignItems: 'center',
             marginTop: '24px',
             paddingTop: '20px',
-            borderTop: '1px solid rgba(95, 138, 250, 0.2)',
+            borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}
+          >
             <span
               style={{
                 color: '#6B7280',
-                fontSize: '24px',
+                fontSize: '18px',
                 marginBottom: '8px',
                 letterSpacing: '0.5px',
               }}
@@ -522,9 +556,9 @@ export default async function handler(req: NextRequest) {
             <span
               style={{
                 color: '#94A3B8',
-                fontSize: '32px',
-                fontFamily: 'monospace',
-                background: 'rgba(35, 98, 193, 0.15)',
+                fontSize: '26px',
+                fontFamily: 'PPFraktionMono, monospace',
+                background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
                 borderRadius: '10px',
               }}
@@ -533,36 +567,59 @@ export default async function handler(req: NextRequest) {
             </span>
           </div>
 
-          {formattedLatency && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: '24px',
-                  marginBottom: '8px',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                DELIVERY TIME
-              </span>
-              <span style={{ color: '#10b981', fontSize: '32px', fontWeight: 500 }}>
-                {formattedLatency}
-              </span>
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+            {formattedLatency ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span
+                  style={{
+                    color: '#6B7280',
+                    fontSize: '18px',
+                    marginBottom: '8px',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  DELIVERY TIME
+                </span>
+                <span
+                  style={{
+                    color: latencyColor,
+                    fontSize: '26px',
+                    fontWeight: 500,
+                    fontFamily: 'PPFraktionMono, monospace',
+                    padding: '8px 16px',
+                  }}
+                >
+                  {formattedLatency}
+                </span>
+              </div>
+            ) : null}
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}
+          >
             <span
               style={{
                 color: '#6B7280',
-                fontSize: '24px',
+                fontSize: '18px',
                 marginBottom: '8px',
                 letterSpacing: '0.5px',
               }}
             >
               SENT
             </span>
-            <span style={{ color: '#94A3B8', fontSize: '32px' }}>{formattedDate}</span>
+            <span
+              style={{
+                color: '#94A3B8',
+                fontSize: '26px',
+                fontFamily: 'PPFraktionMono, monospace',
+                background: 'rgba(154, 13, 255, 0.11)',
+                padding: '8px 16px',
+                borderRadius: '10px',
+              }}
+            >
+              {formattedDate}
+            </span>
           </div>
         </div>
       </div>
@@ -575,14 +632,15 @@ function DefaultOGImage({ origin }: { origin: string }) {
   return (
     <div
       style={{
-        background: '#0E1320',
+        background:
+          'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
         width: '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'SpaceGrotesk, sans-serif',
+        fontFamily: 'PPValve, sans-serif',
       }}
     >
       {/* Top decorative line */}
@@ -593,7 +651,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
           left: 0,
           right: 0,
           height: '4px',
-          background: 'linear-gradient(90deg, #2362C1 0%, #5F8AFA 50%, #2362C1 100%)',
+          background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
         }}
       />
 
@@ -602,7 +660,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
         <span
           style={{
             color: 'white',
-            fontSize: '72px',
+            fontSize: '64px',
             fontWeight: 600,
             letterSpacing: '-1px',
           }}

@@ -42,7 +42,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${
+            className={`relative cursor-pointer border-b border-primary-50 last:border-0 hover:bg-accent-50 active:bg-accent-100 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
@@ -175,7 +175,7 @@ function LinkCell({
 }
 
 const styles = {
-  header: 'text-sm text-blue-500 font-medium pt-2 pb-3 text-center',
+  header: 'text-sm text-primary-800 font-medium pt-2 pb-3 text-center',
   value: 'py-3.5 flex items-center justify-center text-sm text-center font-light px-1',
   valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center font-light truncate',
   iconText: 'text-sm font-light ml-2',
