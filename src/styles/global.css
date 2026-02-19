@@ -363,3 +363,16 @@ svg path[fill='white'] {
 .hover\:htw-bg-gray-200:hover {
   background-color: #fabaf8 !important; /* accent-100 */
 }
+
+/* Tooltip trigger icons - darker for better contrast against headers */
+a[data-tooltip-id] .htw-bg-gray-200 {
+  background-color: #d1d5db !important;
+}
+
+a[data-tooltip-id] .htw-border-gray-300 {
+  border-color: #9ca3af !important;
+}
+
+a[data-tooltip-id] .htw-opacity-60 {
+  opacity: 0.9 !important;
+}
