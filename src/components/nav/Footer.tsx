@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { DiscordIcon, GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
+import { GithubIcon, QuestionMarkIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
 import Logo from '../../images/logos/hyperlane-logo.svg';
@@ -23,10 +23,10 @@ const footerLinks2 = [
 const footerLinks3 = [
   { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color={Color.white} /> },
   {
-    title: 'Discord',
-    url: links.discord,
+    title: 'Support',
+    url: links.help,
     external: true,
-    icon: <DiscordIcon color={Color.white} />,
+    icon: <QuestionMarkIcon color={Color.white} />,
   },
   { title: 'Github', url: links.github, external: true, icon: <GithubIcon color={Color.white} /> },
 ];
