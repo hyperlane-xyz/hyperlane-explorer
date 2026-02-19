@@ -264,15 +264,16 @@ function TransactionDetails({
       };
     }
 
-    void (async () => {
-      const link = await getFromExplorerLink(from).catch(() => null);
-      if (!cancelled) setFromExplorerLink(link);
-    })();
+    getFromExplorerLink(from)
+      .then((link) => {
+        if (!cancelled) setFromExplorerLink(link);
+      })
+      .catch(() => null);
 
     return () => {
       cancelled = true;
     };
-  }, [multiProvider, chainName, from, getFromExplorerLink]);
+  }, [chainName, from, getFromExplorerLink]);
 
   return (
     <>

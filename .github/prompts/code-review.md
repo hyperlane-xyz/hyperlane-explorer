@@ -8,6 +8,7 @@ Review this pull request. Focus on:
 - Adherence to existing patterns in the codebase
 - **Use existing utilities** - Search codebase before adding new helpers
 - **Prefer `??` over `||`** - Preserves zero/empty string as valid values
+- **No async IIFEs** - Use `.then().catch()` instead of `void (async () => { ... })()`
 
 ## Architecture
 
