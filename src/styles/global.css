@@ -326,3 +326,53 @@ svg path[fill='white'] {
 [class*='htw-'] a[href^='https'] {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
+
+/* Modal and panel backgrounds - cream instead of pure white */
+.htw-bg-white {
+  background-color: #f8f8ff !important;
+}
+
+/* Input backgrounds in widgets */
+[class*='htw-'] input {
+  background-color: #f8f8ff !important;
+}
+
+/* Modal backdrop - darker fade and proper z-index */
+.htw-bg-black\/25 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  z-index: 30 !important;
+}
+
+/* Modal panel container - above backdrop */
+.htw-z-20 {
+  z-index: 40 !important;
+}
+
+/* Widget gray backgrounds - match cream white */
+.htw-bg-gray-100 {
+  background-color: #f8f8ff !important; /* same as our white */
+}
+
+/* Widget hover states - match message table accent colors */
+[class*='htw-']:hover.hover\:htw-bg-gray-100,
+.hover\:htw-bg-gray-100:hover {
+  background-color: #f9d5fb !important; /* accent-50 */
+}
+
+[class*='htw-']:hover.hover\:htw-bg-gray-200,
+.hover\:htw-bg-gray-200:hover {
+  background-color: #fabaf8 !important; /* accent-100 */
+}
+
+/* Tooltip trigger icons - darker for better contrast against headers */
+a[data-tooltip-id] .htw-bg-gray-200 {
+  background-color: #d1d5db !important;
+}
+
+a[data-tooltip-id] .htw-border-gray-300 {
+  border-color: #9ca3af !important;
+}
+
+a[data-tooltip-id] .htw-opacity-60 {
+  opacity: 0.9 !important;
+}

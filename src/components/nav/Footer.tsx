@@ -2,10 +2,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { DiscordIcon, GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
+import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
+import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
 import Logo from '../../images/logos/hyperlane-logo.svg';
+import { Color } from '../../styles/Color';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },
@@ -14,15 +16,20 @@ const footerLinks1 = [
 ];
 
 const footerLinks2 = [
-  { title: 'Support', url: links.help, external: true },
+  { title: 'Stake', url: links.stake, external: true },
   { title: 'Careers', url: links.jobs, external: true },
   { title: 'Brand', url: links.brand, external: true },
 ];
 
 const footerLinks3 = [
-  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color="#fff" /> },
-  { title: 'Discord', url: links.discord, external: true, icon: <DiscordIcon color="#fff" /> },
-  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color="#fff" /> },
+  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color={Color.white} /> },
+  {
+    title: 'Support',
+    url: links.help,
+    external: true,
+    icon: <QuestionMarkIcon color={Color.white} />,
+  },
+  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color={Color.white} /> },
 ];
 
 export function Footer() {
