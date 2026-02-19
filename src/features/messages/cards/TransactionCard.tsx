@@ -1,7 +1,7 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useCallback, useEffect, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { Card } from '../../../components/layout/Card';
 import { links } from '../../../consts/links';
@@ -247,13 +247,6 @@ function TransactionDetails({
 
   const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
 
-  const getFromExplorerLink = useCallback(
-    async (address: string) => {
-      return tryGetBlockExplorerAddressUrl(multiProvider, chainName, address);
-    },
-    [multiProvider, chainName],
-  );
-
   useEffect(() => {
     let cancelled = false;
 
@@ -264,16 +257,18 @@ function TransactionDetails({
       };
     }
 
-    getFromExplorerLink(from)
+    tryGetBlockExplorerAddressUrl(multiProvider, chainName, from)
       .then((link) => {
         if (!cancelled) setFromExplorerLink(link);
       })
-      .catch(() => null);
+      .catch(() => {
+        if (!cancelled) setFromExplorerLink(null);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [chainName, from, getFromExplorerLink]);
+  }, [chainName, from, multiProvider]);
 
   return (
     <>
