@@ -2,8 +2,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { GithubIcon, QuestionMarkIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
+import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
+import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
 import Logo from '../../images/logos/hyperlane-logo.svg';
 import { Color } from '../../styles/Color';
@@ -15,7 +16,6 @@ const footerLinks1 = [
 ];
 
 const footerLinks2 = [
-  { title: 'Support', url: links.help, external: true },
   { title: 'Careers', url: links.jobs, external: true },
   { title: 'Brand', url: links.brand, external: true },
 ];
