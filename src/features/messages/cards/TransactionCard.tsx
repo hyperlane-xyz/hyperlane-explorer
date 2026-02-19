@@ -247,11 +247,13 @@ function TransactionDetails({
 
   const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
 
+  // Address explorer URL lookup is async in SDK; tx URL lookup above is sync.
   useEffect(() => {
     let cancelled = false;
 
+    setFromExplorerLink(null);
+
     if (!from) {
-      setFromExplorerLink(null);
       return () => {
         cancelled = true;
       };
