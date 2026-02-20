@@ -37,16 +37,17 @@ export function ContentDetailsCard({
 }: Props) {
   const multiProvider = useMultiProvider();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
+  const [prevDecodedBody, setPrevDecodedBody] = useState(decodedBody);
+  if (decodedBody !== prevDecodedBody) {
+    setPrevDecodedBody(decodedBody);
+    if (decodedBody) setBodyDecodeType('utf8');
+  }
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
     BlockExplorerAddressUrls | undefined
   >(undefined);
 
   const formattedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
   const formattedSender = formatAddress(sender, originDomainId, multiProvider);
-
-  useEffect(() => {
-    if (decodedBody) setBodyDecodeType('utf8');
-  }, [decodedBody]);
   const onChangeBodyDecode = (value: string) => {
     setBodyDecodeType(value);
   };
@@ -143,7 +144,7 @@ export function ContentDetailsCard({
       </div>
       <div>
         <div className="flex items-center">
-          <label className="text-sm text-gray-500">Message Content:</label>
+          <span className="text-sm text-gray-500">Message Content:</span>
           <SelectField
             classes="w-16 h-7 py-0.5 ml-3 mb-0.5"
             options={decodeOptions}

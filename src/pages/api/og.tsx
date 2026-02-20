@@ -295,6 +295,7 @@ export default async function handler(req: NextRequest) {
         {/* Sparkle background */}
         <img
           src={backgroundUrl}
+          alt=""
           style={{
             position: 'absolute',
             top: '-75%',
