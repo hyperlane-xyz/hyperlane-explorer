@@ -15,13 +15,15 @@ import { GasPayment } from '../../debugger/types';
 
 import { KeyValueRow } from './KeyValueRow';
 
+const EMPTY_IGP_PAYMENTS: AddressTo<GasPayment[]> = {};
+
 interface Props {
   message: Message;
   igpPayments?: AddressTo<GasPayment[]>;
   blur: boolean;
 }
 
-export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
+export function GasDetailsCard({ message, blur, igpPayments = EMPTY_IGP_PAYMENTS }: Props) {
   const multiProvider = useMultiProvider();
   const unitOptions = useMemo(() => {
     const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
@@ -157,7 +159,7 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
       </thead>
       <tbody>
         {payments.map((p, i) => (
-          <tr key={`igp-payment-${i}`}>
+          <tr key={`${p.contract}-${p.gasAmount}-${i}`}>
             <td className={style.td}>{p.contract}</td>
             <td className={style.td}>{p.gasAmount}</td>
             <td className={style.td}>{p.paymentAmount}</td>

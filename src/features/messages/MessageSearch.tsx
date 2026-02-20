@@ -101,13 +101,13 @@ export function MessageSearch() {
   const [destinationChainFilter, setDestinationChainFilter] = useState<string | null>(
     defaultDestinationQuery || null,
   );
-  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(
+  const [startTimeFilter, setStartTimeFilter] = useState<number | null>(() =>
     tryToDecimalNumber(defaultStartTime),
   );
-  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(
+  const [endTimeFilter, setEndTimeFilter] = useState<number | null>(() =>
     tryToDecimalNumber(defaultEndTime),
   );
-  const [statusFilter, setStatusFilter] = useState<MessageStatusFilter>(
+  const [statusFilter, setStatusFilter] = useState<MessageStatusFilter>(() =>
     parseStatusFilter(defaultStatus),
   );
 

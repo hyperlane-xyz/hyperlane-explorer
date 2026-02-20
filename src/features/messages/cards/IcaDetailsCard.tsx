@@ -64,10 +64,10 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
           />
           {decodeResult.calls.length ? (
             decodeResult.calls.map((c, i) => (
-              <div key={`ica-call-${i}`}>
-                <label className="text-sm text-gray-500">{`Function call ${i + 1} of ${
+              <div key={`${c.destinationAddress}-${i}`}>
+                <span className="text-sm text-gray-500">{`Function call ${i + 1} of ${
                   decodeResult.calls.length
-                }:`}</label>
+                }:`}</span>
                 <div className="mt-2 space-y-2.5 border-l-2 border-gray-400 pl-4">
                   <KeyValueRow
                     label="Destination address:"
@@ -90,7 +90,7 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
             ))
           ) : (
             <div>
-              <label className="text-sm text-gray-500">Call List:</label>
+              <span className="text-sm text-gray-500">Call List:</span>
               <div className="mt-1 text-sm italic">No calls found for this message.</div>
             </div>
           )}

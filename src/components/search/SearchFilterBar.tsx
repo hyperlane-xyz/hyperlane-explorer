@@ -131,6 +131,16 @@ function DatetimeSelector({
   // Need local state as buffer before user hits apply
   const [startTime, setStartTime] = useState<number | null>(startValue);
   const [endTime, setEndTime] = useState<number | null>(endValue);
+  const [prevStartValue, setPrevStartValue] = useState(startValue);
+  const [prevEndValue, setPrevEndValue] = useState(endValue);
+  if (startValue !== prevStartValue) {
+    setPrevStartValue(startValue);
+    setStartTime(startValue);
+  }
+  if (endValue !== prevEndValue) {
+    setPrevEndValue(endValue);
+    setEndTime(endValue);
+  }
 
   const onClickClear = () => {
     setStartTime(null);

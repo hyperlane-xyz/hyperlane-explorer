@@ -28,21 +28,23 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
   > => {
     if (!warpRouteDetails) return undefined;
 
-    const originToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.originChainId,
-      warpRouteDetails.originToken.addressOrDenom,
-    );
-    const destinationToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.destinationToken.addressOrDenom,
-    );
-    const transferRecipient = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.transferRecipient,
-    );
+    const [originToken, destinationToken, transferRecipient] = await Promise.all([
+      tryGetBlockExplorerAddressUrl(
+        multiProvider,
+        message.originChainId,
+        warpRouteDetails.originToken.addressOrDenom,
+      ),
+      tryGetBlockExplorerAddressUrl(
+        multiProvider,
+        message.destinationChainId,
+        warpRouteDetails.destinationToken.addressOrDenom,
+      ),
+      tryGetBlockExplorerAddressUrl(
+        multiProvider,
+        message.destinationChainId,
+        warpRouteDetails.transferRecipient,
+      ),
+    ]);
     return { originToken, destinationToken, transferRecipient };
   }, [message, multiProvider, warpRouteDetails]);
 
