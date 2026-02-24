@@ -130,8 +130,8 @@ export function useMessageSearchQuery(
     [multiProvider, scrapedChains, data],
   );
   const rawMessageList = useMemo(
-    () => parseRawMessageStubResult(multiProvider, scrapedChains, rawData),
-    [multiProvider, scrapedChains, rawData],
+    () => (shouldQueryRaw ? parseRawMessageStubResult(multiProvider, scrapedChains, rawData) : []),
+    [multiProvider, scrapedChains, rawData, shouldQueryRaw],
   );
   const unfilteredMessageList = useMemo(
     () => mergeMessageStubs([...rawMessageList, ...finalizedMessageList]),
