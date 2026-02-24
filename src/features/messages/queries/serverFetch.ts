@@ -5,9 +5,9 @@ import { postgresByteaToString, stringToPostgresBytea } from './encoding';
 import {
   MessagesStubQueryResult,
   MessageStubEntry,
+  messageStubFragment,
   RawMessageDispatchEntry,
   rawMessageDispatchFragment,
-  messageStubFragment,
 } from './fragments';
 
 /**

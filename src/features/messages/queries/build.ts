@@ -259,7 +259,7 @@ export function buildRawMessageSearchQuery(
     'destination',
     mainnetDomainIds,
   );
-  const warpRouteWhereClause = buildRawWarpRouteWhereClause(warpAddressesBytea);
+  const warpRouteWhereClause = buildWarpRouteWhereClause(warpAddressesBytea);
 
   const queries = whereClauses.map(
     (whereClause, i) =>
@@ -310,11 +310,6 @@ function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
 function buildWarpRouteWhereClause(warpAddressesBytea: string[]): string {
   if (warpAddressesBytea.length === 0) return '';
   // Filter messages where sender OR recipient is in the warp route addresses
-  return '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},';
-}
-
-function buildRawWarpRouteWhereClause(warpAddressesBytea: string[]): string {
-  if (warpAddressesBytea.length === 0) return '';
   return '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},';
 }
 

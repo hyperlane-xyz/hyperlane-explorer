@@ -14,9 +14,10 @@ import {
   buildRawMessageQuery,
   buildRawMessageSearchQuery,
 } from './build';
-import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
+import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult, RawMessagesQueryResult } from './fragments';
 import {
+  mergeMessageStubs,
   parseMessageQueryResult,
   parseMessageStubResult,
   parseRawMessageQueryResult,
@@ -95,7 +96,9 @@ export function useMessageSearchQuery(
   );
 
   const shouldQueryRaw =
-    dbStatusFilter !== 'delivered' && hasInput && isPotentiallyTransactionHash(sanitizedInput);
+    dbStatusFilter !== 'delivered' &&
+    hasInput &&
+    isPotentiallyMessageOrTransactionHash(sanitizedInput);
   const rawQueryConfig = buildRawMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,
@@ -130,14 +133,10 @@ export function useMessageSearchQuery(
     () => parseRawMessageStubResult(multiProvider, scrapedChains, rawData),
     [multiProvider, scrapedChains, rawData],
   );
-  const unfilteredMessageList = useMemo(() => {
-    if (!rawMessageList.length) return finalizedMessageList;
-    const map = new Map(rawMessageList.map((m) => [m.msgId, m]));
-    for (const msg of finalizedMessageList) {
-      map.set(msg.msgId, msg);
-    }
-    return Array.from(map.values()).sort((a, b) => b.origin.timestamp - a.origin.timestamp);
-  }, [finalizedMessageList, rawMessageList]);
+  const unfilteredMessageList = useMemo(
+    () => mergeMessageStubs([...rawMessageList, ...finalizedMessageList]),
+    [finalizedMessageList, rawMessageList],
+  );
 
   // Apply client-side pending filter if needed
   const messageList = useMemo(() => {
@@ -180,22 +179,18 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   const rawQueryConfig = buildRawMessageQuery(MessageIdentifierType.Id, messageId, 1);
 
   // Execute query
-  const [
-    { data, fetching: isFinalizedFetching, error: finalizedError },
-    reexecuteQuery,
-  ] = useQuery<MessagesQueryResult>({
-    query,
-    variables,
-    pause,
-  });
-  const [
-    { data: rawData, fetching: isRawFetching, error: rawError },
-    reexecuteRawQuery,
-  ] = useQuery<RawMessagesQueryResult>({
-    query: rawQueryConfig?.query || '',
-    variables: rawQueryConfig?.variables || {},
-    pause: pause || !rawQueryConfig,
-  });
+  const [{ data, fetching: isFinalizedFetching, error: finalizedError }, reexecuteQuery] =
+    useQuery<MessagesQueryResult>({
+      query,
+      variables,
+      pause,
+    });
+  const [{ data: rawData, fetching: isRawFetching, error: rawError }, reexecuteRawQuery] =
+    useQuery<RawMessagesQueryResult>({
+      query: rawQueryConfig?.query || '',
+      variables: rawQueryConfig?.variables || {},
+      pause: pause || !rawQueryConfig,
+    });
 
   // Parse results
   const multiProvider = useMultiProvider();
@@ -217,8 +212,10 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   const reExecutor = useCallback(() => {
     if (pause || isDelivered || !isWindowVisible()) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-    reexecuteRawQuery({ requestPolicy: 'network-only' });
-  }, [pause, isDelivered, reexecuteQuery, reexecuteRawQuery]);
+    if (rawQueryConfig) {
+      reexecuteRawQuery({ requestPolicy: 'network-only' });
+    }
+  }, [pause, isDelivered, rawQueryConfig, reexecuteQuery, reexecuteRawQuery]);
   useInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
 
   return {
@@ -232,4 +229,8 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
 
 function isWindowVisible() {
   return document.visibilityState === 'visible';
+}
+
+function isPotentiallyMessageOrTransactionHash(input: string) {
+  return /^0x[a-fA-F0-9]{64}$/.test(input);
 }

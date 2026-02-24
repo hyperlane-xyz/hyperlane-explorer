@@ -8,10 +8,10 @@ import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } 
 import {
   MessageEntry,
   MessagesQueryResult,
-  RawMessagesQueryResult,
-  RawMessageDispatchEntry,
   MessagesStubQueryResult,
   MessageStubEntry,
+  RawMessageDispatchEntry,
+  RawMessagesQueryResult,
 } from './fragments';
 
 /**
@@ -53,6 +53,10 @@ export function parseRawMessageQueryResult(
   return queryResult(multiProvider, scrapedChains, data, parseRawMessage);
 }
 
+export function mergeMessageStubs(messages: Array<MessageStub>): Array<MessageStub> {
+  return deduplicateMessageList(messages).sort((a, b) => b.origin.timestamp - a.origin.timestamp);
+}
+
 function queryResult<D, M extends MessageStub>(
   multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
@@ -64,12 +68,11 @@ function queryResult<D, M extends MessageStub>(
   ) => M | null,
 ) {
   if (!data || !Object.keys(data).length) return [];
-  return deduplicateMessageList(
+  return mergeMessageStubs(
     Object.values(data)
       .flat()
       .map((d) => parseFn(multiProvider, scrapedChains, d))
-      .filter((m): m is M => !!m)
-      .sort((a, b) => b.origin.timestamp - a.origin.timestamp),
+      .filter((m): m is M => !!m),
   );
 }
 
@@ -211,7 +214,7 @@ function parseRawMessageStub(
       destinationDomainId,
       body: '',
       origin: {
-        timestamp: parseTimestampString(m.time_updated || m.time_created),
+        timestamp: parseTimestampString(m.time_updated ?? m.time_created),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: sender,
         to: originMailbox,
@@ -303,7 +306,7 @@ function scoreMessage(m: MessageStub): number {
   if (!m.isProvisional) score += 100;
   if (m.status === MessageStatus.Delivered) score += 50;
   if (m.destination) score += 25;
-  if (m.body && m.body !== '0x') score += 5;
+  if (m.body.length > 0 && m.body !== '0x') score += 5;
   return score;
 }
 
