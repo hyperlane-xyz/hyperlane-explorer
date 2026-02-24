@@ -53,7 +53,7 @@ export function parseRawMessageQueryResult(
   return queryResult(multiProvider, scrapedChains, data, parseRawMessage);
 }
 
-export function mergeMessageStubs(messages: Array<MessageStub>): Array<MessageStub> {
+export function mergeMessageStubs<M extends MessageStub>(messages: Array<M>): Array<M> {
   return deduplicateMessageList(messages).sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
@@ -268,9 +268,11 @@ function parseRawMessage(
   }
 }
 
-function parseTimestampString(t: string) {
-  const asUtc = t.at(-1) === 'Z' ? t : t + 'Z';
-  return new Date(asUtc).getTime();
+function parseTimestampString(t: string | null | undefined) {
+  if (!t) return 0;
+  const asUtc = t.at(-1) === 'Z' ? t : `${t}Z`;
+  const millis = new Date(asUtc).getTime();
+  return Number.isFinite(millis) ? millis : 0;
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
@@ -298,7 +300,11 @@ function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Arra
 }
 
 function shouldReplaceWithCandidate(current: MessageStub, candidate: MessageStub): boolean {
-  return scoreMessage(candidate) > scoreMessage(current);
+  const currentScore = scoreMessage(current);
+  const candidateScore = scoreMessage(candidate);
+  if (candidateScore !== currentScore) return candidateScore > currentScore;
+  // If scores tie, keep the freshest row (helps when raw rows tie on score).
+  return candidate.origin.timestamp > current.origin.timestamp;
 }
 
 function scoreMessage(m: MessageStub): number {

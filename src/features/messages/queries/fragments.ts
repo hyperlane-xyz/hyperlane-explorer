@@ -149,8 +149,8 @@ export interface RawMessageDispatchEntry {
   origin_block_hash: string; // binary e.g. \\x123
   origin_block_height: number;
   origin_mailbox: string; // binary e.g. \\x123
-  time_created: string; // e.g. "2022-08-28T17:30:15"
-  time_updated: string; // e.g. "2022-08-28T17:30:15"
+  time_created: string | null; // e.g. "2022-08-28T17:30:15"
+  time_updated: string | null; // e.g. "2022-08-28T17:30:15"
 }
 
 export type MessagesStubQueryResult = Record<string, MessageStubEntry[]>;

@@ -101,20 +101,25 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
 }
 
 function parseRawMessageForOG(message: RawMessageDispatchEntry): MessageOGData {
-  const rawTimestamp = message.time_updated || message.time_created;
-  const timestampWithZone = rawTimestamp.at(-1) === 'Z' ? rawTimestamp : `${rawTimestamp}Z`;
   return {
     msgId: postgresByteaToString(message.msg_id),
     status: 'Pending',
     originDomainId: message.origin_domain,
     destinationDomainId: message.destination_domain,
     originTxHash: postgresByteaToString(message.origin_tx_hash),
-    timestamp: new Date(timestampWithZone).getTime(),
+    timestamp: parseTimestampMillis(message.time_updated ?? message.time_created),
     sender: postgresByteaToString(message.sender),
     recipient: postgresByteaToString(message.recipient),
     body: null,
     deliveryLatency: null,
   };
+}
+
+function parseTimestampMillis(timestamp: string | null | undefined): number {
+  if (!timestamp) return 0;
+  const timestampWithZone = timestamp.at(-1) === 'Z' ? timestamp : `${timestamp}Z`;
+  const millis = new Date(timestampWithZone).getTime();
+  return Number.isFinite(millis) ? millis : 0;
 }
 
 /**
