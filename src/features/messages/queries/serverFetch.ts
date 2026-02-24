@@ -9,6 +9,7 @@ import {
   RawMessageDispatchEntry,
   rawMessageDispatchFragment,
 } from './fragments';
+import { parseTimestampMillis } from './timestamp';
 
 /**
  * Server-side utility to fetch message data from GraphQL for OG meta tags
@@ -113,13 +114,6 @@ function parseRawMessageForOG(message: RawMessageDispatchEntry): MessageOGData {
     body: null,
     deliveryLatency: null,
   };
-}
-
-function parseTimestampMillis(timestamp: string | null | undefined): number {
-  if (!timestamp) return 0;
-  const timestampWithZone = timestamp.at(-1) === 'Z' ? timestamp : `${timestamp}Z`;
-  const millis = new Date(timestampWithZone).getTime();
-  return Number.isFinite(millis) ? millis : 0;
 }
 
 /**

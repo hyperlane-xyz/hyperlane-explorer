@@ -13,6 +13,7 @@ import {
   RawMessageDispatchEntry,
   RawMessagesQueryResult,
 } from './fragments';
+import { parseTimestampMillis } from './timestamp';
 
 /**
  * ========================
@@ -103,14 +104,14 @@ function parseMessageStub(
       destinationDomainId: m.destination_domain_id,
       body,
       origin: {
-        timestamp: parseTimestampString(m.send_occurred_at),
+        timestamp: parseTimestampMillis(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
         to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
       },
       destination: m.is_delivered
         ? {
-            timestamp: parseTimestampString(m.delivery_occurred_at!),
+            timestamp: parseTimestampMillis(m.delivery_occurred_at!),
             hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
             from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
             to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
@@ -214,7 +215,7 @@ function parseRawMessageStub(
       destinationDomainId,
       body: '',
       origin: {
-        timestamp: parseTimestampString(m.time_updated ?? m.time_created),
+        timestamp: parseTimestampMillis(m.time_updated ?? m.time_created),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: sender,
         to: originMailbox,
@@ -266,13 +267,6 @@ function parseRawMessage(
     logger.error('Error parsing raw message', error);
     return null;
   }
-}
-
-function parseTimestampString(t: string | null | undefined) {
-  if (!t) return 0;
-  const asUtc = t.at(-1) === 'Z' ? t : `${t}Z`;
-  const millis = new Date(asUtc).getTime();
-  return Number.isFinite(millis) ? millis : 0;
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
