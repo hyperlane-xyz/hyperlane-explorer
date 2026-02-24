@@ -8,6 +8,8 @@ import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } 
 import {
   MessageEntry,
   MessagesQueryResult,
+  RawMessagesQueryResult,
+  RawMessageDispatchEntry,
   MessagesStubQueryResult,
   MessageStubEntry,
 } from './fragments';
@@ -33,6 +35,22 @@ export function parseMessageQueryResult(
   data: MessagesQueryResult | undefined,
 ): Message[] {
   return queryResult(multiProvider, scrapedChains, data, parseMessage);
+}
+
+export function parseRawMessageStubResult(
+  multiProvider: MultiProtocolProvider,
+  scrapedChains: DomainsEntry[],
+  data: RawMessagesQueryResult | undefined,
+): MessageStub[] {
+  return queryResult(multiProvider, scrapedChains, data, parseRawMessageStub);
+}
+
+export function parseRawMessageQueryResult(
+  multiProvider: MultiProtocolProvider,
+  scrapedChains: DomainsEntry[],
+  data: RawMessagesQueryResult | undefined,
+): Message[] {
+  return queryResult(multiProvider, scrapedChains, data, parseRawMessage);
 }
 
 function queryResult<D, M extends MessageStub>(
@@ -96,6 +114,7 @@ function parseMessageStub(
           }
         : undefined,
       isPiMsg,
+      isProvisional: false,
     };
   } catch (error) {
     logger.error('Error parsing message stub', error);
@@ -160,6 +179,92 @@ function parseMessage(
   }
 }
 
+function parseRawMessageStub(
+  multiProvider: MultiProtocolProvider,
+  scrapedChains: DomainsEntry[],
+  m: RawMessageDispatchEntry,
+): MessageStub | null {
+  try {
+    const originDomainId = m.origin_domain;
+    const destinationDomainId = m.destination_domain;
+
+    const originMetadata = multiProvider.tryGetChainMetadata(originDomainId);
+    const destinationMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
+
+    const isPiMsg =
+      isPiChain(multiProvider, scrapedChains, originDomainId) ||
+      isPiChain(multiProvider, scrapedChains, destinationDomainId);
+
+    const sender = postgresByteaToAddress(m.sender, originMetadata);
+    const originMailbox = postgresByteaToAddress(m.origin_mailbox, originMetadata);
+
+    return {
+      status: MessageStatus.Pending,
+      id: `raw-${m.id}`,
+      msgId: postgresByteaToString(m.msg_id),
+      nonce: m.nonce,
+      sender,
+      recipient: postgresByteaToAddress(m.recipient, destinationMetadata),
+      originChainId: chainIdForDomain(multiProvider, originDomainId),
+      originDomainId,
+      destinationChainId: chainIdForDomain(multiProvider, destinationDomainId),
+      destinationDomainId,
+      body: '',
+      origin: {
+        timestamp: parseTimestampString(m.time_updated || m.time_created),
+        hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
+        from: sender,
+        to: originMailbox,
+      },
+      destination: undefined,
+      isPiMsg,
+      isProvisional: true,
+    };
+  } catch (error) {
+    logger.error('Error parsing raw message stub', error);
+    return null;
+  }
+}
+
+function parseRawMessage(
+  multiProvider: MultiProtocolProvider,
+  scrapedChains: DomainsEntry[],
+  m: RawMessageDispatchEntry,
+): Message | null {
+  try {
+    const stub = parseRawMessageStub(multiProvider, scrapedChains, m);
+    if (!stub) throw new Error('Raw message stub required');
+
+    const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain);
+
+    return {
+      ...stub,
+      decodedBody: undefined,
+      origin: {
+        ...stub.origin,
+        blockHash: postgresByteaToString(m.origin_block_hash),
+        blockNumber: m.origin_block_height,
+        mailbox: postgresByteaToAddress(m.origin_mailbox, originMetadata),
+        nonce: 0,
+        gasLimit: 0,
+        gasPrice: 0,
+        effectiveGasPrice: 0,
+        gasUsed: 0,
+        cumulativeGasUsed: 0,
+        maxFeePerGas: 0,
+        maxPriorityPerGas: 0,
+      },
+      destination: undefined,
+      totalGasAmount: undefined,
+      totalPayment: undefined,
+      numPayments: undefined,
+    };
+  } catch (error) {
+    logger.error('Error parsing raw message', error);
+    return null;
+  }
+}
+
 function parseTimestampString(t: string) {
   const asUtc = t.at(-1) === 'Z' ? t : t + 'Z';
   return new Date(asUtc).getTime();
@@ -175,9 +280,33 @@ function getMessageStatus(m: MessageEntry | MessageStubEntry) {
 }
 
 function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
-  const map = new Map();
+  const map = new Map<string, M>();
   for (const item of messages) {
-    map.set(item.id, item);
+    const existing = map.get(item.msgId);
+    if (!existing) {
+      map.set(item.msgId, item);
+      continue;
+    }
+    if (shouldReplaceWithCandidate(existing, item)) {
+      map.set(item.msgId, item);
+    }
   }
   return Array.from(map.values());
+}
+
+function shouldReplaceWithCandidate(current: MessageStub, candidate: MessageStub): boolean {
+  return scoreMessage(candidate) > scoreMessage(current);
+}
+
+function scoreMessage(m: MessageStub): number {
+  let score = 0;
+  if (!m.isProvisional) score += 100;
+  if (m.status === MessageStatus.Delivered) score += 50;
+  if (m.destination) score += 25;
+  if (m.body && m.body !== '0x') score += 5;
+  return score;
+}
+
+function chainIdForDomain(multiProvider: MultiProtocolProvider, domainId: number) {
+  return multiProvider.tryGetChainMetadata(domainId)?.chainId || domainId;
 }

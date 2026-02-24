@@ -68,6 +68,19 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
+    // Tip/raw rows may lack full finalized fields (e.g. message body), so avoid
+    // deep debug that can generate false negatives.
+    if (message.isProvisional) {
+      const result: MessageDeliveryPendingResult = {
+        status: MessageStatus.Pending,
+        debugResult: {
+          status: MessageDebugStatus.NoErrorsFound,
+          description: 'Provisional tip-stage message; debug deferred until finalized.',
+        },
+      };
+      return result;
+    }
+
     const debugResult = await debugMessage(multiProvider, registry, overrideChainMetadata, message);
     const messageStatus =
       debugResult.status === MessageDebugStatus.NoErrorsFound
