@@ -176,7 +176,11 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
 
   // Assemble GraphQL Query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
-  const rawQueryConfig = buildRawMessageQuery(MessageIdentifierType.Id, messageId, 1);
+  const rawQueryConfig = useMemo(
+    () => buildRawMessageQuery(MessageIdentifierType.Id, messageId, 1),
+    [messageId],
+  );
+  const hasRawQuery = !!rawQueryConfig;
 
   // Execute query
   const [{ data, fetching: isFinalizedFetching, error: finalizedError }, reexecuteQuery] =
@@ -189,7 +193,7 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     useQuery<RawMessagesQueryResult>({
       query: rawQueryConfig?.query || '',
       variables: rawQueryConfig?.variables || {},
-      pause: pause || !rawQueryConfig,
+      pause: pause || !hasRawQuery,
     });
 
   // Parse results
@@ -212,10 +216,10 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   const reExecutor = useCallback(() => {
     if (pause || isDelivered || !isWindowVisible()) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-    if (rawQueryConfig) {
+    if (hasRawQuery) {
       reexecuteRawQuery({ requestPolicy: 'network-only' });
     }
-  }, [pause, isDelivered, rawQueryConfig, reexecuteQuery, reexecuteRawQuery]);
+  }, [pause, isDelivered, hasRawQuery, reexecuteQuery, reexecuteRawQuery]);
   useInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
 
   return {
