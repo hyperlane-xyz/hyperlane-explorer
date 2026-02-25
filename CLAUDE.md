@@ -71,6 +71,7 @@ Search filters sync with URL query params via `src/utils/queryParams.ts` for sha
 - Single quotes, trailing commas, 100 char line width
 - Prettier with import organization and Tailwind class sorting
 - Use `clsx()` for conditional classNames
+- **No async IIFEs in effects** — use `.then().catch()` instead of `void (async () => { ... })()`
 
 ## Engineering Philosophy
 
