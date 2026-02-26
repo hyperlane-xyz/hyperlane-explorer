@@ -16,7 +16,7 @@
     "@ethersproject/transactions": "^5.8.0",
     "@ethersproject/web": "^5.8.0",
     "@headlessui/react": "^2.2.0",
-    "@hyperlane-xyz/core": "10.0.5",
+    "@hyperlane-xyz/core": "10.1.5",
     "@hyperlane-xyz/registry": "23.14.0",
     "@hyperlane-xyz/sdk": "25.3.0",
     "@hyperlane-xyz/utils": "25.3.0",
@@ -86,6 +86,7 @@
   "types": "dist/src/index.d.ts",
   "pnpm": {
     "overrides": {
+      "tronweb>ethers": "^6.13.5",
       "ethers": "^5.7",
       "sha.js": "2.4.12",
       "cipher-base": "1.0.5",
