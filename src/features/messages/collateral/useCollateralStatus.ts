@@ -1,4 +1,4 @@
-import { MultiProtocolProvider, Token } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider, Token, TokenStandard } from '@hyperlane-xyz/sdk';
 import { toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -56,9 +56,36 @@ async function fetchCollateralBalance(
     // Create Token instance from the destination token config
     const token = new Token(destinationToken);
 
-    // Use SDK's getBalance method which handles cross-VM providers
-    // The address parameter should be the router address (destinationToken.addressOrDenom)
-    // which holds the collateral
+    const adapter = token.getAdapter(multiProvider);
+
+    // Prefer bridged supply for collateral checks. For xERC20 lockboxes,
+    // collateral is held by lockbox(), not the router address.
+    if ('getBridgedSupply' in adapter && typeof adapter.getBridgedSupply === 'function') {
+      const bridgedSupply = await adapter.getBridgedSupply();
+      if (bridgedSupply !== undefined) {
+        logger.debug('Fetched collateral balance from bridged supply', {
+          chain: destinationToken.chainName,
+          token: destinationToken.symbol,
+          balance: bridgedSupply.toString(),
+        });
+        return bridgedSupply;
+      }
+    }
+
+    // Avoid false "insufficient collateral" for lockboxes if bridged supply is unavailable.
+    if (
+      destinationToken.standard === TokenStandard.EvmHypXERC20Lockbox ||
+      destinationToken.standard === TokenStandard.EvmHypVSXERC20Lockbox
+    ) {
+      logger.warn('Bridged supply unavailable for xERC20 lockbox collateral check', {
+        chain: destinationToken.chainName,
+        token: destinationToken.symbol,
+        address: destinationToken.addressOrDenom,
+      });
+      return undefined;
+    }
+
+    // Fallback: router balance check.
     const tokenAmount = await token.getBalance(multiProvider, destinationToken.addressOrDenom);
 
     logger.debug('Fetched collateral balance', {

@@ -76,6 +76,7 @@ const COLLATERAL_TOKEN_STANDARDS = [
   'EvmHypNative',
   'EvmHypNativeScaled',
   'EvmHypXERC20Lockbox',
+  'EvmHypVSXERC20Lockbox',
   'SealevelHypCollateral',
   'SealevelHypNative',
   'CwHypCollateral',

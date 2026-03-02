@@ -2,6 +2,8 @@ import {
   EvmHypCollateralAdapter,
   EvmHypNativeAdapter,
   EvmHypSyntheticAdapter,
+  EvmHypVSXERC20Adapter,
+  EvmHypVSXERC20LockboxAdapter,
   EvmHypXERC20Adapter,
   EvmHypXERC20LockboxAdapter,
   IHypTokenAdapter,
@@ -26,7 +28,14 @@ const SUPPORTED_COLLATERAL_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypCollateral,
   TokenStandard.EvmHypNative,
   TokenStandard.EvmHypXERC20Lockbox,
+  TokenStandard.EvmHypVSXERC20Lockbox,
+];
+
+const SUPPORTED_XERC20_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypXERC20,
+  TokenStandard.EvmHypVSXERC20,
+  TokenStandard.EvmHypXERC20Lockbox,
+  TokenStandard.EvmHypVSXERC20Lockbox,
 ];
 
 const SUPPORTED_SYNTHETIC_STANDARDS: TokenStandard[] = [TokenStandard.EvmHypSynthetic];
@@ -45,6 +54,11 @@ function isSupportedCollateralStandard(standard: TokenStandard | string | undefi
 function isSupportedSyntheticStandard(standard: TokenStandard | string | undefined): boolean {
   if (!standard) return false;
   return SUPPORTED_SYNTHETIC_STANDARDS.includes(standard as TokenStandard);
+}
+
+function isSupportedXERC20Standard(standard: TokenStandard | string | undefined): boolean {
+  if (!standard) return false;
+  return SUPPORTED_XERC20_STANDARDS.includes(standard as TokenStandard);
 }
 
 /**
@@ -83,8 +97,14 @@ function createHypAdapter(
       return new EvmHypSyntheticAdapter(chainName, multiProvider, { token: addressOrDenom });
     case TokenStandard.EvmHypXERC20:
       return new EvmHypXERC20Adapter(chainName, multiProvider, { token: addressOrDenom });
+    case TokenStandard.EvmHypVSXERC20:
+      return new EvmHypVSXERC20Adapter(chainName, multiProvider, { token: addressOrDenom });
     case TokenStandard.EvmHypXERC20Lockbox:
       return new EvmHypXERC20LockboxAdapter(chainName, multiProvider, { token: addressOrDenom });
+    case TokenStandard.EvmHypVSXERC20Lockbox:
+      return new EvmHypVSXERC20LockboxAdapter(chainName, multiProvider, {
+        token: addressOrDenom,
+      });
     default:
       return undefined;
   }
@@ -111,8 +131,13 @@ async function fetchTokenBalance(
     const result: ChainBalance = { balance: bridgedSupply };
 
     // For xERC20 lockbox, get both lockbox balance and total xERC20 supply
-    if (token.standard === TokenStandard.EvmHypXERC20Lockbox) {
-      const lockboxAdapter = adapter as EvmHypXERC20LockboxAdapter;
+    if (
+      token.standard === TokenStandard.EvmHypXERC20Lockbox ||
+      token.standard === TokenStandard.EvmHypVSXERC20Lockbox
+    ) {
+      const lockboxAdapter = adapter as
+        | EvmHypXERC20LockboxAdapter
+        | EvmHypVSXERC20LockboxAdapter;
       try {
         // getBridgedSupply returns lockbox balance for lockbox adapter
         result.lockboxBalance = bridgedSupply;
@@ -126,7 +151,10 @@ async function fetchTokenBalance(
     }
 
     // For xERC20 (non-lockbox), getBridgedSupply returns total supply
-    if (token.standard === TokenStandard.EvmHypXERC20) {
+    if (
+      token.standard === TokenStandard.EvmHypXERC20 ||
+      token.standard === TokenStandard.EvmHypVSXERC20
+    ) {
       result.xerc20Supply = bridgedSupply;
     }
 
@@ -146,6 +174,7 @@ function shouldFetchSupply(token: WarpRouteTokenVisualization): boolean {
   return (
     isCollateralTokenStandard(token.standard) ||
     isSupportedCollateralStandard(token.standard) ||
+    isSupportedXERC20Standard(token.standard) ||
     isSupportedSyntheticStandard(token.standard)
   );
 }
