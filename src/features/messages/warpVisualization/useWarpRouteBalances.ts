@@ -135,9 +135,7 @@ async function fetchTokenBalance(
       token.standard === TokenStandard.EvmHypXERC20Lockbox ||
       token.standard === TokenStandard.EvmHypVSXERC20Lockbox
     ) {
-      const lockboxAdapter = adapter as
-        | EvmHypXERC20LockboxAdapter
-        | EvmHypVSXERC20LockboxAdapter;
+      const lockboxAdapter = adapter as EvmHypXERC20LockboxAdapter | EvmHypVSXERC20LockboxAdapter;
       try {
         // getBridgedSupply returns lockbox balance for lockbox adapter
         result.lockboxBalance = bridgedSupply;
