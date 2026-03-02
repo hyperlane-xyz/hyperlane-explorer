@@ -178,8 +178,12 @@ export function useCollateralStatus(
     return { status: CollateralStatus.Unknown };
   }
 
-  if (isLoading || collateralBalance === undefined) {
+  if (isLoading) {
     return { status: CollateralStatus.Checking };
+  }
+
+  if (collateralBalance === undefined) {
+    return { status: CollateralStatus.Unknown };
   }
 
   if (!warpRouteDetails) {
