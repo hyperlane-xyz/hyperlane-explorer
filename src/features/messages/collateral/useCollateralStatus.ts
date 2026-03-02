@@ -61,14 +61,22 @@ async function fetchCollateralBalance(
     // Prefer bridged supply for collateral checks. For xERC20 lockboxes,
     // collateral is held by lockbox(), not the router address.
     if ('getBridgedSupply' in adapter && typeof adapter.getBridgedSupply === 'function') {
-      const bridgedSupply = await adapter.getBridgedSupply();
-      if (bridgedSupply !== undefined) {
-        logger.debug('Fetched collateral balance from bridged supply', {
+      try {
+        const bridgedSupply = await adapter.getBridgedSupply();
+        if (bridgedSupply !== undefined) {
+          logger.debug('Fetched collateral balance from bridged supply', {
+            chain: destinationToken.chainName,
+            token: destinationToken.symbol,
+            balance: bridgedSupply.toString(),
+          });
+          return bridgedSupply;
+        }
+      } catch (error) {
+        logger.warn('getBridgedSupply failed, falling back to balance check', {
           chain: destinationToken.chainName,
           token: destinationToken.symbol,
-          balance: bridgedSupply.toString(),
+          error,
         });
-        return bridgedSupply;
       }
     }
 
