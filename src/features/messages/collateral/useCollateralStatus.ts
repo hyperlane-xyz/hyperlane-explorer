@@ -56,35 +56,32 @@ async function fetchCollateralBalance(
     // Create Token instance from the destination token config
     const token = new Token(destinationToken);
 
-    const adapter = token.getAdapter(multiProvider);
-
-    // Prefer bridged supply for collateral checks. For xERC20 lockboxes,
-    // collateral is held by lockbox(), not the router address.
-    if ('getBridgedSupply' in adapter && typeof adapter.getBridgedSupply === 'function') {
-      try {
-        const bridgedSupply = await adapter.getBridgedSupply();
-        if (bridgedSupply !== undefined) {
-          logger.debug('Fetched collateral balance from bridged supply', {
-            chain: destinationToken.chainName,
-            token: destinationToken.symbol,
-            balance: bridgedSupply.toString(),
-          });
-          return bridgedSupply;
-        }
-      } catch (error) {
-        logger.warn('getBridgedSupply failed, falling back to balance check', {
-          chain: destinationToken.chainName,
-          token: destinationToken.symbol,
-          error,
-        });
-      }
-    }
-
-    // Avoid false "insufficient collateral" for lockboxes if bridged supply is unavailable.
+    // For xERC20 lockboxes, collateral is held by lockbox(), not the router address.
+    // Use getBridgedSupply instead; if unavailable, we can't reliably check collateral.
     if (
       destinationToken.standard === TokenStandard.EvmHypXERC20Lockbox ||
       destinationToken.standard === TokenStandard.EvmHypVSXERC20Lockbox
     ) {
+      const adapter = token.getAdapter(multiProvider);
+      if ('getBridgedSupply' in adapter && typeof adapter.getBridgedSupply === 'function') {
+        try {
+          const bridgedSupply = await adapter.getBridgedSupply();
+          if (bridgedSupply !== undefined) {
+            logger.debug('Fetched lockbox collateral from bridged supply', {
+              chain: destinationToken.chainName,
+              token: destinationToken.symbol,
+              balance: bridgedSupply.toString(),
+            });
+            return bridgedSupply;
+          }
+        } catch (error) {
+          logger.warn('getBridgedSupply failed for lockbox', {
+            chain: destinationToken.chainName,
+            token: destinationToken.symbol,
+            error,
+          });
+        }
+      }
       logger.warn('Bridged supply unavailable for xERC20 lockbox collateral check', {
         chain: destinationToken.chainName,
         token: destinationToken.symbol,
@@ -93,7 +90,7 @@ async function fetchCollateralBalance(
       return undefined;
     }
 
-    // Fallback: router balance check.
+    // For non-lockbox collateral types, check the router balance directly.
     const tokenAmount = await token.getBalance(multiProvider, destinationToken.addressOrDenom);
 
     logger.debug('Fetched collateral balance', {
