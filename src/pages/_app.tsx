@@ -63,6 +63,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
         className={`${MAIN_FONT.variable} font-sans text-black`}
         style={{ visibility: 'hidden' }}
       >
+        <OGHead
+          url={links.explorerUrl}
+          image={`${links.explorerUrl}/images/logo.png`}
+          logoUrl={`${links.explorerUrl}/images/logo.png`}
+        />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
