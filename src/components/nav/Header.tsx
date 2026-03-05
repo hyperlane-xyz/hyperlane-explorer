@@ -36,7 +36,7 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'rotate-[0.01deg] scale-90'
             } transition-all duration-500 ease-in-out`}
           >
-            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-6 w-auto sm:h-7" />
+            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-8 w-auto sm:h-10" />
           </div>
         </Link>
         <nav
