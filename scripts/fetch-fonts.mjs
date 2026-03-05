@@ -1,7 +1,6 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createWriteStream, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
-import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { fileURLToPath } from 'url';
 
@@ -61,7 +60,7 @@ async function fetchFonts() {
       const response = await s3.send(command);
       const writeStream = createWriteStream(outputPath);
 
-      await pipeline(Readable.fromWeb(response.Body.transformToWebStream()), writeStream);
+      await pipeline(response.Body, writeStream);
 
       console.log(`Downloaded ${fontFile}`);
       results.success.push(fontFile);
