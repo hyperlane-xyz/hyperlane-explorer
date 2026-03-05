@@ -364,19 +364,13 @@ svg path[fill='white'] {
   background-color: #D9A4FF !important; /* accent-100 */
 }
 
-/* Tooltip trigger icons - higher contrast for visibility */
+/* Tooltip trigger icons - slightly darker for readability */
 a[data-tooltip-id] .htw-bg-gray-200 {
-  background-color: #9A0DFF !important;
+  background-color: #d1d5db !important;
 }
 
 a[data-tooltip-id] .htw-border-gray-300 {
-  border-color: #7211B9 !important;
-}
-
-a[data-tooltip-id] .htw-opacity-60 {
-  opacity: 1 !important;
-  color: white !important;
-  fill: white !important;
+  border-color: #9ca3af !important;
 }
 
 /* Chain metadata modal - make dark chain logos visible */
