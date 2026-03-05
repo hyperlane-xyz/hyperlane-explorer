@@ -49,6 +49,12 @@ async function fetchFonts() {
   for (const fontFile of FONTS) {
     const outputPath = join(FONTS_DIR, fontFile);
 
+    if (existsSync(outputPath)) {
+      console.log(`Skipping ${fontFile} (already exists)`);
+      results.success.push(fontFile);
+      continue;
+    }
+
     try {
       console.log(`Downloading ${fontFile}...`);
 
