@@ -41,7 +41,7 @@ export function KeyValueRow({
   return (
     <div className={`flex items-center gap-2 font-light ${classes}`}>
       <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
-      <div className={`flex min-w-0 items-center ${displayWidth || ''}`}>
+      <div className={`flex min-w-0 flex-1 items-center ${displayWidth || ''}`}>
         <span
           className={`font-mono text-sm ${!truncateMiddle ? 'truncate' : ''} ${blurValue && 'blur-xs'}`}
         >
