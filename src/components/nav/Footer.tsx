@@ -6,7 +6,7 @@ import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
 import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
-import Logo from '../../images/logos/hyperlane-logo.svg';
+import LogoLockup from '/public/images/HYP_Lockup_White.png';
 import { Color } from '../../styles/Color';
 
 const footerLinks1 = [
@@ -37,11 +37,7 @@ export function Footer() {
     <footer className="relative z-10 bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
       <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
-          <Image src={Logo} alt="" className="h-12 w-auto sm:h-14" />
-          <div className="ml-6 space-y-1 text-lg sm:text-xl">
-            <div>Go interchain</div>
-            <div>with Hyperlane</div>
-          </div>
+          <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-10 w-auto sm:h-12" />
         </div>
         <nav className="flex">
           <ul className={`${styles.linkCol} mr-14`}>

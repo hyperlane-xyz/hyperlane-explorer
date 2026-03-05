@@ -310,7 +310,7 @@ svg path[fill='white'] {
 
 /* Widget text styling - default to primary font */
 [class*='htw-'] {
-  font-family: 'PP Valve', system-ui, sans-serif;
+  font-family: 'PP Fraktion Mono', system-ui, sans-serif;
 }
 
 /* Chain picker subtitles (Mainnet/Testnet labels) - mono */
@@ -356,12 +356,12 @@ svg path[fill='white'] {
 /* Widget hover states - match message table accent colors */
 [class*='htw-']:hover.hover\:htw-bg-gray-100,
 .hover\:htw-bg-gray-100:hover {
-  background-color: #f9d5fb !important; /* accent-50 */
+  background-color: #E8CAFF !important; /* accent-50 */
 }
 
 [class*='htw-']:hover.hover\:htw-bg-gray-200,
 .hover\:htw-bg-gray-200:hover {
-  background-color: #fabaf8 !important; /* accent-100 */
+  background-color: #D9A4FF !important; /* accent-100 */
 }
 
 /* Tooltip trigger icons - darker for better contrast against headers */

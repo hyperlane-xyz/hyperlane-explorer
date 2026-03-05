@@ -314,7 +314,7 @@ export default async function handler(req: NextRequest) {
           display: 'flex',
           flexDirection: 'column',
           padding: '48px 64px',
-          fontFamily: 'PPValve, sans-serif',
+          fontFamily: 'PPFraktionMono, sans-serif',
           position: 'relative',
         }}
       >
@@ -340,7 +340,7 @@ export default async function handler(req: NextRequest) {
             left: 0,
             right: 0,
             height: '4px',
-            background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
+            background: 'linear-gradient(90deg, #4C52FF 0%, #9A0DFF 50%, #4C52FF 100%)',
           }}
         />
 
@@ -642,7 +642,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'PPValve, sans-serif',
+        fontFamily: 'PPFraktionMono, sans-serif',
       }}
     >
       {/* Top decorative line */}
@@ -653,7 +653,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
           left: 0,
           right: 0,
           height: '4px',
-          background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
+          background: 'linear-gradient(90deg, #4C52FF 0%, #9A0DFF 50%, #4C52FF 100%)',
         }}
       />
 

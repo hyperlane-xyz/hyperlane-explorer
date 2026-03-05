@@ -202,7 +202,7 @@ function ClearButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-pink-300/80 p-1 hover:opacity-80"
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-primary-300/80 p-1 hover:opacity-80"
     >
       <XIcon color="white" height={10} width={10} />
     </button>

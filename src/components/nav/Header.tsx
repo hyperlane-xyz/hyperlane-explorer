@@ -5,7 +5,7 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import Logo from '../../images/logos/hyperlane-logo.svg';
+import LogoLockup from '/public/images/HYP_Lockup_White.png';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
@@ -36,13 +36,7 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'rotate-[0.01deg] scale-90'
             } transition-all duration-500 ease-in-out`}
           >
-            <Image src={Logo} alt="" className="h-7 w-auto sm:h-8" />
-            <span className="ml-3 hidden text-xl font-medium tracking-tight text-white sm:block">
-              Hyperlane
-            </span>
-            <span className="ml-2 text-lg font-medium tracking-tight text-white sm:text-xl">
-              Explorer
-            </span>
+            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-6 w-auto sm:h-7" />
           </div>
         </Link>
         <nav
