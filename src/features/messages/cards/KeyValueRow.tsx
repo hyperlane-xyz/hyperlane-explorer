@@ -43,7 +43,7 @@ export function KeyValueRow({
       <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <div className={`flex min-w-0 flex-1 items-center ${displayWidth || ''}`}>
         <span
-          className={`font-mono text-sm ${!truncateMiddle ? 'truncate' : ''} ${blurValue && 'blur-xs'}`}
+          className={`min-w-0 font-mono text-sm ${!truncateMiddle ? 'truncate' : ''} ${blurValue && 'blur-xs'}`}
         >
           {displayValue}
           {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}

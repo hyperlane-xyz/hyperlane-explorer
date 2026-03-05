@@ -45,29 +45,27 @@ export const config = {
 
 // Global font cache to avoid reloading on every request
 // Edge runtime persists module-level state across requests within the same instance
-let fontCache: { valve: ArrayBuffer; mono: ArrayBuffer } | null = null;
+let fontCache: { mono: ArrayBuffer } | null = null;
 
-async function loadFonts(baseUrl: string): Promise<{ valve: ArrayBuffer; mono: ArrayBuffer }> {
+async function loadFonts(baseUrl: string): Promise<{ mono: ArrayBuffer }> {
   if (fontCache) {
     return fontCache;
   }
   try {
-    const [valveRes, monoRes] = await Promise.all([
-      fetch(new URL('/fonts/PPValve-PlainMedium.ttf', baseUrl).toString()),
-      fetch(new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString()),
-    ]);
-    if (!valveRes.ok || !monoRes.ok) {
+    const monoRes = await fetch(
+      new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString(),
+    );
+    if (!monoRes.ok) {
       logger.error('Failed to fetch fonts');
-      return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
+      return { mono: new ArrayBuffer(0) };
     }
     fontCache = {
-      valve: await valveRes.arrayBuffer(),
       mono: await monoRes.arrayBuffer(),
     };
     return fontCache;
   } catch (error) {
     logger.error('Error loading fonts for OG image:', error);
-    return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
+    return { mono: new ArrayBuffer(0) };
   }
 }
 
@@ -204,12 +202,6 @@ export default async function handler(req: NextRequest) {
     width: 1200,
     height: 630,
     fonts: [
-      {
-        name: 'PPValve',
-        data: fonts.valve,
-        style: 'normal' as const,
-        weight: 500 as const,
-      },
       {
         name: 'PPFraktionMono',
         data: fonts.mono,
