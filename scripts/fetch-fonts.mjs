@@ -1,5 +1,5 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { createWriteStream, existsSync, mkdirSync } from 'fs';
+import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { dirname, join } from 'path';
 import { pipeline } from 'stream/promises';
 import { fileURLToPath } from 'url';
@@ -66,6 +66,7 @@ async function fetchFonts() {
       results.success.push(fontFile);
     } catch (error) {
       console.warn(`Failed to download ${fontFile}: ${error.message}`);
+      try { unlinkSync(outputPath); } catch {}
       results.failed.push(fontFile);
     }
   }
