@@ -79,6 +79,7 @@ export function MessageSummaryRow({
     statusIcon = <CheckmarkIcon width={18} height={18} className="pt-px" />;
     statusTitle = 'Delivered';
   } else if (status === MessageStatus.Failing) {
+    statusTitle = 'Failing';
     statusIcon = (
       <Image
         src={ErrorIcon}
@@ -89,7 +90,6 @@ export function MessageSummaryRow({
         className="pt-px"
       />
     );
-    statusTitle = 'Failing';
   }
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
