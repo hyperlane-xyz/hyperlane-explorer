@@ -8,6 +8,7 @@ import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
+import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
@@ -76,7 +77,7 @@ export function MessageSummaryRow({
   let statusIcon: ReactNode = null;
   let statusTitle = '';
   if (status === MessageStatus.Delivered) {
-    statusIcon = <CheckmarkIcon width={18} height={18} className="pt-px" />;
+    statusIcon = <CheckmarkIcon width={18} height={18} color={Color.primaryDark} className="pt-px" />;
     statusTitle = 'Delivered';
   } else if (status === MessageStatus.Failing) {
     statusTitle = 'Failing';

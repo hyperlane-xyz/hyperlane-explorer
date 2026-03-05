@@ -8,7 +8,7 @@ interface Props {
 
 export function SectionCard({ className, title, icon, children }: PropsWithChildren<Props>) {
   return (
-    <div className={`overflow-hidden rounded bg-card-gradient shadow-card ${className}`}>
+    <div className={`overflow-auto rounded bg-card-gradient shadow-card ${className || ''}`}>
       {/* Muted Gray Header */}
       <div className="bg-gray-150 px-3 py-2">
         <div className="flex items-center gap-2">
