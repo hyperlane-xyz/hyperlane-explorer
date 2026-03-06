@@ -16,8 +16,6 @@ export function formatAddress(
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
       return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
-    case ProtocolType.Aleo:
-      return address.split('/')[1];
     default:
       return address;
   }
