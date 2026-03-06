@@ -310,7 +310,7 @@ export default async function handler(req: NextRequest) {
           position: 'relative',
         }}
       >
-        {/* Sparkle background */}
+        {/* Grid background */}
         <img
           src={backgroundUrl}
           style={{
@@ -321,6 +321,19 @@ export default async function handler(req: NextRequest) {
             height: '250%',
             objectFit: 'cover',
             objectPosition: 'center',
+            opacity: 0.6,
+          }}
+        />
+        {/* Grid fade overlay - hides grid at top, reveals at bottom */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              'linear-gradient(to bottom, #0d0612 0%, rgba(13,6,18,0.7) 40%, rgba(13,6,18,0) 100%)',
           }}
         />
 
@@ -332,7 +345,7 @@ export default async function handler(req: NextRequest) {
             left: 0,
             right: 0,
             height: '4px',
-            background: 'linear-gradient(90deg, #4C52FF 0%, #9A0DFF 50%, #4C52FF 100%)',
+            background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
           }}
         />
 
@@ -405,8 +418,8 @@ export default async function handler(req: NextRequest) {
             {/* Origin Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, ${originColors.primary}15 0%, ${originColors.secondary || originColors.primary}08 100%)`,
-                border: `1px solid ${originColors.primary}30`,
+                background: `linear-gradient(135deg, #1e1033 0%, #160c24 100%)`,
+                border: `1px solid ${originColors.primary}40`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
@@ -454,8 +467,8 @@ export default async function handler(req: NextRequest) {
             {/* Destination Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}08 0%, ${destColors.primary}15 100%)`,
-                border: `1px solid ${destColors.primary}30`,
+                background: `linear-gradient(135deg, #160c24 0%, #1e1033 100%)`,
+                border: `1px solid ${destColors.primary}40`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
