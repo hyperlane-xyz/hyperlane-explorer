@@ -5,7 +5,7 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import LogoLockup from '/public/images/HYP_Lockup_White.png';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
@@ -36,7 +36,7 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'rotate-[0.01deg] scale-90'
             } transition-all duration-500 ease-in-out`}
           >
-            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-7 w-auto sm:h-8" />
+            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-8 w-auto sm:h-10" />
           </div>
         </Link>
         <nav
@@ -45,10 +45,10 @@ export function Header({ pathName }: { pathName: string }) {
           }`}
         >
           <Link href="/" className={navLinkClass('/')}>
-            Home
+            HOME
           </Link>
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
-            About
+            ABOUT
           </a>
           {/* <Link href="/api-docs" className={navLinkClass('/api-docs')}>
             API
@@ -59,7 +59,7 @@ export function Header({ pathName }: { pathName: string }) {
             href={docLinks.home}
             rel="noopener noreferrer"
           >
-            Docs
+            DOCS
           </a>
           {showSearch && <MiniSearchBar />}
         </nav>
@@ -71,7 +71,7 @@ export function Header({ pathName }: { pathName: string }) {
             menuItems={[
               ({ close }) => (
                 <MobileNavLink href="/" closeDropdown={close} key="Home">
-                  Home
+                  HOME
                 </MobileNavLink>
               ),
               //  ({ close }) => (
@@ -81,12 +81,12 @@ export function Header({ pathName }: { pathName: string }) {
               // ),
               ({ close }) => (
                 <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
-                  Docs
+                  DOCS
                 </MobileNavLink>
               ),
               ({ close }) => (
                 <MobileNavLink href={links.home} closeDropdown={close} key="About">
-                  About
+                  ABOUT
                 </MobileNavLink>
               ),
             ]}
@@ -140,7 +140,7 @@ function MobileNavLink({
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-xl font-medium capitalize text-white">{children}</span>
+      <span className="text-xl font-medium uppercase text-white">{children}</span>
     </Link>
   );
 }

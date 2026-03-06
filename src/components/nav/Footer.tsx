@@ -6,7 +6,7 @@ import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
 import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
-import LogoLockup from '/public/images/HYP_Lockup_White.png';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 import { Color } from '../../styles/Color';
 
 const footerLinks1 = [
@@ -88,5 +88,5 @@ export function Footer() {
 
 const styles = {
   linkCol: 'flex flex-col gap-2',
-  linkItem: 'flex items-center capitalize text-decoration-none hover:underline underline-offset-2',
+  linkItem: 'flex items-center uppercase text-decoration-none hover:underline underline-offset-2',
 };

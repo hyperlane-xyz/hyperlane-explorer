@@ -1,7 +1,7 @@
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 
-import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { APP_DESCRIPTION } from '../../consts/appMetadata';
 import { links } from '../../consts/links';
 import {
   fetchDomainNames,
