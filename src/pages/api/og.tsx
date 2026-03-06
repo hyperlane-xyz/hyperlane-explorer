@@ -333,7 +333,7 @@ export default async function handler(req: NextRequest) {
             right: 0,
             bottom: 0,
             background:
-              'linear-gradient(to bottom, #0d0612 0%, rgba(13,6,18,0.7) 40%, rgba(13,6,18,0) 100%)',
+              'linear-gradient(to bottom, rgba(13,6,18,0.85) 0%, rgba(13,6,18,0.4) 40%, rgba(13,6,18,0) 70%)',
           }}
         />
 
@@ -418,8 +418,8 @@ export default async function handler(req: NextRequest) {
             {/* Origin Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, #1e1033 0%, #160c24 100%)`,
-                border: `1px solid ${originColors.primary}40`,
+                background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
+                border: `1px solid ${originColors.primary}50`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
@@ -467,8 +467,8 @@ export default async function handler(req: NextRequest) {
             {/* Destination Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, #160c24 0%, #1e1033 100%)`,
-                border: `1px solid ${destColors.primary}40`,
+                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
+                border: `1px solid ${destColors.primary}50`,
                 borderRadius: '20px',
                 padding: '28px 48px',
                 display: 'flex',
