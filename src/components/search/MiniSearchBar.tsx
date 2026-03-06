@@ -23,7 +23,7 @@ export function MiniSearchBar() {
   return (
     <Formik<FormValues> initialValues={initialValues} onSubmit={onSubmit}>
       <Form>
-        <div className="flex items-center rounded-sm bg-white p-1 transition-all">
+        <div className="flex items-center rounded-[1px] bg-white p-1 transition-all">
           <Field
             id="search"
             name="search"

@@ -97,7 +97,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   return (
     <>
-      <div className="flex items-center justify-between rounded-sm bg-accent-gradient px-3 py-2 shadow-accent-glow">
+      <div className="flex items-center justify-between rounded-[1px] bg-accent-gradient px-3 py-2 shadow-accent-glow">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-cream-300" />
           <h2 className="text-md font-medium text-white">{`${
