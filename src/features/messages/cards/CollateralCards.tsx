@@ -73,7 +73,7 @@ export function ActiveRebalanceModal({ warpRouteDetails }: CollateralCardsProps)
         classes="flex gap-1 cursor-pointer text-sm text-primary-600 underline underline-offset-1 transition-all hover:text-primary-600 active:text-primary-700"
         onClick={open}
       >
-        <RefreshIcon width={20} height={20} color={Color.blue} />
+        <RefreshIcon width={20} height={20} color={Color.primary} />
         View Active Rebalance
       </TextButton>
 
