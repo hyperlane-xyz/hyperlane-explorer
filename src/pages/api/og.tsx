@@ -172,21 +172,23 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
-// Parse delivery latency string to total seconds
-function parseLatencySeconds(latency: string): number {
+function parseLatencyParts(latency: string): { hours: number; minutes: number; seconds: number } {
   const parts = latency.split(':');
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  const seconds = parseInt(parts[2], 10);
+  return {
+    hours: parseInt(parts[0], 10),
+    minutes: parseInt(parts[1], 10),
+    seconds: parseInt(parts[2], 10),
+  };
+}
+
+function parseLatencySeconds(latency: string): number {
+  const { hours, minutes, seconds } = parseLatencyParts(latency);
   return hours * 3600 + minutes * 60 + seconds;
 }
 
 // Format delivery latency string (e.g., "00:01:32" -> "1m 32s")
 function formatDeliveryLatency(latency: string): string {
-  const parts = latency.split(':');
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  const seconds = parseInt(parts[2], 10);
+  const { hours, minutes, seconds } = parseLatencyParts(latency);
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
