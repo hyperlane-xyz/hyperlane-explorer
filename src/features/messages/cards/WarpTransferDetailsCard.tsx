@@ -6,6 +6,7 @@ import { useMultiProvider } from '../../../store';
 import { Message, WarpRouteDetails } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
+import { useWarpFees } from '../warpFees/useWarpFees';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
@@ -50,6 +51,8 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
       .catch(() => setBlockExplorerAddressUrls(undefined));
   }, [getBlockExplorerLinks]);
 
+  const warpFees = useWarpFees(message, warpRouteDetails);
+
   if (!warpRouteDetails) return null;
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
@@ -89,6 +92,22 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               blurValue={blur}
               showCopy
             />
+            {warpFees && (
+              <>
+                <KeyValueRow
+                  label="Warp fee:"
+                  labelWidth="w-28 sm:w-32"
+                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+                <KeyValueRow
+                  label="Total sent:"
+                  labelWidth="w-28 sm:w-32"
+                  display={`${warpFees.totalSent} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+              </>
+            )}
             <KeyValueRow
               label="Origin token:"
               labelWidth="w-28 sm:w-32"
