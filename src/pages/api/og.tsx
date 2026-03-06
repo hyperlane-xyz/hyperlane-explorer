@@ -543,8 +543,6 @@ export default async function handler(req: NextRequest) {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginTop: '24px',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
           <div
