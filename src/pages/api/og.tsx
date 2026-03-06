@@ -360,7 +360,7 @@ export default async function handler(req: NextRequest) {
         >
           <img
             src={`${origin}/images/HYP_Lockup_White.png`}
-            height="44"
+            height="56"
             alt=""
           />
           <div
