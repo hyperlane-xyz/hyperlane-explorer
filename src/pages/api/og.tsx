@@ -358,20 +358,11 @@ export default async function handler(req: NextRequest) {
             marginBottom: '40px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img
-              src={`${origin}/images/hyperlane-logo-color.svg`}
-              width="44"
-              height="40"
-              alt=""
-              style={{ marginRight: '16px' }}
-            />
-            <span
-              style={{ color: 'white', fontSize: '42px', fontWeight: 600, letterSpacing: '-0.5px' }}
-            >
-              {APP_NAME}
-            </span>
-          </div>
+          <img
+            src={`${origin}/images/HYP_Lockup_White.png`}
+            height="44"
+            alt=""
+          />
           <div
             style={{
               display: 'flex',
@@ -660,18 +651,8 @@ function DefaultOGImage({ origin }: { origin: string }) {
         }}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-        <img src={`${origin}/images/hyperlane-logo-color.svg`} width="140" height="126" alt="" />
-        <span
-          style={{
-            color: 'white',
-            fontSize: '64px',
-            fontWeight: 600,
-            letterSpacing: '-1px',
-          }}
-        >
-          {APP_NAME}
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
+        <img src={`${origin}/images/HYP_Lockup_White.png`} height="80" alt="" />
         <span style={{ color: '#6B7280', fontSize: '28px' }}>{APP_DESCRIPTION}</span>
       </div>
     </div>
