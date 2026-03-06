@@ -83,11 +83,12 @@ async function fetchFonts() {
   );
 
   if (results.failed.length > 0) {
-    console.warn('Failed fonts:', results.failed.join(', '));
+    console.error('Failed fonts:', results.failed.join(', '));
+    process.exit(1);
   }
 }
 
 fetchFonts().catch((error) => {
-  console.warn('Font fetch script encountered an error:', error.message);
-  // Exit gracefully - don't fail the build
+  console.error('Font fetch script failed:', error.message);
+  process.exit(1);
 });
