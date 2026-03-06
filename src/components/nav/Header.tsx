@@ -90,7 +90,7 @@ export function Header({ pathName }: { pathName: string }) {
                 </MobileNavLink>
               ),
             ]}
-            menuClassname="!left-0 !right-0 py-7 px-8 !bg-primary-600/95 backdrop-blur-sm"
+            menuClassname="!left-0 !right-0 py-7 px-8"
           />
         </div>
       </div>
