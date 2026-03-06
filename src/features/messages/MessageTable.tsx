@@ -91,7 +91,6 @@ export function MessageSummaryRow({
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, mp),
     [message, warpRouteChainAddressMap, mp],
   );
-
   return (
     <>
       <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
