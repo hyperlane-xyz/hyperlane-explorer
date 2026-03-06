@@ -103,11 +103,11 @@ export function MessageSummaryRow({
   );
   return (
     <>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5">
         <ChainLogo chainName={destinationChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
@@ -131,7 +131,7 @@ export function MessageSummaryRow({
       <LinkCell
         id={msgId}
         base64={base64}
-        aClasses={`flex items-center py-3.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
+        aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
       >
         {warpRouteDetails ? (
@@ -174,7 +174,7 @@ function LinkCell({
 
 const styles = {
   header: 'text-sm text-primary-800 font-medium pt-2 pb-3 text-center',
-  value: 'py-3.5 flex items-center justify-center text-sm text-center font-light px-1',
-  valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center font-light truncate',
+  value: 'py-2.5 flex items-center justify-center text-sm text-center font-light px-1',
+  valueTruncated: 'py-2.5 flex items-center justify-center text-sm text-center font-light truncate',
   iconText: 'text-sm font-light ml-2',
 };

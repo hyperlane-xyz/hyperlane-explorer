@@ -360,7 +360,7 @@ export default async function handler(req: NextRequest) {
         >
           <img
             src={`${origin}/images/hyperlane-explorer-logo.svg`}
-            width="140"
+            width="229"
             height="56"
             alt=""
           />
@@ -653,7 +653,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
-        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="200" height="80" alt="" />
+        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="327" height="80" alt="" />
         <span style={{ color: '#6B7280', fontSize: '28px' }}>{APP_DESCRIPTION}</span>
       </div>
     </div>
