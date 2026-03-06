@@ -360,8 +360,8 @@ export default async function handler(req: NextRequest) {
         >
           <img
             src={`${origin}/images/hyperlane-explorer-logo.svg`}
-            width="229"
-            height="56"
+            width="275"
+            height="67"
             alt=""
           />
           <div
@@ -371,7 +371,7 @@ export default async function handler(req: NextRequest) {
               gap: '10px',
               background: statusBgColor,
               padding: '14px 24px',
-              borderRadius: '28px',
+              borderRadius: '8px',
               border: `1px solid ${statusColor}`,
             }}
           >
@@ -412,7 +412,7 @@ export default async function handler(req: NextRequest) {
               style={{
                 background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
                 border: `1px solid ${originColors.primary}50`,
-                borderRadius: '20px',
+                borderRadius: '6px',
                 padding: '28px 48px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -461,7 +461,7 @@ export default async function handler(req: NextRequest) {
               style={{
                 background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
                 border: `1px solid ${destColors.primary}50`,
-                borderRadius: '20px',
+                borderRadius: '6px',
                 padding: '28px 48px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -557,7 +557,7 @@ export default async function handler(req: NextRequest) {
                 fontFamily: 'PPFraktionMono, monospace',
                 background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
-                borderRadius: '10px',
+                borderRadius: '4px',
               }}
             >
               {shortMsgId}
@@ -612,7 +612,7 @@ export default async function handler(req: NextRequest) {
                 fontFamily: 'PPFraktionMono, monospace',
                 background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
-                borderRadius: '10px',
+                borderRadius: '4px',
               }}
             >
               {formattedDate}
