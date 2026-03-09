@@ -1,28 +1,47 @@
 # Code Review Guidelines
 
-## Always flag
-- XSS vulnerabilities: unsanitized user input rendered in the DOM
-- Secrets or API keys committed in code or logs
-- Introduction of `as` type assertions, `as any`, `as unknown as X`, or `!` non-null assertions
-- New async IIFEs in useEffect (use `.then().catch()` pattern instead)
-- Silent error swallowing (empty catch blocks or catch-and-ignore)
-- Direct DOM manipulation instead of React state
-- Missing error boundaries or unhandled promise rejections in data fetching
-- New external script/resource URLs without CSP header updates in `next.config.js`
-- GraphQL queries without proper error handling
-- State mutations outside of Zustand store actions
-- New API routes that import from `@hyperlane-xyz/utils` (Edge runtime incompatible)
+## Code Quality
 
-## Never flag
-- Formatting or style issues (handled by prettier and eslint)
-- Missing documentation or comments on self-evident code
-- Existing patterns that are intentional (check git history if unsure)
-- Minor naming preferences when existing convention is followed
-- Tailwind class ordering (handled by prettier plugin)
-- Import ordering
+- Logic errors and potential bugs
+- Error handling and edge cases
+- Code clarity and maintainability
+- Adherence to existing patterns in the codebase
+- **Use existing utilities** - Search codebase before adding new helpers
+- **Prefer `??` over `||`** - Preserves zero/empty string as valid values
+- **No async IIFEs** - Use `.then().catch()` instead of `void (async () => { ... })()` (in `useEffect`, named inner async funcs are fine: `const load = async () => { ... }; load();`; anonymous async IIFEs still disallowed)
 
-## Skip these paths
-- `node_modules/`
-- `.next/`
-- `*.lock` files
-- `public/` static assets
+## Architecture
+
+- Consistency with existing architecture patterns
+- Breaking changes or backward compatibility issues
+- API contract changes
+- **Deduplicate** - Move repeated code/types to shared files
+- **Extract utilities** - Shared functions belong in utils packages
+
+## Testing
+
+- Test coverage for new/modified code
+- Edge cases that should be tested
+- **New utility functions need unit tests**
+
+## Performance
+
+- Unnecessary re-renders or computations
+- Bundle size impact of new dependencies
+
+## Explorer-Specific
+
+- **Use existing utilities** - Check `src/utils/` (formatAmountCompact, shortenAddress, tryGetBlockExplorerAddressUrl)
+- **Query limits** - Use SEARCH_QUERY_LIMIT for searches, larger batches for background ops
+- **Deduplicate** - Move repeated constants/types to `src/consts/` or `src/types.ts`
+- **URL state sync** - Search filters should sync with URL query params
+- **PI chains** - Permissionless Interop chains have separate query paths in `src/features/messages/pi-queries/`
+- **Edge runtime** - Can't import @hyperlane-xyz/utils in edge runtime (API routes)
+- **Export reusable components** - Common UI patterns should be extracted
+
+## UI Consistency
+
+- **Color consistency** - Don't mix multiple shades; use design system colors
+- **Green = success at destination** - Not origin; use blue/neutral for origin
+- **Avoid wasted space** - Keep layouts compact and information-dense
+- **Collapsible for detail** - Use collapsible sections for verbose content
