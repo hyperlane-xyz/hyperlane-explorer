@@ -1,4 +1,4 @@
-Review this pull request. Focus on:
+# Code Review Guidelines
 
 ## Code Quality
 
@@ -45,7 +45,3 @@ Review this pull request. Focus on:
 - **Green = success at destination** - Not origin; use blue/neutral for origin
 - **Avoid wasted space** - Keep layouts compact and information-dense
 - **Collapsible for detail** - Use collapsible sections for verbose content
-
-Provide actionable feedback with specific line references.
-Be concise. For minor style issues, group them together.
-Security issues are handled by a separate dedicated review.
