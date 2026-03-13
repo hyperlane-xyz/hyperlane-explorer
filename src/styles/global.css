@@ -328,14 +328,8 @@ svg path[fill='white'] {
 }
 
 /* Modal and panel backgrounds - cream instead of pure white */
-.htw-bg-white:not([data-headlessui-state]) {
+.htw-bg-white {
   background-color: #f8f8ff !important;
-}
-
-/* Mobile nav dropdown - dark background matching header */
-[data-headlessui-state].htw-bg-white {
-  background-color: rgba(13, 6, 18, 0.95) !important;
-  backdrop-filter: blur(12px) !important;
 }
 
 /* Input backgrounds in widgets */
