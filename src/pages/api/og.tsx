@@ -515,7 +515,7 @@ export default async function handler(req: NextRequest) {
               )}
               <span
                 style={{
-                  color: '#94A3B8',
+                  color: '#E2E8F0',
                   fontSize: '50px',
                   fontWeight: 500,
                 }}
