@@ -213,7 +213,6 @@ function TransactionCard({
     <SectionCard
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
-      titleSize="md"
       leading={<ChainLogo chainName={chainName} size={24} />}
       icon={<Tooltip id="transaction-info" content={helpText} />}
     >
