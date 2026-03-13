@@ -327,9 +327,10 @@ svg path[fill='white'] {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
 
-/* Modal and panel backgrounds - cream instead of pure white */
+/* Modal and panel backgrounds - cream instead of pure white.
+   No !important so Tailwind !bg-[...] overrides (e.g. mobile nav dropdown) can win. */
 .htw-bg-white {
-  background-color: #f8f8ff !important;
+  background-color: #f8f8ff;
 }
 
 /* Input backgrounds in widgets */
