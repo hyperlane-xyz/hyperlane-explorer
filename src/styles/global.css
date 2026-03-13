@@ -343,9 +343,13 @@ svg path[fill='white'] {
   z-index: 30 !important;
 }
 
-/* Modal panel container - above backdrop */
+/* Modal panel container - above backdrop, boxy rounding */
 .htw-z-20 {
   z-index: 40 !important;
+}
+
+.htw-rounded-lg {
+  border-radius: 0.25rem !important; /* match boxy theme */
 }
 
 /* Widget gray backgrounds - match cream white */
