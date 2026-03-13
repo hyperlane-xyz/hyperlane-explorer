@@ -14134,7 +14134,7 @@ snapshots:
   '@tronweb3/tronwallet-abstract-adapter@1.1.11(bufferutil@4.0.8)(utf-8-validate@5.0.10)':
     dependencies:
       eventemitter3: 4.0.7
-      tronweb: 6.2.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      tronweb: 6.2.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - debug
