@@ -17,7 +17,7 @@ export function SectionCard({
   children,
 }: PropsWithChildren<Props>) {
   return (
-    <div className={`overflow-auto rounded bg-card-gradient shadow-card ${className || ''}`}>
+    <section className={`overflow-auto rounded bg-card-gradient shadow-card ${className || ''}`}>
       {/* Muted Gray Header */}
       <div className="bg-gray-150 px-3 py-2">
         <div className="flex items-center gap-2">
@@ -32,6 +32,6 @@ export function SectionCard({
       </div>
       {/* Content */}
       <div className="p-3 sm:p-4">{children}</div>
-    </div>
+    </section>
   );
 }
