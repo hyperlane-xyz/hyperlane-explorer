@@ -213,12 +213,9 @@ function TransactionCard({
     <SectionCard
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
-      icon={
-        <div className="flex items-center gap-1.5">
-          <Tooltip id="transaction-info" content={helpText} />
-          <ChainLogo chainName={chainName} size={20} />
-        </div>
-      }
+      titleSize="md"
+      leading={<ChainLogo chainName={chainName} size={24} />}
+      icon={<Tooltip id="transaction-info" content={helpText} />}
     >
       <div className="space-y-2">{children}</div>
     </SectionCard>
