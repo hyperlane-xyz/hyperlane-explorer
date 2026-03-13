@@ -370,6 +370,14 @@ svg path[fill='white'] {
   background-color: #D9A4FF !important; /* accent-100 */
 }
 
+/* Tooltip popups - darker background for contrast against header */
+.react-tooltip {
+  background-color: #1a1a2e !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  opacity: 1 !important;
+}
+
 /* Tooltip trigger icons - slightly darker for readability */
 a[data-tooltip-id] .htw-bg-gray-200 {
   background-color: #d1d5db !important;
