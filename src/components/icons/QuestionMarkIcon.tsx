@@ -9,12 +9,7 @@ interface Props {
   className?: string;
 }
 
-function _QuestionMarkIcon({
-  width = 20,
-  height = 20,
-  color = Color.primary,
-  className,
-}: Props) {
+function _QuestionMarkIcon({ width = 20, height = 20, color = Color.primary, className }: Props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

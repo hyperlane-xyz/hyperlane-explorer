@@ -52,9 +52,7 @@ async function loadFonts(baseUrl: string): Promise<{ mono: ArrayBuffer }> {
     return fontCache;
   }
   try {
-    const monoRes = await fetch(
-      new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString(),
-    );
+    const monoRes = await fetch(new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString());
     if (!monoRes.ok) {
       logger.error('Failed to fetch fonts');
       return { mono: new ArrayBuffer(0) };

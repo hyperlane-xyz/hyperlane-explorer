@@ -74,7 +74,9 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
         <div className="flex items-center gap-2">
           {/* Route ID pill - outside button to prevent toggle on copy */}
           <div className="flex items-center gap-1 rounded-md bg-[#e5e7eb] px-2.5 py-1.5">
-            <span className="font-mono text-xs font-light text-gray-800">{visualization.routeId}</span>
+            <span className="font-mono text-xs font-light text-gray-800">
+              {visualization.routeId}
+            </span>
             <CopyButton
               copyValue={visualization.routeId}
               width={12}

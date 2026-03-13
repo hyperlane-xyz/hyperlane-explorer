@@ -5,10 +5,10 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 

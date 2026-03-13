@@ -77,7 +77,9 @@ export function MessageSummaryRow({
   let statusIcon: ReactNode = null;
   let statusTitle = '';
   if (status === MessageStatus.Delivered) {
-    statusIcon = <CheckmarkIcon width={18} height={18} color={Color.primaryDark} className="pt-px" />;
+    statusIcon = (
+      <CheckmarkIcon width={18} height={18} color={Color.primaryDark} className="pt-px" />
+    );
     statusTitle = 'Delivered';
   } else if (status === MessageStatus.Failing) {
     statusTitle = 'Failing';

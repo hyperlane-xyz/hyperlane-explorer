@@ -356,12 +356,12 @@ svg path[fill='white'] {
 /* Widget hover states - match message table accent colors */
 [class*='htw-']:hover.hover\:htw-bg-gray-100,
 .hover\:htw-bg-gray-100:hover {
-  background-color: #E8CAFF !important; /* accent-50 */
+  background-color: #e8caff !important; /* accent-50 */
 }
 
 [class*='htw-']:hover.hover\:htw-bg-gray-200,
 .hover\:htw-bg-gray-200:hover {
-  background-color: #D9A4FF !important; /* accent-100 */
+  background-color: #d9a4ff !important; /* accent-100 */
 }
 
 /* Tooltip popups - darker background for contrast against header */

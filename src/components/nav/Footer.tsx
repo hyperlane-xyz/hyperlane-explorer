@@ -4,10 +4,10 @@ import Link from 'next/link';
 
 import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
-import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
-import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 import { Color } from '../../styles/Color';
+import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },
