@@ -5,7 +5,7 @@ import { PropsWithChildren } from 'react';
 import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
 
 import { docLinks, links } from '../../consts/links';
-import Logo from '../../images/logos/hyperlane-logo.svg';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import { MiniSearchBar } from '../search/MiniSearchBar';
@@ -36,25 +36,19 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'rotate-[0.01deg] scale-90'
             } transition-all duration-500 ease-in-out`}
           >
-            <Image src={Logo} alt="" className="h-7 w-auto sm:h-8" />
-            <span className="ml-3 hidden text-xl font-medium tracking-tight text-white sm:block">
-              Hyperlane
-            </span>
-            <span className="ml-2 text-lg font-medium tracking-tight text-white sm:text-xl">
-              Explorer
-            </span>
+            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-8 w-auto sm:h-10" />
           </div>
         </Link>
         <nav
-          className={`hidden sm:flex sm:items-center sm:space-x-8 ${
+          className={`hidden sm:flex sm:min-h-[40px] sm:items-center sm:space-x-8 ${
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
           <Link href="/" className={navLinkClass('/')}>
-            Home
+            HOME
           </Link>
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
-            About
+            ABOUT
           </a>
           {/* <Link href="/api-docs" className={navLinkClass('/api-docs')}>
             API
@@ -65,7 +59,7 @@ export function Header({ pathName }: { pathName: string }) {
             href={docLinks.home}
             rel="noopener noreferrer"
           >
-            Docs
+            DOCS
           </a>
           {showSearch && <MiniSearchBar />}
         </nav>
@@ -77,7 +71,7 @@ export function Header({ pathName }: { pathName: string }) {
             menuItems={[
               ({ close }) => (
                 <MobileNavLink href="/" closeDropdown={close} key="Home">
-                  Home
+                  HOME
                 </MobileNavLink>
               ),
               //  ({ close }) => (
@@ -87,16 +81,16 @@ export function Header({ pathName }: { pathName: string }) {
               // ),
               ({ close }) => (
                 <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
-                  Docs
+                  DOCS
                 </MobileNavLink>
               ),
               ({ close }) => (
                 <MobileNavLink href={links.home} closeDropdown={close} key="About">
-                  About
+                  ABOUT
                 </MobileNavLink>
               ),
             ]}
-            menuClassname="!left-0 !right-0 py-7 px-8 bg-primary-600/95 backdrop-blur-sm"
+            menuClassname="!left-0 !right-0 py-7 px-8 !bg-[rgba(13,6,18,0.95)] backdrop-blur-sm"
           />
         </div>
       </div>
@@ -106,7 +100,7 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white bg-primary-500 px-4 py-1">
+    <div className="flex flex-col items-center rounded border border-white bg-primary-500 px-4 py-1">
       <WideChevronIcon
         width={10}
         height={14}
@@ -146,7 +140,7 @@ function MobileNavLink({
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-xl font-medium capitalize text-white">{children}</span>
+      <span className="text-xl font-medium uppercase text-white">{children}</span>
     </Link>
   );
 }

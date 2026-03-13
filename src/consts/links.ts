@@ -6,6 +6,7 @@ export const links = {
   discord: 'https://discord.gg/VK9ZUy3aTV',
   github: 'https://github.com/hyperlane-xyz',
   jobs: 'https://jobs.lever.co/Hyperlane',
+  stake: 'https://app.symbiotic.fi/vault/0xE1F23869776c82f691d9Cb34597Ab1830Fb0De58',
   twitter: 'https://x.com/hyperlane',
   blog: 'https://medium.com/hyperlane',
   tenderlySimDocs:

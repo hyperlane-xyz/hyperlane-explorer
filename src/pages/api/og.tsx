@@ -1,7 +1,7 @@
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 
-import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { APP_DESCRIPTION } from '../../consts/appMetadata';
 import { links } from '../../consts/links';
 import {
   fetchDomainNames,
@@ -45,29 +45,27 @@ export const config = {
 
 // Global font cache to avoid reloading on every request
 // Edge runtime persists module-level state across requests within the same instance
-let fontCache: { valve: ArrayBuffer; mono: ArrayBuffer } | null = null;
+let fontCache: { mono: ArrayBuffer } | null = null;
 
-async function loadFonts(baseUrl: string): Promise<{ valve: ArrayBuffer; mono: ArrayBuffer }> {
+async function loadFonts(baseUrl: string): Promise<{ mono: ArrayBuffer }> {
   if (fontCache) {
     return fontCache;
   }
   try {
-    const [valveRes, monoRes] = await Promise.all([
-      fetch(new URL('/fonts/PPValve-PlainMedium.ttf', baseUrl).toString()),
-      fetch(new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString()),
-    ]);
-    if (!valveRes.ok || !monoRes.ok) {
+    const monoRes = await fetch(
+      new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString(),
+    );
+    if (!monoRes.ok) {
       logger.error('Failed to fetch fonts');
-      return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
+      return { mono: new ArrayBuffer(0) };
     }
     fontCache = {
-      valve: await valveRes.arrayBuffer(),
       mono: await monoRes.arrayBuffer(),
     };
     return fontCache;
   } catch (error) {
     logger.error('Error loading fonts for OG image:', error);
-    return { valve: new ArrayBuffer(0), mono: new ArrayBuffer(0) };
+    return { mono: new ArrayBuffer(0) };
   }
 }
 
@@ -205,12 +203,6 @@ export default async function handler(req: NextRequest) {
     height: 630,
     fonts: [
       {
-        name: 'PPValve',
-        data: fonts.valve,
-        style: 'normal' as const,
-        weight: 500 as const,
-      },
-      {
         name: 'PPFraktionMono',
         data: fonts.mono,
         style: 'normal' as const,
@@ -314,11 +306,11 @@ export default async function handler(req: NextRequest) {
           display: 'flex',
           flexDirection: 'column',
           padding: '48px 64px',
-          fontFamily: 'PPValve, sans-serif',
+          fontFamily: 'PPFraktionMono, sans-serif',
           position: 'relative',
         }}
       >
-        {/* Sparkle background */}
+        {/* Grid background */}
         <img
           src={backgroundUrl}
           style={{
@@ -329,6 +321,19 @@ export default async function handler(req: NextRequest) {
             height: '250%',
             objectFit: 'cover',
             objectPosition: 'center',
+            opacity: 0.6,
+          }}
+        />
+        {/* Grid fade overlay - hides grid at top, reveals at bottom */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              'linear-gradient(to bottom, rgba(13,6,18,0.85) 0%, rgba(13,6,18,0.4) 40%, rgba(13,6,18,0) 70%)',
           }}
         />
 
@@ -353,20 +358,12 @@ export default async function handler(req: NextRequest) {
             marginBottom: '40px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img
-              src={`${origin}/images/hyperlane-logo-color.svg`}
-              width="44"
-              height="40"
-              alt=""
-              style={{ marginRight: '16px' }}
-            />
-            <span
-              style={{ color: 'white', fontSize: '42px', fontWeight: 600, letterSpacing: '-0.5px' }}
-            >
-              {APP_NAME}
-            </span>
-          </div>
+          <img
+            src={`${origin}/images/hyperlane-explorer-logo.svg`}
+            width="275"
+            height="67"
+            alt=""
+          />
           <div
             style={{
               display: 'flex',
@@ -374,7 +371,7 @@ export default async function handler(req: NextRequest) {
               gap: '10px',
               background: statusBgColor,
               padding: '14px 24px',
-              borderRadius: '28px',
+              borderRadius: '2px',
               border: `1px solid ${statusColor}`,
             }}
           >
@@ -413,9 +410,9 @@ export default async function handler(req: NextRequest) {
             {/* Origin Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, ${originColors.primary}15 0%, ${originColors.secondary || originColors.primary}08 100%)`,
-                border: `1px solid ${originColors.primary}30`,
-                borderRadius: '20px',
+                background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
+                border: `1px solid ${originColors.primary}50`,
+                borderRadius: '2px',
                 padding: '28px 48px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -462,9 +459,9 @@ export default async function handler(req: NextRequest) {
             {/* Destination Chain Box */}
             <div
               style={{
-                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}08 0%, ${destColors.primary}15 100%)`,
-                border: `1px solid ${destColors.primary}30`,
-                borderRadius: '20px',
+                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
+                border: `1px solid ${destColors.primary}50`,
+                borderRadius: '2px',
                 padding: '28px 48px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -538,8 +535,6 @@ export default async function handler(req: NextRequest) {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginTop: '24px',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(154, 13, 255, 0.2)',
           }}
         >
           <div
@@ -562,7 +557,7 @@ export default async function handler(req: NextRequest) {
                 fontFamily: 'PPFraktionMono, monospace',
                 background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
-                borderRadius: '10px',
+                borderRadius: '2px',
               }}
             >
               {shortMsgId}
@@ -617,7 +612,7 @@ export default async function handler(req: NextRequest) {
                 fontFamily: 'PPFraktionMono, monospace',
                 background: 'rgba(154, 13, 255, 0.11)',
                 padding: '8px 16px',
-                borderRadius: '10px',
+                borderRadius: '2px',
               }}
             >
               {formattedDate}
@@ -642,7 +637,7 @@ function DefaultOGImage({ origin }: { origin: string }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'PPValve, sans-serif',
+        fontFamily: 'PPFraktionMono, sans-serif',
       }}
     >
       {/* Top decorative line */}
@@ -653,22 +648,12 @@ function DefaultOGImage({ origin }: { origin: string }) {
           left: 0,
           right: 0,
           height: '4px',
-          background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
+          background: 'linear-gradient(90deg, #4C52FF 0%, #9A0DFF 50%, #4C52FF 100%)',
         }}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-        <img src={`${origin}/images/hyperlane-logo-color.svg`} width="140" height="126" alt="" />
-        <span
-          style={{
-            color: 'white',
-            fontSize: '64px',
-            fontWeight: 600,
-            letterSpacing: '-1px',
-          }}
-        >
-          {APP_NAME}
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
+        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="327" height="80" alt="" />
         <span style={{ color: '#6B7280', fontSize: '28px' }}>{APP_DESCRIPTION}</span>
       </div>
     </div>

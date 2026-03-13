@@ -32,7 +32,7 @@ function _HyperlaneGradientLogo({ width = 219, height = 18, className }: Props) 
           <stop stopColor="#4C52FF" />
           <stop offset="0.3" stopColor="#9A0DFF" />
           <stop offset="0.6" stopColor="#9A0DFF" />
-          <stop offset="1" stopColor="#FF4FE9" />
+          <stop offset="1" stopColor="#9A0DFF" />
         </linearGradient>
       </defs>
     </svg>
