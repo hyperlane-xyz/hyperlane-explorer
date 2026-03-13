@@ -2,10 +2,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { DiscordIcon, GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
+import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 
+import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
 import { docLinks, links } from '../../consts/links';
-import Logo from '../../images/logos/hyperlane-logo.svg';
+import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
+import { Color } from '../../styles/Color';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },
@@ -14,15 +16,20 @@ const footerLinks1 = [
 ];
 
 const footerLinks2 = [
-  { title: 'Support', url: links.help, external: true },
+  { title: 'Stake', url: links.stake, external: true },
   { title: 'Careers', url: links.jobs, external: true },
   { title: 'Brand', url: links.brand, external: true },
 ];
 
 const footerLinks3 = [
-  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color="#fff" /> },
-  { title: 'Discord', url: links.discord, external: true, icon: <DiscordIcon color="#fff" /> },
-  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color="#fff" /> },
+  { title: 'X', url: links.twitter, external: true, icon: <TwitterIcon color={Color.white} /> },
+  {
+    title: 'Support',
+    url: links.help,
+    external: true,
+    icon: <QuestionMarkIcon color={Color.white} />,
+  },
+  { title: 'Github', url: links.github, external: true, icon: <GithubIcon color={Color.white} /> },
 ];
 
 export function Footer() {
@@ -30,11 +37,7 @@ export function Footer() {
     <footer className="relative z-10 bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
       <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
-          <Image src={Logo} alt="" className="h-12 w-auto sm:h-14" />
-          <div className="ml-6 space-y-1 text-lg sm:text-xl">
-            <div>Go interchain</div>
-            <div>with Hyperlane</div>
-          </div>
+          <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-10 w-auto sm:h-12" />
         </div>
         <nav className="flex">
           <ul className={`${styles.linkCol} mr-14`}>
@@ -85,5 +88,5 @@ export function Footer() {
 
 const styles = {
   linkCol: 'flex flex-col gap-2',
-  linkItem: 'flex items-center capitalize text-decoration-none hover:underline underline-offset-2',
+  linkItem: 'flex items-center uppercase text-decoration-none hover:underline underline-offset-2',
 };

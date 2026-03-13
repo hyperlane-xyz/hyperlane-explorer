@@ -1,8 +1,6 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import { useMemo } from 'react';
-import { Card } from '../../../components/layout/Card';
-import AccountStar from '../../../images/icons/account-star.svg';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { Message } from '../../../types';
 import { tryDecodeIcaBody, useIcaAddress } from '../ica';
 
@@ -23,19 +21,16 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
   } = useIcaAddress(originDomainId, decodeResult?.sender);
 
   return (
-    <Card className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="relative -left-0.5 -top-px">
-          <Image src={AccountStar} width={28} height={28} alt="" />
-        </div>
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-primary-800">ICA Details</h3>
-          <Tooltip
-            id="ica-info"
-            content="Extra information for messages from/to Interchain Accounts."
-          />
-        </div>
-      </div>
+    <SectionCard
+      className="w-full"
+      title="ICA Details"
+      icon={
+        <Tooltip
+          id="ica-info"
+          content="Extra information for messages from/to Interchain Accounts."
+        />
+      }
+    >
       {decodeResult ? (
         <>
           <KeyValueRow
@@ -100,6 +95,6 @@ export function IcaDetailsCard({ message: { originDomainId, body }, blur }: Prop
           Unable to decode ICA message body, no details currently available.
         </div>
       )}
-    </Card>
+    </SectionCard>
   );
 }

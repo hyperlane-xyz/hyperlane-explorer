@@ -7,7 +7,7 @@ module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     fontFamily: {
-      sans: ['PP Valve', 'system-ui', 'sans-serif'],
+      sans: ['PP Fraktion Mono', 'system-ui', 'sans-serif'],
       mono: ['PP Fraktion Mono', 'system-ui', 'monospace'],
       secondary: ['PP Fraktion Mono', 'system-ui', 'sans-serif'],
     },
@@ -15,6 +15,17 @@ module.exports = {
       all: '1px',
       xs: '480px',
       ...defaultTheme.screens,
+    },
+    borderRadius: {
+      none: '0',
+      sm: '1px',
+      DEFAULT: '2px',
+      md: '3px',
+      lg: '4px',
+      xl: '6px',
+      '2xl': '8px',
+      '3xl': '10px',
+      full: '9999px',
     },
     extend: {
       colors: {
@@ -52,16 +63,16 @@ module.exports = {
         },
         accent: {
           25: '#F8F0FF',
-          50: '#F9D5FB',
-          100: '#FABAF8',
-          200: '#FCA0F4',
-          300: '#FD85F0',
-          400: '#FE6AED',
-          500: '#FF4FE9',
-          600: '#DA46CA',
-          700: '#B53DAA',
-          800: '#91358B',
-          900: '#6C2C6C',
+          50: '#E8CAFF',
+          100: '#D9A4FF',
+          200: '#C97EFF',
+          300: '#B959FF',
+          400: '#AA33FF',
+          500: '#9A0DFF',
+          600: '#860FDC',
+          700: '#7211B9',
+          800: '#5E1396',
+          900: '#4A1673',
         },
         blue: {
           25: '#F8F0FF',
@@ -149,14 +160,6 @@ module.exports = {
         128: '32rem',
         144: '36rem',
       },
-      borderRadius: {
-        none: '0',
-        sm: '0.2rem',
-        DEFAULT: '0.3rem',
-        md: '0.4rem',
-        lg: '0.5rem',
-        full: '9999px',
-      },
       blur: {
         xs: '3px',
       },
@@ -170,7 +173,7 @@ module.exports = {
         'brand-gradient': `radial-gradient(ellipse 200% 150% at 50% 100%, ${theme('colors.primary.800')} 0%, ${theme('colors.primary.950')} 40%, #0d0612 100%)`,
       }),
       boxShadow: ({ theme }) => ({
-        'accent-glow': `inset 2px 2px 13px 2px ${theme('colors.accent.100')}`,
+        'accent-glow': `inset 0 0 20px 0 rgba(154, 13, 255, 0.35)`,
         card: `0px 4px 6px ${theme('colors.gray.950')}1A`,
         button: `0 4px 6px ${theme('colors.gray.950')}1A`,
         input: `0 0 4px ${theme('colors.gray.400')}4D`,

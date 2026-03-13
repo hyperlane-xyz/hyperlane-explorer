@@ -8,6 +8,7 @@ import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane
 import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
+import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
@@ -87,7 +88,7 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          'flex items-center justify-center rounded border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
           value ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         onClick={open}
@@ -99,7 +100,7 @@ function ChainSelector({
             width={9}
             height={5}
             className="ml-2 opacity-80"
-            color="#DA46CA"
+            color={Color.accentDark}
           />
         )}
       </button>
@@ -155,13 +156,13 @@ function DatetimeSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color="#DA46CA"
+                color={Color.accentDark}
               />
             )}
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
           hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-60"
@@ -201,7 +202,7 @@ function ClearButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-pink-300/80 p-1 hover:opacity-80"
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-primary-300/80 p-1 hover:opacity-80"
     >
       <XIcon color="white" height={10} width={10} />
     </button>
@@ -236,13 +237,13 @@ function StatusSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color="#DA46CA"
+                color={Color.accentDark}
               />
             )}
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
           hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-36"

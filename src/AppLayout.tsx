@@ -19,7 +19,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
       <div className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between bg-brand-gradient">
-        <div className="pointer-events-none fixed inset-0 z-0" style={styles.starOverlay} />
+        <div className="pointer-events-none absolute inset-0 z-0" style={styles.gridOverlay} />
         <Header pathName={pathName} />
         <div className="relative z-10 mx-auto max-w-5xl grow">
           <main style={styles.main} className="relative min-h-full pt-3">
@@ -39,11 +39,13 @@ function getHeadTitle(pathName: string) {
 }
 
 const styles = {
-  starOverlay: {
+  gridOverlay: {
     backgroundImage: 'url(/images/background.svg)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  },
+    backgroundSize: '100% auto',
+    backgroundRepeat: 'repeat',
+    maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
+    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
+  } as React.CSSProperties,
   main: {
     width: 'min(900px,96vw)',
   },
