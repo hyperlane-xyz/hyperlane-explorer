@@ -2,12 +2,13 @@ import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useMemo } from 'react';
+import { PropsWithChildren, ReactNode, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
+import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
@@ -42,7 +43,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer border-b border-blue-50 last:border-0 hover:bg-pink-50 active:bg-pink-100 ${
+            className={`relative cursor-pointer border-b border-primary-50 last:border-0 hover:bg-accent-50 active:bg-accent-100 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >
@@ -73,14 +74,25 @@ export function MessageSummaryRow({
   const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, mp);
 
-  let statusIcon = undefined;
+  let statusIcon: ReactNode = null;
   let statusTitle = '';
   if (status === MessageStatus.Delivered) {
-    statusIcon = CheckmarkIcon;
+    statusIcon = (
+      <CheckmarkIcon width={18} height={18} color={Color.primaryDark} className="pt-px" />
+    );
     statusTitle = 'Delivered';
   } else if (status === MessageStatus.Failing) {
-    statusIcon = ErrorIcon;
     statusTitle = 'Failing';
+    statusIcon = (
+      <Image
+        src={ErrorIcon}
+        width={18}
+        height={18}
+        alt={statusTitle}
+        title={statusTitle}
+        className="pt-px"
+      />
+    );
   }
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
@@ -93,11 +105,11 @@ export function MessageSummaryRow({
   );
   return (
     <>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5 pl-3 sm:pl-5">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-3.5">
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5">
         <ChainLogo chainName={destinationChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
@@ -121,7 +133,7 @@ export function MessageSummaryRow({
       <LinkCell
         id={msgId}
         base64={base64}
-        aClasses={`flex items-center py-3.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
+        aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
       >
         {warpRouteDetails ? (
@@ -138,18 +150,7 @@ export function MessageSummaryRow({
         ) : null}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} tdClasses="w-8">
-        {statusIcon && (
-          <span>
-            <Image
-              src={statusIcon}
-              width={18}
-              height={18}
-              alt={statusTitle}
-              title={statusTitle}
-              className="pt-px"
-            />
-          </span>
-        )}
+        {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
       </LinkCell>
     </>
   );
@@ -174,8 +175,8 @@ function LinkCell({
 }
 
 const styles = {
-  header: 'text-sm text-blue-500 font-medium pt-2 pb-3 text-center',
-  value: 'py-3.5 flex items-center justify-center text-sm text-center font-light px-1',
-  valueTruncated: 'py-3.5 flex items-center justify-center text-sm text-center font-light truncate',
+  header: 'text-sm text-primary-800 font-medium pt-2 pb-3 text-center',
+  value: 'py-2.5 flex items-center justify-center text-sm text-center font-light px-1',
+  valueTruncated: 'py-2.5 flex items-center justify-center text-sm text-center font-light truncate',
   iconText: 'text-sm font-light ml-2',
 };

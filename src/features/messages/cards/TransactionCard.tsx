@@ -3,9 +3,10 @@ import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
+import { Color } from '../../../styles/Color';
 import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
@@ -95,7 +96,7 @@ export function DestinationTransactionCard({
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
         <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} />
+          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
@@ -170,7 +171,7 @@ export function DestinationTransactionCard({
                 </div>
               )}
               <div className="mt-6 flex items-center justify-center">
-                <SpinnerIcon width={40} height={40} />
+                <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
               </div>
               <CallDataModal debugResult={debugResult} />
             </div>
@@ -209,18 +210,14 @@ function TransactionCard({
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
   return (
-    <Card className="flex min-w-[400px] flex-1 basis-0 flex-col space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="relative -left-0.5 -top-px">
-          <ChainLogo chainName={chainName} />
-        </div>
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">{title}</h3>
-          <Tooltip id="transaction-info" content={helpText} />
-        </div>
-      </div>
-      {children}
-    </Card>
+    <SectionCard
+      className="flex min-w-[340px] flex-1 basis-0 flex-col"
+      title={title}
+      leading={<ChainLogo chainName={chainName} size={24} />}
+      icon={<Tooltip id="transaction-info" content={helpText} />}
+    >
+      <div className="space-y-2">{children}</div>
+    </SectionCard>
   );
 }
 
@@ -282,19 +279,19 @@ function TransactionDetails({
         label="Tx:"
         labelWidth="w-16"
         display={formattedHash}
-        displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
         link={txExplorerLink}
+        truncateMiddle={true}
       />
       <KeyValueRow
         label="From:"
         labelWidth="w-16"
         display={from}
-        displayWidth="w-60 sm:w-64"
         showCopy={true}
         blurValue={blur}
         link={fromExplorerLink}
+        truncateMiddle={true}
       />
       {!!timestamp && (
         <KeyValueRow
@@ -302,7 +299,6 @@ function TransactionDetails({
           labelWidth="w-16"
           display={getHumanReadableTimeString(timestamp)}
           subDisplay={`(${getDateTimeString(timestamp)})`}
-          displayWidth="w-60 sm:w-64"
           blurValue={blur}
         />
       )}
@@ -310,7 +306,6 @@ function TransactionDetails({
         label="Block:"
         labelWidth="w-16"
         display={blockNumber?.toString()}
-        displayWidth="w-60 sm:w-64"
         blurValue={blur}
       />
     </>
@@ -341,7 +336,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
           <p className="text-sm font-light">
             {`The last step of message delivery is the recipient contract's 'handle' function. If the handle is reverting, try debugging it with `}
             <a
-              className={`${styles.textLink} all:text-blue-500`}
+              className={`${styles.textLink} all:text-primary-600`}
               href={links.tenderlySimDocs}
               target="_blank"
               rel="noopener noreferrer"
@@ -384,13 +379,7 @@ function ChainDescriptionRow({
     false,
   )} (${idString})`;
   return (
-    <KeyValueRow
-      label="Chain:"
-      labelWidth="w-16"
-      display={chainDescription}
-      displayWidth="w-60 sm:w-64"
-      blurValue={blur}
-    />
+    <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
   );
 }
 

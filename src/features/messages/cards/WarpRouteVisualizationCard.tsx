@@ -65,7 +65,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
       <div className="flex w-full items-center justify-between">
         <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-2">
           <Image src={HubIcon} width={28} height={28} alt="" className="opacity-80" />
-          <h3 className="text-md font-medium text-blue-500">Warp Route Overview</h3>
+          <h3 className="text-md font-medium text-primary-800">Warp Route Overview</h3>
           <Tooltip
             id="warp-route-overview-info"
             content="Visualization of the warp route showing all connected chains, their configuration, and collateral balances"
@@ -73,13 +73,15 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
         </button>
         <div className="flex items-center gap-2">
           {/* Route ID pill - outside button to prevent toggle on copy */}
-          <div className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">
-            <span className="font-mono text-xs text-gray-600">{visualization.routeId}</span>
+          <div className="flex items-center gap-1 rounded-md bg-[#e5e7eb] px-2.5 py-1.5">
+            <span className="font-mono text-xs font-light text-gray-800">
+              {visualization.routeId}
+            </span>
             <CopyButton
               copyValue={visualization.routeId}
               width={12}
               height={12}
-              className="opacity-60"
+              className="opacity-50"
             />
           </div>
           <button onClick={() => setIsExpanded(!isExpanded)}>
