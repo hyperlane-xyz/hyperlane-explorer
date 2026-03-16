@@ -148,6 +148,4 @@ function MobileNavLink({
 const styles = {
   navLink:
     'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-primary-500 underline-offset-[3px] transition-all',
-  dropdownOption:
-    'flex items-center cursor-pointer p-2 mt-1 rounded text-primary-600 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
 };
