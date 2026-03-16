@@ -19,10 +19,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
       <div className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between bg-brand-gradient">
-        <div
-          className="pointer-events-none absolute inset-0 z-0"
-          style={styles.gridOverlay}
-        />
+        <div className="pointer-events-none absolute inset-0 z-0" style={styles.gridOverlay} />
         <Header pathName={pathName} />
         <div className="relative z-10 mx-auto max-w-5xl grow">
           <main style={styles.main} className="relative min-h-full pt-3">

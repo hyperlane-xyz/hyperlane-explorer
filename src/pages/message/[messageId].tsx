@@ -100,7 +100,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
   // Skip OG data fetching for non-bot user agents (speeds up navigation for real users)
   const userAgent = ctx.req?.headers['user-agent'] || '';
-  const isBot = /bot|crawl|spider|slurp|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot|WhatsApp/i.test(userAgent);
+  const isBot =
+    /bot|crawl|spider|slurp|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot|WhatsApp/i.test(
+      userAgent,
+    );
 
   if (isBot && messageId && typeof messageId === 'string') {
     try {
