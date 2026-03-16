@@ -78,16 +78,10 @@ export function ContentDetailsCard({
   const getBlockExplorerLinks = useCallback(async (): Promise<
     BlockExplorerAddressUrls | undefined
   > => {
-    const senderAddressLink = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      originChainId,
-      formattedSender,
-    );
-    const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      destinationChainId,
-      formattedRecipient,
-    );
+    const [senderAddressLink, recipientAddressLink] = await Promise.all([
+      tryGetBlockExplorerAddressUrl(multiProvider, originChainId, formattedSender),
+      tryGetBlockExplorerAddressUrl(multiProvider, destinationChainId, formattedRecipient),
+    ]);
     return { sender: senderAddressLink, recipient: recipientAddressLink };
   }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
 

@@ -2,7 +2,7 @@ import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, ReactNode, useMemo } from 'react';
+import { PropsWithChildren, ReactNode, memo, useMemo } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
@@ -59,7 +59,7 @@ export function MessageTable({
   );
 }
 
-export function MessageSummaryRow({
+export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
   mp,
   warpRouteChainAddressMap,
@@ -154,7 +154,7 @@ export function MessageSummaryRow({
       </LinkCell>
     </>
   );
-}
+});
 
 function LinkCell({
   id,
@@ -167,7 +167,7 @@ function LinkCell({
   const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
-      <Link href={`${path}${params}`} className={aClasses}>
+      <Link href={`${path}${params}`} prefetch={true} className={aClasses}>
         {children}
       </Link>
     </td>
