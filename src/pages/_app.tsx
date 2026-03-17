@@ -10,9 +10,12 @@ import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql
 import '@hyperlane-xyz/widgets/styles.css';
 
 import { AppLayout } from '../AppLayout';
+import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
+import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
+import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 import '../styles/global.css';
 
 // Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
@@ -57,17 +60,20 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // The Component is rendered (for Head/OG tags) but visually hidden.
   if (isSsr) {
     return (
-      <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
+      <div className="font-sans text-black">
         <OGHead
           url={links.explorerUrl}
           image={`${links.explorerUrl}/images/logo.png`}
           logoUrl={`${links.explorerUrl}/images/logo.png`}
         />
-        <QueryClientProvider client={reactQueryClient}>
-          <UrqlProvider value={urqlClient}>
-            <Component {...pageProps} />
-          </UrqlProvider>
-        </QueryClientProvider>
+        <div className="hidden" aria-hidden="true">
+          <QueryClientProvider client={reactQueryClient}>
+            <UrqlProvider value={urqlClient}>
+              <Component {...pageProps} />
+            </UrqlProvider>
+          </QueryClientProvider>
+        </div>
+        <AppLoadingShell>{getSsrLoadingContent(router.pathname)}</AppLoadingShell>
       </div>
     );
   }
@@ -92,4 +98,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
       </ErrorBoundary>
     </div>
   );
+}
+
+function getSsrLoadingContent(pathName: string) {
+  if (pathName === '/') return <MessageSearchLoading />;
+  if (pathName === '/message/[messageId]') return <MessageDetailsLoading />;
+  return <div className="min-h-[20rem]" />;
 }
