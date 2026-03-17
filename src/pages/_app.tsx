@@ -53,6 +53,28 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // complicates graphql integration. However, we still need to render
   // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onRouteChangeStart = (url: string) => {
+      if (isMessageRoute(url)) {
+        setPendingRoute(url);
+      } else {
+        setPendingRoute(null);
+      }
+    };
+    const onRouteChangeEnd = () => setPendingRoute(null);
+
+    router.events.on('routeChangeStart', onRouteChangeStart);
+    router.events.on('routeChangeComplete', onRouteChangeEnd);
+    router.events.on('routeChangeError', onRouteChangeEnd);
+
+    return () => {
+      router.events.off('routeChangeStart', onRouteChangeStart);
+      router.events.off('routeChangeComplete', onRouteChangeEnd);
+      router.events.off('routeChangeError', onRouteChangeEnd);
+    };
+  }, [router.events]);
 
   // Note, the font definition is required both here and in _document.tsx
   // Otherwise Next.js will not load the font
@@ -91,7 +113,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <AppLayout pathName={router.pathname}>
-              <Component {...pageProps} />
+              {pendingRoute ? getRouteLoadingContent(pendingRoute) : <Component {...pageProps} />}
             </AppLayout>
           </UrqlProvider>
         </QueryClientProvider>
@@ -103,6 +125,15 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
 function getSsrLoadingContent(pathName: string) {
   if (pathName === '/') return <MessageSearchLoading />;
-  if (pathName === '/message/[messageId]') return <MessageDetailsLoading />;
+  if (isMessageRoute(pathName)) return <MessageDetailsLoading />;
   return <div className="min-h-[20rem]" />;
+}
+
+function getRouteLoadingContent(pathName: string) {
+  if (isMessageRoute(pathName)) return <MessageDetailsLoading />;
+  return null;
+}
+
+function isMessageRoute(pathName: string) {
+  return pathName === '/message/[messageId]' || pathName.startsWith('/message/');
 }

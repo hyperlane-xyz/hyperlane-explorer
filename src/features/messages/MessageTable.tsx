@@ -1,6 +1,7 @@
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -15,6 +16,7 @@ import { getHumanReadableTimeString } from '../../utils/time';
 import type { ChainMetadataResolver } from '../chains/metadataManager';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
+import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
@@ -79,6 +81,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
+  const router = useRouter();
   const hasPrimedDetailPage = useRef(false);
 
   useEffect(() => {
@@ -107,9 +110,12 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   }
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
+  const detailPath = `/message/${msgId}`;
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
     hasPrimedDetailPage.current = true;
+    void router.prefetch(detailPath);
+    void prefetchMessageDetailShell();
     prefetchMessageStub(message);
 
     if (message.isPiMsg || !scrapedChains.length) return;
@@ -127,7 +133,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   return (
     <>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         aClasses="flex items-center py-2.5 pl-3 sm:pl-5"
         onNavigateIntent={primeDetailPage}
@@ -138,7 +144,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         </div>
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         aClasses="flex items-center py-2.5"
         onNavigateIntent={primeDetailPage}
@@ -149,7 +155,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         </div>
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         tdClasses="hidden sm:table-cell"
         aClasses={styles.value}
@@ -158,7 +164,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         {shortenAddress(formattedSender) || 'Invalid Address'}
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         tdClasses="hidden sm:table-cell"
         aClasses={styles.value}
@@ -167,7 +173,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         {shortenAddress(formattedRecipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         tdClasses="hidden lg:table-cell"
         aClasses={styles.valueTruncated}
@@ -176,7 +182,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         {shortenAddress(formattedTxHash)}
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
@@ -184,7 +190,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       <LinkCell
-        id={msgId}
+        path={detailPath}
         base64={base64}
         aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
@@ -203,7 +209,12 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
           </>
         ) : null}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} tdClasses="w-8" onNavigateIntent={primeDetailPage}>
+      <LinkCell
+        path={detailPath}
+        base64={base64}
+        tdClasses="w-8"
+        onNavigateIntent={primeDetailPage}
+      >
         {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
       </LinkCell>
     </>
@@ -211,20 +222,19 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 });
 
 function LinkCell({
-  id,
+  path,
   base64,
   tdClasses,
   aClasses,
   onNavigateIntent,
   children,
 }: PropsWithChildren<{
-  id: string;
+  path: string;
   base64?: string;
   tdClasses?: string;
   aClasses?: string;
   onNavigateIntent?: () => void;
 }>) {
-  const path = `/message/${id}`;
   const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
