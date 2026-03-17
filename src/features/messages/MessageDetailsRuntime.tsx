@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
-import { useIsIcaMessage } from './icaUtils';
-import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
+import { DetailSectionSkeleton } from './MessageDetailsLoading';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
 const DestinationTransactionCard = dynamic(
@@ -14,22 +13,6 @@ const DestinationTransactionCard = dynamic(
       <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
     ),
   },
-);
-const IsmDetailsCard = dynamic(
-  () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
-);
-const IcaDetailsCard = dynamic(
-  () => import('./cards/IcaDetailsCard').then((mod) => mod.IcaDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
-);
-const WarpRouteVisualizationCard = dynamic(
-  () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
-  { loading: () => <DetailCardSkeleton className="w-full" /> },
 );
 const PiMessageDetailsBridge = dynamic(() =>
   import('./PiMessageDetailsBridge').then((mod) => mod.PiMessageDetailsBridge),
@@ -54,7 +37,6 @@ interface Props {
   isGraphQlMessageFound: boolean;
   destinationChainName: string;
   blur: boolean;
-  showExtendedCards: boolean;
   warpRouteDetails?: WarpRouteDetails;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
@@ -68,7 +50,6 @@ export function MessageDetailsRuntime({
   isGraphQlMessageFound,
   destinationChainName,
   blur,
-  showExtendedCards,
   warpRouteDetails,
   onStateChange,
 }: Props) {
@@ -89,7 +70,6 @@ export function MessageDetailsRuntime({
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
   const hasRun =
     hasDetailedUrlMessage || isGraphQlMessageFound || baseIsMessageFound || piState.hasRun;
-  const isIcaMsg = useIsIcaMessage(message || queriedMessage);
 
   useEffect(() => {
     onStateChange({
@@ -127,21 +107,6 @@ export function MessageDetailsRuntime({
         message={message || queriedMessage}
         warpRouteDetails={warpRouteDetails}
       />
-      {showExtendedCards ? (
-        <>
-          <WarpRouteVisualizationCard
-            message={message || queriedMessage}
-            warpRouteDetails={warpRouteDetails}
-            blur={blur}
-          />
-          {debugResult?.ismDetails && (
-            <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-          )}
-          {isIcaMsg && <IcaDetailsCard message={message || queriedMessage} blur={blur} />}
-        </>
-      ) : (
-        <>{warpRouteDetails && <DetailCardSkeleton className="w-full" />}</>
-      )}
     </>
   );
 }

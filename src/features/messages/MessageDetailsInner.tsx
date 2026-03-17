@@ -1,7 +1,7 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
@@ -25,11 +25,27 @@ const ContentDetailsCard = dynamic(
   () => import('./cards/ContentDetailsCard').then((mod) => mod.ContentDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
 );
+const IsmDetailsCard = dynamic(
+  () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
+  {
+    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
+  },
+);
+const IcaDetailsCard = dynamic(
+  () => import('./cards/IcaDetailsCard').then((mod) => mod.IcaDetailsCard),
+  {
+    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
+  },
+);
 const GasDetailsCard = dynamic(
   () => import('./cards/GasDetailsCard').then((mod) => mod.GasDetailsCard),
   {
     loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
   },
+);
+const WarpRouteVisualizationCard = dynamic(
+  () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
+  { loading: () => <DetailCardSkeleton className="w-full" /> },
 );
 const WarpTransferDetailsCard = dynamic(
   () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
@@ -51,8 +67,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const chainMetadataResolver = useChainMetadataResolver();
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
-  const [showExtendedCards, setShowExtendedCards] = useState(false);
-  const [showRuntimeCard, setShowRuntimeCard] = useState(false);
   const [runtimeState, setRuntimeState] = useState<{
     messageId: string;
     value: MessageDetailsRuntimeState;
@@ -116,39 +130,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
 
   useEffect(() => {
     setRuntimeState(null);
-    setShowRuntimeCard(false);
-  }, [messageId]);
-
-  useEffect(() => {
-    setShowExtendedCards(false);
-
-    const reveal = () => {
-      startTransition(() => setShowExtendedCards(true));
-    };
-
-    if (typeof window === 'undefined') return;
-
-    if ('requestIdleCallback' in window) {
-      const idleWindow = window as Window &
-        typeof globalThis & {
-          requestIdleCallback: typeof window.requestIdleCallback;
-          cancelIdleCallback: typeof window.cancelIdleCallback;
-        };
-      const idleId = idleWindow.requestIdleCallback(reveal, { timeout: 700 });
-      return () => idleWindow.cancelIdleCallback(idleId);
-    }
-
-    const timeoutId = globalThis.setTimeout(reveal, 150);
-    return () => globalThis.clearTimeout(timeoutId);
-  }, [messageId]);
-
-  useEffect(() => {
-    const revealRuntime = () => {
-      startTransition(() => setShowRuntimeCard(true));
-    };
-
-    const timeoutId = globalThis.setTimeout(revealRuntime, 120);
-    return () => globalThis.clearTimeout(timeoutId);
   }, [messageId]);
 
   const warpRouteDetails = useMemo(
@@ -162,7 +143,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
       status={status}
       transaction={destination}
       blur={blur}
-      isLiveDetailsPending={isFetching || showRuntimeCard}
+      isLiveDetailsPending={isFetching}
     />
   );
 
@@ -190,47 +171,43 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           transaction={origin}
           blur={blur}
         />
-        {showRuntimeCard ? (
-          <Suspense fallback={destinationPreview}>
-            <MessageDetailsRuntime
-              messageId={messageId}
-              baseMessage={baseMessage}
-              baseIsMessageFound={baseIsMessageFound}
-              hasDetailedUrlMessage={hasDetailedUrlMessage}
-              hasGraphQlRun={hasGraphQlRun}
-              isGraphQlMessageFound={isGraphQlMessageFound}
-              destinationChainName={destinationChainName}
-              blur={blur}
-              showExtendedCards={showExtendedCards}
-              warpRouteDetails={warpRouteDetails}
-              onStateChange={handleRuntimeStateChange}
-            />
-          </Suspense>
-        ) : (
-          destinationPreview
-        )}
+        <Suspense fallback={destinationPreview}>
+          <MessageDetailsRuntime
+            messageId={messageId}
+            baseMessage={baseMessage}
+            baseIsMessageFound={baseIsMessageFound}
+            hasDetailedUrlMessage={hasDetailedUrlMessage}
+            hasGraphQlRun={hasGraphQlRun}
+            isGraphQlMessageFound={isGraphQlMessageFound}
+            destinationChainName={destinationChainName}
+            blur={blur}
+            warpRouteDetails={warpRouteDetails}
+            onStateChange={handleRuntimeStateChange}
+          />
+        </Suspense>
         <ContentDetailsCard message={message} blur={blur} />
-        {showExtendedCards ? (
-          <>
-            {showTimeline && <TimelineCard message={message} blur={blur} />}
-            <WarpTransferDetailsCard
-              message={message}
-              warpRouteDetails={warpRouteDetails}
-              blur={blur}
-            />
-            <GasDetailsCard
-              message={message}
-              igpPayments={debugResult?.gasDetails?.contractToPayments}
-              blur={blur}
-            />
-          </>
-        ) : (
-          <>
-            {showTimeline && <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />}
-            {warpRouteDetails && <DetailSectionSkeleton className="w-full" rows={4} />}
-            <DetailSectionSkeleton className="w-full" rows={3} />
-          </>
+        <WarpRouteVisualizationCard
+          message={message}
+          warpRouteDetails={warpRouteDetails}
+          blur={blur}
+        />
+        {debugResult?.ismDetails && (
+          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
         )}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+        {showTimeline && <TimelineCard message={message} blur={blur} />}
+        {warpRouteDetails && (
+          <WarpTransferDetailsCard
+            message={message}
+            warpRouteDetails={warpRouteDetails}
+            blur={blur}
+          />
+        )}
+        <GasDetailsCard
+          message={message}
+          igpPayments={debugResult?.gasDetails?.contractToPayments}
+          blur={blur}
+        />
       </div>
     </>
   );
