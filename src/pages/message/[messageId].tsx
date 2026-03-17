@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { OGHead } from '../../components/OGHead';
 import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { MessageDetailsLoading } from '../../features/messages/MessageDetailsLoading';
 import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
@@ -14,7 +15,10 @@ import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing
 // Dynamic import with ssr: false to avoid pino-pretty issues during SSR
 const MessageDetailsPage = dynamic(
   () => import('../../features/messages/MessageDetailsPage').then((mod) => mod.MessageDetailsPage),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <MessageDetailsLoading />,
+  },
 );
 
 interface OGData {
@@ -98,7 +102,13 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  if (messageId && typeof messageId === 'string') {
+  const userAgent = ctx.req?.headers['user-agent'] || '';
+  const isBot =
+    /bot|crawl|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|discordbot|whatsapp/i.test(
+      userAgent,
+    );
+
+  if (isBot && messageId && typeof messageId === 'string') {
     try {
       const [messageData, domainNames, chainMetadata] = await Promise.all([
         fetchMessageForOG(messageId),
@@ -123,6 +133,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     } catch {
       // Silently fail - will use default OG tags
     }
+  }
+
+  if (!isBot) {
+    ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
   }
 
   return {

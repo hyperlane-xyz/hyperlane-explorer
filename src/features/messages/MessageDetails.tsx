@@ -1,5 +1,6 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -10,19 +11,45 @@ import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
-import { ContentDetailsCard } from './cards/ContentDetailsCard';
-import { GasDetailsCard } from './cards/GasDetailsCard';
-import { IcaDetailsCard } from './cards/IcaDetailsCard';
-import { IsmDetailsCard } from './cards/IsmDetailsCard';
+import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
-import { WarpRouteVisualizationCard } from './cards/WarpRouteVisualizationCard';
-import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
+
+const ContentDetailsCard = dynamic(
+  () => import('./cards/ContentDetailsCard').then((mod) => mod.ContentDetailsCard),
+  { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
+);
+const GasDetailsCard = dynamic(
+  () => import('./cards/GasDetailsCard').then((mod) => mod.GasDetailsCard),
+  {
+    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
+  },
+);
+const IsmDetailsCard = dynamic(
+  () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
+  {
+    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
+  },
+);
+const IcaDetailsCard = dynamic(
+  () => import('./cards/IcaDetailsCard').then((mod) => mod.IcaDetailsCard),
+  {
+    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
+  },
+);
+const WarpTransferDetailsCard = dynamic(
+  () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
+  { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
+);
+const WarpRouteVisualizationCard = dynamic(
+  () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
+  { loading: () => <DetailCardSkeleton className="w-full" /> },
+);
 
 interface Props {
   messageId: string; // Hex value for message id
