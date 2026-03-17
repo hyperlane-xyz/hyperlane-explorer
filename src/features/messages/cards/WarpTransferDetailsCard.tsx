@@ -3,14 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useMultiProvider } from '../../../store';
-import { Message, WarpRouteDetails } from '../../../types';
+import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
 import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   warpRouteDetails: WarpRouteDetails | undefined;
   blur: boolean;
 }

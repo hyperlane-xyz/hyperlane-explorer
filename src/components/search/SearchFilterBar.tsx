@@ -1,17 +1,21 @@
 import clsx from 'clsx';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 
-import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
 import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
+
+const ChainSearchModal = dynamic(() =>
+  import('../../features/chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
 
 interface Props {
   originChain: string | null;
@@ -105,7 +109,7 @@ function ChainSelector({
         )}
       </button>
       {value && <ClearButton onClick={onClear} />}
-      <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />
+      {isOpen && <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />}
     </div>
   );
 }

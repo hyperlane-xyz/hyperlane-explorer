@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
-import { Message, MessageStatus, WarpRouteDetails } from '../../../types';
+import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 
 import { CollateralInfo, CollateralStatus } from './types';
@@ -112,7 +112,7 @@ async function fetchCollateralBalance(
 }
 
 export function useCollateralStatus(
-  message: Message | undefined,
+  message: Message | MessageStub | undefined,
   warpRouteDetails: WarpRouteDetails | undefined,
 ): CollateralInfo {
   const multiProvider = useMultiProvider();

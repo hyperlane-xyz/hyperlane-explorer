@@ -1,17 +1,24 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
+import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
-import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
+import {
+  Message,
+  MessageStatus,
+  MessageStub,
+  MessageTx,
+  MessageTxStub,
+  WarpRouteDetails,
+} from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { ChainSearchModal } from '../../chains/ChainSearchModal';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
@@ -21,6 +28,10 @@ import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { KeyValueRow } from './KeyValueRow';
 
+const ChainSearchModal = dynamic(() =>
+  import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
+
 export function OriginTransactionCard({
   chainName,
   domainId,
@@ -29,7 +40,7 @@ export function OriginTransactionCard({
 }: {
   chainName: string;
   domainId: DomainId;
-  transaction: MessageTx;
+  transaction: MessageTx | MessageTxStub;
   blur: boolean;
 }) {
   return (
@@ -59,12 +70,12 @@ export function DestinationTransactionCard({
   chainName: string;
   domainId: DomainId;
   status: MessageStatus;
-  transaction?: MessageTx;
+  transaction?: MessageTx | MessageTxStub;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
-  message?: Message;
+  message?: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
 }) {
   const multiProvider = useMultiProvider();
@@ -146,7 +157,7 @@ export function DestinationTransactionCard({
           </div>
         </DeliveryStatus>
         {/* TODO get modal to auto-close after adding chain metadata */}
-        <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
+        {isOpen && <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />}
       </>
     );
   } else if (status === MessageStatus.Pending) {
@@ -229,11 +240,12 @@ function TransactionDetails({
 }: {
   chainName: string;
   domainId: DomainId;
-  transaction: MessageTx;
+  transaction: MessageTx | MessageTxStub;
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { hash, from, timestamp, blockNumber } = transaction;
+  const { hash, from, timestamp } = transaction;
+  const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
 
   const formattedHash = formatTxHash(hash, domainId, multiProvider);
 
@@ -305,7 +317,7 @@ function TransactionDetails({
       <KeyValueRow
         label="Block:"
         labelWidth="w-16"
-        display={blockNumber?.toString()}
+        display={blockNumber?.toString() || ''}
         blurValue={blur}
       />
     </>

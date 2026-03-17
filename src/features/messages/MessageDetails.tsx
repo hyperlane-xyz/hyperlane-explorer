@@ -1,18 +1,17 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useMultiProvider, useStore } from '../../store';
 import { Color } from '../../styles/Color';
-import { Message, MessageStatus } from '../../types';
+import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
-import { TimelineCard } from './cards/TimelineCard';
 import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
@@ -46,6 +45,9 @@ const WarpTransferDetailsCard = dynamic(
   () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
 );
+const TimelineCard = dynamic(() => import('./cards/TimelineCard').then((mod) => mod.TimelineCard), {
+  loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
+});
 const WarpRouteVisualizationCard = dynamic(
   () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
   { loading: () => <DetailCardSkeleton className="w-full" /> },
@@ -53,13 +55,15 @@ const WarpRouteVisualizationCard = dynamic(
 
 interface Props {
   messageId: string; // Hex value for message id
-  message?: Message; // If provided, component will use this data instead of querying
+  message?: Message | MessageStub; // If provided, component will use this data for initial render
 }
 
 export function MessageDetails({ messageId, message: messageFromUrlParams }: Props) {
   const multiProvider = useMultiProvider();
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
+  const [showExtendedCards, setShowExtendedCards] = useState(false);
+  const hasInitialFullMessage = hasFullMessageDetails(messageFromUrlParams);
 
   // GraphQL query and results
   const {
@@ -68,7 +72,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     hasRun: hasGraphQlRun,
     isMessageFound: isGraphQlMessageFound,
     message: messageFromGraphQl,
-  } = useMessageQuery({ messageId, pause: !!messageFromUrlParams });
+  } = useMessageQuery({ messageId, pause: hasInitialFullMessage });
 
   // Run permissionless interop chains query if needed
   const {
@@ -78,12 +82,12 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     isMessageFound: isPiMessageFound,
   } = usePiChainMessageQuery({
     messageId,
-    pause: !!messageFromUrlParams || !hasGraphQlRun || isGraphQlMessageFound,
+    pause: hasInitialFullMessage || !hasGraphQlRun || isGraphQlMessageFound,
   });
 
   // Coalesce GraphQL + PI results
   const _message =
-    messageFromUrlParams || messageFromGraphQl || messageFromPi || PLACEHOLDER_MESSAGE;
+    messageFromGraphQl || messageFromPi || messageFromUrlParams || PLACEHOLDER_MESSAGE;
   const isMessageFound = !!messageFromUrlParams || isGraphQlMessageFound || isPiMessageFound;
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
@@ -109,6 +113,7 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   const showTimeline =
     !isPiMsg &&
+    'blockNumber' in origin &&
     isEvmChain(multiProvider, originDomainId) &&
     isEvmChain(multiProvider, destinationDomainId);
 
@@ -124,6 +129,29 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
     if (isWarpRouteDataLoaded || !isMessageFound) return;
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isMessageFound, isWarpRouteDataLoaded]);
+
+  useEffect(() => {
+    setShowExtendedCards(false);
+
+    const reveal = () => {
+      startTransition(() => setShowExtendedCards(true));
+    };
+
+    if (typeof window === 'undefined') return;
+
+    if ('requestIdleCallback' in window) {
+      const idleWindow = window as Window &
+        typeof globalThis & {
+          requestIdleCallback: typeof window.requestIdleCallback;
+          cancelIdleCallback: typeof window.cancelIdleCallback;
+        };
+      const idleId = idleWindow.requestIdleCallback(reveal, { timeout: 700 });
+      return () => idleWindow.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = globalThis.setTimeout(reveal, 150);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [messageId]);
 
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
@@ -166,29 +194,49 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           message={message}
           warpRouteDetails={warpRouteDetails}
         />
-        {showTimeline && <TimelineCard message={message} blur={blur} />}
-        <WarpTransferDetailsCard
-          message={message}
-          warpRouteDetails={warpRouteDetails}
-          blur={blur}
-        />
-        <WarpRouteVisualizationCard
-          message={message}
-          warpRouteDetails={warpRouteDetails}
-          blur={blur}
-        />
         <ContentDetailsCard message={message} blur={blur} />
-        <GasDetailsCard
-          message={message}
-          igpPayments={debugResult?.gasDetails?.contractToPayments}
-          blur={blur}
-        />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+        {showExtendedCards ? (
+          <>
+            {showTimeline && <TimelineCard message={message} blur={blur} />}
+            <WarpTransferDetailsCard
+              message={message}
+              warpRouteDetails={warpRouteDetails}
+              blur={blur}
+            />
+            <WarpRouteVisualizationCard
+              message={message}
+              warpRouteDetails={warpRouteDetails}
+              blur={blur}
+            />
+            <GasDetailsCard
+              message={message}
+              igpPayments={debugResult?.gasDetails?.contractToPayments}
+              blur={blur}
+            />
+            {debugResult?.ismDetails && (
+              <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+            )}
+            {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+          </>
+        ) : (
+          <>
+            {showTimeline && <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />}
+            {warpRouteDetails && <DetailSectionSkeleton className="w-full" rows={4} />}
+            {warpRouteDetails && <DetailCardSkeleton className="w-full" />}
+            <DetailSectionSkeleton className="w-full" rows={3} />
+          </>
         )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
+  );
+}
+
+function hasFullMessageDetails(message?: Message | MessageStub | null): message is Message {
+  if (!message) return false;
+  return (
+    'decodedBody' in message ||
+    'totalGasAmount' in message ||
+    ('blockNumber' in message.origin && typeof message.origin.blockNumber === 'number')
   );
 }
 

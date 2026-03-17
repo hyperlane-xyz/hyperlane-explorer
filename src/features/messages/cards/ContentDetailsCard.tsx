@@ -4,7 +4,7 @@ import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useMultiProvider } from '../../../store';
-import { Message } from '../../../types';
+import { Message, MessageStub } from '../../../types';
 import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
@@ -14,12 +14,12 @@ import { KeyValueRow } from './KeyValueRow';
 import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   blur: boolean;
 }
 
-export function ContentDetailsCard({
-  message: {
+export function ContentDetailsCard({ message, blur }: Props) {
+  const {
     msgId,
     nonce,
     originDomainId,
@@ -27,12 +27,10 @@ export function ContentDetailsCard({
     sender,
     recipient,
     body,
-    decodedBody,
     originChainId,
     destinationChainId,
-  },
-  blur,
-}: Props) {
+  } = message;
+  const decodedBody = 'decodedBody' in message ? message.decodedBody : undefined;
   const multiProvider = useMultiProvider();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
   const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
@@ -78,16 +76,10 @@ export function ContentDetailsCard({
   const getBlockExplorerLinks = useCallback(async (): Promise<
     BlockExplorerAddressUrls | undefined
   > => {
-    const senderAddressLink = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      originChainId,
-      formattedSender,
-    );
-    const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      destinationChainId,
-      formattedRecipient,
-    );
+    const [senderAddressLink, recipientAddressLink] = await Promise.all([
+      tryGetBlockExplorerAddressUrl(multiProvider, originChainId, formattedSender),
+      tryGetBlockExplorerAddressUrl(multiProvider, destinationChainId, formattedRecipient),
+    ]);
     return { sender: senderAddressLink, recipient: recipientAddressLink };
   }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
 

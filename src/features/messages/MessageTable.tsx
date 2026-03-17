@@ -13,7 +13,9 @@ import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../type
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { getHumanReadableTimeString } from '../../utils/time';
+import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
+import { prefetchMessageDetails } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 export function MessageTable({
@@ -25,6 +27,7 @@ export function MessageTable({
 }) {
   const multiProvider = useMultiProvider();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const { scrapedDomains } = useScrapedDomains();
 
   return (
     <table className="mb-1 w-full">
@@ -50,6 +53,7 @@ export function MessageTable({
             <MessageSummaryRow
               message={m}
               mp={multiProvider}
+              scrapedChains={scrapedDomains}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
             />
           </tr>
@@ -62,13 +66,16 @@ export function MessageTable({
 export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
   mp,
+  scrapedChains,
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
   mp: MultiProtocolProvider;
+  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
+  const setPrefetchedMessage = useStore((s) => s.setPrefetchedMessage);
 
   const formattedSender = formatAddress(sender, originDomainId, mp);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
@@ -96,6 +103,13 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   }
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
+  const primeDetailPage = () => {
+    setPrefetchedMessage(message);
+
+    if (message.isPiMsg || !scrapedChains.length) return;
+
+    void prefetchMessageDetails(message.msgId, mp, scrapedChains);
+  };
 
   const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
@@ -105,18 +119,40 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   );
   return (
     <>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5 pl-3 sm:pl-5">
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        aClasses="flex items-center py-2.5 pl-3 sm:pl-5"
+        onNavigateIntent={primeDetailPage}
+      >
         <ChainLogo chainName={originChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5">
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        aClasses="flex items-center py-2.5"
+        onNavigateIntent={primeDetailPage}
+      >
         <ChainLogo chainName={destinationChainName} size={20} />
         <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        tdClasses="hidden sm:table-cell"
+        aClasses={styles.value}
+        onNavigateIntent={primeDetailPage}
+      >
         {shortenAddress(formattedSender) || 'Invalid Address'}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        tdClasses="hidden sm:table-cell"
+        aClasses={styles.value}
+        onNavigateIntent={primeDetailPage}
+      >
         {shortenAddress(formattedRecipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell
@@ -124,10 +160,16 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         base64={base64}
         tdClasses="hidden lg:table-cell"
         aClasses={styles.valueTruncated}
+        onNavigateIntent={primeDetailPage}
       >
         {shortenAddress(formattedTxHash)}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
+      <LinkCell
+        id={msgId}
+        base64={base64}
+        aClasses={styles.valueTruncated}
+        onNavigateIntent={primeDetailPage}
+      >
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       <LinkCell
@@ -135,6 +177,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         base64={base64}
         aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
+        onNavigateIntent={primeDetailPage}
       >
         {warpRouteDetails ? (
           <>
@@ -149,7 +192,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
           </>
         ) : null}
       </LinkCell>
-      <LinkCell id={msgId} base64={base64} tdClasses="w-8">
+      <LinkCell id={msgId} base64={base64} tdClasses="w-8" onNavigateIntent={primeDetailPage}>
         {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
       </LinkCell>
     </>
@@ -161,13 +204,28 @@ function LinkCell({
   base64,
   tdClasses,
   aClasses,
+  onNavigateIntent,
   children,
-}: PropsWithChildren<{ id: string; base64?: string; tdClasses?: string; aClasses?: string }>) {
+}: PropsWithChildren<{
+  id: string;
+  base64?: string;
+  tdClasses?: string;
+  aClasses?: string;
+  onNavigateIntent?: () => void;
+}>) {
   const path = `/message/${id}`;
   const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
-      <Link href={`${path}${params}`} prefetch={true} className={aClasses}>
+      <Link
+        href={`${path}${params}`}
+        prefetch={true}
+        className={aClasses}
+        onMouseEnter={onNavigateIntent}
+        onFocus={onNavigateIntent}
+        onTouchStart={onNavigateIntent}
+        onClick={onNavigateIntent}
+      >
         {children}
       </Link>
     </td>

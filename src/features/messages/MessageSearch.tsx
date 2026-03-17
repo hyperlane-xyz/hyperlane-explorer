@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
+import dynamic from 'next/dynamic';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
-import { SearchFilterBar } from '../../components/search/SearchFilterBar';
 import {
   SearchChainError,
   SearchEmptyError,
@@ -22,6 +22,11 @@ import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 import { MessageTable } from './MessageTable';
 import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
+
+const SearchFilterBar = dynamic(
+  () => import('../../components/search/SearchFilterBar').then((mod) => mod.SearchFilterBar),
+  { loading: () => <SearchFilterBarSkeleton /> },
+);
 
 function parseStatusFilter(value: string): MessageStatusFilter {
   if (value === 'delivered' || value === 'pending') return value;
@@ -309,6 +314,17 @@ export function MessageSearch() {
         />
       </Card>
     </>
+  );
+}
+
+function SearchFilterBarSkeleton() {
+  return (
+    <div className="flex items-center gap-2 md:gap-4">
+      <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
+      <div className="h-8 w-24 rounded border border-accent-600/40 bg-accent-50/40" />
+      <div className="h-8 w-16 rounded border border-accent-600/40 bg-accent-50/40" />
+      <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
+    </div>
   );
 }
 

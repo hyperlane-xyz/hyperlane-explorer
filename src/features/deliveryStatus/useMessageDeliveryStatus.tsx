@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
-import { Message, MessageStatus } from '../../types';
+import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
@@ -14,7 +14,7 @@ export function useMessageDeliveryStatus({
   message,
   enabled = true,
 }: {
-  message: Message;
+  message: Message | MessageStub;
   enabled: boolean;
 }) {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
