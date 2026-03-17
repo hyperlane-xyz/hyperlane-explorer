@@ -63,7 +63,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
   const [showExtendedCards, setShowExtendedCards] = useState(false);
-  const hasInitialFullMessage = hasFullMessageDetails(messageFromUrlParams);
+  const hasDetailedUrlMessage = hasFullMessageDetails(messageFromUrlParams);
 
   const {
     isFetching: isGraphQlFetching,
@@ -71,7 +71,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     hasRun: hasGraphQlRun,
     isMessageFound: isGraphQlMessageFound,
     message: messageFromGraphQl,
-  } = useMessageQuery({ messageId, pause: hasInitialFullMessage });
+  } = useMessageQuery({ messageId, pause: hasDetailedUrlMessage });
 
   const {
     isError: isPiError,
@@ -80,11 +80,13 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     isMessageFound: isPiMessageFound,
   } = usePiChainMessageQuery({
     messageId,
-    pause: hasInitialFullMessage || !hasGraphQlRun || isGraphQlMessageFound,
+    pause: hasDetailedUrlMessage || !hasGraphQlRun || isGraphQlMessageFound,
   });
 
+  const fetchedMessage = messageFromGraphQl || messageFromPi;
   const _message =
-    messageFromGraphQl || messageFromPi || messageFromUrlParams || PLACEHOLDER_MESSAGE;
+    (hasDetailedUrlMessage ? messageFromUrlParams : fetchedMessage || messageFromUrlParams) ||
+    PLACEHOLDER_MESSAGE;
   const isMessageFound = !!messageFromUrlParams || isGraphQlMessageFound || isPiMessageFound;
   const isFetching = isGraphQlFetching || isPiFetching;
   const isError = isGraphQlError || isPiError;
@@ -230,7 +232,12 @@ function hasFullMessageDetails(message?: Message | MessageStub | null): message 
   return (
     'decodedBody' in message ||
     'totalGasAmount' in message ||
-    ('blockNumber' in message.origin && typeof message.origin.blockNumber === 'number')
+    'totalPayment' in message ||
+    'numPayments' in message ||
+    'blockHash' in message.origin ||
+    'blockNumber' in message.origin ||
+    'mailbox' in message.origin ||
+    'gasLimit' in message.origin
   );
 }
 

@@ -1,11 +1,15 @@
 import dynamic from 'next/dynamic';
 import { Message, MessageStub } from '../../types';
-import { MessageDetails } from './MessageDetails';
+import { MessageDetailsLoading } from './MessageDetailsLoading';
 import { getPrefetchedMessageDetails, getPrefetchedMessageStub } from './queries/prefetch';
 
 const ChainConfigSyncEffect = dynamic(
   () => import('../chains/ChainConfigSyncer').then((mod) => mod.ChainConfigSyncEffect),
   { ssr: false },
+);
+const MessageDetailsInner = dynamic(
+  () => import('./MessageDetailsInner').then((mod) => mod.MessageDetailsInner),
+  { loading: () => <MessageDetailsLoading /> },
 );
 
 export function MessageDetailsPage({
@@ -21,7 +25,7 @@ export function MessageDetailsPage({
   return (
     <>
       <ChainConfigSyncEffect />
-      <MessageDetails
+      <MessageDetailsInner
         messageId={messageId}
         message={message || prefetchedMessageDetails || prefetchedMessage}
       />
