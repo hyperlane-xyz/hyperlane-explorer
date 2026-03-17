@@ -185,16 +185,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
             onStateChange={handleRuntimeStateChange}
           />
         </Suspense>
-        <ContentDetailsCard message={message} blur={blur} />
-        <WarpRouteVisualizationCard
-          message={message}
-          warpRouteDetails={warpRouteDetails}
-          blur={blur}
-        />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-        )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
         {showTimeline && <TimelineCard message={message} blur={blur} />}
         {warpRouteDetails && (
           <WarpTransferDetailsCard
@@ -203,11 +193,21 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
             blur={blur}
           />
         )}
+        <WarpRouteVisualizationCard
+          message={message}
+          warpRouteDetails={warpRouteDetails}
+          blur={blur}
+        />
+        <ContentDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
+        {debugResult?.ismDetails && (
+          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+        )}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
   );
