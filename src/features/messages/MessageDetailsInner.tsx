@@ -1,7 +1,7 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
@@ -12,7 +12,10 @@ import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
-import { OriginTransactionCard } from './cards/OriginTransactionCard';
+import {
+  DestinationTransactionPreviewCard,
+  OriginTransactionCard,
+} from './cards/OriginTransactionCard';
 import { useIsIcaMessage } from './icaUtils';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
@@ -35,13 +38,8 @@ const WarpTransferDetailsCard = dynamic(
 const TimelineCard = dynamic(() => import('./cards/TimelineCard').then((mod) => mod.TimelineCard), {
   loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
 });
-const MessageDetailsRuntime = dynamic(
-  () => import('./MessageDetailsRuntime').then((mod) => mod.MessageDetailsRuntime),
-  {
-    loading: () => (
-      <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
-    ),
-  },
+const MessageDetailsRuntime = lazy(() =>
+  import('./MessageDetailsRuntime').then((mod) => ({ default: mod.MessageDetailsRuntime })),
 );
 
 interface Props {
@@ -54,6 +52,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
   const [showExtendedCards, setShowExtendedCards] = useState(false);
+  const [showRuntimeCard, setShowRuntimeCard] = useState(false);
   const [runtimeState, setRuntimeState] = useState<{
     messageId: string;
     value: MessageDetailsRuntimeState;
@@ -117,6 +116,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
 
   useEffect(() => {
     setRuntimeState(null);
+    setShowRuntimeCard(false);
   }, [messageId]);
 
   useEffect(() => {
@@ -142,9 +142,28 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     return () => globalThis.clearTimeout(timeoutId);
   }, [messageId]);
 
+  useEffect(() => {
+    const revealRuntime = () => {
+      startTransition(() => setShowRuntimeCard(true));
+    };
+
+    const timeoutId = globalThis.setTimeout(revealRuntime, 120);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [messageId]);
+
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [chainMetadataResolver, message, warpRouteChainAddressMap],
+  );
+  const destinationPreview = (
+    <DestinationTransactionPreviewCard
+      chainName={destinationChainName}
+      domainId={destinationDomainId}
+      status={status}
+      transaction={destination}
+      blur={blur}
+      isLiveDetailsPending={isFetching || showRuntimeCard}
+    />
   );
 
   return (
@@ -171,19 +190,25 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           transaction={origin}
           blur={blur}
         />
-        <MessageDetailsRuntime
-          messageId={messageId}
-          baseMessage={baseMessage}
-          baseIsMessageFound={baseIsMessageFound}
-          hasDetailedUrlMessage={hasDetailedUrlMessage}
-          hasGraphQlRun={hasGraphQlRun}
-          isGraphQlMessageFound={isGraphQlMessageFound}
-          destinationChainName={destinationChainName}
-          blur={blur}
-          showExtendedCards={showExtendedCards}
-          warpRouteDetails={warpRouteDetails}
-          onStateChange={handleRuntimeStateChange}
-        />
+        {showRuntimeCard ? (
+          <Suspense fallback={destinationPreview}>
+            <MessageDetailsRuntime
+              messageId={messageId}
+              baseMessage={baseMessage}
+              baseIsMessageFound={baseIsMessageFound}
+              hasDetailedUrlMessage={hasDetailedUrlMessage}
+              hasGraphQlRun={hasGraphQlRun}
+              isGraphQlMessageFound={isGraphQlMessageFound}
+              destinationChainName={destinationChainName}
+              blur={blur}
+              showExtendedCards={showExtendedCards}
+              warpRouteDetails={warpRouteDetails}
+              onStateChange={handleRuntimeStateChange}
+            />
+          </Suspense>
+        ) : (
+          destinationPreview
+        )}
         <ContentDetailsCard message={message} blur={blur} />
         {showExtendedCards ? (
           <>
