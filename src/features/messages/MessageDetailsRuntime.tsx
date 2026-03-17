@@ -5,6 +5,10 @@ import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { useIsIcaMessage } from './icaUtils';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
+import {
+  DEFAULT_PI_MESSAGE_DETAILS_STATE,
+  PiMessageDetailsState,
+} from './piMessageDetailsState';
 
 const DestinationTransactionCard = dynamic(
   () => import('./cards/TransactionCard').then((mod) => mod.DestinationTransactionCard),
@@ -33,22 +37,6 @@ const WarpRouteVisualizationCard = dynamic(
 const PiMessageDetailsBridge = dynamic(() =>
   import('./PiMessageDetailsBridge').then((mod) => mod.PiMessageDetailsBridge),
 );
-
-interface PiMessageDetailsState {
-  hasRun: boolean;
-  isError: boolean;
-  isFetching: boolean;
-  isMessageFound: boolean;
-  message: Message | null;
-}
-
-const DEFAULT_PI_MESSAGE_DETAILS_STATE: PiMessageDetailsState = {
-  hasRun: false,
-  isError: false,
-  isFetching: false,
-  isMessageFound: false,
-  message: null,
-};
 
 export interface MessageDetailsRuntimeState {
   hasRun: boolean;

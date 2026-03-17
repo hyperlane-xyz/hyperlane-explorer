@@ -1,7 +1,7 @@
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, ReactNode, memo, useMemo, useRef } from 'react';
+import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
@@ -80,6 +80,10 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
   const hasPrimedDetailPage = useRef(false);
+
+  useEffect(() => {
+    hasPrimedDetailPage.current = false;
+  }, [chainMetadataResolver, message.msgId, scrapedChains]);
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
