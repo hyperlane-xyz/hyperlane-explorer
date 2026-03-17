@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import {
-  PiMessageDetailsState,
-} from './piMessageDetailsState';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
+import { PiMessageDetailsState } from './piMessageDetailsState';
 
 export function PiMessageDetailsBridge({
   messageId,

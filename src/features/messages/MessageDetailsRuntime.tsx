@@ -5,10 +5,7 @@ import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { useIsIcaMessage } from './icaUtils';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
-import {
-  DEFAULT_PI_MESSAGE_DETAILS_STATE,
-  PiMessageDetailsState,
-} from './piMessageDetailsState';
+import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
 const DestinationTransactionCard = dynamic(
   () => import('./cards/TransactionCard').then((mod) => mod.DestinationTransactionCard),

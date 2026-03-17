@@ -13,18 +13,20 @@ export {
 
 interface ProviderState {
   multiProvider: MultiProtocolProvider;
-  syncMultiProvider: () => Promise<void>;
+  syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
 
+type ProviderChainMetadata = ReturnType<typeof useMetadataStore.getState>['chainMetadata'];
+
 let providerSyncPromise: Promise<void> | null = null;
+let queuedChainMetadata: ProviderChainMetadata | null = null;
 let isProviderStoreSubscribed = false;
 
 const useProviderStore = create<ProviderState>()((set) => ({
   multiProvider: new MultiProtocolProvider({}),
-  syncMultiProvider: async () => {
-    if (providerSyncPromise) return providerSyncPromise;
-
-    providerSyncPromise = (async () => {
+  syncMultiProvider: async (requestedChainMetadata) => {
+    let chainMetadata = requestedChainMetadata;
+    if (!chainMetadata || !Object.keys(chainMetadata).length) {
       const metadataState = useMetadataStore.getState();
       if (
         !metadataState.isChainMetadataLoaded ||
@@ -33,12 +35,28 @@ const useProviderStore = create<ProviderState>()((set) => ({
         await metadataState.ensureChainMetadata();
       }
 
-      const { chainMetadata } = useMetadataStore.getState();
-      logger.debug('Syncing MultiProtocolProvider from metadata store');
-      set({ multiProvider: new MultiProtocolProvider(chainMetadata) });
-    })().finally(() => {
-      providerSyncPromise = null;
-    });
+      chainMetadata = useMetadataStore.getState().chainMetadata;
+    }
+
+    if (providerSyncPromise) {
+      queuedChainMetadata = chainMetadata;
+      return providerSyncPromise;
+    }
+
+    providerSyncPromise = Promise.resolve()
+      .then(() => {
+        logger.debug('Syncing MultiProtocolProvider from metadata store');
+        set({ multiProvider: new MultiProtocolProvider(chainMetadata) });
+      })
+      .finally(() => {
+        const nextChainMetadata = queuedChainMetadata;
+        queuedChainMetadata = null;
+        providerSyncPromise = null;
+
+        if (nextChainMetadata && nextChainMetadata !== chainMetadata) {
+          void useProviderStore.getState().syncMultiProvider(nextChainMetadata);
+        }
+      });
 
     return providerSyncPromise;
   },
@@ -51,7 +69,7 @@ function ensureProviderStoreSubscription() {
   void useProviderStore.getState().syncMultiProvider();
   useMetadataStore.subscribe((state, prevState) => {
     if (state.chainMetadata !== prevState.chainMetadata) {
-      void useProviderStore.getState().syncMultiProvider();
+      void useProviderStore.getState().syncMultiProvider(state.chainMetadata);
     }
   });
 }

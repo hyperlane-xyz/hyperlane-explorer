@@ -14,15 +14,15 @@ const prefetchedMessageDetails = new Map<string, Message>();
 const prefetchedMessageDetailPromises = new Map<string, Promise<Message | null>>();
 
 export function getPrefetchedMessageStub(messageId: string) {
-  return prefetchedMessageStubs.get(messageId);
+  return prefetchedMessageStubs.get(normalizeMessageCacheKey(messageId));
 }
 
 export function getPrefetchedMessageDetails(messageId: string) {
-  return prefetchedMessageDetails.get(messageId);
+  return prefetchedMessageDetails.get(normalizeMessageCacheKey(messageId));
 }
 
 export function prefetchMessageStub(message: MessageStub) {
-  setPrefetchedValue(prefetchedMessageStubs, message.msgId, message);
+  setPrefetchedValue(prefetchedMessageStubs, normalizeMessageCacheKey(message.msgId), message);
 }
 
 export function prefetchMessageDetails(
@@ -30,10 +30,11 @@ export function prefetchMessageDetails(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
 ) {
-  const existing = prefetchedMessageDetails.get(messageId);
+  const cacheKey = normalizeMessageCacheKey(messageId);
+  const existing = prefetchedMessageDetails.get(cacheKey);
   if (existing) return Promise.resolve(existing);
 
-  const inFlight = prefetchedMessageDetailPromises.get(messageId);
+  const inFlight = prefetchedMessageDetailPromises.get(cacheKey);
   if (inFlight) return inFlight;
 
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
@@ -61,15 +62,19 @@ export function prefetchMessageDetails(
       return null;
     })
     .finally(() => {
-      prefetchedMessageDetailPromises.delete(messageId);
+      prefetchedMessageDetailPromises.delete(cacheKey);
     });
 
-  prefetchedMessageDetailPromises.set(messageId, promise);
+  prefetchedMessageDetailPromises.set(cacheKey, promise);
   return promise;
 }
 
 function setPrefetchedMessageDetails(message: Message) {
-  setPrefetchedValue(prefetchedMessageDetails, message.msgId, message);
+  setPrefetchedValue(prefetchedMessageDetails, normalizeMessageCacheKey(message.msgId), message);
+}
+
+function normalizeMessageCacheKey(messageId: string) {
+  return messageId.toLowerCase();
 }
 
 function setPrefetchedValue<T>(cache: Map<string, T>, key: string, value: T) {
