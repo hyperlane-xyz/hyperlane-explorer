@@ -135,12 +135,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     }
   }
 
-  ctx.res.setHeader(
-    'Cache-Control',
-    isBot
-      ? 'public, s-maxage=300, stale-while-revalidate=600'
-      : 'private, max-age=60, stale-while-revalidate=300',
-  );
+  // This response shape varies on bot detection. Without a normalized vary key from the CDN,
+  // shared caching bot and non-bot HTML at the same URL risks cache poisoning.
+  ctx.res.setHeader('Cache-Control', 'private, no-store');
 
   return {
     props: {
