@@ -12,8 +12,8 @@ import { logger } from '../../utils/logger';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
 // Dynamic import with ssr: false to avoid pino-pretty issues during SSR
-const MessageDetails = dynamic(
-  () => import('../../features/messages/MessageDetails').then((mod) => mod.MessageDetails),
+const MessageDetailsPage = dynamic(
+  () => import('../../features/messages/MessageDetailsPage').then((mod) => mod.MessageDetailsPage),
   { ssr: false },
 );
 
@@ -84,7 +84,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
         image={ogImage}
         logoUrl={logoUrl}
       />
-      <MessageDetails messageId={messageId} message={message} />
+      <MessageDetailsPage messageId={messageId} message={message} />
     </>
   );
 };

@@ -1,8 +1,4 @@
-import {
-  GithubRegistry,
-  IRegistry,
-  warpRouteConfigs as publishedWarpRouteConfigs,
-} from '@hyperlane-xyz/registry';
+import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
@@ -50,7 +46,15 @@ interface AppState {
   setWarpRouteIdToAddressesMap: (warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap) => void;
   warpRouteConfigs: WarpRouteConfigs;
   setWarpRouteConfigs: (warpRouteConfigs: WarpRouteConfigs) => void;
+  isWarpRouteDataLoaded: boolean;
+  ensureWarpRouteData: () => Promise<void>;
 }
+
+let warpRouteDataPromise: Promise<{
+  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
+  warpRouteConfigs: WarpRouteConfigs;
+}> | null = null;
 
 export const useStore = create<AppState>()(
   persist(
@@ -64,19 +68,11 @@ export const useStore = create<AppState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         logger.debug('Setting chain overrides in store');
-        const {
-          multiProvider,
-          warpRouteChainAddressMap,
-          warpRouteIdToAddressesMap,
-          warpRouteConfigs,
-        } = await buildMultiProvider(get().registry, overrides);
+        const { multiProvider } = await buildMultiProvider(get().registry, overrides);
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
         set({
           chainMetadataOverrides: filtered,
           multiProvider,
-          warpRouteChainAddressMap,
-          warpRouteIdToAddressesMap,
-          warpRouteConfigs,
         });
       },
       multiProvider: new MultiProtocolProvider({}),
@@ -90,7 +86,14 @@ export const useStore = create<AppState>()(
         branch: config.registryBranch,
       }),
       setRegistry: (registry: IRegistry) => {
-        set({ registry });
+        warpRouteDataPromise = null;
+        set({
+          registry,
+          warpRouteChainAddressMap: {},
+          warpRouteIdToAddressesMap: {},
+          warpRouteConfigs: {},
+          isWarpRouteDataLoaded: false,
+        });
       },
       bannerClassName: '',
       setBanner: (className: string) => set({ bannerClassName: className }),
@@ -106,6 +109,29 @@ export const useStore = create<AppState>()(
       setWarpRouteConfigs: (warpRouteConfigs: WarpRouteConfigs) => {
         set({ warpRouteConfigs });
       },
+      isWarpRouteDataLoaded: false,
+      ensureWarpRouteData: async () => {
+        const state = get();
+        if (state.isWarpRouteDataLoaded) return;
+        const registry = state.registry;
+
+        if (!warpRouteDataPromise) {
+          warpRouteDataPromise = buildWarpRouteMaps(registry).finally(() => {
+            warpRouteDataPromise = null;
+          });
+        }
+
+        const { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs } =
+          await warpRouteDataPromise;
+        if (get().registry !== registry) return;
+
+        set({
+          warpRouteChainAddressMap,
+          warpRouteIdToAddressesMap,
+          warpRouteConfigs,
+          isWarpRouteDataLoaded: true,
+        });
+      },
     }),
     {
       name: 'hyperlane', // name in storage
@@ -119,22 +145,11 @@ export const useStore = create<AppState>()(
             return;
           }
           buildMultiProvider(state.registry, state.chainMetadataOverrides)
-            .then(
-              ({
-                metadata,
-                multiProvider,
-                warpRouteChainAddressMap,
-                warpRouteIdToAddressesMap,
-                warpRouteConfigs,
-              }) => {
-                state.setChainMetadata(metadata);
-                state.setMultiProvider(multiProvider);
-                state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
-                state.setWarpRouteIdToAddressesMap(warpRouteIdToAddressesMap);
-                state.setWarpRouteConfigs(warpRouteConfigs);
-                logger.debug('Rehydration complete');
-              },
-            )
+            .then(({ metadata, multiProvider }) => {
+              state.setChainMetadata(metadata);
+              state.setMultiProvider(multiProvider);
+              logger.debug('Rehydration complete');
+            })
             .catch((e) => logger.error('Error building MultiProtocolProvider', e));
         };
       },
@@ -170,8 +185,6 @@ async function buildMultiProvider(
 ) {
   logger.debug('Building new MultiProtocolProvider from registry');
 
-  // TODO improve interface so this pre-cache isn't required
-  await registry.listRegistryContent();
   const registryChainMetadata = await registry.getMetadata();
 
   // TODO have the registry do this automatically
@@ -194,15 +207,9 @@ async function buildMultiProvider(
     },
   );
 
-  const { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs } =
-    await buildWarpRouteMaps(registry);
-
   return {
     metadata: mergedMetadata,
     multiProvider: new MultiProtocolProvider(mergedMetadata),
-    warpRouteChainAddressMap,
-    warpRouteIdToAddressesMap,
-    warpRouteConfigs,
   };
 }
 
@@ -220,6 +227,7 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
     logger.debug(
       'Failed to build warp route maps from GithubRegistry. Using published warp route configs.',
     );
+    const { warpRouteConfigs: publishedWarpRouteConfigs } = await import('@hyperlane-xyz/registry');
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
 

@@ -31,6 +31,8 @@ interface Props {
 
 export function MessageDetails({ messageId, message: messageFromUrlParams }: Props) {
   const multiProvider = useMultiProvider();
+  const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
+  const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
 
   // GraphQL query and results
   const {
@@ -90,6 +92,12 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
   const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
 
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+
+  useEffect(() => {
+    if (isWarpRouteDataLoaded || !isMessageFound) return;
+    ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
+  }, [ensureWarpRouteData, isMessageFound, isWarpRouteDataLoaded]);
+
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
     [message, warpRouteChainAddressMap, multiProvider],

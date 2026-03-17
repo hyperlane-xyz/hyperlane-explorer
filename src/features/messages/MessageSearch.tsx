@@ -12,8 +12,9 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
-import { useReadyMultiProvider, useWarpRouteIdToAddressesMap } from '../../store';
+import { useReadyMultiProvider, useStore, useWarpRouteIdToAddressesMap } from '../../store';
 import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
+import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
@@ -52,6 +53,7 @@ export function MessageSearch() {
   // Chain metadata
   const multiProvider = useReadyMultiProvider();
   const warpRouteIdToAddressesMap = useWarpRouteIdToAddressesMap();
+  const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
 
   // Query params from URL - isRouterReady indicates router has hydrated
   const [
@@ -143,6 +145,34 @@ export function MessageSearch() {
 
   // Check if search input looks like a warp route but wasn't found (after map is loaded)
   const isUnknownWarpRoute = looksLikeWarpRoute && isWarpRouteMapLoaded && !detectedWarpRouteId;
+
+  useEffect(() => {
+    if (isWarpRouteMapLoaded) return;
+
+    const loadWarpRouteData = () => {
+      ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
+    };
+
+    if (looksLikeWarpRoute) {
+      loadWarpRouteData();
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+
+    if ('requestIdleCallback' in window) {
+      const idleWindow = window as Window &
+        typeof globalThis & {
+          requestIdleCallback: typeof window.requestIdleCallback;
+          cancelIdleCallback: typeof window.cancelIdleCallback;
+        };
+      const idleId = idleWindow.requestIdleCallback(loadWarpRouteData, { timeout: 2_000 });
+      return () => idleWindow.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = globalThis.setTimeout(loadWarpRouteData, 1_500);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [ensureWarpRouteData, isWarpRouteMapLoaded, looksLikeWarpRoute]);
 
   // GraphQL query and results
   const {

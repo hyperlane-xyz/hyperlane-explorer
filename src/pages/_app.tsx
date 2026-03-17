@@ -13,7 +13,6 @@ import { AppLayout } from '../AppLayout';
 import { OGHead } from '../components/OGHead';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
-import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
 import '../styles/global.css';
 
 // Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
@@ -83,11 +82,9 @@ export default function App({ Component, router, pageProps }: AppProps) {
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
-            <ChainConfigSyncer>
-              <AppLayout pathName={router.pathname}>
-                <Component {...pageProps} />
-              </AppLayout>
-            </ChainConfigSyncer>
+            <AppLayout pathName={router.pathname}>
+              <Component {...pageProps} />
+            </AppLayout>
           </UrqlProvider>
         </QueryClientProvider>
         <ToastContainer transition={Zoom} position="bottom-right" limit={2} />
