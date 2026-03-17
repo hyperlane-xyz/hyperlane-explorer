@@ -1,7 +1,7 @@
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { NextRouter, useRouter } from 'next/router';
 import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -20,6 +20,8 @@ import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
+const BACKGROUND_PREFETCH_COUNT = 5;
+
 export function MessageTable({
   messageList,
   isFetching,
@@ -27,9 +29,62 @@ export function MessageTable({
   messageList: MessageStub[];
   isFetching: boolean;
 }) {
+  const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
   const { scrapedDomains } = useScrapedDomains();
+  const backgroundPrefetchKey = useMemo(() => {
+    if (isFetching) return '';
+    return `${scrapedDomains.length}:${messageList
+      .slice(0, BACKGROUND_PREFETCH_COUNT)
+      .map((message) => message.msgId.toLowerCase())
+      .join(',')}`;
+  }, [isFetching, messageList, scrapedDomains.length]);
+
+  useEffect(() => {
+    if (!backgroundPrefetchKey) return;
+
+    const messagesToPrefetch = messageList.slice(0, BACKGROUND_PREFETCH_COUNT);
+    let cancelled = false;
+
+    const prefetchTopRows = async () => {
+      await prefetchMessageDetailShell();
+      await Promise.all(
+        messagesToPrefetch.map((message) => {
+          if (cancelled) return Promise.resolve();
+          return prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedDomains);
+        }),
+      );
+    };
+
+    if (typeof window === 'undefined') return;
+
+    if ('requestIdleCallback' in window) {
+      const idleWindow = window as Window &
+        typeof globalThis & {
+          requestIdleCallback: typeof window.requestIdleCallback;
+          cancelIdleCallback: typeof window.cancelIdleCallback;
+        };
+      const idleId = idleWindow.requestIdleCallback(
+        () => {
+          void prefetchTopRows();
+        },
+        { timeout: 1_000 },
+      );
+      return () => {
+        cancelled = true;
+        idleWindow.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      void prefetchTopRows();
+    }, 250);
+    return () => {
+      cancelled = true;
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [backgroundPrefetchKey, chainMetadataResolver, messageList, router, scrapedDomains]);
 
   return (
     <table className="mb-1 w-full">
@@ -114,13 +169,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
     hasPrimedDetailPage.current = true;
-    void router.prefetch(detailPath);
-    void prefetchMessageDetailShell();
-    prefetchMessageStub(message);
-
-    if (message.isPiMsg || !scrapedChains.length) return;
-
-    void prefetchMessageDetails(message.msgId, chainMetadataResolver, scrapedChains);
+    void prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedChains);
   };
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
@@ -259,3 +308,19 @@ const styles = {
   valueTruncated: 'py-2.5 flex items-center justify-center text-sm text-center font-light truncate',
   iconText: 'text-sm font-light ml-2',
 };
+
+async function prefetchMessageNavigation(
+  router: NextRouter,
+  message: MessageStub,
+  chainMetadataResolver: ChainMetadataResolver,
+  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'],
+) {
+  const detailPath = `/message/${message.msgId}`;
+  void router.prefetch(detailPath);
+  void prefetchMessageDetailShell();
+  prefetchMessageStub(message);
+
+  if (message.isPiMsg || !scrapedChains.length) return;
+
+  await prefetchMessageDetails(message.msgId, chainMetadataResolver, scrapedChains);
+}
