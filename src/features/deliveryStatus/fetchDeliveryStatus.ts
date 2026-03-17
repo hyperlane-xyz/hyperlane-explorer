@@ -7,7 +7,7 @@ import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
-import { checkIsMessageDelivered } from '../messages/utils';
+import { checkIsMessageDelivered } from '../messages/deliveryUtils';
 import {
   MessageDeliveryFailingResult,
   MessageDeliveryPendingResult,

@@ -1,4 +1,4 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import dynamic from 'next/dynamic';

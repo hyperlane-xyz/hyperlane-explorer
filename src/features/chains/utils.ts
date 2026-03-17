@@ -1,5 +1,5 @@
-import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';

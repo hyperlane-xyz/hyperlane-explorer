@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
 
-import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { objFilter } from '@hyperlane-xyz/utils';
 
 import { unscrapedChainsInDb } from '../../../consts/config';

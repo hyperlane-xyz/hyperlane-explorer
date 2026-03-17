@@ -1,10 +1,13 @@
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { PropsWithChildren } from 'react';
 
-import { toTitleCase } from '@hyperlane-xyz/utils';
-
-import { Footer } from './components/nav/Footer';
 import { Header } from './components/nav/Header';
+
+const Footer = dynamic(() => import('./components/nav/Footer').then((mod) => mod.Footer), {
+  loading: () => <div className="h-24 sm:h-28" />,
+  ssr: false,
+});
 
 interface Props {
   pathName: string;
@@ -35,7 +38,15 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
 function getHeadTitle(pathName: string) {
   const segments = pathName.split('/');
   if (segments.length <= 1 || !segments[1]) return 'Home';
-  else return toTitleCase(segments[1]);
+  return titleCase(segments[1]);
+}
+
+function titleCase(value: string) {
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 const styles = {

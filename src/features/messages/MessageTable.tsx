@@ -1,4 +1,4 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';

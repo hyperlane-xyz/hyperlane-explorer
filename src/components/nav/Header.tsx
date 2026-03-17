@@ -1,25 +1,60 @@
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren } from 'react';
-
-import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
+import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 
 import { docLinks, links } from '../../consts/links';
-import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
-import { MiniSearchBar } from '../search/MiniSearchBar';
 import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
+
+const MiniSearchBar = dynamic(
+  () => import('../search/MiniSearchBar').then((mod) => mod.MiniSearchBar),
+  {
+    loading: () => <div className="h-10 w-44 rounded bg-white/10" />,
+    ssr: false,
+  },
+);
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   // For dynamic sizing on scroll
   const animateHeader = useScrollThresholdListener(100);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   const navLinkClass = (path?: string) =>
     path && pathName === path ? styles.navLink + ' underline' : styles.navLink;
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathName]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (mobileMenuRef.current?.contains(target)) return;
+      setIsMobileMenuOpen(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <header
@@ -64,34 +99,29 @@ export function Header({ pathName }: { pathName: string }) {
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
-        <div className="item-center relative mr-2 flex sm:hidden">
-          <DropdownMenu
-            button={<DropdownButton />}
-            buttonClassname="hover:opacity-80 active:opacity-70 transition-all"
-            menuItems={[
-              ({ close }) => (
-                <MobileNavLink href="/" closeDropdown={close} key="Home">
-                  HOME
-                </MobileNavLink>
-              ),
-              //  ({ close }) => (
-              //   <MobileNavLink href="/api" closeDropdown={c} key="API">
-              //     API
-              //   </MobileNavLink>
-              // ),
-              ({ close }) => (
-                <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
-                  DOCS
-                </MobileNavLink>
-              ),
-              ({ close }) => (
-                <MobileNavLink href={links.home} closeDropdown={close} key="About">
-                  ABOUT
-                </MobileNavLink>
-              ),
-            ]}
-            menuClassname="!left-0 !right-0 py-7 px-8 !bg-[rgba(13,6,18,0.95)] backdrop-blur-sm"
-          />
+        <div className="item-center relative mr-2 flex sm:hidden" ref={mobileMenuRef}>
+          <button
+            type="button"
+            aria-expanded={isMobileMenuOpen}
+            aria-label="Toggle navigation menu"
+            className="rounded border border-white bg-primary-500 px-4 py-1 transition-all hover:opacity-80 active:opacity-70"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+          >
+            <DropdownButton />
+          </button>
+          {isMobileMenuOpen && (
+            <div className="absolute left-0 right-0 top-full mt-3 bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
+              <MobileNavLink href="/" closeDropdown={() => setIsMobileMenuOpen(false)}>
+                HOME
+              </MobileNavLink>
+              <MobileNavLink href={docLinks.home} closeDropdown={() => setIsMobileMenuOpen(false)}>
+                DOCS
+              </MobileNavLink>
+              <MobileNavLink href={links.home} closeDropdown={() => setIsMobileMenuOpen(false)}>
+                ABOUT
+              </MobileNavLink>
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -100,29 +130,32 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded border border-white bg-primary-500 px-4 py-1">
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="transition-all"
-      />
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="-mt-1 transition-all"
-      />
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="-mt-1 transition-all"
-      />
+    <div className="flex flex-col items-center">
+      <DropdownChevron className="transition-all" />
+      <DropdownChevron className="-mt-1 transition-all" />
+      <DropdownChevron className="-mt-1 transition-all" />
     </div>
+  );
+}
+
+function DropdownChevron({ className }: { className?: string }) {
+  return (
+    <svg
+      width="10"
+      height="14"
+      viewBox="0 0 10 14"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M1 4.5L5 9.5L9 4.5"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

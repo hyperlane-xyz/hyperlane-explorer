@@ -1,4 +1,4 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { config } from '../../../consts/config';
 import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';

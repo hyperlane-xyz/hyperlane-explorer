@@ -1,4 +1,4 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
