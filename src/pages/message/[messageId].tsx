@@ -97,8 +97,6 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const { messageId } = ctx.query;
   let ogData: OGData | null = null;
 
-  ctx.res.setHeader('Vary', 'User-Agent');
-
   // Get the host from the request for absolute OG image URLs
   const host = ctx.req?.headers?.host || 'explorer.hyperlane.xyz';
   const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -137,7 +135,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     }
   }
 
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  ctx.res.setHeader(
+    'Cache-Control',
+    isBot
+      ? 'public, s-maxage=300, stale-while-revalidate=600'
+      : 'private, max-age=60, stale-while-revalidate=300',
+  );
 
   return {
     props: {
