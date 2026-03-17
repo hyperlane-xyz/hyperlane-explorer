@@ -16,13 +16,18 @@ interface Props {
 
 export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const blockExplorerAddressUrls = useMemo(() => {
+    if (!warpRouteDetails) {
+      return {
+        originToken: null,
+        destinationToken: null,
+        transferRecipient: null,
+      };
+    }
 
-  if (!warpRouteDetails) return null;
+    const { originToken, destinationToken, transferRecipient } = warpRouteDetails;
 
-  const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
-  const isCollateral = isCollateralRoute(destinationToken.standard);
-  const blockExplorerAddressUrls = useMemo(
-    () => ({
+    return {
       originToken: getBlockExplorerAddressUrl(
         chainMetadataResolver,
         message.originChainId,
@@ -38,16 +43,13 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         message.destinationChainId,
         transferRecipient,
       ),
-    }),
-    [
-      chainMetadataResolver,
-      destinationToken.addressOrDenom,
-      message.destinationChainId,
-      message.originChainId,
-      originToken.addressOrDenom,
-      transferRecipient,
-    ],
-  );
+    };
+  }, [chainMetadataResolver, message.destinationChainId, message.originChainId, warpRouteDetails]);
+
+  if (!warpRouteDetails) return null;
+
+  const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
+  const isCollateral = isCollateralRoute(destinationToken.standard);
 
   return (
     <SectionCard

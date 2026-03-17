@@ -3,8 +3,7 @@ import { messageId } from '@hyperlane-xyz/utils';
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { logger } from '../../utils/logger';
 
-// eslint-disable-next-line camelcase
-import { Mailbox__factory } from '@hyperlane-xyz/core';
+import { Mailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
 
 /**
  * Extracts the Hyperlane message ID from a transaction that dispatched a message.
@@ -31,7 +30,7 @@ export async function extractMessageIdFromTx(
       return null;
     }
 
-    const mailbox = Mailbox__factory.connect(mailboxAddress, provider);
+    const mailbox = MailboxFactory.connect(mailboxAddress, provider);
 
     for (const log of txReceipt.logs) {
       try {
@@ -86,7 +85,7 @@ export async function checkIsMessageDelivered(
   }
 
   const provider = multiProvider.getEthersV5Provider(destinationChainName);
-  const mailbox = Mailbox__factory.connect(mailboxAddr, provider);
+  const mailbox = MailboxFactory.connect(mailboxAddr, provider);
 
   try {
     logger.debug(`Searching for process logs for msgId ${msgId}`);
