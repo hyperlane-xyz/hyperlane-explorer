@@ -15,7 +15,6 @@ import { config } from './consts/config';
 import { links } from './consts/links';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import {
-  MessageStub,
   TokenArgsWithWireDecimals,
   WarpRouteChainAddressMap,
   WarpRouteConfigs,
@@ -49,8 +48,6 @@ interface AppState {
   setWarpRouteConfigs: (warpRouteConfigs: WarpRouteConfigs) => void;
   isWarpRouteDataLoaded: boolean;
   ensureWarpRouteData: () => Promise<void>;
-  prefetchedMessagesById: Record<string, MessageStub>;
-  setPrefetchedMessage: (message: MessageStub) => void;
 }
 
 let warpRouteDataPromise: Promise<{
@@ -119,8 +116,12 @@ export const useStore = create<AppState>()(
         const registry = state.registry;
 
         if (!warpRouteDataPromise) {
-          warpRouteDataPromise = buildWarpRouteMaps(registry).finally(() => {
-            warpRouteDataPromise = null;
+          const nextWarpRouteDataPromise = buildWarpRouteMaps(registry);
+          warpRouteDataPromise = nextWarpRouteDataPromise;
+          nextWarpRouteDataPromise.finally(() => {
+            if (warpRouteDataPromise === nextWarpRouteDataPromise) {
+              warpRouteDataPromise = null;
+            }
           });
         }
 
@@ -133,22 +134,6 @@ export const useStore = create<AppState>()(
           warpRouteIdToAddressesMap,
           warpRouteConfigs,
           isWarpRouteDataLoaded: true,
-        });
-      },
-      prefetchedMessagesById: {},
-      setPrefetchedMessage: (message: MessageStub) => {
-        set((state) => {
-          const prefetchedMessagesById = {
-            ...state.prefetchedMessagesById,
-            [message.msgId]: message,
-          };
-
-          const keys = Object.keys(prefetchedMessagesById);
-          if (keys.length > 25) {
-            delete prefetchedMessagesById[keys[0]];
-          }
-
-          return { prefetchedMessagesById };
         });
       },
     }),

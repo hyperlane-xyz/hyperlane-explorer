@@ -1,6 +1,6 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { config } from '../../../consts/config';
-import { Message } from '../../../types';
+import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { MessageIdentifierType, buildMessageQuery } from './build';
@@ -9,11 +9,20 @@ import { parseMessageQueryResult } from './parse';
 
 const MAX_PREFETCHED_MESSAGES = 25;
 
+const prefetchedMessageStubs = new Map<string, MessageStub>();
 const prefetchedMessageDetails = new Map<string, Message>();
 const prefetchedMessageDetailPromises = new Map<string, Promise<Message | null>>();
 
+export function getPrefetchedMessageStub(messageId: string) {
+  return prefetchedMessageStubs.get(messageId);
+}
+
 export function getPrefetchedMessageDetails(messageId: string) {
   return prefetchedMessageDetails.get(messageId);
+}
+
+export function prefetchMessageStub(message: MessageStub) {
+  setPrefetchedValue(prefetchedMessageStubs, message.msgId, message);
 }
 
 export function prefetchMessageDetails(
@@ -59,13 +68,17 @@ export function prefetchMessageDetails(
 }
 
 function setPrefetchedMessageDetails(message: Message) {
-  if (prefetchedMessageDetails.has(message.msgId)) {
-    prefetchedMessageDetails.delete(message.msgId);
+  setPrefetchedValue(prefetchedMessageDetails, message.msgId, message);
+}
+
+function setPrefetchedValue<T>(cache: Map<string, T>, key: string, value: T) {
+  if (cache.has(key)) {
+    cache.delete(key);
   }
-  prefetchedMessageDetails.set(message.msgId, message);
+  cache.set(key, value);
 
-  if (prefetchedMessageDetails.size <= MAX_PREFETCHED_MESSAGES) return;
+  if (cache.size <= MAX_PREFETCHED_MESSAGES) return;
 
-  const oldestKey = prefetchedMessageDetails.keys().next().value;
-  if (oldestKey) prefetchedMessageDetails.delete(oldestKey);
+  const oldestKey = cache.keys().next().value;
+  if (oldestKey) cache.delete(oldestKey);
 }

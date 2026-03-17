@@ -15,7 +15,7 @@ import { formatAmountCompact } from '../../utils/amount';
 import { getHumanReadableTimeString } from '../../utils/time';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
-import { prefetchMessageDetails } from './queries/prefetch';
+import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 export function MessageTable({
@@ -75,7 +75,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
-  const setPrefetchedMessage = useStore((s) => s.setPrefetchedMessage);
 
   const formattedSender = formatAddress(sender, originDomainId, mp);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
@@ -104,7 +103,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
   const primeDetailPage = () => {
-    setPrefetchedMessage(message);
+    prefetchMessageStub(message);
 
     if (message.isPiMsg || !scrapedChains.length) return;
 

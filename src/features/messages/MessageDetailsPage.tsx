@@ -1,8 +1,12 @@
-import { useStore } from '../../store';
+import dynamic from 'next/dynamic';
 import { Message, MessageStub } from '../../types';
-import { ChainConfigSyncer } from '../chains/ChainConfigSyncer';
 import { MessageDetails } from './MessageDetails';
-import { getPrefetchedMessageDetails } from './queries/prefetch';
+import { getPrefetchedMessageDetails, getPrefetchedMessageStub } from './queries/prefetch';
+
+const ChainConfigSyncEffect = dynamic(
+  () => import('../chains/ChainConfigSyncer').then((mod) => mod.ChainConfigSyncEffect),
+  { ssr: false },
+);
 
 export function MessageDetailsPage({
   messageId,
@@ -11,15 +15,16 @@ export function MessageDetailsPage({
   messageId: string;
   message?: Message | MessageStub;
 }) {
-  const prefetchedMessage = useStore((s) => s.prefetchedMessagesById[messageId]);
+  const prefetchedMessage = getPrefetchedMessageStub(messageId);
   const prefetchedMessageDetails = getPrefetchedMessageDetails(messageId);
 
   return (
-    <ChainConfigSyncer>
+    <>
+      <ChainConfigSyncEffect />
       <MessageDetails
         messageId={messageId}
         message={message || prefetchedMessageDetails || prefetchedMessage}
       />
-    </ChainConfigSyncer>
+    </>
   );
 }
