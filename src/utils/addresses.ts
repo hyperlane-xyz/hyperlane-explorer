@@ -1,6 +1,7 @@
 import {
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
+  isZeroishAddress,
   ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
@@ -12,6 +13,8 @@ export function formatAddress(
   domainId: number,
   chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ) {
+  if (!address || isZeroishAddress(address)) return address;
+
   const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
@@ -27,6 +30,8 @@ export function formatTxHash(
   domainId: number,
   chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ) {
+  if (!hash || /^0*$/.test(strip0x(hash))) return hash;
+
   const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
