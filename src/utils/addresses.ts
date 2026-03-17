@@ -1,4 +1,3 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
@@ -6,12 +5,14 @@ import {
   strip0x,
 } from '@hyperlane-xyz/utils';
 
+import type { ChainMetadataResolver } from '../features/chains/metadataManager';
+
 export function formatAddress(
   address: string,
   domainId: number,
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
@@ -21,8 +22,12 @@ export function formatAddress(
   }
 }
 
-export function formatTxHash(hash: string, domainId: number, multiProvider: MultiProtocolProvider) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
+export function formatTxHash(
+  hash: string,
+  domainId: number,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
+) {
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
     case ProtocolType.Radix:

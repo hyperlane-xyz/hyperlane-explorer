@@ -1,7 +1,7 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { config } from '../../../consts/config';
 import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
+import type { ChainMetadataResolver } from '../../chains/metadataManager';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { MessageIdentifierType, buildMessageQuery } from './build';
 import { MessagesQueryResult } from './fragments';
@@ -27,7 +27,7 @@ export function prefetchMessageStub(message: MessageStub) {
 
 export function prefetchMessageDetails(
   messageId: string,
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
 ) {
   const existing = prefetchedMessageDetails.get(messageId);
@@ -51,7 +51,8 @@ export function prefetchMessageDetails(
       if (body.errors?.length) {
         throw new Error(body.errors[0]?.message || 'GraphQL prefetch failed');
       }
-      const message = parseMessageQueryResult(multiProvider, scrapedChains, body.data)[0] || null;
+      const message =
+        parseMessageQueryResult(chainMetadataResolver, scrapedChains, body.data)[0] || null;
       if (message) setPrefetchedMessageDetails(message);
       return message;
     })

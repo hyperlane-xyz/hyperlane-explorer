@@ -9,7 +9,7 @@ import {
 } from '@hyperlane-xyz/sdk';
 import { fromBase64 } from '@hyperlane-xyz/utils';
 
-import { useStore } from '../../store';
+import { useStore } from '../../metadataStore';
 import { logger } from '../../utils/logger';
 import { useQueryParam } from '../../utils/queryParams';
 

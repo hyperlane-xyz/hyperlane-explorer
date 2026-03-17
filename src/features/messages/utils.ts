@@ -1,4 +1,3 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   bytesToProtocolAddress,
   fromBase64,
@@ -12,6 +11,7 @@ import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
 import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+import type { ChainMetadataResolver } from '../chains/metadataManager';
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
@@ -24,18 +24,18 @@ export function deserializeMessage<M extends MessageStub>(data: string | string[
 export function parseWarpRouteMessageDetails(
   message: Message | MessageStub,
   warpRouteChainAddressMap: WarpRouteChainAddressMap,
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ): WarpRouteDetails | undefined {
   try {
     const { body, sender, originDomainId, destinationDomainId, recipient } = message;
 
-    const originMetadata = multiProvider.tryGetChainMetadata(originDomainId);
-    const destinationMetadata = multiProvider.tryGetChainMetadata(destinationDomainId);
+    const originMetadata = chainMetadataResolver.tryGetChainMetadata(originDomainId);
+    const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(destinationDomainId);
 
     if (!body || !originMetadata || !destinationMetadata) return undefined;
 
-    const parsedSender = formatAddress(sender, originDomainId, multiProvider);
-    const parsedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
+    const parsedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
+    const parsedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
 
     const originToken = getTokenFromWarpRouteChainAddressMap(
       originMetadata,

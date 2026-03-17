@@ -7,7 +7,7 @@ import { trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useMultiProvider } from '../../store';
+import { useChainMetadataResolver } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
@@ -71,11 +71,10 @@ function ChainSelector({
   onChangeValue: (value: string | null) => void;
 }) {
   const { isOpen, open, close } = useModal();
-
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
 
   const chainDisplayName = value
-    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
+    ? trimToLength(getChainDisplayName(chainMetadataResolver, value, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {

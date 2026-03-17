@@ -1,4 +1,3 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,12 +6,13 @@ import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
 import ErrorIcon from '../../images/icons/error-circle.svg';
-import { useMultiProvider, useStore } from '../../store';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { getHumanReadableTimeString } from '../../utils/time';
+import type { ChainMetadataResolver } from '../chains/metadataManager';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
@@ -25,7 +25,7 @@ export function MessageTable({
   messageList: MessageStub[];
   isFetching: boolean;
 }) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
   const { scrapedDomains } = useScrapedDomains();
 
@@ -52,7 +52,7 @@ export function MessageTable({
           >
             <MessageSummaryRow
               message={m}
-              mp={multiProvider}
+              chainMetadataResolver={chainMetadataResolver}
               scrapedChains={scrapedDomains}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
             />
@@ -65,20 +65,20 @@ export function MessageTable({
 
 export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
-  mp,
+  chainMetadataResolver,
   scrapedChains,
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
-  mp: MultiProtocolProvider;
+  chainMetadataResolver: ChainMetadataResolver;
   scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
-  const formattedSender = formatAddress(sender, originDomainId, mp);
-  const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
-  const formattedTxHash = formatTxHash(origin.hash, originDomainId, mp);
+  const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
+  const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
@@ -107,14 +107,15 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
     if (message.isPiMsg || !scrapedChains.length) return;
 
-    void prefetchMessageDetails(message.msgId, mp, scrapedChains);
+    void prefetchMessageDetails(message.msgId, chainMetadataResolver, scrapedChains);
   };
 
-  const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
-  const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
+  const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
+  const destinationChainName =
+    chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, mp),
-    [message, warpRouteChainAddressMap, mp],
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
+    [message, warpRouteChainAddressMap, chainMetadataResolver],
   );
   return (
     <>
@@ -125,7 +126,9 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         onNavigateIntent={primeDetailPage}
       >
         <ChainLogo chainName={originChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
+        <div className={styles.iconText}>
+          {getChainDisplayName(chainMetadataResolver, originChainName, true)}
+        </div>
       </LinkCell>
       <LinkCell
         id={msgId}
@@ -134,7 +137,9 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         onNavigateIntent={primeDetailPage}
       >
         <ChainLogo chainName={destinationChainName} size={20} />
-        <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
+        <div className={styles.iconText}>
+          {getChainDisplayName(chainMetadataResolver, destinationChainName, true)}
+        </div>
       </LinkCell>
       <LinkCell
         id={msgId}

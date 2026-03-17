@@ -1,9 +1,10 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
 
+import type { ChainMetadataResolver } from './metadataManager';
 import { DomainsEntry } from './queries/fragments';
 
 export async function getMailboxAddress(
@@ -18,34 +19,40 @@ export async function getMailboxAddress(
 }
 
 export function getChainDisplayName(
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
   chainName?: string,
   shortName = false,
   fallbackToId = true,
 ): string {
-  const metadata = multiProvider.tryGetChainMetadata(chainName || 0);
+  const metadata = chainMetadataResolver.tryGetChainMetadata(chainName || 0);
   if (!metadata) return fallbackToId && chainName ? chainName : 'Unknown';
   const displayName = shortName ? metadata.displayNameShort : metadata.displayName;
   return displayName || metadata.displayName || toTitleCase(metadata.name);
 }
 
-export function getChainEnvironment(multiProvider: MultiProtocolProvider, domainId: DomainId) {
-  const isTestnet = multiProvider.tryGetChainMetadata(domainId)?.isTestnet;
+export function getChainEnvironment(
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
+  domainId: DomainId,
+) {
+  const isTestnet = chainMetadataResolver.tryGetChainMetadata(domainId)?.isTestnet;
   return isTestnet ? Environment.Testnet : Environment.Mainnet;
 }
 
 // Is a 'Permissionless Interop' chain (i.e. one not deployed and scraped by Abacus Works)
 export function isPiChain(
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainName'>,
   scrapedChains: DomainsEntry[],
   domainId: DomainId,
 ) {
-  const chainName = multiProvider.tryGetChainName(domainId);
+  const chainName = chainMetadataResolver.tryGetChainName(domainId);
   // Note: .trim() because one chain name in the DB has a trailing \n char for some reason
   return !chainName || !scrapedChains.find((chain) => chain.name.trim() === chainName);
 }
 
-export function isEvmChain(multiProvider: MultiProtocolProvider, domainId: DomainId) {
-  const protocol = multiProvider.tryGetProtocol(domainId);
+export function isEvmChain(
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetProtocol'>,
+  domainId: DomainId,
+) {
+  const protocol = chainMetadataResolver.tryGetProtocol(domainId);
   return protocol === ProtocolType.Ethereum;
 }

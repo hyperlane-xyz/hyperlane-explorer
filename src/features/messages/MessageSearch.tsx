@@ -12,20 +12,23 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
-import { useReadyMultiProvider, useStore, useWarpRouteIdToAddressesMap } from '../../store';
-import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
+import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
+import { MessageStatusFilter, MessageStub, WarpRouteIdToAddressesMap } from '../../types';
 import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
-import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
 
 const SearchFilterBar = dynamic(
   () => import('../../components/search/SearchFilterBar').then((mod) => mod.SearchFilterBar),
   { loading: () => <SearchFilterBarSkeleton /> },
+);
+const PiMessageSearchBridge = dynamic(
+  () => import('./PiMessageSearchBridge').then((mod) => mod.PiMessageSearchBridge),
+  { ssr: false },
 );
 
 function parseStatusFilter(value: string): MessageStatusFilter {
@@ -56,9 +59,13 @@ enum MESSAGE_QUERY_PARAMS {
 
 export function MessageSearch() {
   // Chain metadata
-  const multiProvider = useReadyMultiProvider();
+  const isChainMetadataReady = useChainMetadataReady();
+  const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
   const warpRouteIdToAddressesMap = useWarpRouteIdToAddressesMap();
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
+  const [piSearchState, setPiSearchState] = useState<PiMessageSearchState>(
+    DEFAULT_PI_MESSAGE_SEARCH_STATE,
+  );
 
   // Query params from URL - isRouterReady indicates router has hydrated
   const [
@@ -152,6 +159,10 @@ export function MessageSearch() {
   const isUnknownWarpRoute = looksLikeWarpRoute && isWarpRouteMapLoaded && !detectedWarpRouteId;
 
   useEffect(() => {
+    ensureChainMetadata().catch((e) => logger.error('Error loading chain metadata', e));
+  }, [ensureChainMetadata]);
+
+  useEffect(() => {
     if (isWarpRouteMapLoaded) return;
 
     const loadWarpRouteData = () => {
@@ -200,26 +211,19 @@ export function MessageSearch() {
     warpRouteAddresses,
   );
 
-  // Run permissionless interop chains query if needed
-  const {
-    isError: isPiError,
-    isFetching: isPiFetching,
-    hasRun: hasPiRun,
-    messageList: piMessageList,
-    isMessagesFound: isPiMessagesFound,
-  } = usePiChainMessageSearchQuery({
-    sanitizedInput,
-    startTimeFilter,
-    endTimeFilter,
-    pause: !hasRun || isMessagesFound,
-  });
+  const shouldRunPiSearch = !!sanitizedInput && hasRun && !isMessagesFound;
+
+  useEffect(() => {
+    if (shouldRunPiSearch) return;
+    setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
+  }, [shouldRunPiSearch, sanitizedInput, startTimeFilter, endTimeFilter]);
 
   // Coalesce GraphQL + PI results
-  const isAnyFetching = isFetching || isPiFetching;
-  const isAnyError = isError || isPiError;
-  const hasAllRun = hasRun && hasPiRun;
-  const isAnyMessageFound = isMessagesFound || isPiMessagesFound;
-  const messageListResult = isMessagesFound ? messageList : piMessageList;
+  const isAnyFetching = isFetching || piSearchState.isFetching;
+  const isAnyError = isError || piSearchState.isError;
+  const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
+  const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
+  const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
 
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
@@ -228,7 +232,7 @@ export function MessageSearch() {
     isValidOrigin &&
     isValidDestination &&
     isAnyMessageFound &&
-    !!multiProvider;
+    isChainMetadataReady;
 
   // Keep url in sync - use raw filter values, not validated ones, to preserve URL params
   // even when chain metadata hasn't loaded yet
@@ -251,6 +255,14 @@ export function MessageSearch() {
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, message id, or warp route"
       />
+      {shouldRunPiSearch && (
+        <PiMessageSearchBridge
+          sanitizedInput={sanitizedInput}
+          startTimeFilter={startTimeFilter}
+          endTimeFilter={endTimeFilter}
+          onStateChange={setPiSearchState}
+        />
+      )}
       <Card className="relative mt-4 min-h-[38rem] w-full" padding="">
         <div className="flex items-center justify-between px-2 pb-3 pt-3.5 sm:px-4 md:px-5">
           <h2 className="w-min pl-0.5 font-medium text-primary-800 sm:w-fit">
@@ -277,7 +289,7 @@ export function MessageSearch() {
         </Fade>
         <SearchFetching
           show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
-          isPiFetching={isPiFetching}
+          isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
           show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
@@ -310,12 +322,28 @@ export function MessageSearch() {
           </div>
         )}
         <SearchChainError
-          show={(!isValidOrigin || !isValidDestination) && isValidInput && !!multiProvider}
+          show={(!isValidOrigin || !isValidDestination) && isValidInput && isChainMetadataReady}
         />
       </Card>
     </>
   );
 }
+
+interface PiMessageSearchState {
+  hasRun: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  isMessagesFound: boolean;
+  messageList: MessageStub[];
+}
+
+const DEFAULT_PI_MESSAGE_SEARCH_STATE: PiMessageSearchState = {
+  hasRun: false,
+  isError: false,
+  isFetching: false,
+  isMessagesFound: false,
+  messageList: [],
+};
 
 function SearchFilterBarSkeleton() {
   return (
