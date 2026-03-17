@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
-import { useMultiProvider } from '../../../store';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
@@ -20,13 +20,13 @@ interface Props {
 }
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const totalGasAmountFromMessage =
     'totalGasAmount' in message ? message.totalGasAmount : undefined;
   const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
   const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
   const unitOptions = useMemo(() => {
-    const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
+    const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
     return [
@@ -34,7 +34,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       { value: 9, display: 'Gwei' },
       { value: 0, display: 'Wei' },
     ];
-  }, [message, multiProvider]);
+  }, [chainMetadataResolver, message.originDomainId]);
 
   const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
 

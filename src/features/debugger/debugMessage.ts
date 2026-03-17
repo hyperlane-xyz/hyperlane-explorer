@@ -13,7 +13,6 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
-  MAILBOX_VERSION,
   MultiProtocolProvider,
   isProxy,
   proxyImplementation,
@@ -26,6 +25,7 @@ import {
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
+import { MAILBOX_VERSION } from '../../consts/mailbox';
 
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';

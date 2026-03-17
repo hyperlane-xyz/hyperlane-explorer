@@ -1,4 +1,4 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -8,7 +8,6 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
-import { fetchDeliveryStatus } from './fetchDeliveryStatus';
 
 export function useMessageDeliveryStatus({
   message,
@@ -38,6 +37,7 @@ export function useMessageDeliveryStatus({
       }
 
       logger.debug('Fetching message delivery status for:', id);
+      const { fetchDeliveryStatus } = await import('./fetchDeliveryStatus');
       const deliverStatus = await fetchDeliveryStatus(
         multiProvider,
         registry,

@@ -1,20 +1,19 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
-import { useMultiProvider, useStore } from '../../store';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
-import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
-import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
-import { useIsIcaMessage } from './ica';
-import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
+import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
+import { OriginTransactionCard } from './cards/OriginTransactionCard';
+import { useIsIcaMessage } from './icaUtils';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
@@ -29,18 +28,6 @@ const GasDetailsCard = dynamic(
     loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
   },
 );
-const IsmDetailsCard = dynamic(
-  () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
-);
-const IcaDetailsCard = dynamic(
-  () => import('./cards/IcaDetailsCard').then((mod) => mod.IcaDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
-);
 const WarpTransferDetailsCard = dynamic(
   () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
@@ -48,9 +35,13 @@ const WarpTransferDetailsCard = dynamic(
 const TimelineCard = dynamic(() => import('./cards/TimelineCard').then((mod) => mod.TimelineCard), {
   loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
 });
-const WarpRouteVisualizationCard = dynamic(
-  () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
-  { loading: () => <DetailCardSkeleton className="w-full" /> },
+const MessageDetailsRuntime = dynamic(
+  () => import('./MessageDetailsRuntime').then((mod) => mod.MessageDetailsRuntime),
+  {
+    loading: () => (
+      <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
+    ),
+  },
 );
 
 interface Props {
@@ -59,10 +50,14 @@ interface Props {
 }
 
 export function MessageDetailsInner({ messageId, message: messageFromUrlParams }: Props) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
   const [showExtendedCards, setShowExtendedCards] = useState(false);
+  const [runtimeState, setRuntimeState] = useState<{
+    messageId: string;
+    value: MessageDetailsRuntimeState;
+  } | null>(null);
   const hasDetailedUrlMessage = hasFullMessageDetails(messageFromUrlParams);
 
   const {
@@ -73,34 +68,27 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     message: messageFromGraphQl,
   } = useMessageQuery({ messageId, pause: hasDetailedUrlMessage });
 
-  const {
-    isError: isPiError,
-    isFetching: isPiFetching,
-    message: messageFromPi,
-    isMessageFound: isPiMessageFound,
-  } = usePiChainMessageQuery({
-    messageId,
-    pause: hasDetailedUrlMessage || !hasGraphQlRun || isGraphQlMessageFound,
-  });
-
-  const fetchedMessage = messageFromGraphQl || messageFromPi;
-  const _message =
-    (hasDetailedUrlMessage ? messageFromUrlParams : fetchedMessage || messageFromUrlParams) ||
+  const baseIsMessageFound = !!messageFromUrlParams || isGraphQlMessageFound;
+  const baseMessage =
+    (hasDetailedUrlMessage ? messageFromUrlParams : messageFromGraphQl || messageFromUrlParams) ||
     PLACEHOLDER_MESSAGE;
-  const isMessageFound = !!messageFromUrlParams || isGraphQlMessageFound || isPiMessageFound;
-  const isFetching = isGraphQlFetching || isPiFetching;
-  const isError = isGraphQlError || isPiError;
+  const needsRuntimeMessageLookup =
+    !baseIsMessageFound && !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
+  const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
+  const handleRuntimeStateChange = useCallback(
+    (value: MessageDetailsRuntimeState) => setRuntimeState({ messageId, value }),
+    [messageId],
+  );
+  const message = activeRuntimeState?.message || baseMessage;
+  const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
+  const isFetching =
+    isGraphQlFetching ||
+    !!activeRuntimeState?.isFetching ||
+    (needsRuntimeMessageLookup && !activeRuntimeState?.hasRun);
+  const isError = isGraphQlError || !!activeRuntimeState?.isError;
   const blur = !isMessageFound;
-  const isIcaMsg = useIsIcaMessage(_message);
-
-  const {
-    messageWithDeliveryStatus: message,
-    debugResult,
-    isDeliveryStatusFetching,
-  } = useMessageDeliveryStatus({
-    message: _message,
-    enabled: isMessageFound,
-  });
+  const isIcaMsg = useIsIcaMessage(message);
+  const debugResult = activeRuntimeState?.debugResult;
 
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
 
@@ -111,13 +99,14 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const showTimeline =
     !isPiMsg &&
     'blockNumber' in origin &&
-    isEvmChain(multiProvider, originDomainId) &&
-    isEvmChain(multiProvider, destinationDomainId);
+    isEvmChain(chainMetadataResolver, originDomainId) &&
+    isEvmChain(chainMetadataResolver, destinationDomainId);
 
-  useDynamicBannerColor(isFetching, status, isMessageFound, isError || isPiError);
+  useDynamicBannerColor(isFetching, status, isMessageFound, isError);
 
-  const originChainName = multiProvider.tryGetChainName(originDomainId) || 'Unknown';
-  const destinationChainName = multiProvider.tryGetChainName(destinationDomainId) || 'Unknown';
+  const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
+  const destinationChainName =
+    chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
 
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
 
@@ -125,6 +114,10 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     if (isWarpRouteDataLoaded || !isMessageFound) return;
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isMessageFound, isWarpRouteDataLoaded]);
+
+  useEffect(() => {
+    setRuntimeState(null);
+  }, [messageId]);
 
   useEffect(() => {
     setShowExtendedCards(false);
@@ -150,8 +143,8 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   }, [messageId]);
 
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, multiProvider),
-    [message, warpRouteChainAddressMap, multiProvider],
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
+    [chainMetadataResolver, message, warpRouteChainAddressMap],
   );
 
   return (
@@ -161,7 +154,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           <div className="h-2.5 w-2.5 rounded-full bg-cream-300" />
           <h2 className="text-lg font-medium text-white">{`${
             isIcaMsg ? 'ICA ' : ''
-          }Message to ${getChainDisplayName(multiProvider, destinationChainName)}`}</h2>
+          }Message to ${getChainDisplayName(chainMetadataResolver, destinationChainName)}`}</h2>
         </div>
         <StatusHeader
           messageStatus={status}
@@ -178,17 +171,18 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           transaction={origin}
           blur={blur}
         />
-        <DestinationTransactionCard
-          chainName={destinationChainName}
-          domainId={destinationDomainId}
-          status={status}
-          transaction={destination}
-          debugResult={debugResult}
-          isStatusFetching={isDeliveryStatusFetching}
-          isPiMsg={isPiMsg}
+        <MessageDetailsRuntime
+          messageId={messageId}
+          baseMessage={baseMessage}
+          baseIsMessageFound={baseIsMessageFound}
+          hasDetailedUrlMessage={hasDetailedUrlMessage}
+          hasGraphQlRun={hasGraphQlRun}
+          isGraphQlMessageFound={isGraphQlMessageFound}
+          destinationChainName={destinationChainName}
           blur={blur}
-          message={message}
+          showExtendedCards={showExtendedCards}
           warpRouteDetails={warpRouteDetails}
+          onStateChange={handleRuntimeStateChange}
         />
         <ContentDetailsCard message={message} blur={blur} />
         {showExtendedCards ? (
@@ -199,26 +193,16 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
               warpRouteDetails={warpRouteDetails}
               blur={blur}
             />
-            <WarpRouteVisualizationCard
-              message={message}
-              warpRouteDetails={warpRouteDetails}
-              blur={blur}
-            />
             <GasDetailsCard
               message={message}
               igpPayments={debugResult?.gasDetails?.contractToPayments}
               blur={blur}
             />
-            {debugResult?.ismDetails && (
-              <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-            )}
-            {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
           </>
         ) : (
           <>
             {showTimeline && <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />}
             {warpRouteDetails && <DetailSectionSkeleton className="w-full" rows={4} />}
-            {warpRouteDetails && <DetailCardSkeleton className="w-full" />}
             <DetailSectionSkeleton className="w-full" rows={3} />
           </>
         )}

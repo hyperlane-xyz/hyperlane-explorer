@@ -2,7 +2,8 @@ import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { Message, MessageStub } from '../../../types';
-import { tryDecodeIcaBody, useIcaAddress } from '../ica';
+import { useIcaAddress } from '../ica';
+import { tryDecodeIcaBody } from '../icaUtils';
 
 import { KeyValueRow } from './KeyValueRow';
 

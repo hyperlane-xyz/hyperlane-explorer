@@ -1,17 +1,16 @@
-import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SectionCard } from '../../../components/layout/SectionCard';
-import { useMultiProvider } from '../../../store';
+import { MAILBOX_VERSION } from '../../../consts/mailbox';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub } from '../../../types';
 import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { CodeBlock, CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
-import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
   message: Message | MessageStub;
@@ -31,14 +30,22 @@ export function ContentDetailsCard({ message, blur }: Props) {
     destinationChainId,
   } = message;
   const decodedBody = 'decodedBody' in message ? message.decodedBody : undefined;
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
-  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
-    BlockExplorerAddressUrls | undefined
-  >(undefined);
 
-  const formattedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
-  const formattedSender = formatAddress(sender, originDomainId, multiProvider);
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
+  const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
+  const blockExplorerAddressUrls = useMemo(
+    () => ({
+      sender: getBlockExplorerAddressUrl(chainMetadataResolver, originChainId, formattedSender),
+      recipient: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        destinationChainId,
+        formattedRecipient,
+      ),
+    }),
+    [chainMetadataResolver, destinationChainId, formattedRecipient, formattedSender, originChainId],
+  );
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
@@ -73,22 +80,6 @@ export function ContentDetailsCard({ message, blur }: Props) {
     }
   }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
-  const getBlockExplorerLinks = useCallback(async (): Promise<
-    BlockExplorerAddressUrls | undefined
-  > => {
-    const [senderAddressLink, recipientAddressLink] = await Promise.all([
-      tryGetBlockExplorerAddressUrl(multiProvider, originChainId, formattedSender),
-      tryGetBlockExplorerAddressUrl(multiProvider, destinationChainId, formattedRecipient),
-    ]);
-    return { sender: senderAddressLink, recipient: recipientAddressLink };
-  }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
-
-  useEffect(() => {
-    getBlockExplorerLinks()
-      .then((urls) => setBlockExplorerAddressUrls(urls))
-      .catch(() => setBlockExplorerAddressUrls(undefined));
-  }, [getBlockExplorerLinks]);
-
   return (
     <SectionCard
       className="w-full"
@@ -122,7 +113,7 @@ export function ContentDetailsCard({ message, blur }: Props) {
             display={formattedSender}
             showCopy={true}
             blurValue={blur}
-            link={blockExplorerAddressUrls?.sender}
+            link={blockExplorerAddressUrls.sender}
             truncateMiddle={true}
           />
           <KeyValueRow
@@ -131,7 +122,7 @@ export function ContentDetailsCard({ message, blur }: Props) {
             display={formattedRecipient}
             showCopy={true}
             blurValue={blur}
-            link={blockExplorerAddressUrls?.recipient}
+            link={blockExplorerAddressUrls.recipient}
             truncateMiddle={true}
           />
         </div>
