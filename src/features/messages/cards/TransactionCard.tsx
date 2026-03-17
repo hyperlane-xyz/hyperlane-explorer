@@ -2,7 +2,7 @@ import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import dynamic from 'next/dynamic';
-import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
@@ -18,7 +18,7 @@ import {
 } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { getBlockExplorerAddressUrl, getBlockExplorerTxUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
@@ -31,29 +31,6 @@ import { KeyValueRow } from './KeyValueRow';
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
 );
-
-export function OriginTransactionCard({
-  chainName,
-  domainId,
-  transaction,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  transaction: MessageTx | MessageTxStub;
-  blur: boolean;
-}) {
-  return (
-    <TransactionCard chainName={chainName} title="Origin Transaction" helpText={helpText.origin}>
-      <TransactionDetails
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        blur={blur}
-      />
-    </TransactionCard>
-  );
-}
 
 export function DestinationTransactionCard({
   chainName,
@@ -248,36 +225,11 @@ function TransactionDetails({
   const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
 
   const formattedHash = formatTxHash(hash, domainId, multiProvider);
-
   const txExplorerLink =
     hash && !new BigNumber(hash).isZero()
-      ? multiProvider.tryGetExplorerTxUrl(chainName, { hash: formattedHash })
+      ? getBlockExplorerTxUrl(multiProvider, chainName, formattedHash)
       : null;
-
-  const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
-
-  // Address explorer URL lookup is async in SDK; tx URL lookup above is sync.
-  useEffect(() => {
-    let cancelled = false;
-
-    setFromExplorerLink(null);
-
-    if (!from) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    tryGetBlockExplorerAddressUrl(multiProvider, chainName, from)
-      .then((link) => {
-        if (!cancelled) setFromExplorerLink(link);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chainName, from, multiProvider]);
+  const fromExplorerLink = getBlockExplorerAddressUrl(multiProvider, chainName, from);
 
   return (
     <>

@@ -1,24 +1,7 @@
 import { useEffect } from 'react';
 
-import type { Message } from '../../types';
-
 import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
-
-export interface PiMessageSearchState {
-  hasRun: boolean;
-  isError: boolean;
-  isFetching: boolean;
-  isMessagesFound: boolean;
-  messageList: Message[];
-}
-
-export const DEFAULT_PI_MESSAGE_SEARCH_STATE: PiMessageSearchState = {
-  hasRun: false,
-  isError: false,
-  isFetching: false,
-  isMessagesFound: false,
-  messageList: [],
-};
+import { PiMessageSearchState } from './piSearchState';
 
 export function PiMessageSearchBridge({
   endTimeFilter,

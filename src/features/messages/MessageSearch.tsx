@@ -13,13 +13,14 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
-import { MessageStatusFilter, MessageStub, WarpRouteIdToAddressesMap } from '../../types';
+import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
 import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
+import { DEFAULT_PI_MESSAGE_SEARCH_STATE, PiMessageSearchState } from './piSearchState';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
 
 const SearchFilterBar = dynamic(
@@ -328,22 +329,6 @@ export function MessageSearch() {
     </>
   );
 }
-
-interface PiMessageSearchState {
-  hasRun: boolean;
-  isError: boolean;
-  isFetching: boolean;
-  isMessagesFound: boolean;
-  messageList: MessageStub[];
-}
-
-const DEFAULT_PI_MESSAGE_SEARCH_STATE: PiMessageSearchState = {
-  hasRun: false,
-  isError: false,
-  isFetching: false,
-  isMessagesFound: false,
-  messageList: [],
-};
 
 function SearchFilterBarSkeleton() {
   return (

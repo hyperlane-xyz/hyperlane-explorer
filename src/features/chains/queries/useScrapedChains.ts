@@ -12,10 +12,8 @@ import { isPiChain } from '../utils';
 import { DOMAINS_QUERY, DomainsEntry } from './fragments';
 
 export function useScrapedDomains() {
-  const { scrapedDomains, setScrapedDomains } = useStore((s) => ({
-    scrapedDomains: s.scrapedDomains,
-    setScrapedDomains: s.setScrapedDomains,
-  }));
+  const scrapedDomains = useStore((s) => s.scrapedDomains);
+  const setScrapedDomains = useStore((s) => s.setScrapedDomains);
 
   const [result] = useQuery<{ domain: Array<DomainsEntry> }>({
     query: DOMAINS_QUERY,

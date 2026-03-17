@@ -49,6 +49,8 @@ export function DestinationTransactionPreviewCard({
   blur: boolean;
   isLiveDetailsPending: boolean;
 }) {
+  const chainMetadataResolver = useChainMetadataResolver();
+
   if (transaction) {
     return (
       <MessageTransactionPreviewCard
@@ -62,7 +64,6 @@ export function DestinationTransactionPreviewCard({
     );
   }
 
-  const chainMetadataResolver = useChainMetadataResolver();
   const idString =
     chainName && chainName !== chainMetadataResolver.tryGetChainName(domainId)
       ? `${chainName} / ${domainId}`

@@ -64,8 +64,6 @@ function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
   if (family === 'radixdashboard') {
     return address.startsWith('account') ? 'account' : 'component';
   }
-
-  if (!family) return null;
   return family === 'voyager' ? 'contract' : 'address';
 }
 

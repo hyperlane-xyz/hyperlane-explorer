@@ -1,7 +1,7 @@
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, ReactNode, memo, useMemo } from 'react';
+import { PropsWithChildren, ReactNode, memo, useMemo, useRef } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
@@ -79,6 +79,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
+  const hasPrimedDetailPage = useRef(false);
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
@@ -103,6 +104,8 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
   const primeDetailPage = () => {
+    if (hasPrimedDetailPage.current) return;
+    hasPrimedDetailPage.current = true;
     prefetchMessageStub(message);
 
     if (message.isPiMsg || !scrapedChains.length) return;
