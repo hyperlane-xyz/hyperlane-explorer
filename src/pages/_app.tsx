@@ -2,9 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { ToastContainer, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Tooltip } from 'react-tooltip';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
@@ -21,6 +19,10 @@ import '../styles/global.css';
 // Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
 const ErrorBoundary = dynamic(
   () => import('../components/errors/ErrorBoundary').then((mod) => mod.ErrorBoundary),
+  { ssr: false },
+);
+const AppClientOverlays = dynamic(
+  () => import('../components/AppClientOverlays').then((mod) => mod.AppClientOverlays),
   { ssr: false },
 );
 
@@ -93,8 +95,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
             </AppLayout>
           </UrqlProvider>
         </QueryClientProvider>
-        <ToastContainer transition={Zoom} position="bottom-right" limit={2} />
-        <Tooltip id="root-tooltip" className="z-50" />
+        <AppClientOverlays />
       </ErrorBoundary>
     </div>
   );
