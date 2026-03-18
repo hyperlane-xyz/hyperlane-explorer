@@ -1,6 +1,10 @@
 import { BigNumber, utils } from 'ethers';
 
-import { parseSentTransferRemoteAmount, parseTotalErc20TransferredToRouter } from './fetchWarpFees';
+import {
+  normalizeDecimals,
+  parseSentTransferRemoteAmount,
+  parseTotalErc20TransferredToRouter,
+} from './fetchWarpFees';
 
 const erc20Iface = new utils.Interface([
   'event Transfer(address indexed from, address indexed to, uint256 value)',
@@ -30,6 +34,7 @@ function makeSentTransferRemoteLog(
 
 const ROUTER = utils.getAddress('0x1234567890123456789012345678901234567890');
 const SENDER = utils.getAddress('0xabcdef0123456789abcdef0123456789abcdef01');
+const TOKEN = utils.getAddress('0x000000000000000000000000000000000000dEaD');
 const RECIPIENT = '0x' + '00'.repeat(31) + '01';
 
 describe('parseSentTransferRemoteAmount', () => {
@@ -57,29 +62,55 @@ describe('parseSentTransferRemoteAmount', () => {
 describe('parseTotalErc20TransferredToRouter', () => {
   it('sums ERC20 transfers from sender to router', () => {
     const logs = [
-      makeTransferLog(SENDER, ROUTER, BigNumber.from('1000000'), ROUTER),
-      makeTransferLog(SENDER, ROUTER, BigNumber.from('50000'), ROUTER),
+      makeTransferLog(SENDER, ROUTER, BigNumber.from('1000000'), TOKEN),
+      makeTransferLog(SENDER, ROUTER, BigNumber.from('50000'), TOKEN),
     ];
-    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER);
+    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER, TOKEN);
     expect(result?.eq(BigNumber.from('1050000'))).toBe(true);
   });
 
   it('ignores transfers from other senders', () => {
     const other = utils.getAddress('0x0000000000000000000000000000000000000002');
-    const logs = [makeTransferLog(other, ROUTER, BigNumber.from('1000000'), ROUTER)];
-    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER);
+    const logs = [makeTransferLog(other, ROUTER, BigNumber.from('1000000'), TOKEN)];
+    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER, TOKEN);
     expect(result).toBeNull();
   });
 
   it('ignores transfers to other addresses', () => {
     const other = utils.getAddress('0x0000000000000000000000000000000000000003');
     const logs = [makeTransferLog(SENDER, other, BigNumber.from('1000000'), other)];
-    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER);
+    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER, TOKEN);
+    expect(result).toBeNull();
+  });
+
+  it('ignores transfers from a different token contract', () => {
+    const otherToken = utils.getAddress('0x0000000000000000000000000000000000000099');
+    const logs = [makeTransferLog(SENDER, ROUTER, BigNumber.from('1000000'), otherToken)];
+    const result = parseTotalErc20TransferredToRouter(logs, ROUTER, SENDER, TOKEN);
     expect(result).toBeNull();
   });
 
   it('returns null when no matching transfers found', () => {
-    const result = parseTotalErc20TransferredToRouter([], ROUTER, SENDER);
+    const result = parseTotalErc20TransferredToRouter([], ROUTER, SENDER, TOKEN);
     expect(result).toBeNull();
+  });
+});
+
+describe('normalizeDecimals', () => {
+  it('returns value unchanged when decimals are equal', () => {
+    const value = BigNumber.from('1000000');
+    expect(normalizeDecimals(value, 6, 6).eq(value)).toBe(true);
+  });
+
+  it('scales down when fromDecimals > toDecimals', () => {
+    const value = BigNumber.from('1000000000000000000'); // 1e18
+    const result = normalizeDecimals(value, 18, 6);
+    expect(result.eq(BigNumber.from('1000000'))).toBe(true); // 1e6
+  });
+
+  it('scales up when fromDecimals < toDecimals', () => {
+    const value = BigNumber.from('1000000'); // 1e6
+    const result = normalizeDecimals(value, 6, 18);
+    expect(result.eq(BigNumber.from('1000000000000000000'))).toBe(true); // 1e18
   });
 });

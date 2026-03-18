@@ -14,6 +14,7 @@ export function useWarpFees(
     queryKey: ['warpFees', message.id, warpRouteDetails?.originToken.addressOrDenom],
     queryFn: () => fetchWarpFees(message, warpRouteDetails!, multiProvider),
     enabled: !!warpRouteDetails,
+    staleTime: Infinity,
   });
 
   return data ?? null;

@@ -56,11 +56,19 @@ export async function fetchWarpFees(
     const sentAmountWire = parseSentTransferRemoteAmount(receipt.logs, routerAddress);
     if (!sentAmountWire) return null;
 
+    // For collateral routes the ERC20 token differs from the router;
+    // for synthetic routes the router IS the ERC20 token.
+    const tokenAddress =
+      (warpRouteDetails.originToken as Record<string, unknown>).collateralAddressOrDenom as
+        | string
+        | undefined;
+
     // ERC20 Transfer amounts are in native token decimals
     const totalTransferred = parseTotalErc20TransferredToRouter(
       receipt.logs,
       routerAddress,
       message.origin.from,
+      tokenAddress || routerAddress,
     );
     if (!totalTransferred || totalTransferred.isZero()) return null;
 
@@ -87,7 +95,7 @@ export async function fetchWarpFees(
 }
 
 /** Normalize a BigNumber from one decimal basis to another */
-function normalizeDecimals(value: BigNumber, fromDecimals: number, toDecimals: number): BigNumber {
+export function normalizeDecimals(value: BigNumber, fromDecimals: number, toDecimals: number): BigNumber {
   if (fromDecimals === toDecimals) return value;
   if (fromDecimals > toDecimals) {
     return value.div(BigNumber.from(10).pow(fromDecimals - toDecimals));
@@ -119,14 +127,18 @@ export function parseTotalErc20TransferredToRouter(
   logs: Array<{ address: string; topics: string[]; data: string }>,
   routerAddress: string,
   senderAddress: string,
+  tokenAddress: string,
 ): BigNumber | null {
   const lowerRouter = routerAddress.toLowerCase();
   const lowerSender = senderAddress.toLowerCase();
+  const lowerToken = tokenAddress.toLowerCase();
 
   let total = BigNumber.from(0);
   let found = false;
 
   for (const log of logs) {
+    // Only consider Transfer events from the expected token contract
+    if (log.address.toLowerCase() !== lowerToken) continue;
     try {
       const parsed = erc20Iface.parseLog(log);
       if (parsed.name !== 'Transfer') continue;
