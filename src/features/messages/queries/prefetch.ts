@@ -13,6 +13,12 @@ const prefetchedMessageStubs = new Map<string, MessageStub>();
 const prefetchedMessageDetails = new Map<string, Message>();
 const prefetchedMessageDetailPromises = new Map<string, Promise<Message | null>>();
 
+export function clearPrefetchedMessages() {
+  prefetchedMessageStubs.clear();
+  prefetchedMessageDetails.clear();
+  prefetchedMessageDetailPromises.clear();
+}
+
 export function getPrefetchedMessageStub(messageId: string) {
   return prefetchedMessageStubs.get(normalizeMessageCacheKey(messageId));
 }

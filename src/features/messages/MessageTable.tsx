@@ -110,6 +110,7 @@ export function MessageTable({
             <MessageSummaryRow
               message={m}
               chainMetadataResolver={chainMetadataResolver}
+              router={router}
               scrapedChains={scrapedDomains}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
             />
@@ -123,11 +124,13 @@ export function MessageTable({
 export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
   chainMetadataResolver,
+  router,
   scrapedChains,
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
   chainMetadataResolver: ChainMetadataResolver;
+  router: NextRouter;
   scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
@@ -136,7 +139,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
   const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
-  const router = useRouter();
   const hasPrimedDetailPage = useRef(false);
 
   useEffect(() => {

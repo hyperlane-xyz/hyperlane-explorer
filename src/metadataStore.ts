@@ -12,6 +12,7 @@ import {
   createChainMetadataResolver,
 } from './features/chains/metadataManager';
 import { DomainsEntry } from './features/chains/queries/fragments';
+import { clearPrefetchedMessages } from './features/messages/queries/prefetch';
 import {
   TokenArgsWithWireDecimals,
   WarpRouteChainAddressMap,
@@ -65,6 +66,7 @@ export const useStore = create<MetadataState>()(
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
         const filtered = objFilter(overrides, (_, metadata) => !!metadata);
+        clearPrefetchedMessages();
         set({
           chainMetadataOverrides: filtered,
           isChainMetadataLoaded: false,
@@ -114,6 +116,7 @@ export const useStore = create<MetadataState>()(
       setRegistry: (registry: IRegistry) => {
         chainMetadataRequest = null;
         warpRouteDataPromise = null;
+        clearPrefetchedMessages();
         set({
           chainMetadata: {},
           isChainMetadataLoaded: false,
