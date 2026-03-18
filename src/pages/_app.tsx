@@ -76,8 +76,6 @@ export default function App({ Component, router, pageProps }: AppProps) {
     };
   }, [router.events]);
 
-  const pendingRouteLoadingContent = pendingRoute ? getRouteLoadingContent(pendingRoute) : null;
-
   // Note, the font definition is required both here and in _document.tsx
   // Otherwise Next.js will not load the font
 
@@ -115,21 +113,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <AppLayout pathName={router.pathname}>
-              <div className="relative">
-                <div
-                  aria-hidden={!!pendingRouteLoadingContent}
-                  className={pendingRouteLoadingContent ? 'pointer-events-none' : undefined}
-                >
-                  <Component {...pageProps} />
-                </div>
-                {pendingRouteLoadingContent ? (
-                  <div className="absolute inset-0 z-20">
-                    <div className="bg-brand-gradient/80 min-h-full backdrop-blur-[2px]">
-                      {pendingRouteLoadingContent}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+              {pendingRoute ? (
+                getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
+              ) : (
+                <Component {...pageProps} />
+              )}
             </AppLayout>
           </UrqlProvider>
         </QueryClientProvider>
