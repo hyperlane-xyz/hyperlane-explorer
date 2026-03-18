@@ -18,17 +18,7 @@ interface Props {
 }
 
 export function ContentDetailsCard({ message, blur }: Props) {
-  const {
-    msgId,
-    nonce,
-    originDomainId,
-    destinationDomainId,
-    sender,
-    recipient,
-    body,
-    originChainId,
-    destinationChainId,
-  } = message;
+  const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
   const decodedBody = 'decodedBody' in message ? message.decodedBody : undefined;
   const chainMetadataResolver = useChainMetadataResolver();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
@@ -37,14 +27,20 @@ export function ContentDetailsCard({ message, blur }: Props) {
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const blockExplorerAddressUrls = useMemo(
     () => ({
-      sender: getBlockExplorerAddressUrl(chainMetadataResolver, originChainId, formattedSender),
+      sender: getBlockExplorerAddressUrl(chainMetadataResolver, originDomainId, formattedSender),
       recipient: getBlockExplorerAddressUrl(
         chainMetadataResolver,
-        destinationChainId,
+        destinationDomainId,
         formattedRecipient,
       ),
     }),
-    [chainMetadataResolver, destinationChainId, formattedRecipient, formattedSender, originChainId],
+    [
+      chainMetadataResolver,
+      destinationDomainId,
+      formattedRecipient,
+      formattedSender,
+      originDomainId,
+    ],
   );
 
   useEffect(() => {
