@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tanstackQuery from '@tanstack/eslint-plugin-query';
 import nextConfig from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
@@ -12,12 +13,14 @@ export default [
       '**/build',
       '**/coverage',
       '**/postcss.config.js',
+      '**/jest.config.js',
       '**/next.config.js',
       '**/tailwind.config.js',
     ],
   },
   js.configs.recommended,
   ...nextConfig,
+  ...nextTypescript,
   ...tanstackQuery.configs['flat/recommended'],
   prettier,
   {
@@ -29,10 +32,6 @@ export default [
 
       ecmaVersion: 12,
       sourceType: 'module',
-
-      parserOptions: {
-        project: './tsconfig.json',
-      },
     },
 
     rules: {

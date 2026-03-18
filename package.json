@@ -75,7 +75,7 @@
     "clean": "rm -rf dist cache .next",
     "prebuild": "node scripts/fetch-fonts.mjs",
     "fetch-fonts": "node --env-file=.env.local scripts/fetch-fonts.mjs",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "typecheck": "tsc",
     "lint": "eslint .",
