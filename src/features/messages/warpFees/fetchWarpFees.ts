@@ -58,10 +58,8 @@ export async function fetchWarpFees(
 
     // For collateral routes the ERC20 token differs from the router;
     // for synthetic routes the router IS the ERC20 token.
-    const tokenAddress =
-      (warpRouteDetails.originToken as Record<string, unknown>).collateralAddressOrDenom as
-        | string
-        | undefined;
+    const tokenAddress = (warpRouteDetails.originToken as Record<string, unknown>)
+      .collateralAddressOrDenom as string | undefined;
 
     // ERC20 Transfer amounts are in native token decimals
     const totalTransferred = parseTotalErc20TransferredToRouter(
@@ -95,7 +93,11 @@ export async function fetchWarpFees(
 }
 
 /** Normalize a BigNumber from one decimal basis to another */
-export function normalizeDecimals(value: BigNumber, fromDecimals: number, toDecimals: number): BigNumber {
+export function normalizeDecimals(
+  value: BigNumber,
+  fromDecimals: number,
+  toDecimals: number,
+): BigNumber {
   if (fromDecimals === toDecimals) return value;
   if (fromDecimals > toDecimals) {
     return value.div(BigNumber.from(10).pow(fromDecimals - toDecimals));
