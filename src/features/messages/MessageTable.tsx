@@ -289,8 +289,8 @@ function LinkCell({
     <td className={tdClasses}>
       <Link
         href={`${path}${params}`}
-        prefetch={true}
-        className={aClasses}
+        prefetch={false}
+        className={`block h-full w-full ${aClasses || ''}`}
         onMouseEnter={onNavigateIntent}
         onFocus={onNavigateIntent}
         onTouchStart={onNavigateIntent}
