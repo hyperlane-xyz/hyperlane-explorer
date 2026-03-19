@@ -216,7 +216,7 @@ export function MessageSearch() {
 
   useEffect(() => {
     setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
-  }, [sanitizedInput, startTimeFilter, endTimeFilter, shouldRunPiSearch]);
+  }, [sanitizedInput, startTimeFilter, endTimeFilter]);
 
   // Coalesce GraphQL + PI results
   const isAnyFetching = isFetching || piSearchState.isFetching;

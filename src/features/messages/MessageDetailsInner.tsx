@@ -89,7 +89,11 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     !baseIsMessageFound && !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
   const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
   const handleRuntimeStateChange = useCallback(
-    (value: MessageDetailsRuntimeState) => setRuntimeState({ messageId, value }),
+    (value: MessageDetailsRuntimeState) =>
+      setRuntimeState((prev) => {
+        if (prev?.messageId === messageId && isRuntimeStateEqual(prev.value, value)) return prev;
+        return { messageId, value };
+      }),
     [messageId],
   );
   const message = activeRuntimeState?.message || baseMessage;
@@ -210,6 +214,18 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
+  );
+}
+
+function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRuntimeState) {
+  return (
+    a.hasRun === b.hasRun &&
+    a.isFetching === b.isFetching &&
+    a.isError === b.isError &&
+    a.isMessageFound === b.isMessageFound &&
+    a.message === b.message &&
+    a.debugResult === b.debugResult &&
+    a.isDeliveryStatusFetching === b.isDeliveryStatusFetching
   );
 }
 
