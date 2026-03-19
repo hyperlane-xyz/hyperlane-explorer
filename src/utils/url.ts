@@ -61,6 +61,7 @@ function appendToPath(baseUrl: string, pathExtension: string) {
 
 function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
   const family = metadata.blockExplorers?.[0]?.family;
+  if (!family) return null;
   if (family === 'radixdashboard') {
     return address.startsWith('account') ? 'account' : 'component';
   }
