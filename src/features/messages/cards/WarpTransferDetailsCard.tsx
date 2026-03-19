@@ -30,21 +30,26 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     return {
       originToken: getBlockExplorerAddressUrl(
         chainMetadataResolver,
-        message.originChainId,
+        message.originDomainId,
         originToken.addressOrDenom,
       ),
       destinationToken: getBlockExplorerAddressUrl(
         chainMetadataResolver,
-        message.destinationChainId,
+        message.destinationDomainId,
         destinationToken.addressOrDenom,
       ),
       transferRecipient: getBlockExplorerAddressUrl(
         chainMetadataResolver,
-        message.destinationChainId,
+        message.destinationDomainId,
         transferRecipient,
       ),
     };
-  }, [chainMetadataResolver, message.destinationChainId, message.originChainId, warpRouteDetails]);
+  }, [
+    chainMetadataResolver,
+    message.destinationDomainId,
+    message.originDomainId,
+    warpRouteDetails,
+  ]);
 
   if (!warpRouteDetails) return null;
 
