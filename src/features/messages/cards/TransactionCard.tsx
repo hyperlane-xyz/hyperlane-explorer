@@ -1,6 +1,4 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
-import BigNumber from 'bignumber.js';
 import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
@@ -16,17 +14,13 @@ import {
   MessageTxStub,
   WarpRouteDetails,
 } from '../../../types';
-import { formatTxHash } from '../../../utils/addresses';
-import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
-import { getBlockExplorerAddressUrl, getBlockExplorerTxUrl } from '../../../utils/url';
-import { getChainDisplayName } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
-import { KeyValueRow } from './KeyValueRow';
+import { TransactionDetailsRows } from './TransactionDetailsRows';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
@@ -221,56 +215,15 @@ function TransactionDetails({
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { hash, from, timestamp } = transaction;
-  const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
-
-  const formattedHash = formatTxHash(hash, domainId, multiProvider);
-  const txExplorerLink =
-    hash && !new BigNumber(hash).isZero()
-      ? getBlockExplorerTxUrl(multiProvider, chainName, formattedHash)
-      : null;
-  const fromExplorerLink = getBlockExplorerAddressUrl(multiProvider, chainName, from);
 
   return (
     <>
-      <ChainDescriptionRow
+      <TransactionDetailsRows
         chainName={chainName}
         domainId={domainId}
-        multiProvider={multiProvider}
+        transaction={transaction}
         blur={blur}
-      />
-      <KeyValueRow
-        label="Tx:"
-        labelWidth="w-16"
-        display={formattedHash}
-        showCopy={true}
-        blurValue={blur}
-        link={txExplorerLink}
-        truncateMiddle={true}
-      />
-      <KeyValueRow
-        label="From:"
-        labelWidth="w-16"
-        display={from}
-        showCopy={true}
-        blurValue={blur}
-        link={fromExplorerLink}
-        truncateMiddle={true}
-      />
-      {!!timestamp && (
-        <KeyValueRow
-          label="Time:"
-          labelWidth="w-16"
-          display={getHumanReadableTimeString(timestamp)}
-          subDisplay={`(${getDateTimeString(timestamp)})`}
-          blurValue={blur}
-        />
-      )}
-      <KeyValueRow
-        label="Block:"
-        labelWidth="w-16"
-        display={blockNumber?.toString() || ''}
-        blurValue={blur}
+        resolver={multiProvider}
       />
     </>
   );
@@ -318,32 +271,6 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
         </div>
       </Modal>
     </>
-  );
-}
-
-function ChainDescriptionRow({
-  chainName,
-  domainId,
-  multiProvider,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  multiProvider: MultiProtocolProvider;
-  blur: boolean;
-}) {
-  const idString =
-    chainName && chainName !== multiProvider.tryGetChainName(domainId)
-      ? `${chainName} / ${domainId}`
-      : `${domainId}`;
-  const chainDescription = `${getChainDisplayName(
-    multiProvider,
-    chainName,
-    false,
-    false,
-  )} (${idString})`;
-  return (
-    <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
   );
 }
 

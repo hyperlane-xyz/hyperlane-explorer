@@ -132,10 +132,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
-  useEffect(() => {
-    setRuntimeState(null);
-  }, [messageId]);
-
   const warpRouteDetails = useMemo(
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [chainMetadataResolver, message, warpRouteChainAddressMap],
