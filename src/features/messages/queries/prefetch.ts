@@ -12,8 +12,10 @@ const MAX_PREFETCHED_MESSAGES = 25;
 const prefetchedMessageStubs = new Map<string, MessageStub>();
 const prefetchedMessageDetails = new Map<string, Message>();
 const prefetchedMessageDetailPromises = new Map<string, Promise<Message | null>>();
+let prefetchedMessageVersion = 0;
 
 export function clearPrefetchedMessages() {
+  prefetchedMessageVersion += 1;
   prefetchedMessageStubs.clear();
   prefetchedMessageDetails.clear();
   prefetchedMessageDetailPromises.clear();
@@ -43,6 +45,7 @@ export function prefetchMessageDetails(
   const inFlight = prefetchedMessageDetailPromises.get(cacheKey);
   if (inFlight) return inFlight;
 
+  const version = prefetchedMessageVersion;
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
   const promise = fetch(config.apiUrl, {
     method: 'POST',
@@ -60,15 +63,20 @@ export function prefetchMessageDetails(
       }
       const message =
         parseMessageQueryResult(chainMetadataResolver, scrapedChains, body.data)[0] || null;
-      if (message) setPrefetchedMessageDetails(message);
-      return message;
+      if (message && prefetchedMessageVersion === version) {
+        setPrefetchedMessageDetails(message);
+        return message;
+      }
+      return null;
     })
     .catch((error) => {
       logger.debug('Error prefetching message details', messageId, error);
       return null;
     })
     .finally(() => {
-      prefetchedMessageDetailPromises.delete(cacheKey);
+      if (prefetchedMessageDetailPromises.get(cacheKey) === promise) {
+        prefetchedMessageDetailPromises.delete(cacheKey);
+      }
     });
 
   prefetchedMessageDetailPromises.set(cacheKey, promise);
