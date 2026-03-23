@@ -31,6 +31,8 @@ describe('createChainMetadataResolver', () => {
     expect(resolver.tryGetChainMetadata('ethereum')?.name).toBe('ethereum');
     expect(resolver.tryGetChainMetadata('1')?.name).toBe('ethereum');
     expect(resolver.tryGetChainMetadata(1)?.name).toBe('ethereum');
+    expect(resolver.tryGetChainName('1')).toBe('ethereum');
+    expect(resolver.tryGetChainName(1)).toBe('ethereum');
   });
 
   it('resolves non-numeric string chain IDs', () => {

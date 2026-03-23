@@ -128,9 +128,9 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
 
   useEffect(() => {
-    if (isWarpRouteDataLoaded || !isMessageFound) return;
+    if (isWarpRouteDataLoaded) return;
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
-  }, [ensureWarpRouteData, isMessageFound, isWarpRouteDataLoaded]);
+  }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   useEffect(() => {
     setRuntimeState(null);

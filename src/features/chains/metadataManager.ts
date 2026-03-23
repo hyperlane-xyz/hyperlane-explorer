@@ -5,7 +5,7 @@ export interface ChainMetadataResolver {
   getKnownChainNames: () => string[];
   tryGetChainId: (chain: ChainNameOrId) => string | number | null;
   tryGetChainMetadata: (chain: ChainNameOrId) => ChainMetadata | null | undefined;
-  tryGetChainName: (domainId: DomainId) => string | null | undefined;
+  tryGetChainName: (chain: ChainNameOrId) => string | null | undefined;
   tryGetDomainId: (chainName: string) => number | null;
   tryGetProtocol: (chain: ChainNameOrId) => ChainMetadata['protocol'] | null | undefined;
 }
@@ -39,7 +39,7 @@ export function createChainMetadataResolver(
     getKnownChainNames: () => Object.keys(metadata),
     tryGetChainId: (chain) => tryGetChainMetadata(chain)?.chainId ?? null,
     tryGetChainMetadata,
-    tryGetChainName: (domainId) => byDomainId.get(domainId)?.name,
+    tryGetChainName: (chain) => tryGetChainMetadata(chain)?.name,
     tryGetDomainId: (chainName) => metadata[chainName]?.domainId ?? null,
     tryGetProtocol: (chain) => tryGetChainMetadata(chain)?.protocol,
   };
