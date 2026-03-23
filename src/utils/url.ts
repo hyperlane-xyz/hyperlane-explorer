@@ -2,6 +2,7 @@ import type { ChainMetadata, ChainNameOrId } from '@hyperlane-xyz/sdk';
 import { isZeroishAddress } from '@hyperlane-xyz/utils';
 
 import type { ChainMetadataResolver } from '../features/chains/metadataManager';
+import { logger } from './logger';
 
 type ExplorerMetadataResolver = Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;
 
@@ -16,7 +17,7 @@ export function getBlockExplorerTxUrl(
   if (!baseUrl) return null;
 
   const urlPathStub = isLegacyTransactionPath(metadata.name) ? 'transaction' : 'tx';
-  return appendToPath(baseUrl, `${urlPathStub}/${hash}`).toString();
+  return appendToPath(baseUrl, `${urlPathStub}/${hash}`)?.toString() || null;
 }
 
 export function getBlockExplorerAddressUrl(
@@ -33,30 +34,40 @@ export function getBlockExplorerAddressUrl(
   const urlPathStub = getExplorerAddressPathStub(metadata, address);
   if (!baseUrl || !urlPathStub) return null;
 
-  return appendToPath(baseUrl, `${urlPathStub}/${address}`).toString();
+  return appendToPath(baseUrl, `${urlPathStub}/${address}`)?.toString() || null;
 }
 
-export async function tryGetBlockExplorerAddressUrl(
+export function tryGetBlockExplorerAddressUrl(
   chainMetadataResolver: ExplorerMetadataResolver,
   chain: ChainNameOrId,
   address: string,
 ) {
-  return getBlockExplorerAddressUrl(chainMetadataResolver, chain, address);
+  return Promise.resolve(getBlockExplorerAddressUrl(chainMetadataResolver, chain, address));
 }
 
 function getExplorerBaseUrl(metadata: ChainMetadata, index = 0) {
   const explorer = metadata.blockExplorers?.[index];
   if (!explorer?.url) return null;
-  return new URL(explorer.url).toString();
+  try {
+    return new URL(explorer.url).toString();
+  } catch (error) {
+    logger.debug('Invalid block explorer URL', metadata.name, explorer.url, error);
+    return null;
+  }
 }
 
 function appendToPath(baseUrl: string, pathExtension: string) {
-  const base = new URL(baseUrl);
-  let currentPath = base.pathname;
-  if (currentPath.endsWith('/')) currentPath = currentPath.slice(0, -1);
-  const newUrl = new URL(`${currentPath}/${pathExtension}`, base);
-  newUrl.search = base.searchParams.toString();
-  return newUrl;
+  try {
+    const base = new URL(baseUrl);
+    let currentPath = base.pathname;
+    if (currentPath.endsWith('/')) currentPath = currentPath.slice(0, -1);
+    const newUrl = new URL(`${currentPath}/${pathExtension}`, base);
+    newUrl.search = base.searchParams.toString();
+    return newUrl;
+  } catch (error) {
+    logger.debug('Error appending block explorer path', baseUrl, pathExtension, error);
+    return null;
+  }
 }
 
 function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
