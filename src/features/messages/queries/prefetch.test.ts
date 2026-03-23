@@ -58,7 +58,9 @@ describe('prefetchMessageDetails', () => {
   it('keeps the latest in-flight promise after invalidation', async () => {
     const firstDeferred = createDeferred<Response>();
     const secondDeferred = createDeferred<Response>();
-    fetchMock.mockReturnValueOnce(firstDeferred.promise).mockReturnValueOnce(secondDeferred.promise);
+    fetchMock
+      .mockReturnValueOnce(firstDeferred.promise)
+      .mockReturnValueOnce(secondDeferred.promise);
 
     const firstPromise = prefetchMessageDetails(messageId, resolver, []);
     clearPrefetchedMessages();
