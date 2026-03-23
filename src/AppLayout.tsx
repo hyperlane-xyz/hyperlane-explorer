@@ -2,6 +2,7 @@ import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { PropsWithChildren } from 'react';
 
+import { appShellGridOverlayStyle, appShellMainStyle } from './components/layout/appShellStyles';
 import { Header } from './components/nav/Header';
 
 const Footer = dynamic(() => import('./components/nav/Footer').then((mod) => mod.Footer), {
@@ -22,10 +23,13 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
       <div className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between bg-brand-gradient">
-        <div className="pointer-events-none absolute inset-0 z-0" style={styles.gridOverlay} />
+        <div
+          className="pointer-events-none absolute inset-0 z-0"
+          style={appShellGridOverlayStyle}
+        />
         <Header pathName={pathName} />
         <div className="relative z-10 mx-auto max-w-5xl grow">
-          <main style={styles.main} className="relative min-h-full pt-3">
+          <main style={appShellMainStyle} className="relative min-h-full pt-3">
             {children}
           </main>
         </div>
@@ -48,18 +52,3 @@ function titleCase(value: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(' ');
 }
-
-const styles = {
-  gridOverlay: {
-    backgroundImage: 'url(/images/background.svg)',
-    backgroundSize: '100% auto',
-    backgroundRepeat: 'repeat',
-    maskImage:
-      'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
-    WebkitMaskImage:
-      'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
-  } as React.CSSProperties,
-  main: {
-    width: 'min(900px,96vw)',
-  },
-};

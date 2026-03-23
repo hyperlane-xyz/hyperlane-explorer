@@ -22,6 +22,7 @@ import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 import { MessageTable } from './MessageTable';
 import { DEFAULT_PI_MESSAGE_SEARCH_STATE, PiMessageSearchState } from './piSearchState';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
+import { SearchFilterBarSkeleton } from './SearchFilterBarSkeleton';
 
 const SearchFilterBar = dynamic(
   () => import('../../components/search/SearchFilterBar').then((mod) => mod.SearchFilterBar),
@@ -327,17 +328,6 @@ export function MessageSearch() {
         />
       </Card>
     </>
-  );
-}
-
-function SearchFilterBarSkeleton() {
-  return (
-    <div className="flex items-center gap-2 md:gap-4">
-      <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
-      <div className="h-8 w-24 rounded border border-accent-600/40 bg-accent-50/40" />
-      <div className="h-8 w-16 rounded border border-accent-600/40 bg-accent-50/40" />
-      <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
-    </div>
   );
 }
 

@@ -1,4 +1,5 @@
 import { Card } from '../../components/layout/Card';
+import { SearchFilterBarSkeleton } from './SearchFilterBarSkeleton';
 
 export function MessageSearchLoading() {
   return (
@@ -11,12 +12,7 @@ export function MessageSearchLoading() {
       <Card className="relative mt-4 min-h-[38rem] w-full" padding="">
         <div className="flex items-center justify-between px-2 pb-3 pt-3.5 sm:px-4 md:px-5">
           <div className="h-6 w-32 rounded bg-gray-200" />
-          <div className="flex items-center gap-2 md:gap-4">
-            <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
-            <div className="h-8 w-24 rounded border border-accent-600/40 bg-accent-50/40" />
-            <div className="h-8 w-16 rounded border border-accent-600/40 bg-accent-50/40" />
-            <div className="h-8 w-20 rounded border border-accent-600/40 bg-accent-50/40" />
-          </div>
+          <SearchFilterBarSkeleton />
         </div>
 
         <div className="px-3 pb-3 sm:px-4 md:px-5">
