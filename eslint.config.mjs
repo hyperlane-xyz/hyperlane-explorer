@@ -1,18 +1,9 @@
-import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
-import typescriptEslint from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
+import tanstackQuery from '@tanstack/eslint-plugin-query';
+import nextConfig from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
+import prettier from 'eslint-config-prettier';
 import globals from 'globals';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
 
 export default [
   {
@@ -22,36 +13,25 @@ export default [
       '**/build',
       '**/coverage',
       '**/postcss.config.js',
+      '**/jest.config.js',
       '**/next.config.js',
       '**/tailwind.config.js',
     ],
   },
-  ...compat.extends(
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@tanstack/eslint-plugin-query/recommended',
-    'next',
-    'next/core-web-vitals',
-    'prettier',
-  ),
+  js.configs.recommended,
+  ...nextConfig,
+  ...nextTypescript,
+  ...tanstackQuery.configs['flat/recommended'],
+  prettier,
   {
-    plugins: {
-      '@typescript-eslint': typescriptEslint,
-    },
-
     languageOptions: {
       globals: {
         ...globals.node,
         ...globals.browser,
       },
 
-      parser: tsParser,
       ecmaVersion: 12,
       sourceType: 'module',
-
-      parserOptions: {
-        project: './tsconfig.json',
-      },
     },
 
     rules: {
@@ -66,6 +46,17 @@ export default [
       'no-constant-condition': ['off'],
       'no-multiple-empty-lines': ['error'],
       'jsx-a11y/alt-text': ['off'],
+      '@next/next/no-img-element': ['off'],
+      'react-hooks/set-state-in-effect': ['off'],
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+
+    rules: {
+      // Disable base rules that @typescript-eslint replaces
+      'no-unused-vars': ['off'],
+      'no-undef': ['off'],
 
       '@typescript-eslint/ban-ts-comment': ['off'],
       '@typescript-eslint/explicit-module-boundary-types': ['off'],
@@ -81,8 +72,15 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+    },
+  },
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
 
-      '@next/next/no-img-element': ['off'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
     },
   },
 ];

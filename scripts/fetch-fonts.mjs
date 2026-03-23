@@ -72,7 +72,7 @@ async function fetchFonts() {
       results.success.push(fontFile);
     } catch (error) {
       console.warn(`Failed to download ${fontFile}: ${error.message}`);
-      try { unlinkSync(outputPath); } catch {}
+      try { unlinkSync(outputPath); } catch { /* ignore cleanup failures */ }
       results.failed.push(fontFile);
     }
   }
