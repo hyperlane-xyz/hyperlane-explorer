@@ -8,6 +8,7 @@ import { MessageStatus, MessageTx, MessageTxStub } from '../../../types';
 import { getChainDisplayName } from '../../chains/utils';
 import { KeyValueRow } from './KeyValueRow';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
+import { transactionHelpText } from './transactionHelpText';
 
 export function OriginTransactionCard({
   chainName,
@@ -27,7 +28,7 @@ export function OriginTransactionCard({
       transaction={transaction}
       blur={blur}
       title="Origin Transaction"
-      helpText={helpText.origin}
+      helpText={transactionHelpText.origin}
     />
   );
 }
@@ -58,7 +59,7 @@ export function DestinationTransactionPreviewCard({
         transaction={transaction}
         blur={blur}
         title="Destination Transaction"
-        helpText={helpText.destination}
+        helpText={transactionHelpText.destination}
       />
     );
   }
@@ -79,7 +80,7 @@ export function DestinationTransactionPreviewCard({
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title="Destination Transaction"
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText.destination} />}
+      icon={<Tooltip id={tooltipId} content={transactionHelpText.destination} />}
     >
       <div className="space-y-2">
         <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
@@ -136,9 +137,3 @@ function MessageTransactionPreviewCard({
     </SectionCard>
   );
 }
-
-const helpText = {
-  origin: 'Info about the transaction that initiated the message placement into the outbox.',
-  destination:
-    'Info about the transaction that triggered the delivery of the message from an inbox.',
-};

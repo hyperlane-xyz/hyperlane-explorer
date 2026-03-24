@@ -49,11 +49,14 @@ let chainMetadataRequest: {
   promise: Promise<ChainMap<ChainMetadata>>;
   registry: IRegistry;
 } | null = null;
-let warpRouteDataPromise: Promise<{
-  warpRouteChainAddressMap: WarpRouteChainAddressMap;
-  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
-  warpRouteConfigs: WarpRouteConfigs;
-}> | null = null;
+let warpRouteDataRequest: {
+  promise: Promise<{
+    warpRouteChainAddressMap: WarpRouteChainAddressMap;
+    warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
+    warpRouteConfigs: WarpRouteConfigs;
+  }>;
+  registry: IRegistry;
+} | null = null;
 
 export const useStore = create<MetadataState>()(
   persist(
@@ -84,29 +87,33 @@ export const useStore = create<MetadataState>()(
           chainMetadataRequest.registry !== registry ||
           chainMetadataRequest.overrides !== chainMetadataOverrides
         ) {
-          const promise = import('./features/chains/loadChainMetadata').then((mod) =>
-            mod.loadChainMetadata(registry, chainMetadataOverrides),
-          );
           chainMetadataRequest = {
             registry,
             overrides: chainMetadataOverrides,
-            promise,
+            promise: import('./features/chains/loadChainMetadata').then((mod) =>
+              mod.loadChainMetadata(registry, chainMetadataOverrides),
+            ),
           };
-          promise.finally(() => {
-            if (chainMetadataRequest?.promise === promise) {
-              chainMetadataRequest = null;
-            }
-          });
         }
 
-        const metadata = await chainMetadataRequest.promise;
-        if (get().registry !== registry || get().chainMetadataOverrides !== chainMetadataOverrides)
-          return;
+        const request = chainMetadataRequest;
+        try {
+          const metadata = await request.promise;
+          if (
+            get().registry !== registry ||
+            get().chainMetadataOverrides !== chainMetadataOverrides
+          )
+            return;
 
-        set({
-          chainMetadata: metadata,
-          isChainMetadataLoaded: true,
-        });
+          set({
+            chainMetadata: metadata,
+            isChainMetadataLoaded: true,
+          });
+        } finally {
+          if (chainMetadataRequest === request) {
+            chainMetadataRequest = null;
+          }
+        }
       },
       registry: new GithubRegistry({
         proxyUrl: config.githubProxy,
@@ -115,7 +122,7 @@ export const useStore = create<MetadataState>()(
       }),
       setRegistry: (registry: IRegistry) => {
         chainMetadataRequest = null;
-        warpRouteDataPromise = null;
+        warpRouteDataRequest = null;
         clearPrefetchedMessages();
         set({
           chainMetadata: {},
@@ -138,26 +145,30 @@ export const useStore = create<MetadataState>()(
         if (state.isWarpRouteDataLoaded) return;
         const registry = state.registry;
 
-        if (!warpRouteDataPromise) {
-          const nextWarpRouteDataPromise = buildWarpRouteMaps(registry);
-          warpRouteDataPromise = nextWarpRouteDataPromise;
-          nextWarpRouteDataPromise.finally(() => {
-            if (warpRouteDataPromise === nextWarpRouteDataPromise) {
-              warpRouteDataPromise = null;
-            }
-          });
+        if (!warpRouteDataRequest || warpRouteDataRequest.registry !== registry) {
+          warpRouteDataRequest = {
+            registry,
+            promise: buildWarpRouteMaps(registry),
+          };
         }
 
-        const { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs } =
-          await warpRouteDataPromise;
-        if (get().registry !== registry) return;
+        const request = warpRouteDataRequest;
+        try {
+          const { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs } =
+            await request.promise;
+          if (get().registry !== registry) return;
 
-        set({
-          warpRouteChainAddressMap,
-          warpRouteIdToAddressesMap,
-          warpRouteConfigs,
-          isWarpRouteDataLoaded: true,
-        });
+          set({
+            warpRouteChainAddressMap,
+            warpRouteIdToAddressesMap,
+            warpRouteConfigs,
+            isWarpRouteDataLoaded: true,
+          });
+        } finally {
+          if (warpRouteDataRequest === request) {
+            warpRouteDataRequest = null;
+          }
+        }
       },
     }),
     {

@@ -21,6 +21,7 @@ import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
+import { transactionHelpText } from './transactionHelpText';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
@@ -178,7 +179,7 @@ export function DestinationTransactionCard({
     <TransactionCard
       chainName={chainName}
       title="Destination Transaction"
-      helpText={helpText.destination}
+      helpText={transactionHelpText.destination}
     >
       {content}
     </TransactionCard>
@@ -275,12 +276,6 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
     </>
   );
 }
-
-const helpText = {
-  origin: 'Info about the transaction that initiated the message placement into the outbox.',
-  destination:
-    'Info about the transaction that triggered the delivery of the message from an inbox.',
-};
 
 const styles = {
   textLink:
