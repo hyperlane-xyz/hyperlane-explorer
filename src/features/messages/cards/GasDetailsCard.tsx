@@ -2,7 +2,7 @@ import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
@@ -37,6 +37,10 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   }, [chainMetadataResolver, message.originDomainId]);
 
   const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
+
+  useEffect(() => {
+    setDecimals(unitOptions[1].value);
+  }, [unitOptions]);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {

@@ -22,6 +22,13 @@ let providerSyncPromise: Promise<void> | null = null;
 let queuedChainMetadata: ProviderChainMetadata | null = null;
 let isProviderStoreSubscribed = false;
 
+function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
+  useProviderStore
+    .getState()
+    .syncMultiProvider(chainMetadata)
+    .catch((error) => logger.error('Error syncing MultiProtocolProvider', error));
+}
+
 const useProviderStore = create<ProviderState>()((set) => ({
   multiProvider: new MultiProtocolProvider({}),
   syncMultiProvider: async (requestedChainMetadata) => {
@@ -54,7 +61,7 @@ const useProviderStore = create<ProviderState>()((set) => ({
         providerSyncPromise = null;
 
         if (nextChainMetadata && nextChainMetadata !== chainMetadata) {
-          void useProviderStore.getState().syncMultiProvider(nextChainMetadata);
+          syncMultiProviderSafely(nextChainMetadata);
         }
       });
 
@@ -66,10 +73,10 @@ function ensureProviderStoreSubscription() {
   if (isProviderStoreSubscribed) return;
   isProviderStoreSubscribed = true;
 
-  void useProviderStore.getState().syncMultiProvider();
+  syncMultiProviderSafely();
   useMetadataStore.subscribe((state, prevState) => {
     if (state.chainMetadata !== prevState.chainMetadata) {
-      void useProviderStore.getState().syncMultiProvider(state.chainMetadata);
+      syncMultiProviderSafely(state.chainMetadata);
     }
   });
 }

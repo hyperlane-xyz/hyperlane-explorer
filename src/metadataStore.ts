@@ -274,11 +274,11 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
 function canUsePublishedWarpRouteFallback(registry: IRegistry) {
   if (!(registry instanceof GithubRegistry)) return false;
 
-  const githubRegistry = registry as GithubRegistry & {
-    uri?: string;
-    branch?: string;
-  };
+  const githubRegistry = registry as GithubRegistry & Record<string, unknown>;
   return (
-    githubRegistry.uri === config.registryUrl && githubRegistry.branch === config.registryBranch
+    typeof githubRegistry.uri === 'string' &&
+    typeof githubRegistry.branch === 'string' &&
+    githubRegistry.uri === config.registryUrl &&
+    githubRegistry.branch === config.registryBranch
   );
 }
