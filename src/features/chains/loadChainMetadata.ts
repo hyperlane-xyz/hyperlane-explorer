@@ -37,12 +37,13 @@ export async function loadChainMetadata(
       if (parsedMetadata.success) return parsedMetadata.data;
 
       const fallbackMetadata = metadataWithLogos[chain];
+      const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
       logger.error(
         `Failed to parse metadata for ${chain}, ${
-          fallbackMetadata ? 'falling back to registry metadata' : 'skipping'
+          parsedFallbackMetadata.success ? 'falling back to registry metadata' : 'skipping'
         }`,
       );
-      return fallbackMetadata;
+      return parsedFallbackMetadata.success ? parsedFallbackMetadata.data : undefined;
     }),
     (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
   );

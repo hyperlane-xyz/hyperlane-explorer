@@ -1,6 +1,6 @@
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
@@ -191,12 +191,14 @@ function TransactionCard({
   helpText,
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
+  const tooltipId = `${useId()}-transaction-info`;
+
   return (
     <SectionCard
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id="transaction-info" content={helpText} />}
+      icon={<Tooltip id={tooltipId} content={helpText} />}
     >
       <div className="space-y-2">{children}</div>
     </SectionCard>
