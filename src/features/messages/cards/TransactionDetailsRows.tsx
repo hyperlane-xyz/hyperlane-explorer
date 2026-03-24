@@ -68,12 +68,14 @@ export function TransactionDetailsRows({
           blurValue={blur}
         />
       )}
-      <KeyValueRow
-        label="Block:"
-        labelWidth="w-16"
-        display={blockNumber?.toString() || ''}
-        blurValue={blur}
-      />
+      {blockNumber !== undefined && (
+        <KeyValueRow
+          label="Block:"
+          labelWidth="w-16"
+          display={blockNumber.toString()}
+          blurValue={blur}
+        />
+      )}
     </>
   );
 }
