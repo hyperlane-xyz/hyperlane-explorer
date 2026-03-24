@@ -10,6 +10,12 @@ export async function loadChainMetadata(
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
 ) {
+  for (const chainName of Object.keys(overrideChainMetadata)) {
+    if (chainName !== chainName.toLowerCase()) {
+      throw new Error(`Override chain names must be lowercase: ${chainName}`);
+    }
+  }
+
   logger.debug('Loading chain metadata from registry');
 
   const registryChainMetadata = await registry.getMetadata();
@@ -23,12 +29,21 @@ export async function loadChainMetadata(
     ),
   );
 
+  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
+
   return objFilter(
-    mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata),
-    (chain, metadata): metadata is ChainMetadata => {
+    objMap(mergedMetadata, (chain, metadata) => {
       const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
-      if (!parsedMetadata.success) logger.error(`Failed to parse metadata for ${chain}, skipping`);
-      return parsedMetadata.success;
-    },
+      if (parsedMetadata.success) return parsedMetadata.data;
+
+      const fallbackMetadata = metadataWithLogos[chain];
+      logger.error(
+        `Failed to parse metadata for ${chain}, ${
+          fallbackMetadata ? 'falling back to registry metadata' : 'skipping'
+        }`,
+      );
+      return fallbackMetadata;
+    }),
+    (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
   );
 }

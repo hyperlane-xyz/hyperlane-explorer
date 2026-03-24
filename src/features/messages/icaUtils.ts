@@ -28,8 +28,8 @@ export function isIcaMessage({ sender, recipient }: { sender: Address; recipient
 }
 
 export function tryDecodeIcaBody(body: string) {
-  if (!body || BigNumber.from(body).isZero()) return null;
   try {
+    if (!body || BigNumber.from(body).isZero()) return null;
     const decoder = utils.defaultAbiCoder;
     const decodedBody = decoder.decode(['address sender', 'tuple(address, bytes)[] calls'], body);
     const { sender, calls } = decodedBody as unknown as {

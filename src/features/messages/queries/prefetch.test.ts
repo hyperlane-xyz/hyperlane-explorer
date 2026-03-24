@@ -22,6 +22,7 @@ function createDeferred<T>() {
 }
 
 describe('prefetchMessageDetails', () => {
+  const originalFetch = global.fetch;
   const resolver = {} as never;
   const messageId = '0xabc';
   const parsedMessage = { msgId: messageId } as Message;
@@ -30,6 +31,10 @@ describe('prefetchMessageDetails', () => {
 
   beforeAll(() => {
     global.fetch = fetchMock;
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
   });
 
   beforeEach(() => {

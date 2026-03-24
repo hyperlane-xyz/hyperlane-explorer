@@ -21,14 +21,15 @@ export function MessageDetailsPage({
 }) {
   const prefetchedMessage = getPrefetchedMessageStub(messageId);
   const prefetchedMessageDetails = getPrefetchedMessageDetails(messageId);
+  const initialMessage =
+    message && 'blockNumber' in message.origin
+      ? message
+      : prefetchedMessageDetails || message || prefetchedMessage;
 
   return (
     <>
       <ChainConfigSyncEffect />
-      <MessageDetailsInner
-        messageId={messageId}
-        message={message || prefetchedMessageDetails || prefetchedMessage}
-      />
+      <MessageDetailsInner messageId={messageId} message={initialMessage} />
     </>
   );
 }

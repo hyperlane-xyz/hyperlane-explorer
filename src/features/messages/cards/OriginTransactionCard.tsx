@@ -1,5 +1,6 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
+import { useId } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';
@@ -47,6 +48,7 @@ export function DestinationTransactionPreviewCard({
   isLiveDetailsPending: boolean;
 }) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const tooltipId = `${useId()}-destination-transaction-info`;
 
   if (transaction) {
     return (
@@ -77,7 +79,7 @@ export function DestinationTransactionPreviewCard({
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title="Destination Transaction"
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id="transaction-info" content={helpText.destination} />}
+      icon={<Tooltip id={tooltipId} content={helpText.destination} />}
     >
       <div className="space-y-2">
         <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
@@ -113,13 +115,14 @@ function MessageTransactionPreviewCard({
   helpText: string;
 }) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const tooltipId = `${useId()}-transaction-info`;
 
   return (
     <SectionCard
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id="transaction-info" content={helpText} />}
+      icon={<Tooltip id={tooltipId} content={helpText} />}
     >
       <div className="space-y-2">
         <TransactionDetailsRows

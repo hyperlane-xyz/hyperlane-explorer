@@ -99,7 +99,7 @@ export function Header({ pathName }: { pathName: string }) {
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
-        <div className="item-center relative mr-2 flex sm:hidden" ref={mobileMenuRef}>
+        <div className="relative mr-2 flex items-center sm:hidden" ref={mobileMenuRef}>
           <button
             type="button"
             aria-expanded={isMobileMenuOpen}
@@ -110,7 +110,7 @@ export function Header({ pathName }: { pathName: string }) {
             <DropdownButton />
           </button>
           {isMobileMenuOpen && (
-            <div className="absolute left-0 right-0 top-full mt-3 bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
+            <div className="absolute right-0 top-full mt-3 min-w-[12rem] bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
               <MobileNavLink href="/" closeDropdown={() => setIsMobileMenuOpen(false)}>
                 HOME
               </MobileNavLink>

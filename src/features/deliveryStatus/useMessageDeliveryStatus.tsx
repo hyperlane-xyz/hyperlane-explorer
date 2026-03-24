@@ -23,7 +23,12 @@ export function useMessageDeliveryStatus({
   const { data, error, isFetching } = useQuery({
     queryKey: ['messageDeliveryStatus', message, !!multiProvider, registry, chainMetadataOverrides],
     queryFn: async () => {
-      if (!multiProvider || message.status == MessageStatus.Delivered) {
+      const hasDeliveredDetails =
+        message.status === MessageStatus.Delivered &&
+        !!message.destination &&
+        'blockNumber' in message.destination;
+
+      if (!multiProvider || hasDeliveredDetails) {
         return { message };
       }
 

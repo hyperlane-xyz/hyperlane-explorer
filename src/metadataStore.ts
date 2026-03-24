@@ -219,10 +219,11 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
   try {
     logger.debug('Building warp route maps from GithubRegistry');
     warpRouteConfigs = await registry.getWarpRoutes();
-  } catch {
-    logger.debug(
-      'Failed to build warp route maps from GithubRegistry. Using published warp route configs.',
-    );
+  } catch (error) {
+    logger.error('Failed to build warp route maps from registry', error);
+    if (!canUsePublishedWarpRouteFallback(registry)) throw error;
+
+    logger.debug('Using published warp route configs fallback.');
     const { warpRouteConfigs: publishedWarpRouteConfigs } = await import('@hyperlane-xyz/registry');
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
@@ -257,4 +258,16 @@ export async function buildWarpRouteMaps(registry: IRegistry): Promise<{
   });
 
   return { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs };
+}
+
+function canUsePublishedWarpRouteFallback(registry: IRegistry) {
+  if (!(registry instanceof GithubRegistry)) return false;
+
+  const githubRegistry = registry as GithubRegistry & {
+    uri?: string;
+    branch?: string;
+  };
+  return (
+    githubRegistry.uri === config.registryUrl && githubRegistry.branch === config.registryBranch
+  );
 }

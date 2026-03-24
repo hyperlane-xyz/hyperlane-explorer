@@ -45,6 +45,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           igpPayments[contract].map((p) => ({
             gasAmount: p.gasAmount,
             paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
+            paymentAmountWei: p.paymentAmount,
             contract,
           })),
         )
@@ -55,7 +56,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         new BigNumber(0),
       );
       let totalPaymentWei = paymentsWithAddr.reduce(
-        (sum, val) => sum.plus(val.paymentAmount),
+        (sum, val) => sum.plus(val.paymentAmountWei),
         new BigNumber(0),
       );
       let numPayments = paymentsWithAddr.length;
