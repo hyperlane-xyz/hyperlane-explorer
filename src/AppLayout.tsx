@@ -47,6 +47,8 @@ const styles = {
       'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
     WebkitMaskImage:
       'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100vh, rgba(0,0,0,1) 100%)',
+    willChange: 'transform',
+    transform: 'translateZ(0)',
   } as React.CSSProperties,
   main: {
     width: 'min(900px,96vw)',

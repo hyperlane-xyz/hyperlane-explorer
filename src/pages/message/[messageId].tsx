@@ -98,7 +98,14 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  if (messageId && typeof messageId === 'string') {
+  // Skip OG data fetching for non-bot user agents (speeds up navigation for real users)
+  const userAgent = ctx.req?.headers['user-agent'] || '';
+  const isBot =
+    /bot|crawl|spider|slurp|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot|WhatsApp/i.test(
+      userAgent,
+    );
+
+  if (isBot && messageId && typeof messageId === 'string') {
     try {
       const [messageData, domainNames, chainMetadata] = await Promise.all([
         fetchMessageForOG(messageId),
@@ -123,6 +130,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     } catch {
       // Silently fail - will use default OG tags
     }
+  }
+
+  // Cache the response for real users (instant navigation) while bots get fresh data
+  if (!isBot) {
+    ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
   }
 
   return {

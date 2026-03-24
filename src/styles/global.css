@@ -309,7 +309,13 @@ svg path[fill='white'] {
 }
 
 /* Widget text styling - default to primary font */
-[class*='htw-'] {
+.htw-text-sm,
+.htw-text-xs,
+.htw-text-base,
+.htw-text-lg,
+.htw-font-medium,
+.htw-font-normal,
+.htw-font-light {
   font-family: 'PP Fraktion Mono', system-ui, sans-serif;
 }
 
@@ -319,11 +325,7 @@ svg path[fill='white'] {
 }
 
 /* Explicitly set mono for technical content */
-.htw-font-mono,
-[class*='htw-'] input,
-[class*='htw-'] textarea,
-[class*='htw-'] a[href^='http'],
-[class*='htw-'] a[href^='https'] {
+.htw-font-mono {
   font-family: 'PP Fraktion Mono', system-ui, monospace !important;
 }
 
@@ -334,7 +336,8 @@ svg path[fill='white'] {
 }
 
 /* Input backgrounds in widgets */
-[class*='htw-'] input {
+.htw-bg-white input,
+.htw-bg-gray-100 input {
   background-color: #f8f8ff !important;
 }
 
@@ -359,12 +362,10 @@ svg path[fill='white'] {
 }
 
 /* Widget hover states - match message table accent colors */
-[class*='htw-']:hover.hover\:htw-bg-gray-100,
 .hover\:htw-bg-gray-100:hover {
   background-color: #e8caff !important; /* accent-50 */
 }
 
-[class*='htw-']:hover.hover\:htw-bg-gray-200,
 .hover\:htw-bg-gray-200:hover {
   background-color: #d9a4ff !important; /* accent-100 */
 }
