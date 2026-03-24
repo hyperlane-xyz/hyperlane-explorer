@@ -6,13 +6,9 @@ import { isValidAddress } from '@hyperlane-xyz/utils';
 
 import { useReadyMultiProvider } from '../../store';
 import { logger } from '../../utils/logger';
+import { ICA_ADDRESS } from './icaUtils';
 
-// This assumes all chains have the same ICA address
-// const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
-// TODO V3 determine what ICA address should be
-const ICA_ADDRESS = '';
-
-export { isIcaMessage, tryDecodeIcaBody, useIsIcaMessage } from './icaUtils';
+export { ICA_ADDRESS, isIcaMessage, tryDecodeIcaBody, useIsIcaMessage } from './icaUtils';
 
 export async function tryFetchIcaAddress(
   originDomainId: DomainId,

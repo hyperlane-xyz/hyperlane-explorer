@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
 // This assumes all chains have the same ICA address
 // const ICA_ADDRESS = hyperlaneEnvironments.mainnet.ethereum.interchainAccountRouter;
 // TODO V3 determine what ICA address should be
-const ICA_ADDRESS = '';
+export const ICA_ADDRESS = '';
 
 export function useIsIcaMessage({ sender, recipient }: { sender: Address; recipient: Address }) {
   return useMemo(() => isIcaMessage({ sender, recipient }), [sender, recipient]);

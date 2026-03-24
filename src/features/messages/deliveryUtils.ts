@@ -115,8 +115,13 @@ export async function checkIsMessageDelivered(
     logger.warn(`Error querying for process logs for msgId ${msgId}`, error);
   }
 
-  logger.debug(`Querying mailbox about msgId ${msgId}`);
-  const isDelivered = await mailbox.delivered(msgId);
-  logger.debug(`Mailbox delivery status for ${msgId}: ${isDelivered}`);
-  return { isDelivered };
+  try {
+    logger.debug(`Querying mailbox about msgId ${msgId}`);
+    const isDelivered = await mailbox.delivered(msgId);
+    logger.debug(`Mailbox delivery status for ${msgId}: ${isDelivered}`);
+    return { isDelivered };
+  } catch (error) {
+    logger.warn(`Error checking delivered status for msgId ${msgId}`, error);
+    return { isDelivered: false };
+  }
 }
