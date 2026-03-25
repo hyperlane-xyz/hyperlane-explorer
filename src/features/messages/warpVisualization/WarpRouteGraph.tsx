@@ -4,10 +4,9 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { useChainMetadataResolver } from '../../../metadataStore';
+import { useMultiProvider } from '../../../store';
 import { formatAmountCompact } from '../../../utils/amount';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import type { ChainMetadataResolver } from '../../chains/metadataManager';
 
 import { ChainBalance, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
@@ -76,7 +75,7 @@ function CompactChainNode({
   chainBalance,
   transferAmount,
   borderColor,
-  chainMetadataResolver,
+  multiProvider,
   explorerUrls,
   isDestination = false,
 }: {
@@ -84,7 +83,7 @@ function CompactChainNode({
   chainBalance: ChainBalance | undefined;
   transferAmount: bigint | undefined;
   borderColor: string;
-  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;
+  multiProvider: ReturnType<typeof useMultiProvider>;
   explorerUrls: Record<string, string | null>;
   isDestination?: boolean;
 }) {
@@ -105,7 +104,7 @@ function CompactChainNode({
 
   const explorerUrl = explorerUrls[`${token.chainName}:${token.addressOrDenom}`];
 
-  const chainMetadata = chainMetadataResolver.tryGetChainMetadata(token.chainName);
+  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
 
   return (
@@ -192,13 +191,13 @@ function CompactChainNode({
 function MinimalChainNode({
   token,
   chainBalance,
-  chainMetadataResolver,
+  multiProvider,
 }: {
   token: WarpRouteTokenVisualization;
   chainBalance: ChainBalance | undefined;
-  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;
+  multiProvider: ReturnType<typeof useMultiProvider>;
 }) {
-  const chainMetadata = chainMetadataResolver.tryGetChainMetadata(token.chainName);
+  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
 
   const isCollateral = isCollateralToken(token);
@@ -256,7 +255,7 @@ export function WarpRouteGraph({
   transferAmountDisplay,
   tokenSymbol,
 }: WarpRouteGraphProps) {
-  const chainMetadataResolver = useChainMetadataResolver();
+  const multiProvider = useMultiProvider();
   const [explorerUrls, setExplorerUrls] = useState<Record<string, string | null>>({});
 
   // Fetch explorer URLs for all tokens
@@ -270,7 +269,7 @@ export function WarpRouteGraph({
         fetchTasks.push({
           key: tokenKey,
           promise: tryGetBlockExplorerAddressUrl(
-            chainMetadataResolver,
+            multiProvider,
             token.chainName,
             token.addressOrDenom,
           ),
@@ -289,7 +288,7 @@ export function WarpRouteGraph({
     if (tokens.length > 0) {
       fetchExplorerUrls();
     }
-  }, [tokens, chainMetadataResolver]);
+  }, [tokens, multiProvider]);
 
   // Get origin and destination tokens
   const originToken = tokens.find((t) => t.chainName === originChain);
@@ -319,7 +318,7 @@ export function WarpRouteGraph({
           chainBalance={originBalance}
           transferAmount={transferAmount}
           borderColor="border-primary-500"
-          chainMetadataResolver={chainMetadataResolver}
+          multiProvider={multiProvider}
           explorerUrls={explorerUrls}
         />
 
@@ -345,7 +344,7 @@ export function WarpRouteGraph({
           chainBalance={destBalance}
           transferAmount={transferAmount}
           borderColor="border-primary-500"
-          chainMetadataResolver={chainMetadataResolver}
+          multiProvider={multiProvider}
           explorerUrls={explorerUrls}
           isDestination={true}
         />
@@ -361,7 +360,7 @@ export function WarpRouteGraph({
                 key={token.chainName}
                 token={token}
                 chainBalance={balances[token.chainName]}
-                chainMetadataResolver={chainMetadataResolver}
+                multiProvider={multiProvider}
               />
             ))}
           </div>
