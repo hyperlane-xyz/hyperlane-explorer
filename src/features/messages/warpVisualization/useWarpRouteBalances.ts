@@ -1,3 +1,4 @@
+import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
 import {
   EvmHypVSXERC20LockboxAdapter,
   EvmHypXERC20LockboxAdapter,
@@ -10,7 +11,6 @@ import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 
-import { createEvmHypAdapter } from '../evmHypAdapters';
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 

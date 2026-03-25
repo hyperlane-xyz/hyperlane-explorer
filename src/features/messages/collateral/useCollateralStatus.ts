@@ -1,3 +1,4 @@
+import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
 import {
   EvmHypVSXERC20LockboxAdapter,
   EvmHypXERC20LockboxAdapter,
@@ -12,7 +13,6 @@ import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 
-import { createEvmHypAdapter } from '../evmHypAdapters';
 import { CollateralInfo, CollateralStatus } from './types';
 import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 
