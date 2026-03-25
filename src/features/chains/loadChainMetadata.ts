@@ -1,6 +1,10 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
-import { ChainMetadataSchema, mergeChainMetadataMap } from '@hyperlane-xyz/sdk';
+import {
+  ChainMetadataSchema,
+  mergeChainMetadataMap,
+  type ChainMetadata,
+} from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { links } from '../../consts/links';

@@ -3,7 +3,7 @@ import {
   Mailbox__factory as MailboxFactory,
 } from '@hyperlane-xyz/core';
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import {
   ProtocolType,
   addressToBytes32,
@@ -19,6 +19,7 @@ import { BigNumber, constants, ethers, providers } from 'ethers';
 import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';
 import { logger } from '../../../utils/logger';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 
 const mailbox = MailboxFactory.createInterface();
 const dispatchTopic0 = mailbox.getEventTopic('Dispatch');

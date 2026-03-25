@@ -1,5 +1,5 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -10,6 +10,7 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 
 type DeliveryStatusQueryMessage = MessageStub &
   Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
@@ -99,7 +100,6 @@ export function useMessageDeliveryStatus({
     enabled,
   });
 
-  // Show toast on error
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);

@@ -1,9 +1,9 @@
 import {
-  ChainMap,
   ChainMetadata,
   ChainMetadataSchema,
   mergeChainMetadataMap,
-} from '@hyperlane-xyz/sdk';
+} from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { fromBase64 } from '@hyperlane-xyz/utils';
 import { useEffect } from 'react';
 import { z } from 'zod';

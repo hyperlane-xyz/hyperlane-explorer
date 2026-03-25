@@ -1,12 +1,14 @@
-import type { ChainMetadata } from '@hyperlane-xyz/sdk';
-import { objFilter } from '@hyperlane-xyz/utils';
 import { useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
+
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import { objFilter } from '@hyperlane-xyz/utils';
 
 import { unscrapedChainsInDb } from '../../../consts/config';
 import { useStore } from '../../../metadataStore';
 import type { ChainMetadataResolver } from '../metadataManager';
 import { isPiChain } from '../utils';
+
 import { DOMAINS_QUERY, DomainsEntry } from './fragments';
 
 export function useScrapedDomains() {

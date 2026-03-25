@@ -1,16 +1,20 @@
-import { GithubRegistry } from '@hyperlane-xyz/registry';
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Client } from '@urql/core';
+
+import { GithubRegistry } from '@hyperlane-xyz/registry';
 
 import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';
 import { DOMAINS_QUERY, DomainsEntry } from '../chains/queries/fragments';
+import {
+  createRuntimeMultiProvider,
+  type ExplorerMultiProvider,
+} from '../hyperlane/sdkRuntime';
 
 // TODO de-dupe this with store.ts and handle registry/multiProvider concerns in a single place
-export async function getMultiProvider(): Promise<MultiProtocolProvider> {
+export async function getMultiProvider(): Promise<ExplorerMultiProvider> {
   const registry = new GithubRegistry({ proxyUrl: config.githubProxy });
   const chainMetadata = await registry.getMetadata();
-  return new MultiProtocolProvider(chainMetadata);
+  return createRuntimeMultiProvider(chainMetadata);
 }
 
 export async function getScrapedChains(client: Client): Promise<Array<DomainsEntry>> {
