@@ -53,27 +53,15 @@ importers:
       '@headlessui/react':
         specifier: ^2.2.0
         version: 2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@hyperlane-xyz/aleo-sdk':
-        specifier: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
-        version: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(bufferutil@4.0.8)(typescript@6.0.2)(utf-8-validate@5.0.10)
       '@hyperlane-xyz/core':
         specifier: 10.2.0
         version: 10.2.0(@ethersproject/abi@5.8.0)(@ethersproject/providers@5.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/sinon-chai@4.0.0)
-      '@hyperlane-xyz/cosmos-sdk':
-        specifier: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
-        version: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(bufferutil@4.0.8)(typescript@6.0.2)(utf-8-validate@5.0.10)
-      '@hyperlane-xyz/radix-sdk':
-        specifier: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
-        version: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(bufferutil@4.0.8)(typescript@6.0.2)(utf-8-validate@5.0.10)
       '@hyperlane-xyz/registry':
         specifier: 24.1.0
         version: 24.1.0
       '@hyperlane-xyz/sdk':
         specifier: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
         version: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(@ethersproject/abi@5.8.0)(@ethersproject/providers@5.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@react-native-async-storage/async-storage@1.24.0(react-native@0.82.1(@babel/core@7.28.5)(@types/react@18.3.14)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10)))(@types/sinon-chai@4.0.0)(bufferutil@4.0.8)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.2)(utf-8-validate@5.0.10)
-      '@hyperlane-xyz/tron-sdk':
-        specifier: 22.1.7-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
-        version: 22.1.7-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(@types/sinon-chai@4.0.0)(bufferutil@4.0.8)(typescript@6.0.2)(utf-8-validate@5.0.10)
       '@hyperlane-xyz/utils':
         specifier: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921
         version: 29.1.1-beta.f31970acb752e75c2dc1d8918ffa3806141a9921(bufferutil@4.0.8)(typescript@6.0.2)(utf-8-validate@5.0.10)
