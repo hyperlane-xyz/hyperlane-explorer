@@ -5,7 +5,7 @@ import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
-import { useChainMetadataResolver } from '../../../metadataStore';
+import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
 import {
   Message,
@@ -50,8 +50,8 @@ export function DestinationTransactionCard({
   message?: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
 }) {
-  const chainMetadataResolver = useChainMetadataResolver();
-  const hasChainConfig = !!chainMetadataResolver.tryGetChainMetadata(domainId);
+  const multiProvider = useMultiProvider();
+  const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
 
   const { isOpen, open, close } = useModal();
@@ -217,7 +217,7 @@ function TransactionDetails({
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
 }) {
-  const chainMetadataResolver = useChainMetadataResolver();
+  const multiProvider = useMultiProvider();
 
   return (
     <>
@@ -226,7 +226,7 @@ function TransactionDetails({
         domainId={domainId}
         transaction={transaction}
         blur={blur}
-        resolver={chainMetadataResolver}
+        resolver={multiProvider}
       />
     </>
   );
