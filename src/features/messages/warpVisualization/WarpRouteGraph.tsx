@@ -4,9 +4,11 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { useMultiProvider } from '../../../store';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { formatAmountCompact } from '../../../utils/amount';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import type { ChainMetadataResolver } from '../../chains/metadataManager';
+
 import { ChainBalance, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
@@ -74,7 +76,7 @@ function CompactChainNode({
   chainBalance,
   transferAmount,
   borderColor,
-  multiProvider,
+  chainMetadataResolver,
   explorerUrls,
   isDestination = false,
 }: {
@@ -82,7 +84,7 @@ function CompactChainNode({
   chainBalance: ChainBalance | undefined;
   transferAmount: bigint | undefined;
   borderColor: string;
-  multiProvider: ReturnType<typeof useMultiProvider>;
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;
   explorerUrls: Record<string, string | null>;
   isDestination?: boolean;
 }) {
@@ -103,8 +105,7 @@ function CompactChainNode({
 
   const explorerUrl = explorerUrls[`${token.chainName}:${token.addressOrDenom}`];
 
-  // Get display name from multiProvider if available
-  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
+  const chainMetadata = chainMetadataResolver.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
 
   return (
@@ -191,13 +192,13 @@ function CompactChainNode({
 function MinimalChainNode({
   token,
   chainBalance,
-  multiProvider,
+  chainMetadataResolver,
 }: {
   token: WarpRouteTokenVisualization;
   chainBalance: ChainBalance | undefined;
-  multiProvider: ReturnType<typeof useMultiProvider>;
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;
 }) {
-  const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
+  const chainMetadata = chainMetadataResolver.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
 
   const isCollateral = isCollateralToken(token);
@@ -255,7 +256,7 @@ export function WarpRouteGraph({
   transferAmountDisplay,
   tokenSymbol,
 }: WarpRouteGraphProps) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const [explorerUrls, setExplorerUrls] = useState<Record<string, string | null>>({});
 
   // Fetch explorer URLs for all tokens
@@ -269,7 +270,7 @@ export function WarpRouteGraph({
         fetchTasks.push({
           key: tokenKey,
           promise: tryGetBlockExplorerAddressUrl(
-            multiProvider,
+            chainMetadataResolver,
             token.chainName,
             token.addressOrDenom,
           ),
@@ -288,7 +289,7 @@ export function WarpRouteGraph({
     if (tokens.length > 0) {
       fetchExplorerUrls();
     }
-  }, [tokens, multiProvider]);
+  }, [tokens, chainMetadataResolver]);
 
   // Get origin and destination tokens
   const originToken = tokens.find((t) => t.chainName === originChain);
@@ -318,7 +319,7 @@ export function WarpRouteGraph({
           chainBalance={originBalance}
           transferAmount={transferAmount}
           borderColor="border-primary-500"
-          multiProvider={multiProvider}
+          chainMetadataResolver={chainMetadataResolver}
           explorerUrls={explorerUrls}
         />
 
@@ -344,7 +345,7 @@ export function WarpRouteGraph({
           chainBalance={destBalance}
           transferAmount={transferAmount}
           borderColor="border-primary-500"
-          multiProvider={multiProvider}
+          chainMetadataResolver={chainMetadataResolver}
           explorerUrls={explorerUrls}
           isDestination={true}
         />
@@ -360,7 +361,7 @@ export function WarpRouteGraph({
                 key={token.chainName}
                 token={token}
                 chainBalance={balances[token.chainName]}
-                multiProvider={multiProvider}
+                chainMetadataResolver={chainMetadataResolver}
               />
             ))}
           </div>

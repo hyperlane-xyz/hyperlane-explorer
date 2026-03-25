@@ -1,6 +1,8 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata, ChainName, WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import type { ChainMap, ChainName } from '@hyperlane-xyz/sdk/types';
+import type { WarpCoreConfig } from '@hyperlane-xyz/sdk/warp/types';
 import { objFilter } from '@hyperlane-xyz/utils';
 import { useMemo } from 'react';
 import { create } from 'zustand';

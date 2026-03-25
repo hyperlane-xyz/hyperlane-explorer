@@ -7,13 +7,13 @@ import {
   EvmHypXERC20Adapter,
   EvmHypXERC20LockboxAdapter,
   IHypTokenAdapter,
-  MultiProtocolProvider,
-  TokenStandard,
 } from '@hyperlane-xyz/sdk';
+import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';

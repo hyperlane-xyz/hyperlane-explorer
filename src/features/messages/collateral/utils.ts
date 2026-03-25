@@ -1,6 +1,5 @@
 import { warpRouteConfigs } from '@hyperlane-xyz/registry';
-import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
-
+import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { CCTP_WARP_ROUTE_IDS, CollateralInfo, CollateralStatus } from './types';
 
 // Build a set of CCTP route addresses from the registry

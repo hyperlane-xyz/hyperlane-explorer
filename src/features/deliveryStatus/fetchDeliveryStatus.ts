@@ -1,5 +1,6 @@
-import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { constants } from 'ethers';
 
 import { Message, MessageStatus, MessageStub } from '../../types';
@@ -7,6 +8,7 @@ import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { MessageDebugStatus } from '../debugger/types';
 import { checkIsMessageDelivered } from '../messages/deliveryUtils';
 import {
