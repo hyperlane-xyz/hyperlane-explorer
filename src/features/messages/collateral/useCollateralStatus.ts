@@ -1,8 +1,10 @@
-import { MultiProtocolProvider, Token, TokenStandard } from '@hyperlane-xyz/sdk';
+import { Token } from '@hyperlane-xyz/sdk/token/Token';
+import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';

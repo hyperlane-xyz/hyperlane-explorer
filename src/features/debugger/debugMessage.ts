@@ -9,7 +9,6 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
-  MultiProtocolProvider,
   isProxy,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
@@ -30,6 +29,7 @@ import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 

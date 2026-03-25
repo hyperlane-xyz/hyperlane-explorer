@@ -1,6 +1,10 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { create } from 'zustand';
 
+import {
+  createEmptyMultiProvider,
+  createRuntimeMultiProvider,
+  type ExplorerMultiProvider,
+} from './features/hyperlane/sdkRuntime';
 import { useStore as useMetadataStore } from './metadataStore';
 import { logger } from './utils/logger';
 
@@ -12,7 +16,7 @@ export {
 } from './metadataStore';
 
 interface ProviderState {
-  multiProvider: MultiProtocolProvider;
+  multiProvider: ExplorerMultiProvider;
   syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
 
@@ -30,7 +34,7 @@ function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
 }
 
 const useProviderStore = create<ProviderState>()((set) => ({
-  multiProvider: new MultiProtocolProvider({}),
+  multiProvider: createEmptyMultiProvider(),
   syncMultiProvider: async (requestedChainMetadata) => {
     let chainMetadata = requestedChainMetadata;
     if (!chainMetadata || !Object.keys(chainMetadata).length) {
@@ -51,9 +55,9 @@ const useProviderStore = create<ProviderState>()((set) => ({
     }
 
     providerSyncPromise = Promise.resolve()
-      .then(() => {
+      .then(async () => {
         logger.debug('Syncing MultiProtocolProvider from metadata store');
-        set({ multiProvider: new MultiProtocolProvider(chainMetadata) });
+        set({ multiProvider: await createRuntimeMultiProvider(chainMetadata) });
       })
       .finally(() => {
         const nextChainMetadata = queuedChainMetadata;

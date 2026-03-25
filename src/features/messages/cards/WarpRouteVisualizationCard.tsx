@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 
 import { Card } from '../../../components/layout/Card';
 import HubIcon from '../../../images/icons/hub.svg';
-import { useMultiProvider } from '../../../store';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { useWarpRouteBalances } from '../warpVisualization/useWarpRouteBalances';
 import { useWarpRouteVisualization } from '../warpVisualization/useWarpRouteVisualization';
@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: Props) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Get warp route visualization data (from registry, no RPC calls)
@@ -41,13 +41,13 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
 
   // Get chain names
   const originChainName = useMemo(
-    () => multiProvider.tryGetChainName(message.originDomainId) || 'Unknown',
-    [multiProvider, message.originDomainId],
+    () => chainMetadataResolver.tryGetChainName(message.originDomainId) || 'Unknown',
+    [chainMetadataResolver, message.originDomainId],
   );
 
   const destinationChainName = useMemo(
-    () => multiProvider.tryGetChainName(message.destinationDomainId) || 'Unknown',
-    [multiProvider, message.destinationDomainId],
+    () => chainMetadataResolver.tryGetChainName(message.destinationDomainId) || 'Unknown',
+    [chainMetadataResolver, message.destinationDomainId],
   );
 
   // Calculate transfer amount in base units for comparison

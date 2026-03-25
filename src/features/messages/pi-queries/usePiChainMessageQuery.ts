@@ -1,11 +1,12 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 
 import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import { isValidSearchQuery } from '../queries/useMessageQuery';

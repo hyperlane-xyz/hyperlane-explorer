@@ -1,7 +1,8 @@
-import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { ChainSearchMenu, Modal } from '@hyperlane-xyz/widgets';
 
-import { useMultiProvider, useStore } from '../../store';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
+
 import { useScrapedChains } from './queries/useScrapedChains';
 
 export function ChainSearchModal({
@@ -15,8 +16,8 @@ export function ChainSearchModal({
   onClickChain?: (metadata: ChainMetadata) => void;
   showAddChainMenu?: boolean;
 }) {
-  const multiProvider = useMultiProvider();
-  const { chains } = useScrapedChains(multiProvider);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const { chains } = useScrapedChains(chainMetadataResolver);
   const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
     chainMetadataOverrides: s.chainMetadataOverrides,
     setChainMetadataOverrides: s.setChainMetadataOverrides,
