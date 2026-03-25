@@ -2,7 +2,14 @@ import { config } from '../../../consts/config';
 import { logger } from '../../../utils/logger';
 
 import { postgresByteaToString, stringToPostgresBytea } from './encoding';
-import { MessagesStubQueryResult, MessageStubEntry, messageStubFragment } from './fragments';
+import {
+  MessagesStubQueryResult,
+  MessageStubEntry,
+  messageStubFragment,
+  RawMessageDispatchEntry,
+  rawMessageDispatchFragment,
+} from './fragments';
+import { parseTimestampMillis } from './timestamp';
 
 /**
  * Server-side utility to fetch message data from GraphQL for OG meta tags
@@ -20,6 +27,13 @@ export async function fetchMessageForOG(messageId: string): Promise<MessageOGDat
         limit: 1
       ) {
         ${messageStubFragment}
+      }
+      raw_message_dispatch(
+        where: {msg_id: {_eq: $identifier}},
+        order_by: [{time_updated: desc}, {id: desc}],
+        limit: 1
+      ) {
+        ${rawMessageDispatchFragment}
       }
     }
   `;
@@ -39,12 +53,20 @@ export async function fetchMessageForOG(messageId: string): Promise<MessageOGDat
     if (!response.ok) return null;
 
     const result = await response.json();
-    const data = result.data as MessagesStubQueryResult | undefined;
+    const data = result.data as
+      | (MessagesStubQueryResult & { raw_message_dispatch?: RawMessageDispatchEntry[] })
+      | undefined;
 
-    if (!data?.message_view?.length) return null;
+    if (!data?.message_view?.length && !data?.raw_message_dispatch?.length) return null;
 
-    const message = data.message_view[0];
-    return parseMessageForOG(message);
+    if (data?.message_view?.length) {
+      const message = data.message_view[0];
+      return parseMessageForOG(message);
+    }
+    if (data?.raw_message_dispatch?.length) {
+      return parseRawMessageForOG(data.raw_message_dispatch[0]);
+    }
+    return null;
   } catch (error) {
     logger.error('Error fetching message for OG:', error);
     return null;
@@ -76,6 +98,21 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
     recipient: postgresByteaToString(message.recipient),
     body: message.message_body ? postgresByteaToString(message.message_body) : null,
     deliveryLatency: message.delivery_latency,
+  };
+}
+
+function parseRawMessageForOG(message: RawMessageDispatchEntry): MessageOGData {
+  return {
+    msgId: postgresByteaToString(message.msg_id),
+    status: 'Pending',
+    originDomainId: message.origin_domain,
+    destinationDomainId: message.destination_domain,
+    originTxHash: postgresByteaToString(message.origin_tx_hash),
+    timestamp: parseTimestampMillis(message.time_updated ?? message.time_created),
+    sender: postgresByteaToString(message.sender),
+    recipient: postgresByteaToString(message.recipient),
+    body: null,
+    deliveryLatency: null,
   };
 }
 

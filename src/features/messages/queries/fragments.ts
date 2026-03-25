@@ -60,6 +60,22 @@ ${messageStubFragment}
   num_payments
 `;
 
+export const rawMessageDispatchFragment = `
+  id
+  msg_id
+  nonce
+  origin_domain
+  destination_domain
+  sender
+  recipient
+  origin_tx_hash
+  origin_block_hash
+  origin_block_height
+  origin_mailbox
+  time_created
+  time_updated
+`;
+
 /**
  * ===================================
  * FRAGMENT TYPES
@@ -121,5 +137,22 @@ export interface MessageEntry extends MessageStubEntry {
   num_payments: number;
 }
 
+export interface RawMessageDispatchEntry {
+  id: number;
+  msg_id: string; // binary e.g. \\x123
+  nonce: number;
+  origin_domain: number;
+  destination_domain: number;
+  sender: string; // binary e.g. \\x123
+  recipient: string; // binary e.g. \\x123
+  origin_tx_hash: string; // binary e.g. \\x123
+  origin_block_hash: string; // binary e.g. \\x123
+  origin_block_height: number;
+  origin_mailbox: string; // binary e.g. \\x123
+  time_created: string | null; // e.g. "2022-08-28T17:30:15"
+  time_updated: string | null; // e.g. "2022-08-28T17:30:15"
+}
+
 export type MessagesStubQueryResult = Record<string, MessageStubEntry[]>;
 export type MessagesQueryResult = Record<string, MessageEntry[]>;
+export type RawMessagesQueryResult = Record<string, RawMessageDispatchEntry[]>;

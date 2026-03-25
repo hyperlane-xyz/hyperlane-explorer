@@ -128,7 +128,17 @@ export function MessageSummaryRow({
         {shortenAddress(formattedTxHash)}
       </LinkCell>
       <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
-        {getHumanReadableTimeString(origin.timestamp)}
+        <span className="flex items-center gap-1">
+          <span>{getHumanReadableTimeString(origin.timestamp)}</span>
+          {message.isProvisional && (
+            <span
+              className="rounded bg-blue-100 px-1 py-0.5 text-[10px] font-medium uppercase text-blue-600"
+              title="Tip-stage message, not finalized"
+            >
+              tip
+            </span>
+          )}
+        </span>
       </LinkCell>
       <LinkCell
         id={msgId}

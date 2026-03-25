@@ -34,6 +34,7 @@ export interface MessageStub {
   status: MessageStatus;
   id: string; // Database id
   msgId: string; // Message hash
+  isProvisional?: boolean; // True when sourced from tip/raw table (not finalized)
   nonce: number; // formerly leafIndex
   sender: Address;
   recipient: Address;

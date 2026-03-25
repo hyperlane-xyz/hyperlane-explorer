@@ -4,7 +4,11 @@ import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
-import { messageDetailsFragment, messageStubFragment } from './fragments';
+import {
+  messageDetailsFragment,
+  messageStubFragment,
+  rawMessageDispatchFragment,
+} from './fragments';
 
 /**
  * ========================
@@ -57,6 +61,39 @@ export function buildMessageQuery(
       limit: ${limit}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
+    }
+  }
+  `;
+  return { query, variables };
+}
+
+export function buildRawMessageQuery(
+  idType: MessageIdentifierType,
+  idValue: string,
+  limit: number,
+) {
+  let whereClause: string;
+  if (idType === MessageIdentifierType.Id) {
+    whereClause = 'msg_id: {_eq: $identifier}';
+  } else if (idType === MessageIdentifierType.Sender) {
+    whereClause = 'sender: {_eq: $identifier}';
+  } else if (idType === MessageIdentifierType.Recipient) {
+    whereClause = 'recipient: {_eq: $identifier}';
+  } else if (idType === MessageIdentifierType.OriginTxHash) {
+    whereClause = 'origin_tx_hash: {_eq: $identifier}';
+  } else {
+    return null;
+  }
+  const variables = { identifier: searchValueToPostgresBytea(idValue) };
+
+  const query = `
+  query ($identifier: bytea!) @cached(ttl: 5) {
+    raw_message_dispatch(
+      where: {${whereClause}},
+      order_by: [{time_updated: desc}, {id: desc}],
+      limit: ${limit}
+    ) {
+      ${rawMessageDispatchFragment}
     }
   }
   `;
@@ -170,6 +207,97 @@ export function buildMessageSearchQuery(
   return { query, variables };
 }
 
+export function buildRawMessageSearchQuery(
+  searchInput: string,
+  originDomainIdFilter: number | null,
+  destDomainIdFilter: number | null,
+  startTimeFilter: number | null,
+  endTimeFilter: number | null,
+  limit: number,
+  mainnetDomainIds?: number[],
+  warpRouteAddresses: string[] = [],
+) {
+  const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
+  const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
+  const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
+  const endTime = endTimeFilter ? adjustToUtcTime(endTimeFilter) : undefined;
+
+  const warpAddressesBytea = warpRouteAddresses
+    .map((addr) => searchValueToPostgresBytea(addr))
+    .filter((addr): addr is string => !!addr);
+
+  const variables: Record<string, unknown> = {
+    search: searchValueToPostgresBytea(searchInput),
+    originChains,
+    destinationChains,
+    startTime,
+    endTime,
+  };
+
+  if (warpAddressesBytea.length > 0) {
+    variables.warpAddresses = warpAddressesBytea;
+  }
+
+  const hasFilters = !!(
+    originDomainIdFilter ||
+    destDomainIdFilter ||
+    startTimeFilter ||
+    endTimeFilter ||
+    searchInput ||
+    warpAddressesBytea.length > 0
+  );
+  const whereClauses = buildRawSearchWhereClauses(searchInput);
+  const originDomainWhereClause = buildRawDomainIdWhereClause(
+    originDomainIdFilter,
+    hasFilters,
+    'origin',
+    mainnetDomainIds,
+  );
+  const destinationDomainWhereClause = buildRawDomainIdWhereClause(
+    destDomainIdFilter,
+    hasFilters,
+    'destination',
+    mainnetDomainIds,
+  );
+  const warpRouteWhereClause = buildWarpRouteWhereClause(warpAddressesBytea);
+
+  const queries = whereClauses.map(
+    (whereClause, i) =>
+      `q${i}: raw_message_dispatch(
+    where: {
+      _and: [
+        ${originDomainWhereClause}
+        ${destinationDomainWhereClause}
+        ${startTimeFilter ? '{time_updated: {_gte: $startTime}},' : ''}
+        ${endTimeFilter ? '{time_updated: {_lte: $endTime}},' : ''}
+        ${warpRouteWhereClause}
+        ${whereClause}
+      ]
+    },
+    order_by: [{time_updated: desc}, {id: desc}],
+    limit: ${limit}
+    ) {
+      ${rawMessageDispatchFragment}
+    }`,
+  );
+
+  const variableDeclarations = [
+    '$search: bytea',
+    '$originChains: [Int!]',
+    '$destinationChains: [Int!]',
+    '$startTime: timestamp',
+    '$endTime: timestamp',
+  ];
+  if (warpAddressesBytea.length > 0) {
+    variableDeclarations.push('$warpAddresses: [bytea!]');
+  }
+
+  const query = `query (${variableDeclarations.join(', ')}) @cached(ttl: 5) {
+    ${queries.join('\n')}
+  }`;
+  return { query, variables };
+}
+
 // Note: Only 'delivered' filter is applied at DB level. 'pending' uses client-side
 // filtering (see useMessageQuery.ts) because DB query for is_delivered=false is slow.
 function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
@@ -205,6 +333,20 @@ function buildSearchWhereClauses(searchInput: string) {
   return clauses;
 }
 
+function buildRawSearchWhereClauses(searchInput: string) {
+  if (!searchInput) return [''];
+
+  const clauses: string[] = [];
+  if (isAddress(searchInput)) {
+    clauses.push(`{sender: {_eq: $search}}`, `{recipient: {_eq: $search}}`);
+  }
+  if (isPotentiallyTransactionHash(searchInput)) {
+    clauses.push(`{origin_tx_hash: {_eq: $search}}`);
+  }
+  clauses.push(`{msg_id: {_eq: $search}}`);
+  return clauses;
+}
+
 function buildDomainIdWhereClause(
   domainId: number | null,
   hasFilters: boolean,
@@ -218,5 +360,18 @@ function buildDomainIdWhereClause(
   if (domainId) return `{${fieldName}_domain_id: {_in: $${fieldName}Chains}},`;
 
   // if domainId is not set but there are other filters, remove condition of filtering by mainnet chains
+  return '';
+}
+
+function buildRawDomainIdWhereClause(
+  domainId: number | null,
+  hasFilters: boolean,
+  fieldName: 'origin' | 'destination',
+  mainnetDomainIds: number[] = [],
+) {
+  const dbField = `${fieldName}_domain`;
+
+  if (!hasFilters) return `{${dbField}: {_in: [${mainnetDomainIds}]}},`;
+  if (domainId) return `{${dbField}: {_in: $${fieldName}Chains}},`;
   return '';
 }
