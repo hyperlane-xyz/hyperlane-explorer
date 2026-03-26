@@ -140,9 +140,7 @@ function DropdownButton() {
 }
 
 function DropdownChevron({ className }: { className?: string }) {
-  return (
-    <ChevronIcon width={10} height={6} direction="s" className={`${className} text-white`} />
-  );
+  return <ChevronIcon width={10} height={6} direction="s" className={`${className} text-white`} />;
 }
 
 function MobileNavLink({
