@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import type { ComponentType, ErrorInfo, PropsWithChildren, ReactNode } from 'react';
+import type { ErrorInfo, PropsWithChildren, ReactNode } from 'react';
 import { Component as ReactComponent, useEffect, useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
@@ -46,18 +46,6 @@ function useIsSsr() {
   return isSsr;
 }
 
-function useClientErrorBoundary() {
-  const [ErrorBoundary, setErrorBoundary] = useState<ComponentType<PropsWithChildren> | null>(null);
-
-  useEffect(() => {
-    import('../components/errors/ErrorBoundary')
-      .then((mod) => setErrorBoundary(() => mod.ErrorBoundary))
-      .catch((error) => logger.error('Error loading client error boundary', error));
-  }, []);
-
-  return ErrorBoundary;
-}
-
 class InlineErrorBoundary extends ReactComponent<PropsWithChildren, { hasError: boolean }> {
   state = { hasError: false };
 
@@ -95,8 +83,6 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // complicates graphql integration. However, we still need to render
   // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
-  const ClientErrorBoundary = useClientErrorBoundary();
-  const ActiveErrorBoundary = ClientErrorBoundary || InlineErrorBoundary;
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   useEffect(() => {
@@ -159,10 +145,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   return (
     <div className="font-sans text-black">
       <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
-      <ActiveErrorBoundary>
+      <InlineErrorBoundary>
         {appContent}
         <AppClientOverlays />
-      </ActiveErrorBoundary>
+      </InlineErrorBoundary>
     </div>
   );
 }
