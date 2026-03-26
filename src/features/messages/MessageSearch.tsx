@@ -217,7 +217,15 @@ export function MessageSearch() {
 
   useEffect(() => {
     setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
-  }, [sanitizedInput, startTimeFilter, endTimeFilter, shouldRunPiSearch]);
+  }, [sanitizedInput, startTimeFilter, endTimeFilter]);
+
+  const prevShouldRunPiSearchRef = useRef(shouldRunPiSearch);
+  useEffect(() => {
+    if (prevShouldRunPiSearchRef.current && !shouldRunPiSearch) {
+      setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
+    }
+    prevShouldRunPiSearchRef.current = shouldRunPiSearch;
+  }, [shouldRunPiSearch]);
 
   // Coalesce GraphQL + PI results
   const isAnyFetching = isFetching || piSearchState.isFetching;

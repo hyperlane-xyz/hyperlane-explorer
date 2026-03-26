@@ -142,6 +142,7 @@ export const useStore = create<MetadataState>()(
       isWarpRouteDataLoaded: false,
       ensureWarpRouteData: async () => {
         const state = get();
+        // An empty warp route map is a valid loaded state for registries with no usable routes.
         if (state.isWarpRouteDataLoaded) return;
         const registry = state.registry;
 

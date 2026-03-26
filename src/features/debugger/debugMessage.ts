@@ -71,7 +71,8 @@ export async function debugMessage(
     recipient,
     body,
   );
-  const destName = multiProvider.tryGetChainName(destDomain)!;
+  const destName = multiProvider.tryGetChainName(destDomain);
+  if (!destName) throw new Error(`Cannot debug message, unknown destination domain ${destDomain}`);
   const originProvider = multiProvider.getEthersV5Provider(originDomain) as Provider;
   const destProvider = multiProvider.getEthersV5Provider(destDomain) as Provider;
   const senderBytes = addressToBytes32(sender);

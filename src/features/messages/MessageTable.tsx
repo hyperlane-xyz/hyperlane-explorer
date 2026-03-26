@@ -42,7 +42,7 @@ export function MessageTable({
   }, [isFetching, messageList, scrapedDomains.length]);
 
   useEffect(() => {
-    if (!backgroundPrefetchKey) return;
+    if (!backgroundPrefetchKey || typeof window === 'undefined') return;
 
     const messagesToPrefetch = messageList.slice(0, BACKGROUND_PREFETCH_COUNT);
     let cancelled = false;
@@ -56,8 +56,6 @@ export function MessageTable({
         }),
       );
     };
-
-    if (typeof window === 'undefined') return;
 
     if ('requestIdleCallback' in window) {
       const idleWindow = window as Window &
@@ -143,7 +141,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
   useEffect(() => {
     hasPrimedDetailPage.current = false;
-  }, [chainMetadataResolver, message.msgId, scrapedChains]);
+  }, [message.msgId]);
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
