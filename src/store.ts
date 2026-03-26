@@ -76,6 +76,7 @@ function ensureProviderStoreSubscription() {
   syncMultiProviderSafely();
   useMetadataStore.subscribe((state, prevState) => {
     if (state.chainMetadata !== prevState.chainMetadata) {
+      useProviderStore.setState({ multiProvider: new MultiProtocolProvider({}) });
       syncMultiProviderSafely(state.chainMetadata);
     }
   });

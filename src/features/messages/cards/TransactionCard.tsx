@@ -21,7 +21,6 @@ import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
-import { transactionHelpText } from './transactionHelpText';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
@@ -276,6 +275,12 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
     </>
   );
 }
+
+export const transactionHelpText = {
+  origin: 'Info about the transaction that initiated the message placement into the outbox.',
+  destination:
+    'Info about the transaction that triggered the delivery of the message from an inbox.',
+};
 
 const styles = {
   textLink:

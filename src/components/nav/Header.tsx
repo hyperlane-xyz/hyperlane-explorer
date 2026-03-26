@@ -1,8 +1,9 @@
 import { ChevronIcon } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 
 import { docLinks, links } from '../../consts/links';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
@@ -33,16 +34,16 @@ export function Header({ pathName }: { pathName: string }) {
     setIsMobileMenuOpen(false);
   }, [pathName]);
 
-  const onPointerDown = useEffectEvent((event: MouseEvent | TouchEvent) => {
+  const onPointerDown = useCallback((event: MouseEvent | TouchEvent) => {
     const target = event.target;
     if (!(target instanceof Node)) return;
     if (mobileMenuRef.current?.contains(target)) return;
     setIsMobileMenuOpen(false);
-  });
+  }, []);
 
-  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') setIsMobileMenuOpen(false);
-  });
+  }, []);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -55,7 +56,7 @@ export function Header({ pathName }: { pathName: string }) {
       document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, onKeyDown, onPointerDown]);
 
   return (
     <header
@@ -140,7 +141,9 @@ function DropdownButton() {
 }
 
 function DropdownChevron({ className }: { className?: string }) {
-  return <ChevronIcon width={10} height={6} direction="s" className={`${className} text-white`} />;
+  return (
+    <ChevronIcon width={10} height={6} direction="s" className={clsx(className, 'text-white')} />
+  );
 }
 
 function MobileNavLink({

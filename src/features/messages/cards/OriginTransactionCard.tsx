@@ -7,8 +7,8 @@ import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageTx, MessageTxStub } from '../../../types';
 import { getChainDisplayName } from '../../chains/utils';
 import { KeyValueRow } from './KeyValueRow';
+import { transactionHelpText } from './TransactionCard';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
-import { transactionHelpText } from './transactionHelpText';
 
 export function OriginTransactionCard({
   chainName,
