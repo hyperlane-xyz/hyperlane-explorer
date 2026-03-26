@@ -81,7 +81,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc",
-    "lint": "eslint src",
+    "lint": "next lint",
     "start": "next start",
     "test": "jest",
     "prettier": "prettier --write ./src"

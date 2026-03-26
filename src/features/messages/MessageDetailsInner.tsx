@@ -72,7 +72,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     messageId: string;
     value: MessageDetailsRuntimeState;
   } | null>(null);
-  const hasDetailedUrlMessage = hasFullMessageDetails(messageFromUrlParams);
+  const hasDetailedUrlMessage = hasCompleteMessageDetails(messageFromUrlParams);
 
   const {
     isFetching: isGraphQlFetching,
@@ -220,16 +220,16 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
   );
 }
 
-function hasFullMessageDetails(message?: Message | MessageStub | null): message is Message {
+function hasCompleteMessageDetails(message?: Message | MessageStub | null): message is Message {
   if (!message) return false;
   return (
-    'decodedBody' in message ||
-    'totalGasAmount' in message ||
-    'totalPayment' in message ||
-    'numPayments' in message ||
-    'blockHash' in message.origin ||
-    'blockNumber' in message.origin ||
-    'mailbox' in message.origin ||
+    'decodedBody' in message &&
+    'totalGasAmount' in message &&
+    'totalPayment' in message &&
+    'numPayments' in message &&
+    'blockHash' in message.origin &&
+    'blockNumber' in message.origin &&
+    'mailbox' in message.origin &&
     'gasLimit' in message.origin
   );
 }
@@ -248,7 +248,9 @@ function StatusHeader({
   duration?: string;
 }) {
   let text: string;
-  if (isMessageFound) {
+  if (isFetching) {
+    text = 'Loading message';
+  } else if (isMessageFound) {
     text = `Status: ${toTitleCase(messageStatus)}`;
   } else if (isError) {
     text = 'Error finding message';

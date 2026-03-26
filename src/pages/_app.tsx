@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import type { ComponentType, PropsWithChildren } from 'react';
+import { Component as ReactComponent } from 'react';
+import type { ComponentType, ErrorInfo, PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
@@ -58,12 +59,48 @@ function useClientErrorBoundary() {
   return ErrorBoundary;
 }
 
+class InlineErrorBoundary extends ReactComponent<
+  PropsWithChildren,
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    logger.error('Unhandled app error', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+          <h1 className="text-2xl font-medium text-black">Something went wrong</h1>
+          <a
+            href={links.help}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 text-sm underline underline-offset-2"
+          >
+            Visit the Hyperlane Help Center
+          </a>
+        </div>
+      );
+    }
+
+    return this.props.children as ReactNode;
+  }
+}
+
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration. However, we still need to render
   // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
   const ClientErrorBoundary = useClientErrorBoundary();
+  const ActiveErrorBoundary = ClientErrorBoundary || InlineErrorBoundary;
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,8 +163,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   return (
     <div className="font-sans text-black">
       <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
-      {ClientErrorBoundary ? <ClientErrorBoundary>{appContent}</ClientErrorBoundary> : appContent}
-      <AppClientOverlays />
+      <ActiveErrorBoundary>
+        {appContent}
+        <AppClientOverlays />
+      </ActiveErrorBoundary>
     </div>
   );
 }
