@@ -67,6 +67,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const chainMetadataResolver = useChainMetadataResolver();
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
+  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
   const [runtimeState, setRuntimeState] = useState<{
     messageId: string;
     value: MessageDetailsRuntimeState;
@@ -88,14 +89,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const needsRuntimeMessageLookup =
     !baseIsMessageFound && !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
   const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
-  const handleRuntimeStateChange = useCallback(
-    (value: MessageDetailsRuntimeState) =>
-      setRuntimeState((prev) => {
-        if (prev?.messageId === messageId && isRuntimeStateEqual(prev.value, value)) return prev;
-        return { messageId, value };
-      }),
-    [messageId],
-  );
   const message = activeRuntimeState?.message || baseMessage;
   const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
   const isFetching =
@@ -106,36 +99,38 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const blur = !isMessageFound;
   const isIcaMsg = useIsIcaMessage(message);
   const debugResult = activeRuntimeState?.debugResult;
-
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
-
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
     : undefined;
-
   const showTimeline =
     !isPiMsg &&
     'blockNumber' in origin &&
     isEvmChain(chainMetadataResolver, originDomainId) &&
     isEvmChain(chainMetadataResolver, destinationDomainId);
-
-  useDynamicBannerColor(isFetching, status, isMessageFound, isError);
-
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
+  const warpRouteDetails = useMemo(
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
+    [chainMetadataResolver, message, warpRouteChainAddressMap],
+  );
+  const handleRuntimeStateChange = useCallback(
+    (value: MessageDetailsRuntimeState) =>
+      setRuntimeState((prev) => {
+        if (prev?.messageId === messageId && isRuntimeStateEqual(prev.value, value)) return prev;
+        return { messageId, value };
+      }),
+    [messageId],
+  );
 
-  const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  useDynamicBannerColor(isFetching, status, isMessageFound, isError);
 
   useEffect(() => {
     if (isWarpRouteDataLoaded) return;
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
-  const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [chainMetadataResolver, message, warpRouteChainAddressMap],
-  );
   const destinationPreview = (
     <DestinationTransactionPreviewCard
       chainName={destinationChainName}
