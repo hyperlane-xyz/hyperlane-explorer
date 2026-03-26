@@ -10,6 +10,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 import { AppLayout } from '../AppLayout';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { OGHead } from '../components/OGHead';
+import { OG_BASE_URL } from '../consts/appMetadata';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
@@ -85,11 +86,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   if (isSsr) {
     return (
       <div className="font-sans text-black">
-        <OGHead
-          url={links.explorerUrl}
-          image={`${links.explorerUrl}/images/logo.png`}
-          logoUrl={`${links.explorerUrl}/images/logo.png`}
-        />
+        <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
         <div className="hidden" aria-hidden="true">
           <QueryClientProvider client={reactQueryClient}>
             <UrqlProvider value={urqlClient}>
@@ -104,11 +101,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className="font-sans text-black">
-      <OGHead
-        url={links.explorerUrl}
-        image={`${links.explorerUrl}/images/logo.png`}
-        logoUrl={`${links.explorerUrl}/images/logo.png`}
-      />
+      <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>

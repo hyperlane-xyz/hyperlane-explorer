@@ -62,32 +62,16 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     : APP_DESCRIPTION;
   const ogImage = ogData
     ? `${host}/api/og?messageId=${ogData.messageId}`
-    : `${host}/images/logo.png`;
+    : `${host}/images/og-preview.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
-  const logoUrl = `${host}/images/logo.png`;
-
   // Render nothing while waiting for client-side router
   if (!messageId || typeof messageId !== 'string') {
-    return (
-      <OGHead
-        title={ogTitle}
-        description={ogDescription}
-        url={ogUrl}
-        image={ogImage}
-        logoUrl={logoUrl}
-      />
-    );
+    return <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />;
   }
 
   return (
     <>
-      <OGHead
-        title={ogTitle}
-        description={ogDescription}
-        url={ogUrl}
-        image={ogImage}
-        logoUrl={logoUrl}
-      />
+      <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
       <MessageDetailsPage messageId={messageId} message={message} />
     </>
   );
