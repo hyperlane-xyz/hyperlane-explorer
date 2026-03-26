@@ -11,6 +11,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 
 import { AppLayout } from '../AppLayout';
 import { OGHead } from '../components/OGHead';
+import { OG_BASE_URL } from '../consts/appMetadata';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
@@ -59,11 +60,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   if (isSsr) {
     return (
       <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
-        <OGHead
-          url={links.explorerUrl}
-          image={`${links.explorerUrl}/images/logo.png`}
-          logoUrl={`${links.explorerUrl}/images/logo.png`}
-        />
+        <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
@@ -75,11 +72,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className="font-sans text-black">
-      <OGHead
-        url={links.explorerUrl}
-        image={`${links.explorerUrl}/images/logo.png`}
-        logoUrl={`${links.explorerUrl}/images/logo.png`}
-      />
+      <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
