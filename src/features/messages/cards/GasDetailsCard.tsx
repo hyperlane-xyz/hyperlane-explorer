@@ -2,7 +2,7 @@ import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
@@ -18,6 +18,8 @@ interface Props {
   igpPayments?: AddressTo<GasPayment[]>;
   blur: boolean;
 }
+
+const DEFAULT_GAS_UNIT_DECIMALS = 9;
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
@@ -36,11 +38,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     ];
   }, [chainMetadataResolver, message.originDomainId]);
 
-  const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
-
-  useEffect(() => {
-    setDecimals(unitOptions[1].value);
-  }, [unitOptions]);
+  const [decimals, setDecimals] = useState<number>(DEFAULT_GAS_UNIT_DECIMALS);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {

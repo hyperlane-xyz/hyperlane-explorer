@@ -10,6 +10,8 @@ export interface ChainMetadataResolver {
   tryGetProtocol: (chain: ChainNameOrId) => ChainMetadata['protocol'] | null;
 }
 
+// Builds a lightweight lookup helper for one metadata snapshot so callers can resolve
+// chain names, domain ids, and chain ids without constructing a MultiProtocolProvider.
 export function createChainMetadataResolver(
   metadata: ChainMap<ChainMetadata>,
 ): ChainMetadataResolver {
