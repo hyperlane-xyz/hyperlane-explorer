@@ -1,7 +1,8 @@
+import { ChevronIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { PropsWithChildren, useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { docLinks, links } from '../../consts/links';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
@@ -32,19 +33,19 @@ export function Header({ pathName }: { pathName: string }) {
     setIsMobileMenuOpen(false);
   }, [pathName]);
 
+  const onPointerDown = useEffectEvent((event: MouseEvent | TouchEvent) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (mobileMenuRef.current?.contains(target)) return;
+    setIsMobileMenuOpen(false);
+  });
+
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === 'Escape') setIsMobileMenuOpen(false);
+  });
+
   useEffect(() => {
     if (!isMobileMenuOpen) return;
-
-    const onPointerDown = (event: MouseEvent | TouchEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (mobileMenuRef.current?.contains(target)) return;
-      setIsMobileMenuOpen(false);
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsMobileMenuOpen(false);
-    };
 
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('touchstart', onPointerDown);
@@ -140,22 +141,7 @@ function DropdownButton() {
 
 function DropdownChevron({ className }: { className?: string }) {
   return (
-    <svg
-      width="10"
-      height="14"
-      viewBox="0 0 10 14"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M1 4.5L5 9.5L9 4.5"
-        stroke="white"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <ChevronIcon width={10} height={6} direction="s" className={`${className} text-white`} />
   );
 }
 
