@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
+import type { ComponentType, PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
@@ -17,11 +18,6 @@ import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoadin
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 import '../styles/global.css';
 
-// Dynamic import ErrorBoundary to avoid pino-pretty issues during SSR
-const ErrorBoundary = dynamic(
-  () => import('../components/errors/ErrorBoundary').then((mod) => mod.ErrorBoundary),
-  { ssr: false },
-);
 const AppClientOverlays = dynamic(
   () => import('../components/AppClientOverlays').then((mod) => mod.AppClientOverlays),
   { ssr: false },
@@ -49,11 +45,24 @@ function useIsSsr() {
   return isSsr;
 }
 
+function useClientErrorBoundary() {
+  const [ErrorBoundary, setErrorBoundary] = useState<ComponentType<PropsWithChildren> | null>(null);
+
+  useEffect(() => {
+    import('../components/errors/ErrorBoundary')
+      .then((mod) => setErrorBoundary(() => mod.ErrorBoundary))
+      .catch((error) => console.error('Error loading client error boundary', error));
+  }, []);
+
+  return ErrorBoundary;
+}
+
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration. However, we still need to render
   // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
+  const ClientErrorBoundary = useClientErrorBoundary();
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,23 +108,25 @@ export default function App({ Component, router, pageProps }: AppProps) {
     );
   }
 
+  const appContent = (
+    <QueryClientProvider client={reactQueryClient}>
+      <UrqlProvider value={urqlClient}>
+        <AppLayout pathName={router.pathname}>
+          {pendingRoute ? (
+            getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
+          ) : (
+            <Component {...pageProps} />
+          )}
+        </AppLayout>
+      </UrqlProvider>
+    </QueryClientProvider>
+  );
+
   return (
     <div className="font-sans text-black">
       <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
-      <ErrorBoundary>
-        <QueryClientProvider client={reactQueryClient}>
-          <UrqlProvider value={urqlClient}>
-            <AppLayout pathName={router.pathname}>
-              {pendingRoute ? (
-                getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
-              ) : (
-                <Component {...pageProps} />
-              )}
-            </AppLayout>
-          </UrqlProvider>
-        </QueryClientProvider>
-        <AppClientOverlays />
-      </ErrorBoundary>
+      {ClientErrorBoundary ? <ClientErrorBoundary>{appContent}</ClientErrorBoundary> : appContent}
+      <AppClientOverlays />
     </div>
   );
 }
