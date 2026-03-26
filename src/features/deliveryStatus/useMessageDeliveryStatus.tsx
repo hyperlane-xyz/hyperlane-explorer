@@ -1,4 +1,5 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -8,6 +9,16 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
+
+type DeliveryStatusQueryMessage = MessageStub &
+  Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
+type DeliveryStatusQueryKey = readonly [
+  'messageDeliveryStatus',
+  DeliveryStatusQueryMessage,
+  boolean,
+  IRegistry,
+  ChainMap<Partial<ChainMetadata>>,
+];
 
 export function useMessageDeliveryStatus({
   message,
@@ -19,44 +30,34 @@ export function useMessageDeliveryStatus({
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
-  const messageQueryKey = {
-    msgId: message.msgId,
-    status: message.status,
-    originDomainId: message.originDomainId,
-    destinationDomainId: message.destinationDomainId,
-    originTxHash: message.origin.hash,
-    destinationTxHash: message.destination?.hash ?? null,
-    destinationBlockNumber:
-      message.destination && 'blockNumber' in message.destination
-        ? message.destination.blockNumber
-        : null,
-  };
+  const queryMessage = createDeliveryStatusQueryMessage(message);
 
   const { data, error, isFetching } = useQuery({
     queryKey: [
       'messageDeliveryStatus',
-      messageQueryKey,
+      queryMessage,
       !!multiProvider,
       registry,
       chainMetadataOverrides,
-    ],
-    queryFn: async () => {
+    ] as DeliveryStatusQueryKey,
+    queryFn: async ({ queryKey }) => {
+      const [, messageForQuery] = queryKey;
       const hasDeliveredDetails =
-        message.status === MessageStatus.Delivered &&
-        !!message.destination &&
-        'blockNumber' in message.destination;
+        messageForQuery.status === MessageStatus.Delivered &&
+        !!messageForQuery.destination &&
+        'blockNumber' in messageForQuery.destination;
 
       if (!multiProvider || hasDeliveredDetails) {
-        return { message };
+        return { message: messageForQuery };
       }
 
-      const { id, originDomainId, destinationDomainId } = message;
+      const { id, originDomainId, destinationDomainId } = messageForQuery;
 
       if (
         !checkChain(multiProvider, originDomainId) ||
         !checkChain(multiProvider, destinationDomainId)
       ) {
-        return { message };
+        return { message: messageForQuery };
       }
 
       logger.debug('Fetching message delivery status for:', id);
@@ -65,13 +66,13 @@ export function useMessageDeliveryStatus({
         multiProvider,
         registry,
         chainMetadataOverrides,
-        message,
+        messageForQuery,
       );
 
       if (deliverStatus.status === MessageStatus.Delivered) {
         return {
           message: {
-            ...message,
+            ...messageForQuery,
             status: MessageStatus.Delivered,
             destination: deliverStatus.deliveryTransaction,
           },
@@ -82,13 +83,13 @@ export function useMessageDeliveryStatus({
       ) {
         return {
           message: {
-            ...message,
+            ...messageForQuery,
             status: deliverStatus.status,
           },
           debugResult: deliverStatus.debugResult,
         };
       } else {
-        return { message };
+        return { message: messageForQuery };
       }
     },
     retry: false,
@@ -109,6 +110,16 @@ export function useMessageDeliveryStatus({
     messageWithDeliveryStatus: data?.message || message,
     debugResult: data?.debugResult,
     isDeliveryStatusFetching: isFetching,
+  };
+}
+
+function createDeliveryStatusQueryMessage(
+  message: Message | MessageStub,
+): DeliveryStatusQueryMessage {
+  return {
+    ...message,
+    origin: { ...message.origin },
+    destination: message.destination ? { ...message.destination } : undefined,
   };
 }
 

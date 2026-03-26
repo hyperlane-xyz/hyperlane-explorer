@@ -17,6 +17,7 @@ import { links } from '../consts/links';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 import '../styles/global.css';
+import { logger } from '../utils/logger';
 
 const AppClientOverlays = dynamic(
   () => import('../components/AppClientOverlays').then((mod) => mod.AppClientOverlays),
@@ -51,7 +52,7 @@ function useClientErrorBoundary() {
   useEffect(() => {
     import('../components/errors/ErrorBoundary')
       .then((mod) => setErrorBoundary(() => mod.ErrorBoundary))
-      .catch((error) => console.error('Error loading client error boundary', error));
+      .catch((error) => logger.error('Error loading client error boundary', error));
   }, []);
 
   return ErrorBoundary;
