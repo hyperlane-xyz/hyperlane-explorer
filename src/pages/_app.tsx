@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import { Component as ReactComponent } from 'react';
 import type { ComponentType, ErrorInfo, PropsWithChildren, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { Component as ReactComponent, useEffect, useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
@@ -59,10 +58,7 @@ function useClientErrorBoundary() {
   return ErrorBoundary;
 }
 
-class InlineErrorBoundary extends ReactComponent<
-  PropsWithChildren,
-  { hasError: boolean }
-> {
+class InlineErrorBoundary extends ReactComponent<PropsWithChildren, { hasError: boolean }> {
   state = { hasError: false };
 
   static getDerivedStateFromError() {
