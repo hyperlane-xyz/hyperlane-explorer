@@ -131,17 +131,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
-  const destinationPreview = (
-    <DestinationTransactionPreviewCard
-      chainName={destinationChainName}
-      domainId={destinationDomainId}
-      status={status}
-      transaction={destination}
-      blur={blur}
-      isLiveDetailsPending={isFetching}
-    />
-  );
-
   return (
     <>
       <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-3 shadow-accent-glow">
@@ -166,7 +155,18 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           transaction={origin}
           blur={blur}
         />
-        <Suspense fallback={destinationPreview}>
+        <Suspense
+          fallback={
+            <DestinationTransactionPreviewCard
+              chainName={destinationChainName}
+              domainId={destinationDomainId}
+              status={status}
+              transaction={destination}
+              blur={blur}
+              isLiveDetailsPending={isFetching}
+            />
+          }
+        >
           <MessageDetailsRuntime
             messageId={messageId}
             baseMessage={baseMessage}

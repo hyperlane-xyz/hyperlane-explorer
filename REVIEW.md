@@ -6,6 +6,7 @@
 - Error handling and edge cases
 - Code clarity and maintainability
 - Prefer consistent hook ordering in components: state/context/store hooks and plain vars first, then memos, then functions/useCallbacks, then effects
+- Prefer rendering JSX inline or extracting a small component over storing component-like JSX in local variables
 - Adherence to existing patterns in the codebase
 - **Use existing utilities** - Search codebase before adding new helpers
 - **Prefer `??` over `||`** - Preserves zero/empty string as valid values
