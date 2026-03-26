@@ -11,6 +11,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 
 import { AppLayout } from '../AppLayout';
 import { OGHead } from '../components/OGHead';
+import { OG_BASE_URL } from '../consts/appMetadata';
 import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { ChainConfigSyncer } from '../features/chains/ChainConfigSyncer';
@@ -44,12 +45,6 @@ function useIsSsr() {
   return isSsr;
 }
 
-// Use Vercel preview URL when available so OG images work on preview deployments
-const ogBaseUrl =
-  process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview' && process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : links.explorerUrl;
-
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration. However, we still need to render
@@ -65,7 +60,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   if (isSsr) {
     return (
       <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
-        <OGHead url={links.explorerUrl} image={`${ogBaseUrl}/images/og-preview.png`} />
+        <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
@@ -77,7 +72,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className="font-sans text-black">
-      <OGHead url={links.explorerUrl} image={`${ogBaseUrl}/images/og-preview.png`} />
+      <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
