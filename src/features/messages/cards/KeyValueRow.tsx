@@ -2,6 +2,7 @@ import { memo } from 'react';
 
 import { isZeroish } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+
 import { truncateString } from '../../../utils/string';
 
 interface Props {

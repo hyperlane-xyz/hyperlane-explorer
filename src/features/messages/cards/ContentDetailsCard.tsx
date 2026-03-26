@@ -1,47 +1,47 @@
+import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { SectionCard } from '../../../components/layout/SectionCard';
-import { MAILBOX_VERSION } from '../../../consts/mailbox';
-import { useChainMetadataResolver } from '../../../metadataStore';
-import { Message, MessageStub } from '../../../types';
+import { useMultiProvider } from '../../../store';
+import { Message } from '../../../types';
 import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
-import { getBlockExplorerAddressUrl } from '../../../utils/url';
+import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { CodeBlock, CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
+import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
-  message: Message | MessageStub;
+  message: Message;
   blur: boolean;
 }
 
-export function ContentDetailsCard({ message, blur }: Props) {
-  const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
-  const decodedBody = 'decodedBody' in message ? message.decodedBody : undefined;
-  const chainMetadataResolver = useChainMetadataResolver();
+export function ContentDetailsCard({
+  message: {
+    msgId,
+    nonce,
+    originDomainId,
+    destinationDomainId,
+    sender,
+    recipient,
+    body,
+    decodedBody,
+    originChainId,
+    destinationChainId,
+  },
+  blur,
+}: Props) {
+  const multiProvider = useMultiProvider();
   const [bodyDecodeType, setBodyDecodeType] = useState<string>(decodedBody ? 'utf8' : 'hex');
+  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
+    BlockExplorerAddressUrls | undefined
+  >(undefined);
 
-  const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
-  const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
-  const blockExplorerAddressUrls = useMemo(
-    () => ({
-      sender: getBlockExplorerAddressUrl(chainMetadataResolver, originDomainId, formattedSender),
-      recipient: getBlockExplorerAddressUrl(
-        chainMetadataResolver,
-        destinationDomainId,
-        formattedRecipient,
-      ),
-    }),
-    [
-      chainMetadataResolver,
-      destinationDomainId,
-      formattedRecipient,
-      formattedSender,
-      originDomainId,
-    ],
-  );
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, multiProvider);
+  const formattedSender = formatAddress(sender, originDomainId, multiProvider);
 
   useEffect(() => {
     if (decodedBody) setBodyDecodeType('utf8');
@@ -76,6 +76,28 @@ export function ContentDetailsCard({ message, blur }: Props) {
     }
   }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
 
+  const getBlockExplorerLinks = useCallback(async (): Promise<
+    BlockExplorerAddressUrls | undefined
+  > => {
+    const senderAddressLink = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      originChainId,
+      formattedSender,
+    );
+    const recipientAddressLink = await tryGetBlockExplorerAddressUrl(
+      multiProvider,
+      destinationChainId,
+      formattedRecipient,
+    );
+    return { sender: senderAddressLink, recipient: recipientAddressLink };
+  }, [destinationChainId, originChainId, multiProvider, formattedSender, formattedRecipient]);
+
+  useEffect(() => {
+    getBlockExplorerLinks()
+      .then((urls) => setBlockExplorerAddressUrls(urls))
+      .catch(() => setBlockExplorerAddressUrls(undefined));
+  }, [getBlockExplorerLinks]);
+
   return (
     <SectionCard
       className="w-full"
@@ -109,7 +131,7 @@ export function ContentDetailsCard({ message, blur }: Props) {
             display={formattedSender}
             showCopy={true}
             blurValue={blur}
-            link={blockExplorerAddressUrls.sender}
+            link={blockExplorerAddressUrls?.sender}
             truncateMiddle={true}
           />
           <KeyValueRow
@@ -118,7 +140,7 @@ export function ContentDetailsCard({ message, blur }: Props) {
             display={formattedRecipient}
             showCopy={true}
             blurValue={blur}
-            link={blockExplorerAddressUrls.recipient}
+            link={blockExplorerAddressUrls?.recipient}
             truncateMiddle={true}
           />
         </div>

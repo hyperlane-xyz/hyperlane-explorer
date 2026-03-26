@@ -50,11 +50,10 @@ const nextConfig = {
 
   reactStrictMode: true,
 
-  // Skip linting and type checking during builds — CI runs these separately
-  eslint: { ignoreDuringBuilds: true },
+  // Skip type checking during builds — CI runs these separately
   typescript: { ignoreBuildErrors: true },
 
-  // Transpile ESM packages for Jest compatibility and webpack aliases
+  // Transpile ESM packages for Jest compatibility
   transpilePackages: [
     '@hyperlane-xyz/core',
     '@hyperlane-xyz/cosmos-sdk',
@@ -70,36 +69,18 @@ const nextConfig = {
     'lodash-es',
   ],
 
-  // Configure webpack to mock modules that break during SSR
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        // Replace pino with a mock to avoid pino-pretty transport issues
-        pino: require.resolve('./src/utils/pino-noop.js'),
-        // Replace aleo-sdk with a mock to avoid @provablehq/wasm top-level fetch() error
-        '@hyperlane-xyz/aleo-sdk': require.resolve('./src/utils/aleo-sdk-noop.js'),
-      };
-
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@provablehq/wasm': false,
-        '@provablehq/sdk': false,
-      };
-    }
-
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-      layers: true,
-    };
-
-    return config;
+  turbopack: {
+    resolveAlias: {
+      // Mock modules that break during bundling
+      'pino': './src/utils/pino-noop.js',
+      '@hyperlane-xyz/aleo-sdk': './src/utils/aleo-sdk-noop.js',
+    },
   },
 
+  serverExternalPackages: ['@provablehq/wasm', '@provablehq/sdk'],
+
   experimental: {
-    webpackBuildWorker: true,
-    parallelServerCompiles: true,
+    turbopackFileSystemCacheForBuild: true,
     parallelServerBuildTraces: true,
     optimizePackageImports: [
       '@hyperlane-xyz/registry',

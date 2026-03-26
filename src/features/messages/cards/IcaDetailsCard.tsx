@@ -1,14 +1,13 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
-import { SectionCard } from '../../../components/layout/SectionCard';
-import { Message, MessageStub } from '../../../types';
-import { useIcaAddress } from '../ica';
-import { tryDecodeIcaBody } from '../icaUtils';
 
+import { SectionCard } from '../../../components/layout/SectionCard';
+import { Message } from '../../../types';
+import { tryDecodeIcaBody, useIcaAddress } from '../ica';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
-  message: Message | MessageStub;
+  message: Message;
   blur: boolean;
 }
 

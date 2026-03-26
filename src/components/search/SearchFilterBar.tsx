@@ -1,21 +1,16 @@
-import clsx from 'clsx';
-import dynamic from 'next/dynamic';
-import { useState } from 'react';
-
-import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
+import { useState } from 'react';
 
+import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useChainMetadataResolver } from '../../metadataStore';
+import { useMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
-
-const ChainSearchModal = dynamic(() =>
-  import('../../features/chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
-);
 
 interface Props {
   originChain: string | null;
@@ -71,10 +66,11 @@ function ChainSelector({
   onChangeValue: (value: string | null) => void;
 }) {
   const { isOpen, open, close } = useModal();
-  const chainMetadataResolver = useChainMetadataResolver();
+
+  const multiProvider = useMultiProvider();
 
   const chainDisplayName = value
-    ? trimToLength(getChainDisplayName(chainMetadataResolver, value, true), 12)
+    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
@@ -108,7 +104,7 @@ function ChainSelector({
         )}
       </button>
       {value && <ClearButton onClick={onClear} />}
-      {isOpen && <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />}
+      <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />
     </div>
   );
 }

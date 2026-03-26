@@ -1,7 +1,8 @@
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
-import type { ChainMetadataResolver } from '../../chains/metadataManager';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
@@ -20,27 +21,27 @@ import {
  */
 
 export function parseMessageStubResult(
-  chainMetadataResolver: ChainMetadataResolver,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
 ): MessageStub[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStub);
+  return queryResult(multiProvider, scrapedChains, data, parseMessageStub);
 }
 
 export function parseMessageQueryResult(
-  chainMetadataResolver: ChainMetadataResolver,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: MessagesQueryResult | undefined,
 ): Message[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessage);
+  return queryResult(multiProvider, scrapedChains, data, parseMessage);
 }
 
 function queryResult<D, M extends MessageStub>(
-  chainMetadataResolver: ChainMetadataResolver,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   data: Record<string, D[]> | undefined,
   parseFn: (
-    chainMetadataResolver: ChainMetadataResolver,
+    multiProvider: MultiProtocolProvider,
     scrapedChains: DomainsEntry[],
     data: D,
   ) => M | null,
@@ -49,25 +50,25 @@ function queryResult<D, M extends MessageStub>(
   return deduplicateMessageList(
     Object.values(data)
       .flat()
-      .map((d) => parseFn(chainMetadataResolver, scrapedChains, d))
+      .map((d) => parseFn(multiProvider, scrapedChains, d))
       .filter((m): m is M => !!m)
       .sort((a, b) => b.origin.timestamp - a.origin.timestamp),
   );
 }
 
 function parseMessageStub(
-  chainMetadataResolver: ChainMetadataResolver,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   m: MessageStubEntry,
 ): MessageStub | null {
   try {
-    const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
-    const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
+    const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
+    const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
     const body = postgresByteaToString(m.message_body ?? '');
 
     const isPiMsg =
-      isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
-      isPiChain(chainMetadataResolver, scrapedChains, m.destination_domain_id);
+      isPiChain(multiProvider, scrapedChains, m.origin_domain_id) ||
+      isPiChain(multiProvider, scrapedChains, m.destination_domain_id);
 
     return {
       status: getMessageStatus(m),
@@ -104,16 +105,16 @@ function parseMessageStub(
 }
 
 function parseMessage(
-  chainMetadataResolver: ChainMetadataResolver,
+  multiProvider: MultiProtocolProvider,
   scrapedChains: DomainsEntry[],
   m: MessageEntry,
 ): Message | null {
   try {
-    const stub = parseMessageStub(chainMetadataResolver, scrapedChains, m);
+    const stub = parseMessageStub(multiProvider, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
 
-    const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
-    const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
+    const originMetadata = multiProvider.tryGetChainMetadata(m.origin_domain_id);
+    const destinationMetadata = multiProvider.tryGetChainMetadata(m.destination_domain_id);
 
     const decodedBody = tryUtf8DecodeBytes(stub.body);
 

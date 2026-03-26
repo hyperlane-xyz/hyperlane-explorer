@@ -1,5 +1,3 @@
-import { BigNumber, constants, ethers, providers } from 'ethers';
-
 import {
   IInterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
   Mailbox__factory as MailboxFactory,
@@ -16,6 +14,7 @@ import {
   normalizeAddress,
   parseMessage,
 } from '@hyperlane-xyz/utils';
+import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';

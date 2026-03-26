@@ -7,13 +7,13 @@ import { useMemo, useState } from 'react';
 import { Card } from '../../../components/layout/Card';
 import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
-import { Message, MessageStub, WarpRouteDetails } from '../../../types';
-import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
+import { Message, WarpRouteDetails } from '../../../types';
 import { useWarpRouteBalances } from '../warpVisualization/useWarpRouteBalances';
 import { useWarpRouteVisualization } from '../warpVisualization/useWarpRouteVisualization';
+import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
 
 interface Props {
-  message: Message | MessageStub;
+  message: Message;
   warpRouteDetails: WarpRouteDetails | undefined;
   blur: boolean;
 }

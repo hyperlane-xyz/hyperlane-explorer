@@ -1,9 +1,9 @@
 import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
+
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
 import { IsmModuleTypes, MessageDebugResult } from '../../debugger/types';
-
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {

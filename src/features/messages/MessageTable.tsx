@@ -1,27 +1,21 @@
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { NextRouter, useRouter } from 'next/router';
-import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
+import { PropsWithChildren, ReactNode, useMemo } from 'react';
+
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
 import ErrorIcon from '../../images/icons/error-circle.svg';
-import { useChainMetadataResolver, useStore } from '../../metadataStore';
+import { useMultiProvider, useStore } from '../../store';
 import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
-import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString } from '../../utils/time';
-import type { ChainMetadataResolver } from '../chains/metadataManager';
-import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
-import { prefetchMessageDetailShell } from './navigationPrefetch';
-import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
-
-const BACKGROUND_PREFETCH_COUNT = 5;
 
 export function MessageTable({
   messageList,
@@ -30,46 +24,8 @@ export function MessageTable({
   messageList: MessageStub[];
   isFetching: boolean;
 }) {
-  const router = useRouter();
-  const chainMetadataResolver = useChainMetadataResolver();
+  const multiProvider = useMultiProvider();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
-  const { scrapedDomains } = useScrapedDomains();
-  const backgroundPrefetchKey = useMemo(() => {
-    if (isFetching) return '';
-    return `${scrapedDomains.length}:${messageList
-      .slice(0, BACKGROUND_PREFETCH_COUNT)
-      .map((message) => message.msgId.toLowerCase())
-      .join(',')}`;
-  }, [isFetching, messageList, scrapedDomains.length]);
-
-  useEffect(() => {
-    if (!backgroundPrefetchKey) return;
-
-    const messagesToPrefetch = messageList.slice(0, BACKGROUND_PREFETCH_COUNT);
-    let cancelled = false;
-
-    const prefetchTopRows = async () => {
-      await prefetchMessageDetailShell();
-      await Promise.all(
-        messagesToPrefetch.map((message) => {
-          if (cancelled) return Promise.resolve();
-          return prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedDomains);
-        }),
-      );
-    };
-
-    const cancelIdleSchedule = scheduleWhenIdle(
-      () => {
-        void prefetchTopRows();
-      },
-      { timeout: 1_000, fallbackDelay: 250 },
-    );
-
-    return () => {
-      cancelled = true;
-      cancelIdleSchedule();
-    };
-  }, [backgroundPrefetchKey, chainMetadataResolver, messageList, router, scrapedDomains]);
 
   return (
     <table className="mb-1 w-full">
@@ -94,9 +50,7 @@ export function MessageTable({
           >
             <MessageSummaryRow
               message={m}
-              chainMetadataResolver={chainMetadataResolver}
-              router={router}
-              scrapedChains={scrapedDomains}
+              mp={multiProvider}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
             />
           </tr>
@@ -106,29 +60,20 @@ export function MessageTable({
   );
 }
 
-export const MessageSummaryRow = memo(function MessageSummaryRow({
+export function MessageSummaryRow({
   message,
-  chainMetadataResolver,
-  router,
-  scrapedChains,
+  mp,
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
-  chainMetadataResolver: ChainMetadataResolver;
-  router: NextRouter;
-  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
+  mp: MultiProtocolProvider;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
-  const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
-  const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
-  const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
-  const hasPrimedDetailPage = useRef(false);
-
-  useEffect(() => {
-    hasPrimedDetailPage.current = false;
-  }, [message.msgId]);
+  const formattedSender = formatAddress(sender, originDomainId, mp);
+  const formattedRecipient = formatAddress(recipient, destinationDomainId, mp);
+  const formattedTxHash = formatTxHash(origin.hash, originDomainId, mp);
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
@@ -152,85 +97,45 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   }
 
   const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
-  const detailPath = `/message/${msgId}`;
-  const primeDetailPage = () => {
-    if (hasPrimedDetailPage.current) return;
-    hasPrimedDetailPage.current = true;
-    void prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedChains);
-  };
 
-  const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
-  const destinationChainName =
-    chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
+  const originChainName = mp.tryGetChainName(originDomainId) || 'Unknown';
+  const destinationChainName = mp.tryGetChainName(destinationDomainId) || 'Unknown';
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [message, warpRouteChainAddressMap, chainMetadataResolver],
+    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, mp),
+    [message, warpRouteChainAddressMap, mp],
   );
   return (
     <>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        aClasses="flex items-center py-2.5 pl-3 sm:pl-5"
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5 pl-3 sm:pl-5">
         <ChainLogo chainName={originChainName} size={20} />
-        <div className={styles.iconText}>
-          {getChainDisplayName(chainMetadataResolver, originChainName, true)}
-        </div>
+        <div className={styles.iconText}>{getChainDisplayName(mp, originChainName, true)}</div>
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        aClasses="flex items-center py-2.5"
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} aClasses="flex items-center py-2.5">
         <ChainLogo chainName={destinationChainName} size={20} />
-        <div className={styles.iconText}>
-          {getChainDisplayName(chainMetadataResolver, destinationChainName, true)}
-        </div>
+        <div className={styles.iconText}>{getChainDisplayName(mp, destinationChainName, true)}</div>
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        tdClasses="hidden sm:table-cell"
-        aClasses={styles.value}
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(formattedSender) || 'Invalid Address'}
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        tdClasses="hidden sm:table-cell"
-        aClasses={styles.value}
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} tdClasses="hidden sm:table-cell" aClasses={styles.value}>
         {shortenAddress(formattedRecipient) || 'Invalid Address'}
       </LinkCell>
       <LinkCell
-        path={detailPath}
+        id={msgId}
         base64={base64}
         tdClasses="hidden lg:table-cell"
         aClasses={styles.valueTruncated}
-        onNavigateIntent={primeDetailPage}
       >
         {shortenAddress(formattedTxHash)}
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        aClasses={styles.valueTruncated}
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} aClasses={styles.valueTruncated}>
         {getHumanReadableTimeString(origin.timestamp)}
       </LinkCell>
       <LinkCell
-        path={detailPath}
+        id={msgId}
         base64={base64}
         aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
-        onNavigateIntent={primeDetailPage}
       >
         {warpRouteDetails ? (
           <>
@@ -245,44 +150,25 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
           </>
         ) : null}
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        tdClasses="w-8"
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell id={msgId} base64={base64} tdClasses="w-8">
         {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
       </LinkCell>
     </>
   );
-});
+}
 
 function LinkCell({
-  path,
+  id,
   base64,
   tdClasses,
   aClasses,
-  onNavigateIntent,
   children,
-}: PropsWithChildren<{
-  path: string;
-  base64?: string;
-  tdClasses?: string;
-  aClasses?: string;
-  onNavigateIntent?: () => void;
-}>) {
+}: PropsWithChildren<{ id: string; base64?: string; tdClasses?: string; aClasses?: string }>) {
+  const path = `/message/${id}`;
   const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
-      <Link
-        href={`${path}${params}`}
-        prefetch={false}
-        className={`block h-full w-full ${aClasses || ''}`}
-        onMouseEnter={onNavigateIntent}
-        onFocus={onNavigateIntent}
-        onTouchStart={onNavigateIntent}
-        onClick={onNavigateIntent}
-      >
+      <Link href={`${path}${params}`} className={aClasses}>
         {children}
       </Link>
     </td>
@@ -295,19 +181,3 @@ const styles = {
   valueTruncated: 'py-2.5 flex items-center justify-center text-sm text-center font-light truncate',
   iconText: 'text-sm font-light ml-2',
 };
-
-async function prefetchMessageNavigation(
-  router: NextRouter,
-  message: MessageStub,
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'],
-) {
-  const detailPath = `/message/${message.msgId}`;
-  void router.prefetch(detailPath);
-  void prefetchMessageDetailShell();
-  prefetchMessageStub(message);
-
-  if (message.isPiMsg || !scrapedChains.length) return;
-
-  await prefetchMessageDetails(message.msgId, chainMetadataResolver, scrapedChains);
-}

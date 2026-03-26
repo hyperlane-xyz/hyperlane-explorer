@@ -1,14 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-
 // eslint-disable-next-line camelcase
 import { MovableCollateralRouter__factory } from '@hyperlane-xyz/core';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
-
-import { checkIsMessageDelivered, extractMessageIdFromTx } from '../deliveryUtils';
+import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils';
 import { ActiveRebalance, RebalanceInfo } from './types';
 import { isCollateralRoute } from './utils';
 
