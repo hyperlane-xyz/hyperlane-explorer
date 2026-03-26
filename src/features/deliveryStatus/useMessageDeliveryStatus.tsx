@@ -19,9 +19,27 @@ export function useMessageDeliveryStatus({
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
+  const messageQueryKey = {
+    msgId: message.msgId,
+    status: message.status,
+    originDomainId: message.originDomainId,
+    destinationDomainId: message.destinationDomainId,
+    originTxHash: message.origin.hash,
+    destinationTxHash: message.destination?.hash ?? null,
+    destinationBlockNumber:
+      message.destination && 'blockNumber' in message.destination
+        ? message.destination.blockNumber
+        : null,
+  };
 
   const { data, error, isFetching } = useQuery({
-    queryKey: ['messageDeliveryStatus', message, !!multiProvider, registry, chainMetadataOverrides],
+    queryKey: [
+      'messageDeliveryStatus',
+      messageQueryKey,
+      !!multiProvider,
+      registry,
+      chainMetadataOverrides,
+    ],
     queryFn: async () => {
       const hasDeliveredDetails =
         message.status === MessageStatus.Delivered &&
