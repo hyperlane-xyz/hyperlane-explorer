@@ -61,8 +61,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
       <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
         <OGHead
           url={links.explorerUrl}
-          image={`${links.explorerUrl}/images/logo.png`}
-          logoUrl={`${links.explorerUrl}/images/logo.png`}
+          image={`${links.explorerUrl}/images/og-preview.png`}
         />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
@@ -77,8 +76,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
     <div className="font-sans text-black">
       <OGHead
         url={links.explorerUrl}
-        image={`${links.explorerUrl}/images/logo.png`}
-        logoUrl={`${links.explorerUrl}/images/logo.png`}
+        image={`${links.explorerUrl}/images/og-preview.png`}
       />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>

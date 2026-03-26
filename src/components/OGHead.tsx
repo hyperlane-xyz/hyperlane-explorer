@@ -7,7 +7,6 @@ interface OGHeadProps {
   description?: string;
   url?: string;
   image?: string;
-  logoUrl?: string;
 }
 
 /**
@@ -19,7 +18,6 @@ export function OGHead({
   description = APP_DESCRIPTION,
   url,
   image,
-  logoUrl,
 }: OGHeadProps) {
   return (
     <Head>
@@ -42,8 +40,6 @@ export function OGHead({
         </>
       )}
       <meta key="og:description" property="og:description" content={description} />
-      {logoUrl && <meta key="og:logo" property="og:logo" content={logoUrl} />}
-
       {/* Twitter Card */}
       <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
       <meta key="twitter:title" name="twitter:title" content={title} />
