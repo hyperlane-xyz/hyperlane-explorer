@@ -65,10 +65,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   if (isSsr) {
     return (
       <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
-        <OGHead
-          url={links.explorerUrl}
-          image={`${ogBaseUrl}/images/og-preview.png`}
-        />
+        <OGHead url={links.explorerUrl} image={`${ogBaseUrl}/images/og-preview.png`} />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
             <Component {...pageProps} />
@@ -80,10 +77,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className="font-sans text-black">
-      <OGHead
-        url={links.explorerUrl}
-        image={`${ogBaseUrl}/images/og-preview.png`}
-      />
+      <OGHead url={links.explorerUrl} image={`${ogBaseUrl}/images/og-preview.png`} />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
