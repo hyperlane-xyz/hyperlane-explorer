@@ -17,6 +17,7 @@
 - Consistency with existing architecture patterns
 - Breaking changes or backward compatibility issues
 - API contract changes
+- Preserve intentional metadata-only vs provider-backed boundaries; don't collapse `metadataStore.ts` back into `store.ts` unless there is a concrete functional need
 - **Deduplicate** - Move repeated code/types to shared files
 - **Extract utilities** - Shared functions belong in utils packages
 
