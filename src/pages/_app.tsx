@@ -44,6 +44,12 @@ function useIsSsr() {
   return isSsr;
 }
 
+// Use Vercel preview URL when available so OG images work on preview deployments
+const ogBaseUrl =
+  process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview' && process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    : links.explorerUrl;
+
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration. However, we still need to render
@@ -61,7 +67,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
       <div className="font-sans text-black" style={{ visibility: 'hidden' }}>
         <OGHead
           url={links.explorerUrl}
-          image={`${links.explorerUrl}/images/og-preview.png`}
+          image={`${ogBaseUrl}/images/og-preview.png`}
         />
         <QueryClientProvider client={reactQueryClient}>
           <UrqlProvider value={urqlClient}>
@@ -76,7 +82,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
     <div className="font-sans text-black">
       <OGHead
         url={links.explorerUrl}
-        image={`${links.explorerUrl}/images/og-preview.png`}
+        image={`${ogBaseUrl}/images/og-preview.png`}
       />
       <ErrorBoundary>
         <QueryClientProvider client={reactQueryClient}>
