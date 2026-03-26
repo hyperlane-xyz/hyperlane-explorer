@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import { PropsWithChildren } from 'react';
 
+import LogoLockup from '../../../public/images/hyperlane-explorer-logo.svg';
 import { appShellGridOverlayStyle, appShellMainStyle } from './appShellStyles';
-import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 
 export function AppLoadingShell({ children }: PropsWithChildren) {
   return (

@@ -1,5 +1,5 @@
-import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 

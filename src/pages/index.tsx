@@ -1,5 +1,6 @@
 import type { NextPage } from 'next';
 import dynamic from 'next/dynamic';
+
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 
 const MessageSearchPage = dynamic(

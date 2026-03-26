@@ -81,6 +81,7 @@ const nextConfig = {
 
   experimental: {
     turbopackFileSystemCacheForBuild: true,
+    parallelServerCompiles: true,
     parallelServerBuildTraces: true,
     optimizePackageImports: [
       '@hyperlane-xyz/registry',

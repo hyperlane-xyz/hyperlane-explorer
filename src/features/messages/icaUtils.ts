@@ -1,7 +1,6 @@
+import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 import { BigNumber, utils } from 'ethers';
 import { useMemo } from 'react';
-
-import { eqAddress, isValidAddress } from '@hyperlane-xyz/utils';
 
 import { logger } from '../../utils/logger';
 

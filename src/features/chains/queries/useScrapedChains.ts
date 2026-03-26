@@ -1,18 +1,17 @@
-import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { objFilter } from '@hyperlane-xyz/utils';
 import { useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { unscrapedChainsInDb } from '../../../consts/config';
-import { useStore } from '../../../store';
+import { useStore } from '../../../metadataStore';
+import type { ChainMetadataResolver } from '../metadataManager';
 import { isPiChain } from '../utils';
 import { DOMAINS_QUERY, DomainsEntry } from './fragments';
 
 export function useScrapedDomains() {
-  const { scrapedDomains, setScrapedDomains } = useStore((s) => ({
-    scrapedDomains: s.scrapedDomains,
-    setScrapedDomains: s.setScrapedDomains,
-  }));
+  const scrapedDomains = useStore((s) => s.scrapedDomains);
+  const setScrapedDomains = useStore((s) => s.setScrapedDomains);
 
   const [result] = useQuery<{ domain: Array<DomainsEntry> }>({
     query: DOMAINS_QUERY,
@@ -32,7 +31,7 @@ export function useScrapedDomains() {
   };
 }
 
-export function useScrapedChains(multiProvider: MultiProtocolProvider) {
+export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
   const { scrapedDomains, isFetching, isError } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
 
@@ -40,17 +39,20 @@ export function useScrapedChains(multiProvider: MultiProtocolProvider) {
     const scrapedChains = objFilter(
       chainMetadata,
       (_, chainMetadata): chainMetadata is ChainMetadata =>
-        !isPiChain(multiProvider, scrapedDomains, chainMetadata.domainId) &&
-        !isUnscrapedDbChain(multiProvider, chainMetadata.domainId),
+        !isPiChain(chainMetadataResolver, scrapedDomains, chainMetadata.domainId) &&
+        !isUnscrapedDbChain(chainMetadataResolver, chainMetadata.domainId),
     );
     return { chains: scrapedChains };
-  }, [multiProvider, chainMetadata, scrapedDomains]);
+  }, [chainMetadataResolver, chainMetadata, scrapedDomains]);
 
   return { chains, isFetching, isError };
 }
 
 // TODO: Remove once all chains in the DB are scraped
-export function isUnscrapedDbChain(multiProvider: MultiProtocolProvider, domainId: DomainId) {
-  const chainName = multiProvider.tryGetChainName(domainId);
+export function isUnscrapedDbChain(
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainName'>,
+  domainId: DomainId,
+) {
+  const chainName = chainMetadataResolver.tryGetChainName(domainId);
   return chainName && unscrapedChainsInDb.includes(chainName);
 }

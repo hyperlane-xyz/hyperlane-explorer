@@ -1,7 +1,6 @@
-import { memo } from 'react';
-
 import { isZeroish } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import { memo } from 'react';
 
 import { truncateString } from '../../../utils/string';
 

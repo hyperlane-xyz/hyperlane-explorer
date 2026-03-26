@@ -2,7 +2,7 @@ import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
-import { useMultiProvider } from '../../../store';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter } from '../../../types';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
@@ -34,8 +34,8 @@ export function useMessageSearchQuery(
   warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
 ) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
-  const multiProvider = useMultiProvider();
-  const { chains } = useScrapedChains(multiProvider);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const { chains } = useScrapedChains(chainMetadataResolver);
   const mainnetDomainIds = Object.values(chains)
     .filter((chain) => !chain.isTestnet)
     .map((chain) => chain.domainId);
@@ -45,10 +45,10 @@ export function useMessageSearchQuery(
 
   // Get chains domainId
   const originDomainId = originChainNameFilter
-    ? multiProvider.tryGetDomainId(originChainNameFilter)
+    ? chainMetadataResolver.tryGetDomainId(originChainNameFilter)
     : null;
   const destDomainId = destinationChainNameFilter
-    ? multiProvider.tryGetDomainId(destinationChainNameFilter)
+    ? chainMetadataResolver.tryGetDomainId(destinationChainNameFilter)
     : null;
 
   // Validating filters
@@ -91,8 +91,8 @@ export function useMessageSearchQuery(
 
   // Parse results
   const unfilteredMessageList = useMemo(
-    () => parseMessageStubResult(multiProvider, scrapedChains, data),
-    [multiProvider, scrapedChains, data],
+    () => parseMessageStubResult(chainMetadataResolver, scrapedChains, data),
+    [chainMetadataResolver, scrapedChains, data],
   );
 
   // Apply client-side pending filter if needed
@@ -127,6 +127,7 @@ export function useMessageSearchQuery(
 
 export function useMessageQuery({ messageId, pause }: { messageId: string; pause: boolean }) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
+  const chainMetadataResolver = useChainMetadataResolver();
 
   // Assemble GraphQL Query
   const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
@@ -139,10 +140,9 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   });
 
   // Parse results
-  const multiProvider = useMultiProvider();
   const messageList = useMemo(
-    () => parseMessageQueryResult(multiProvider, scrapedChains, data),
-    [multiProvider, scrapedChains, data],
+    () => parseMessageQueryResult(chainMetadataResolver, scrapedChains, data),
+    [chainMetadataResolver, scrapedChains, data],
   );
   const isMessageFound = messageList.length > 0;
   const message = isMessageFound ? messageList[0] : null;
