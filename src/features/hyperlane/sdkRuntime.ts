@@ -1,14 +1,11 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
-import {
-  ConfiguredMultiProtocolProvider,
-  type ConfiguredMultiProtocolProvider as ConfiguredProviderType,
-} from '@hyperlane-xyz/sdk/providers/ConfiguredMultiProtocolProvider';
+import { MultiProviderAdapter } from '@hyperlane-xyz/sdk/providers/MultiProviderAdapter';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 
-export type ExplorerMultiProvider = ConfiguredProviderType<{ mailbox?: string }>;
+export type ExplorerMultiProvider = MultiProviderAdapter<{ mailbox?: string }>;
 
 export function createEmptyMultiProvider(): ExplorerMultiProvider {
-  return new ConfiguredMultiProtocolProvider({}, { providerBuilders: {} });
+  return new MultiProviderAdapter({}, { providerBuilders: {} });
 }
 
 // Explorer's provider-backed runtime paths are EVM-only today:
@@ -17,8 +14,10 @@ export function createEmptyMultiProvider(): ExplorerMultiProvider {
 export async function createRuntimeMultiProvider(
   chainMetadata: ChainMap<ChainMetadata<{ mailbox?: string }>>,
 ): Promise<ExplorerMultiProvider> {
-  const { createEvmRuntimeMultiProvider } = await import(
+  const { evmRuntimeProviderBuilders } = await import(
     '@hyperlane-xyz/sdk/providers/runtime/evm'
   );
-  return createEvmRuntimeMultiProvider(chainMetadata);
+  return new MultiProviderAdapter(chainMetadata, {
+    providerBuilders: evmRuntimeProviderBuilders,
+  });
 }

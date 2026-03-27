@@ -50,7 +50,7 @@ export function usePiChainMessageSearchQuery({
       logger.debug('Starting PI Chain message search for:', sanitizedInput);
       // TODO handle time-based filters here
       const query = { input: ensure0x(sanitizedInput) };
-      const allChains = Object.values(multiProvider.metadata);
+      const allChains: ChainMetadata[] = Object.values(multiProvider.metadata);
       const piChains = allChains.filter(
         (c) =>
           c.domainId !== undefined &&
