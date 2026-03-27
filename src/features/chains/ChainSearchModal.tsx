@@ -57,6 +57,10 @@ export function ChainSearchModal({
     () => mergeChainMetadataMap(chains, chainMetadataOverrides),
     [chains, chainMetadataOverrides],
   );
+  const allChainMetadata = useMemo(
+    () => mergeChainMetadataMap(chainMetadata, chainMetadataOverrides),
+    [chainMetadata, chainMetadataOverrides],
+  );
 
   const visibleChains = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -84,8 +88,8 @@ export function ChainSearchModal({
   return (
     <Modal isOpen={isOpen} close={close} panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]">
       {isAddingChain ? (
-        <AddChainForm
-          allChainMetadata={mergeChainMetadataMap(chainMetadata, chainMetadataOverrides)}
+      <AddChainForm
+          allChainMetadata={allChainMetadata}
           onBack={() => setIsAddingChain(false)}
           onChangeOverrideMetadata={setChainMetadataOverrides}
           overrideChainMetadata={chainMetadataOverrides}
