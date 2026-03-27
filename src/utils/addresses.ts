@@ -1,3 +1,4 @@
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import {
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
@@ -5,8 +6,6 @@ import {
   ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
-
-import type { ChainMetadataResolver } from '../features/chains/metadataManager';
 
 export function formatAddress(
   address: string,

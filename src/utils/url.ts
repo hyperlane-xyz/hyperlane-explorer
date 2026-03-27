@@ -1,7 +1,7 @@
 import type { ChainMetadata, ChainNameOrId } from '@hyperlane-xyz/sdk';
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { isZeroishAddress } from '@hyperlane-xyz/utils';
 
-import type { ChainMetadataResolver } from '../features/chains/metadataManager';
 import { logger } from './logger';
 
 type ExplorerMetadataResolver = Pick<ChainMetadataResolver, 'tryGetChainMetadata'>;

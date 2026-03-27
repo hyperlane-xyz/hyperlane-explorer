@@ -1,7 +1,7 @@
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { config } from '../../../consts/config';
 import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
-import type { ChainMetadataResolver } from '../../chains/metadataManager';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { MessageIdentifierType, buildMessageQuery } from './build';
 import { MessagesQueryResult } from './fragments';
