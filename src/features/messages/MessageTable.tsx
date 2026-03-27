@@ -12,6 +12,7 @@ import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteChainAddressMap } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
+import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString } from '../../utils/time';
 import type { ChainMetadataResolver } from '../chains/metadataManager';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
@@ -42,7 +43,7 @@ export function MessageTable({
   }, [isFetching, messageList, scrapedDomains.length]);
 
   useEffect(() => {
-    if (!backgroundPrefetchKey || typeof window === 'undefined') return;
+    if (!backgroundPrefetchKey) return;
 
     const messagesToPrefetch = messageList.slice(0, BACKGROUND_PREFETCH_COUNT);
     let cancelled = false;
@@ -57,30 +58,16 @@ export function MessageTable({
       );
     };
 
-    if ('requestIdleCallback' in window) {
-      const idleWindow = window as Window &
-        typeof globalThis & {
-          requestIdleCallback: typeof window.requestIdleCallback;
-          cancelIdleCallback: typeof window.cancelIdleCallback;
-        };
-      const idleId = idleWindow.requestIdleCallback(
-        () => {
-          void prefetchTopRows();
-        },
-        { timeout: 1_000 },
-      );
-      return () => {
-        cancelled = true;
-        idleWindow.cancelIdleCallback(idleId);
-      };
-    }
+    const cancelIdleSchedule = scheduleWhenIdle(
+      () => {
+        void prefetchTopRows();
+      },
+      { timeout: 1_000, fallbackDelay: 250 },
+    );
 
-    const timeoutId = globalThis.setTimeout(() => {
-      void prefetchTopRows();
-    }, 250);
     return () => {
       cancelled = true;
-      globalThis.clearTimeout(timeoutId);
+      cancelIdleSchedule();
     };
   }, [backgroundPrefetchKey, chainMetadataResolver, messageList, router, scrapedDomains]);
 

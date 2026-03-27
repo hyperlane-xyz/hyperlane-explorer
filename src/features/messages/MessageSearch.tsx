@@ -17,6 +17,7 @@ import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
 import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
+import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 
 import { MessageTable } from './MessageTable';
@@ -176,20 +177,7 @@ export function MessageSearch() {
       return;
     }
 
-    if (typeof window === 'undefined') return;
-
-    if ('requestIdleCallback' in window) {
-      const idleWindow = window as Window &
-        typeof globalThis & {
-          requestIdleCallback: typeof window.requestIdleCallback;
-          cancelIdleCallback: typeof window.cancelIdleCallback;
-        };
-      const idleId = idleWindow.requestIdleCallback(loadWarpRouteData, { timeout: 2_000 });
-      return () => idleWindow.cancelIdleCallback(idleId);
-    }
-
-    const timeoutId = globalThis.setTimeout(loadWarpRouteData, 1_500);
-    return () => globalThis.clearTimeout(timeoutId);
+    return scheduleWhenIdle(loadWarpRouteData, { timeout: 2_000, fallbackDelay: 1_500 });
   }, [ensureWarpRouteData, isWarpRouteMapLoaded, looksLikeWarpRoute]);
 
   // GraphQL query and results
