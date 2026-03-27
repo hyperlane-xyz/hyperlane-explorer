@@ -14,9 +14,7 @@ export function createEmptyMultiProvider(): ExplorerMultiProvider {
 export async function createRuntimeMultiProvider(
   chainMetadata: ChainMap<ChainMetadata<{ mailbox?: string }>>,
 ): Promise<ExplorerMultiProvider> {
-  const { evmRuntimeProviderBuilders } = await import(
-    '@hyperlane-xyz/sdk/providers/runtime/evm'
-  );
+  const { evmRuntimeProviderBuilders } = await import('@hyperlane-xyz/sdk/providers/runtime/evm');
   return new MultiProviderAdapter(chainMetadata, {
     providerBuilders: evmRuntimeProviderBuilders,
   });
