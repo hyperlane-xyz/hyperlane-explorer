@@ -249,9 +249,17 @@ function tryParseChainMetadata(
   }
 
   const metadata = result.data;
+  const chainId = metadata.chainId;
   const domainId = metadata.domainId;
   if (allChainMetadata[metadata.name]) {
     return { success: false, error: 'name is already in use by another chain' };
+  }
+
+  if (
+    chainId !== undefined &&
+    Object.values(allChainMetadata).some((chain) => areChainIdsEqual(chain.chainId, chainId))
+  ) {
+    return { success: false, error: 'chainId is already in use by another chain' };
   }
 
   if (
@@ -262,4 +270,33 @@ function tryParseChainMetadata(
   }
 
   return { success: true, data: metadata };
+}
+
+function areChainIdsEqual(
+  left: ChainMetadata['chainId'],
+  right: ChainMetadata['chainId'],
+): boolean {
+  if (left === undefined || left === null || right === undefined || right === null) {
+    return false;
+  }
+
+  if (left === right) return true;
+
+  const leftNumeric = tryNormalizeNumericChainId(left);
+  const rightNumeric = tryNormalizeNumericChainId(right);
+  return leftNumeric !== null && leftNumeric === rightNumeric;
+}
+
+function tryNormalizeNumericChainId(chainId: ChainMetadata['chainId']): number | null {
+  if (typeof chainId === 'number') {
+    return Number.isSafeInteger(chainId) ? chainId : null;
+  }
+
+  if (typeof chainId !== 'string' || !/^\d+$/.test(chainId)) return null;
+
+  const numericChainId = Number(chainId);
+  if (!Number.isSafeInteger(numericChainId)) return null;
+  if (String(numericChainId) !== chainId) return null;
+
+  return numericChainId;
 }
