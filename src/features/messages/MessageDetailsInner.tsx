@@ -65,6 +65,7 @@ interface Props {
 
 export function MessageDetailsInner({ messageId, message: messageFromUrlParams }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
@@ -125,6 +126,10 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   );
 
   useDynamicBannerColor(isFetching, status, isMessageFound, isError);
+
+  useEffect(() => {
+    ensureChainMetadata().catch((e) => logger.error('Error loading chain metadata', e));
+  }, [ensureChainMetadata]);
 
   useEffect(() => {
     if (isWarpRouteDataLoaded) return;
