@@ -242,6 +242,7 @@ function AddChainForm({
 function tryParseChainMetadata(
   input: string,
   allChainMetadata: Record<string, ChainMetadata>,
+  overrideChainMetadata: Record<string, Partial<ChainMetadata>>,
 ): { success: true; data: ChainMetadata } | { success: false; error: string } {
   const parsed = tryParseJsonOrYaml(input);
   if (!parsed.success) return { success: false, error: String(parsed.error) };
@@ -258,21 +259,26 @@ function tryParseChainMetadata(
   const metadata = result.data;
   const chainId = metadata.chainId;
   const effectiveDomainId = getEffectiveDomainId(metadata);
-  if (allChainMetadata[metadata.name]) {
+  const hasExistingOverride = !!overrideChainMetadata[metadata.name];
+  if (allChainMetadata[metadata.name] && !hasExistingOverride) {
     return { success: false, error: 'name is already in use by another chain' };
   }
 
   if (
     chainId !== undefined &&
-    Object.values(allChainMetadata).some((chain) => areChainIdsEqual(chain.chainId, chainId))
+    Object.entries(allChainMetadata).some(
+      ([chainName, chain]) =>
+        chainName !== metadata.name && areChainIdsEqual(chain.chainId, chainId),
+    )
   ) {
     return { success: false, error: 'chainId is already in use by another chain' };
   }
 
   if (
     effectiveDomainId !== null &&
-    Object.values(allChainMetadata).some(
-      (chain) => getEffectiveDomainId(chain) === effectiveDomainId,
+    Object.entries(allChainMetadata).some(
+      ([chainName, chain]) =>
+        chainName !== metadata.name && getEffectiveDomainId(chain) === effectiveDomainId,
     )
   ) {
     return { success: false, error: 'domainId is already in use by another chain' };
