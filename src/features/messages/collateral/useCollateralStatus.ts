@@ -12,7 +12,6 @@ import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
-
 import { CollateralInfo, CollateralStatus } from './types';
 import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 

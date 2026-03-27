@@ -1,6 +1,5 @@
-import { Client } from '@urql/core';
-
 import { GithubRegistry } from '@hyperlane-xyz/registry';
+import { Client } from '@urql/core';
 
 import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';

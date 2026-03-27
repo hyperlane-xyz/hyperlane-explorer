@@ -7,7 +7,6 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
 import { formatAmountCompact } from '../../../utils/amount';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-
 import { ChainBalance, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
