@@ -33,6 +33,9 @@ interface PageProps {
   host: string;
 }
 
+const LINK_PREVIEW_BOT_RE =
+  /bot|crawl|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|discordbot|whatsapp|skypeuripreview/i;
+
 const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const router = useRouter();
   const { messageId, data } = router.query;
@@ -92,10 +95,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const baseUrl = `${protocol}://${host}`;
 
   const userAgent = ctx.req?.headers['user-agent'] || '';
-  const isBot =
-    /bot|crawl|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|discordbot|whatsapp/i.test(
-      userAgent,
-    );
+  const isBot = LINK_PREVIEW_BOT_RE.test(userAgent);
 
   if (isBot && messageId && typeof messageId === 'string') {
     try {

@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
@@ -53,15 +53,23 @@ export function MessageDetailsRuntime({
   warpRouteDetails,
   onStateChange,
 }: Props) {
-  const [piState, setPiState] = useState<PiMessageDetailsState>(DEFAULT_PI_MESSAGE_DETAILS_STATE);
+  const [piState, setPiState] = useState<{
+    messageId: string;
+    value: PiMessageDetailsState;
+  }>({ messageId, value: DEFAULT_PI_MESSAGE_DETAILS_STATE });
   const shouldRunPi = !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
+  const activePiState =
+    piState.messageId === messageId ? piState.value : DEFAULT_PI_MESSAGE_DETAILS_STATE;
 
-  useEffect(() => {
-    setPiState(DEFAULT_PI_MESSAGE_DETAILS_STATE);
-  }, [messageId]);
+  const handlePiStateChange = useCallback(
+    (value: PiMessageDetailsState) => {
+      setPiState({ messageId, value });
+    },
+    [messageId],
+  );
 
-  const isMessageFound = baseIsMessageFound || piState.isMessageFound;
-  const queriedMessage = piState.message || baseMessage;
+  const isMessageFound = baseIsMessageFound || activePiState.isMessageFound;
+  const queriedMessage = activePiState.message || baseMessage;
   const { messageWithDeliveryStatus, debugResult, isDeliveryStatusFetching } =
     useMessageDeliveryStatus({
       message: queriedMessage,
@@ -69,13 +77,13 @@ export function MessageDetailsRuntime({
     });
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
   const hasRun =
-    hasDetailedUrlMessage || isGraphQlMessageFound || baseIsMessageFound || piState.hasRun;
+    hasDetailedUrlMessage || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
 
   useEffect(() => {
     onStateChange({
       hasRun,
-      isFetching: piState.isFetching,
-      isError: piState.isError,
+      isFetching: activePiState.isFetching,
+      isError: activePiState.isError,
       isMessageFound,
       message,
       debugResult,
@@ -88,13 +96,19 @@ export function MessageDetailsRuntime({
     isMessageFound,
     message,
     onStateChange,
-    piState.isError,
-    piState.isFetching,
+    activePiState.isError,
+    activePiState.isFetching,
   ]);
 
   return (
     <>
-      {shouldRunPi && <PiMessageDetailsBridge messageId={messageId} onStateChange={setPiState} />}
+      {shouldRunPi && (
+        <PiMessageDetailsBridge
+          key={messageId}
+          messageId={messageId}
+          onStateChange={handlePiStateChange}
+        />
+      )}
       <DestinationTransactionCard
         chainName={destinationChainName}
         domainId={message?.destinationDomainId ?? queriedMessage.destinationDomainId}
