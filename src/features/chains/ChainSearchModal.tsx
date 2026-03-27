@@ -5,12 +5,11 @@ import {
   type ChainMetadata,
 } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { tryParseJsonOrYaml } from '@hyperlane-xyz/utils';
-import { ChangeEvent, useMemo, useState } from 'react';
-
 import { Modal } from '@hyperlane-xyz/widgets/layout/Modal';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { useChainMetadataMap, useChainMetadataResolver, useStore } from '../../metadataStore';
-
 import { useScrapedChains } from './queries/useScrapedChains';
 
 const PLACEHOLDER_TEXT = `# YAML data
@@ -80,6 +79,11 @@ export function ChainSearchModal({
         return aLabel.localeCompare(bLabel);
       });
   }, [mergedChainMetadata, query]);
+
+  useEffect(() => {
+    if (showAddChainMenu === undefined) return;
+    setIsAddingChain(showAddChainMenu);
+  }, [showAddChainMenu]);
 
   const handleSelectChain = (metadata: ChainMetadata) => {
     onClickChain?.(metadata);

@@ -10,7 +10,6 @@ import { useMemo } from 'react';
 import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
-
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 

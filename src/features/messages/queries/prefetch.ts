@@ -1,4 +1,5 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
+
 import { config } from '../../../consts/config';
 import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
