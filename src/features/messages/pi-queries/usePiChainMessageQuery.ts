@@ -6,9 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
-import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
