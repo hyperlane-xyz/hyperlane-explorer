@@ -172,7 +172,11 @@ function AddChainForm({
   };
 
   const onClickAdd = async () => {
-    const parsed = tryParseChainMetadata(textInput, allChainMetadata);
+    const parsed = tryParseChainMetadata(
+      textInput,
+      allChainMetadata,
+      overrideChainMetadata,
+    );
     if (!parsed.success) {
       setError(parsed.error);
       return;
