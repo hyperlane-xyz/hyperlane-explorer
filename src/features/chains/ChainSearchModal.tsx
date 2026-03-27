@@ -174,6 +174,7 @@ function AddChainForm({
       return;
     }
 
+    setError(null);
     setIsSaving(true);
     try {
       await onChangeOverrideMetadata({
@@ -182,6 +183,8 @@ function AddChainForm({
       });
       setTextInput('');
       onBack();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to save chain metadata');
     } finally {
       setIsSaving(false);
     }
