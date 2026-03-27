@@ -133,8 +133,8 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending) {
-    // Show collateral warning for all pending messages (not just EVM)
-    // since Token.getBalance() now supports cross-VM collateral checking
+    // Show collateral warning for pending routes when the explorer can query
+    // the destination runtime directly. Today that path is EVM-only.
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
       <>

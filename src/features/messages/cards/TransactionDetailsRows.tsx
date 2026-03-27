@@ -1,10 +1,10 @@
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import BigNumber from 'bignumber.js';
 
 import { MessageTx, MessageTxStub } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getBlockExplorerAddressUrl, getBlockExplorerTxUrl } from '../../../utils/url';
-import type { ChainMetadataResolver } from '../../chains/metadataManager';
 import { getChainDisplayName } from '../../chains/utils';
 import { KeyValueRow } from './KeyValueRow';
 

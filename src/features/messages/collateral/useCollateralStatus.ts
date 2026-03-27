@@ -1,4 +1,9 @@
-import { MultiProtocolProvider, Token, TokenStandard } from '@hyperlane-xyz/sdk';
+import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
+import {
+  EvmHypVSXERC20LockboxAdapter,
+  EvmHypXERC20LockboxAdapter,
+} from '@hyperlane-xyz/sdk/token/adapters/EvmTokenAdapter';
+import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -6,6 +11,7 @@ import { useEffect, useMemo } from 'react';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { CollateralInfo, CollateralStatus } from './types';
 import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 
@@ -14,8 +20,7 @@ const COLLATERAL_REFETCH_INTERVAL = 30000; // 30 seconds
 const COLLATERAL_STALE_TIME = 20000; // 20 seconds
 
 /**
- * Fetches the collateral balance using the SDK's Token class.
- * This properly handles cross-VM collateral checking (EVM, Sealevel, CosmWasm).
+ * Fetches collateral for EVM hyp tokens without pulling the full runtime Token graph.
  */
 async function fetchCollateralBalance(
   destinationToken: WarpRouteDetails['destinationToken'],
@@ -52,8 +57,15 @@ async function fetchCollateralBalance(
       return undefined;
     }
 
-    // Create Token instance from the destination token config
-    const token = new Token(destinationToken);
+    const adapter = createEvmHypAdapter(multiProvider, destinationToken);
+    if (!adapter) {
+      logger.debug('Skipping collateral check for unsupported token runtime', {
+        chain: destinationToken.chainName,
+        token: destinationToken.symbol,
+        standard: destinationToken.standard,
+      });
+      return undefined;
+    }
 
     // For xERC20 lockboxes, collateral is held by lockbox(), not the router address.
     // Use getBridgedSupply instead; if unavailable, we can't reliably check collateral.
@@ -61,10 +73,13 @@ async function fetchCollateralBalance(
       destinationToken.standard === TokenStandard.EvmHypXERC20Lockbox ||
       destinationToken.standard === TokenStandard.EvmHypVSXERC20Lockbox
     ) {
-      const adapter = token.getAdapter(multiProvider);
-      if ('getBridgedSupply' in adapter && typeof adapter.getBridgedSupply === 'function') {
+      const lockboxAdapter = adapter as EvmHypXERC20LockboxAdapter | EvmHypVSXERC20LockboxAdapter;
+      if (
+        'getBridgedSupply' in lockboxAdapter &&
+        typeof lockboxAdapter.getBridgedSupply === 'function'
+      ) {
         try {
-          const bridgedSupply = await adapter.getBridgedSupply();
+          const bridgedSupply = await lockboxAdapter.getBridgedSupply();
           if (bridgedSupply !== undefined) {
             logger.debug('Fetched lockbox collateral from bridged supply', {
               chain: destinationToken.chainName,
@@ -90,15 +105,15 @@ async function fetchCollateralBalance(
     }
 
     // For non-lockbox collateral types, check the router balance directly.
-    const tokenAmount = await token.getBalance(multiProvider, destinationToken.addressOrDenom);
+    const tokenAmount = await adapter.getBalance(destinationToken.addressOrDenom);
 
     logger.debug('Fetched collateral balance', {
       chain: destinationToken.chainName,
       token: destinationToken.symbol,
-      balance: tokenAmount.amount.toString(),
+      balance: tokenAmount.toString(),
     });
 
-    return tokenAmount.amount;
+    return tokenAmount;
   } catch (error) {
     logger.error('Error fetching collateral balance', {
       error,

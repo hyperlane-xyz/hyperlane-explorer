@@ -1,9 +1,9 @@
 import { Mailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { messageId } from '@hyperlane-xyz/utils';
 
 import { DELIVERY_LOG_CHECK_BLOCK_RANGE } from '../../consts/values';
 import { logger } from '../../utils/logger';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 
 function getMailboxAddress(
   multiProvider: Pick<MultiProtocolProvider, 'tryGetChainMetadata'>,

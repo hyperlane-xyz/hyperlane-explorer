@@ -1,7 +1,6 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
 import { objKeys } from '@hyperlane-xyz/utils';
-
-import { WarpRouteChainAddressMap } from '../types';
 
 export function getTokenFromWarpRouteChainAddressMap(
   chainMetadata: ChainMetadata,

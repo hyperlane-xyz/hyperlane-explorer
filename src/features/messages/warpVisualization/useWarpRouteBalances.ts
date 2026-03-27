@@ -1,21 +1,15 @@
+import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
 import {
-  EvmHypCollateralAdapter,
-  EvmHypNativeAdapter,
-  EvmHypSyntheticAdapter,
-  EvmHypVSXERC20Adapter,
   EvmHypVSXERC20LockboxAdapter,
-  EvmHypXERC20Adapter,
   EvmHypXERC20LockboxAdapter,
-  IHypTokenAdapter,
-  MultiProtocolProvider,
-  TokenStandard,
-} from '@hyperlane-xyz/sdk';
-import { ProtocolType } from '@hyperlane-xyz/utils';
+} from '@hyperlane-xyz/sdk/token/adapters/EvmTokenAdapter';
+import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { useMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
@@ -61,55 +55,6 @@ function isSupportedXERC20Standard(standard: TokenStandard | string | undefined)
 }
 
 /**
- * Create the appropriate HypTokenAdapter for a token
- * Only EVM adapters are supported - non-EVM adapters have native dependencies
- * that don't work in the browser bundle
- */
-function createHypAdapter(
-  multiProvider: MultiProtocolProvider,
-  token: WarpRouteTokenVisualization,
-): IHypTokenAdapter<unknown> | undefined {
-  const { chainName, addressOrDenom, standard } = token;
-
-  if (!chainName || !addressOrDenom || !standard) {
-    return undefined;
-  }
-
-  const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-  if (!chainMetadata) {
-    return undefined;
-  }
-
-  const protocol = chainMetadata.protocol;
-
-  // Only EVM adapters are supported
-  if (protocol !== ProtocolType.Ethereum) {
-    return undefined;
-  }
-
-  switch (standard) {
-    case TokenStandard.EvmHypCollateral:
-      return new EvmHypCollateralAdapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypNative:
-      return new EvmHypNativeAdapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypSynthetic:
-      return new EvmHypSyntheticAdapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypXERC20:
-      return new EvmHypXERC20Adapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypVSXERC20:
-      return new EvmHypVSXERC20Adapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypXERC20Lockbox:
-      return new EvmHypXERC20LockboxAdapter(chainName, multiProvider, { token: addressOrDenom });
-    case TokenStandard.EvmHypVSXERC20Lockbox:
-      return new EvmHypVSXERC20LockboxAdapter(chainName, multiProvider, {
-        token: addressOrDenom,
-      });
-    default:
-      return undefined;
-  }
-}
-
-/**
  * Fetch the balance data for a single token
  */
 async function fetchTokenBalance(
@@ -117,7 +62,7 @@ async function fetchTokenBalance(
   token: WarpRouteTokenVisualization,
 ): Promise<ChainBalance | undefined> {
   try {
-    const adapter = createHypAdapter(multiProvider, token);
+    const adapter = createEvmHypAdapter(multiProvider, token);
     if (!adapter) {
       return undefined;
     }

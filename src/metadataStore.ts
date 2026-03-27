@@ -1,24 +1,25 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata, ChainName, WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import {
+  createChainMetadataResolver,
+  type ChainMetadataResolver,
+} from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import type { ChainMap, ChainName } from '@hyperlane-xyz/sdk/types';
+import {
+  buildWarpRouteMaps,
+  type WarpRouteChainAddressMap,
+  type WarpRouteConfigs,
+  type WarpRouteIdToAddressesMap,
+} from '@hyperlane-xyz/sdk/warp/read';
 import { objFilter } from '@hyperlane-xyz/utils';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { config } from './consts/config';
-import {
-  ChainMetadataResolver,
-  createChainMetadataResolver,
-} from './features/chains/metadataManager';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { clearPrefetchedMessages } from './features/messages/queries/prefetch';
-import {
-  TokenArgsWithWireDecimals,
-  WarpRouteChainAddressMap,
-  WarpRouteConfigs,
-  WarpRouteIdToAddressesMap,
-} from './types';
 import { logger } from './utils/logger';
 
 const PERSIST_STATE_VERSION = 2;
@@ -149,7 +150,7 @@ export const useStore = create<MetadataState>()(
         if (!warpRouteDataRequest || warpRouteDataRequest.registry !== registry) {
           warpRouteDataRequest = {
             registry,
-            promise: buildWarpRouteMaps(registry),
+            promise: loadWarpRouteData(registry),
           };
         }
 
@@ -221,12 +222,12 @@ export function useWarpRouteIdToAddressesMap() {
   return useStore((s) => s.warpRouteIdToAddressesMap);
 }
 
-async function buildWarpRouteMaps(registry: IRegistry): Promise<{
+export async function loadWarpRouteData(registry: IRegistry): Promise<{
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
   warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
   warpRouteConfigs: WarpRouteConfigs;
 }> {
-  let warpRouteConfigs: Record<string, WarpCoreConfig>;
+  let warpRouteConfigs: WarpRouteConfigs;
 
   try {
     logger.debug('Building warp route maps from GithubRegistry');
@@ -240,36 +241,7 @@ async function buildWarpRouteMaps(registry: IRegistry): Promise<{
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
 
-  const warpRouteChainAddressMap: WarpRouteChainAddressMap = {};
-  const warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap = {};
-
-  Object.entries(warpRouteConfigs).forEach(([routeId, { tokens }]) => {
-    if (!tokens.length) return;
-
-    const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
-    const routeIdLower = routeId.toLowerCase();
-    warpRouteIdToAddressesMap[routeIdLower] = [];
-
-    tokens.forEach((token) => {
-      const { chainName, addressOrDenom, connections: _connections, ...rest } = token;
-      if (!addressOrDenom) return;
-
-      warpRouteChainAddressMap[chainName] ||= {};
-      warpRouteChainAddressMap[chainName][addressOrDenom] = {
-        ...rest,
-        chainName,
-        addressOrDenom,
-        wireDecimals,
-      } as TokenArgsWithWireDecimals;
-
-      warpRouteIdToAddressesMap[routeIdLower].push({
-        chainName,
-        address: addressOrDenom,
-      });
-    });
-  });
-
-  return { warpRouteChainAddressMap, warpRouteIdToAddressesMap, warpRouteConfigs };
+  return buildWarpRouteMaps(warpRouteConfigs);
 }
 
 function canUsePublishedWarpRouteFallback(registry: IRegistry) {

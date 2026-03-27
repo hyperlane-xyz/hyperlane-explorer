@@ -1,4 +1,4 @@
-import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';

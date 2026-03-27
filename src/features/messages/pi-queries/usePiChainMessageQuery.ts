@@ -1,5 +1,5 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 
@@ -8,6 +8,7 @@ import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
@@ -49,7 +50,7 @@ export function usePiChainMessageSearchQuery({
       logger.debug('Starting PI Chain message search for:', sanitizedInput);
       // TODO handle time-based filters here
       const query = { input: ensure0x(sanitizedInput) };
-      const allChains = Object.values(multiProvider.metadata);
+      const allChains: ChainMetadata[] = Object.values(multiProvider.metadata);
       const piChains = allChains.filter(
         (c) =>
           c.domainId !== undefined &&

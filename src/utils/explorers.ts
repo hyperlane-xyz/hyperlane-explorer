@@ -1,10 +1,10 @@
-import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { fetchWithTimeout, sleep } from '@hyperlane-xyz/utils';
 // TODO de-dupe this file with widgets lib's utils/explorers.ts
 // The widgets lib doesn't export those yet, need to fix that first.
 import { BigNumber, providers } from 'ethers';
 
 import { config } from '../consts/config';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../features/hyperlane/sdkRuntime';
 import type { ExtendedLog } from '../types';
 import { logger } from './logger';
 import { toDecimalNumber, tryToDecimalNumber } from './number';
