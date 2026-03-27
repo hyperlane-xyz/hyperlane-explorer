@@ -1,12 +1,10 @@
+import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
-
-import { useInterval } from '@hyperlane-xyz/widgets';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter } from '../../../types';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
-
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';

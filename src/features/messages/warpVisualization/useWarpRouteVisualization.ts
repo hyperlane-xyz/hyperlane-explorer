@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { useStore } from '../../../store';
 import { WarpRouteConfigs, WarpRouteDetails } from '../../../types';
 import { normalizeAddressToHex } from '../../../utils/yamlParsing';
-
 import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
 
 /**

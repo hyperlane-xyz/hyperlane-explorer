@@ -1,5 +1,6 @@
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
+
 import { logger } from '../../utils/logger';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { MessageSearch } from './MessageSearch';

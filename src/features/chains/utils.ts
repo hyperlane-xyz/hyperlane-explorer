@@ -3,7 +3,6 @@ import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
-
 import type { ChainMetadataResolver } from './metadataManager';
 import { DomainsEntry } from './queries/fragments';
 

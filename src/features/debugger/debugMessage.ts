@@ -1,7 +1,3 @@
-// Forked from debug script in monorepo but mostly rewritten
-// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, utils as ethersUtils, providers } from 'ethers';
-
 import {
   InterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
   IInterchainSecurityModule__factory as InterchainSecurityModuleFactory,
@@ -25,14 +21,16 @@ import {
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
-import { MAILBOX_VERSION } from '../../consts/mailbox';
+// Forked from debug script in monorepo but mostly rewritten
+// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
+import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
+import { debugIgnoredChains } from '../../consts/config';
+import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
-
-import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;

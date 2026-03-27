@@ -1,6 +1,7 @@
 import { formatMessage } from '@hyperlane-xyz/utils';
 import { SelectField, Tooltip } from '@hyperlane-xyz/widgets';
 import { useEffect, useMemo, useState } from 'react';
+
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { MAILBOX_VERSION } from '../../../consts/mailbox';
 import { useChainMetadataResolver } from '../../../metadataStore';

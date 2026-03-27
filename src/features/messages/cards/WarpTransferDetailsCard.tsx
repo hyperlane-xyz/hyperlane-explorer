@@ -1,5 +1,6 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
+
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';

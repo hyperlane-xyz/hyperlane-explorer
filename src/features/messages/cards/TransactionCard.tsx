@@ -1,6 +1,7 @@
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useId, useState } from 'react';
+
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';

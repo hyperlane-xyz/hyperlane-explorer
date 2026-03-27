@@ -3,6 +3,7 @@ import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
+
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
@@ -10,13 +11,13 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
-import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
-import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
 } from './cards/OriginTransactionCard';
 import { useIsIcaMessage } from './icaUtils';
+import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
+import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';

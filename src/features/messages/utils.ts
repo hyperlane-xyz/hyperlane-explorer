@@ -6,6 +6,7 @@ import {
   parseWarpRouteMessage,
   toBase64,
 } from '@hyperlane-xyz/utils';
+
 import { Message, MessageStub, WarpRouteChainAddressMap, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';

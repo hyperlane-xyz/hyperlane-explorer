@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { BigNumber, providers } from 'ethers';
-
 import { InterchainAccountRouter__factory as InterchainAccountRouterFactory } from '@hyperlane-xyz/core';
 import { isValidAddress } from '@hyperlane-xyz/utils';
+import { useQuery } from '@tanstack/react-query';
+import { BigNumber, providers } from 'ethers';
 
 import { useReadyMultiProvider } from '../../store';
 import { logger } from '../../utils/logger';

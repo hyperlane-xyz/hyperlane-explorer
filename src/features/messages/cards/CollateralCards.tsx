@@ -1,7 +1,7 @@
+import { fromWei } from '@hyperlane-xyz/utils';
 import { ErrorIcon, Modal, RefreshIcon, useModal } from '@hyperlane-xyz/widgets';
 import Link from 'next/link';
 
-import { fromWei } from '@hyperlane-xyz/utils';
 import { TextButton } from '../../../components/buttons/TextButton';
 import { Color } from '../../../styles/Color';
 import { WarpRouteDetails } from '../../../types';

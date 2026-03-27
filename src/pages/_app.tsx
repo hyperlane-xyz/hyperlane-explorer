@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
+
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
-
 import { AppLayout } from '../AppLayout';
 import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
@@ -16,6 +16,7 @@ import { config } from '../consts/config';
 import { links } from '../consts/links';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
+
 import '../styles/global.css';
 
 const AppClientOverlays = dynamic(

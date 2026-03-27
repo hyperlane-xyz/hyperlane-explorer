@@ -1,7 +1,6 @@
+import { IconButton, SpinnerIcon, XIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { ChangeEvent } from 'react';
-
-import { IconButton, SpinnerIcon, XIcon } from '@hyperlane-xyz/widgets';
 
 import SearchIcon from '../../images/icons/search.svg';
 import { Color } from '../../styles/Color';

@@ -1,7 +1,6 @@
+import { IconButton, SearchIcon } from '@hyperlane-xyz/widgets';
 import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-
-import { IconButton, SearchIcon } from '@hyperlane-xyz/widgets';
 
 import { Color } from '../../styles/Color';
 

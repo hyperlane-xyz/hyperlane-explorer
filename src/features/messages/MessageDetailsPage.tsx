@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+
 import { Message, MessageStub } from '../../types';
 import { MessageDetailsLoading } from './MessageDetailsLoading';
 import { getPrefetchedMessageDetails, getPrefetchedMessageStub } from './queries/prefetch';

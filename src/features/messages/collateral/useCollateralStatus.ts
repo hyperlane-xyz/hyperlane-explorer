@@ -6,7 +6,6 @@ import { useEffect, useMemo } from 'react';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
-
 import { CollateralInfo, CollateralStatus } from './types';
 import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 

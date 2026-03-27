@@ -1,6 +1,7 @@
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { constants } from 'ethers';
+
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
