@@ -257,7 +257,7 @@ function tryParseChainMetadata(
 
   const metadata = result.data;
   const chainId = metadata.chainId;
-  const domainId = metadata.domainId;
+  const effectiveDomainId = getEffectiveDomainId(metadata);
   if (allChainMetadata[metadata.name]) {
     return { success: false, error: 'name is already in use by another chain' };
   }
@@ -270,8 +270,10 @@ function tryParseChainMetadata(
   }
 
   if (
-    domainId !== undefined &&
-    Object.values(allChainMetadata).some((chain) => chain.domainId === domainId)
+    effectiveDomainId !== null &&
+    Object.values(allChainMetadata).some(
+      (chain) => getEffectiveDomainId(chain) === effectiveDomainId,
+    )
   ) {
     return { success: false, error: 'domainId is already in use by another chain' };
   }
@@ -292,6 +294,14 @@ function areChainIdsEqual(
   const leftNumeric = tryNormalizeNumericChainId(left);
   const rightNumeric = tryNormalizeNumericChainId(right);
   return leftNumeric !== null && leftNumeric === rightNumeric;
+}
+
+function getEffectiveDomainId(metadata: Pick<ChainMetadata, 'chainId' | 'domainId'>) {
+  if (metadata.domainId !== undefined && metadata.domainId !== null) {
+    return metadata.domainId;
+  }
+
+  return tryNormalizeNumericChainId(metadata.chainId);
 }
 
 function tryNormalizeNumericChainId(chainId: ChainMetadata['chainId']): number | null {
