@@ -7,6 +7,7 @@ import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
+import { useWarpFees } from '../warpFees/useWarpFees';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
@@ -52,6 +53,8 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     warpRouteDetails,
   ]);
 
+  const warpFees = useWarpFees(message, warpRouteDetails);
+
   if (!warpRouteDetails) return null;
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
@@ -91,6 +94,22 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               blurValue={blur}
               showCopy
             />
+            {warpFees && (
+              <>
+                <KeyValueRow
+                  label="Warp fee:"
+                  labelWidth="w-28 sm:w-32"
+                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+                <KeyValueRow
+                  label="Total sent:"
+                  labelWidth="w-28 sm:w-32"
+                  display={`${warpFees.totalSent} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+              </>
+            )}
             <KeyValueRow
               label="Origin token:"
               labelWidth="w-28 sm:w-32"
