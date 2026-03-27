@@ -64,7 +64,7 @@ export function ChainSearchModal({
       .filter((metadata) => {
         if (!normalizedQuery) return true;
         return (
-          metadata.name.includes(normalizedQuery) ||
+          metadata.name.toLowerCase().includes(normalizedQuery) ||
           metadata.displayName?.toLowerCase().includes(normalizedQuery) ||
           metadata.chainId?.toString().includes(normalizedQuery) ||
           metadata.domainId?.toString().includes(normalizedQuery)
@@ -249,11 +249,15 @@ function tryParseChainMetadata(
   }
 
   const metadata = result.data;
+  const domainId = metadata.domainId;
   if (allChainMetadata[metadata.name]) {
     return { success: false, error: 'name is already in use by another chain' };
   }
 
-  if (Object.values(allChainMetadata).some((chain) => chain.domainId === metadata.domainId)) {
+  if (
+    domainId !== undefined &&
+    Object.values(allChainMetadata).some((chain) => chain.domainId === domainId)
+  ) {
     return { success: false, error: 'domainId is already in use by another chain' };
   }
 
