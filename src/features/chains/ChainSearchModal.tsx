@@ -70,8 +70,8 @@ export function ChainSearchModal({
         return (
           metadata.name.toLowerCase().includes(normalizedQuery) ||
           metadata.displayName?.toLowerCase().includes(normalizedQuery) ||
-          metadata.chainId?.toString().includes(normalizedQuery) ||
-          metadata.domainId?.toString().includes(normalizedQuery)
+          metadata.chainId?.toString().toLowerCase().includes(normalizedQuery) ||
+          metadata.domainId?.toString().toLowerCase().includes(normalizedQuery)
         );
       })
       .sort((a, b) => {
