@@ -5,10 +5,7 @@ import { GithubRegistry } from '@hyperlane-xyz/registry';
 import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';
 import { DOMAINS_QUERY, DomainsEntry } from '../chains/queries/fragments';
-import {
-  createRuntimeMultiProvider,
-  type ExplorerMultiProvider,
-} from '../hyperlane/sdkRuntime';
+import { createRuntimeMultiProvider, type ExplorerMultiProvider } from '../hyperlane/sdkRuntime';
 
 // TODO de-dupe this with store.ts and handle registry/multiProvider concerns in a single place
 export async function getMultiProvider(): Promise<ExplorerMultiProvider> {

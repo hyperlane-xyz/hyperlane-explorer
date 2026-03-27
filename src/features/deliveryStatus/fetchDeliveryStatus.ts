@@ -8,8 +8,8 @@ import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
-import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { MessageDebugStatus } from '../debugger/types';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { checkIsMessageDelivered } from '../messages/deliveryUtils';
 import {
   MessageDeliveryFailingResult,

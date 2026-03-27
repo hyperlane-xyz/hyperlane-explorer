@@ -88,7 +88,7 @@ export function ChainSearchModal({
   return (
     <Modal isOpen={isOpen} close={close} panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]">
       {isAddingChain ? (
-      <AddChainForm
+        <AddChainForm
           allChainMetadata={allChainMetadata}
           onBack={() => setIsAddingChain(false)}
           onChangeOverrideMetadata={setChainMetadataOverrides}
@@ -172,11 +172,7 @@ function AddChainForm({
   };
 
   const onClickAdd = async () => {
-    const parsed = tryParseChainMetadata(
-      textInput,
-      allChainMetadata,
-      overrideChainMetadata,
-    );
+    const parsed = tryParseChainMetadata(textInput, allChainMetadata, overrideChainMetadata);
     if (!parsed.success) {
       setError(parsed.error);
       return;

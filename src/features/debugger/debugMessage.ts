@@ -6,12 +6,7 @@ import {
   IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import {
-  ChainMap,
-  ChainMetadata,
-  isProxy,
-  proxyImplementation,
-} from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, isProxy, proxyImplementation } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
