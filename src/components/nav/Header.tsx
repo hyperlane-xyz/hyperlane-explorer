@@ -1,4 +1,4 @@
-import { ChevronIcon } from '@hyperlane-xyz/widgets';
+import { WideChevronIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 
 import { docLinks, links } from '../../consts/links';
+import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 
@@ -142,7 +143,13 @@ function DropdownButton() {
 
 function DropdownChevron({ className }: { className?: string }) {
   return (
-    <ChevronIcon width={10} height={6} direction="s" className={clsx(className, 'text-white')} />
+    <WideChevronIcon
+      width={10}
+      height={14}
+      direction="s"
+      color={Color.white}
+      className={clsx(className)}
+    />
   );
 }
 

@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import type { ErrorInfo, PropsWithChildren, ReactNode } from 'react';
-import { Component as ReactComponent, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
 
 import { AppLayout } from '../AppLayout';
+import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { OGHead } from '../components/OGHead';
 import { OG_BASE_URL } from '../consts/appMetadata';
@@ -17,7 +17,6 @@ import { links } from '../consts/links';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 import '../styles/global.css';
-import { logger } from '../utils/logger';
 
 const AppClientOverlays = dynamic(
   () => import('../components/AppClientOverlays').then((mod) => mod.AppClientOverlays),
@@ -46,38 +45,6 @@ function useIsSsr() {
   return isSsr;
 }
 
-class InlineErrorBoundary extends ReactComponent<PropsWithChildren, { hasError: boolean }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error('Unhandled app error', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          <h1 className="text-2xl font-medium text-black">Something went wrong</h1>
-          <a
-            href={links.help}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 text-sm underline underline-offset-2"
-          >
-            Visit the Hyperlane Help Center
-          </a>
-        </div>
-      );
-    }
-
-    return this.props.children as ReactNode;
-  }
-}
-
 export default function App({ Component, router, pageProps }: AppProps) {
   // Disable app SSR for now as it's not needed and
   // complicates graphql integration. However, we still need to render
@@ -85,16 +52,15 @@ export default function App({ Component, router, pageProps }: AppProps) {
   const isSsr = useIsSsr();
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onRouteChangeStart = (url: string) => {
-      if (isMessageRoute(url)) {
-        setPendingRoute(url);
-      } else {
-        setPendingRoute(null);
-      }
-    };
-    const onRouteChangeEnd = () => setPendingRoute(null);
+  const onRouteChangeStart = useCallback((url: string) => {
+    setPendingRoute(isMessageRoute(url) ? url : null);
+  }, []);
 
+  const onRouteChangeEnd = useCallback(() => {
+    setPendingRoute(null);
+  }, []);
+
+  useEffect(() => {
     router.events.on('routeChangeStart', onRouteChangeStart);
     router.events.on('routeChangeComplete', onRouteChangeEnd);
     router.events.on('routeChangeError', onRouteChangeEnd);
@@ -104,7 +70,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
       router.events.off('routeChangeComplete', onRouteChangeEnd);
       router.events.off('routeChangeError', onRouteChangeEnd);
     };
-  }, [router.events]);
+  }, [onRouteChangeEnd, onRouteChangeStart, router.events]);
 
   // Note, the font definition is required both here and in _document.tsx
   // Otherwise Next.js will not load the font
@@ -145,10 +111,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   return (
     <div className="font-sans text-black">
       <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
-      <InlineErrorBoundary>
+      <AppErrorBoundary>
         {appContent}
         <AppClientOverlays />
-      </InlineErrorBoundary>
+      </AppErrorBoundary>
     </div>
   );
 }

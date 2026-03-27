@@ -7,6 +7,8 @@
 - Code clarity and maintainability
 - Prefer consistent hook ordering in components: state/context/store hooks and plain vars first, then memos, then functions/useCallbacks, then effects
 - Prefer rendering JSX inline or extracting a small component over storing component-like JSX in local variables
+- Prefer function components/hooks over class components unless the React API still requires a class (for example local error boundaries)
+- Move stable event handlers/helpers outside `useEffect` bodies when they don't need effect-local scope
 - Adherence to existing patterns in the codebase
 - **Use existing utilities** - Search codebase before adding new helpers
 - **Prefer `??` over `||`** - Preserves zero/empty string as valid values
