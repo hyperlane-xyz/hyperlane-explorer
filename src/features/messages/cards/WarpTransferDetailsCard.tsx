@@ -1,54 +1,55 @@
 import { Tooltip } from '@hyperlane-xyz/widgets';
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
-import { useMultiProvider } from '../../../store';
-import { Message, WarpRouteDetails } from '../../../types';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { useChainMetadataResolver } from '../../../metadataStore';
+import { Message, MessageStub, WarpRouteDetails } from '../../../types';
+import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
 import { KeyValueRow } from './KeyValueRow';
-import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   warpRouteDetails: WarpRouteDetails | undefined;
   blur: boolean;
 }
 
 export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
-  const multiProvider = useMultiProvider();
-  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
-    BlockExplorerAddressUrls | undefined
-  >(undefined);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const blockExplorerAddressUrls = useMemo(() => {
+    if (!warpRouteDetails) {
+      return {
+        originToken: null,
+        destinationToken: null,
+        transferRecipient: null,
+      };
+    }
 
-  const getBlockExplorerLinks = useCallback(async (): Promise<
-    BlockExplorerAddressUrls | undefined
-  > => {
-    if (!warpRouteDetails) return undefined;
+    const { originToken, destinationToken, transferRecipient } = warpRouteDetails;
 
-    const originToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.originChainId,
-      warpRouteDetails.originToken.addressOrDenom,
-    );
-    const destinationToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.destinationToken.addressOrDenom,
-    );
-    const transferRecipient = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.transferRecipient,
-    );
-    return { originToken, destinationToken, transferRecipient };
-  }, [message, multiProvider, warpRouteDetails]);
-
-  useEffect(() => {
-    getBlockExplorerLinks()
-      .then((urls) => setBlockExplorerAddressUrls(urls))
-      .catch(() => setBlockExplorerAddressUrls(undefined));
-  }, [getBlockExplorerLinks]);
+    return {
+      originToken: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.originDomainId,
+        originToken.addressOrDenom,
+      ),
+      destinationToken: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.destinationDomainId,
+        destinationToken.addressOrDenom,
+      ),
+      transferRecipient: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.destinationDomainId,
+        transferRecipient,
+      ),
+    };
+  }, [
+    chainMetadataResolver,
+    message.destinationDomainId,
+    message.originDomainId,
+    warpRouteDetails,
+  ]);
 
   if (!warpRouteDetails) return null;
 
@@ -94,7 +95,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               labelWidth="w-28 sm:w-32"
               display={originToken.addressOrDenom}
               blurValue={blur}
-              link={blockExplorerAddressUrls?.originToken}
+              link={blockExplorerAddressUrls.originToken}
               showCopy
             />
             <KeyValueRow
@@ -102,7 +103,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               labelWidth="w-28 sm:w-32"
               display={destinationToken.addressOrDenom}
               blurValue={blur}
-              link={blockExplorerAddressUrls?.destinationToken}
+              link={blockExplorerAddressUrls.destinationToken}
               showCopy
             />
             <KeyValueRow
@@ -110,7 +111,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               labelWidth="w-28 sm:w-32"
               display={transferRecipient}
               blurValue={blur}
-              link={blockExplorerAddressUrls?.transferRecipient}
+              link={blockExplorerAddressUrls.transferRecipient}
               showCopy
             />
           </div>

@@ -1,4 +1,4 @@
-import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import type { WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { useMemo } from 'react';
 
 import { useStore } from '../../../store';

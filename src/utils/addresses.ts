@@ -1,17 +1,21 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
+  isZeroishAddress,
   ProtocolType,
   strip0x,
 } from '@hyperlane-xyz/utils';
 
+import type { ChainMetadataResolver } from '../features/chains/metadataManager';
+
 export function formatAddress(
   address: string,
   domainId: number,
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
+  if (!address || isZeroishAddress(address)) return address;
+
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
@@ -21,8 +25,14 @@ export function formatAddress(
   }
 }
 
-export function formatTxHash(hash: string, domainId: number, multiProvider: MultiProtocolProvider) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
+export function formatTxHash(
+  hash: string,
+  domainId: number,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
+) {
+  if (!hash || /^0*$/.test(strip0x(hash))) return hash;
+
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
     case ProtocolType.Radix:

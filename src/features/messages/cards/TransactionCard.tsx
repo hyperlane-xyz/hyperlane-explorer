@@ -1,48 +1,30 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
-import BigNumber from 'bignumber.js';
-import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
-import { Message, MessageStatus, MessageTx, WarpRouteDetails } from '../../../types';
-import { formatTxHash } from '../../../utils/addresses';
-import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { ChainSearchModal } from '../../chains/ChainSearchModal';
-import { getChainDisplayName } from '../../chains/utils';
+import {
+  Message,
+  MessageStatus,
+  MessageStub,
+  MessageTx,
+  MessageTxStub,
+  WarpRouteDetails,
+} from '../../../types';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
-import { KeyValueRow } from './KeyValueRow';
+import { TransactionDetailsRows } from './TransactionDetailsRows';
 
-export function OriginTransactionCard({
-  chainName,
-  domainId,
-  transaction,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  transaction: MessageTx;
-  blur: boolean;
-}) {
-  return (
-    <TransactionCard chainName={chainName} title="Origin Transaction" helpText={helpText.origin}>
-      <TransactionDetails
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        blur={blur}
-      />
-    </TransactionCard>
-  );
-}
+const ChainSearchModal = dynamic(() =>
+  import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
 
 export function DestinationTransactionCard({
   chainName,
@@ -59,12 +41,12 @@ export function DestinationTransactionCard({
   chainName: string;
   domainId: DomainId;
   status: MessageStatus;
-  transaction?: MessageTx;
+  transaction?: MessageTx | MessageTxStub;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
   isPiMsg?: boolean;
   blur: boolean;
-  message?: Message;
+  message?: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
 }) {
   const multiProvider = useMultiProvider();
@@ -146,7 +128,7 @@ export function DestinationTransactionCard({
           </div>
         </DeliveryStatus>
         {/* TODO get modal to auto-close after adding chain metadata */}
-        <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />
+        {isOpen && <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />}
       </>
     );
   } else if (status === MessageStatus.Pending) {
@@ -196,7 +178,7 @@ export function DestinationTransactionCard({
     <TransactionCard
       chainName={chainName}
       title="Destination Transaction"
-      helpText={helpText.destination}
+      helpText={transactionHelpText.destination}
     >
       {content}
     </TransactionCard>
@@ -209,12 +191,14 @@ function TransactionCard({
   helpText,
   children,
 }: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
+  const tooltipId = `${useId()}-transaction-info`;
+
   return (
     <SectionCard
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id="transaction-info" content={helpText} />}
+      icon={<Tooltip id={tooltipId} content={helpText} />}
     >
       <div className="space-y-2">{children}</div>
     </SectionCard>
@@ -229,84 +213,19 @@ function TransactionDetails({
 }: {
   chainName: string;
   domainId: DomainId;
-  transaction: MessageTx;
+  transaction: MessageTx | MessageTxStub;
   blur: boolean;
 }) {
   const multiProvider = useMultiProvider();
-  const { hash, from, timestamp, blockNumber } = transaction;
-
-  const formattedHash = formatTxHash(hash, domainId, multiProvider);
-
-  const txExplorerLink =
-    hash && !new BigNumber(hash).isZero()
-      ? multiProvider.tryGetExplorerTxUrl(chainName, { hash: formattedHash })
-      : null;
-
-  const [fromExplorerLink, setFromExplorerLink] = useState<string | null>(null);
-
-  // Address explorer URL lookup is async in SDK; tx URL lookup above is sync.
-  useEffect(() => {
-    let cancelled = false;
-
-    setFromExplorerLink(null);
-
-    if (!from) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    tryGetBlockExplorerAddressUrl(multiProvider, chainName, from)
-      .then((link) => {
-        if (!cancelled) setFromExplorerLink(link);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chainName, from, multiProvider]);
 
   return (
     <>
-      <ChainDescriptionRow
+      <TransactionDetailsRows
         chainName={chainName}
         domainId={domainId}
-        multiProvider={multiProvider}
+        transaction={transaction}
         blur={blur}
-      />
-      <KeyValueRow
-        label="Tx:"
-        labelWidth="w-16"
-        display={formattedHash}
-        showCopy={true}
-        blurValue={blur}
-        link={txExplorerLink}
-        truncateMiddle={true}
-      />
-      <KeyValueRow
-        label="From:"
-        labelWidth="w-16"
-        display={from}
-        showCopy={true}
-        blurValue={blur}
-        link={fromExplorerLink}
-        truncateMiddle={true}
-      />
-      {!!timestamp && (
-        <KeyValueRow
-          label="Time:"
-          labelWidth="w-16"
-          display={getHumanReadableTimeString(timestamp)}
-          subDisplay={`(${getDateTimeString(timestamp)})`}
-          blurValue={blur}
-        />
-      )}
-      <KeyValueRow
-        label="Block:"
-        labelWidth="w-16"
-        display={blockNumber?.toString()}
-        blurValue={blur}
+        resolver={multiProvider}
       />
     </>
   );
@@ -357,33 +276,7 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
   );
 }
 
-function ChainDescriptionRow({
-  chainName,
-  domainId,
-  multiProvider,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  multiProvider: MultiProtocolProvider;
-  blur: boolean;
-}) {
-  const idString =
-    chainName && chainName !== multiProvider.tryGetChainName(domainId)
-      ? `${chainName} / ${domainId}`
-      : `${domainId}`;
-  const chainDescription = `${getChainDisplayName(
-    multiProvider,
-    chainName,
-    false,
-    false,
-  )} (${idString})`;
-  return (
-    <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
-  );
-}
-
-const helpText = {
+export const transactionHelpText = {
   origin: 'Info about the transaction that initiated the message placement into the outbox.',
   destination:
     'Info about the transaction that triggered the delivery of the message from an inbox.',

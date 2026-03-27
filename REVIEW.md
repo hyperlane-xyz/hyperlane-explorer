@@ -5,6 +5,11 @@
 - Logic errors and potential bugs
 - Error handling and edge cases
 - Code clarity and maintainability
+- Prefer consistent hook ordering in components: state/context/store hooks and plain vars first, then memos, then functions/useCallbacks, then effects
+- Prefer rendering JSX inline or extracting a small component over storing component-like JSX in local variables
+- Prefer function components/hooks over class components unless the React API still requires a class (for example local error boundaries)
+- Move stable event handlers/helpers outside `useEffect` bodies when they don't need effect-local scope
+- Extract repeated scheduling/fallback wrappers into a shared util instead of copying the same browser async pattern across files
 - Adherence to existing patterns in the codebase
 - **Use existing utilities** - Search codebase before adding new helpers
 - **Prefer `??` over `||`** - Preserves zero/empty string as valid values
@@ -15,6 +20,7 @@
 - Consistency with existing architecture patterns
 - Breaking changes or backward compatibility issues
 - API contract changes
+- Preserve intentional metadata-only vs provider-backed boundaries; don't collapse `metadataStore.ts` back into `store.ts` unless there is a concrete functional need
 - **Deduplicate** - Move repeated code/types to shared files
 - **Extract utilities** - Shared functions belong in utils packages
 

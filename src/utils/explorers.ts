@@ -2,7 +2,7 @@
 // The widgets lib doesn't export those yet, need to fix that first.
 import { BigNumber, providers } from 'ethers';
 
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { fetchWithTimeout, sleep } from '@hyperlane-xyz/utils';
 
 import { config } from '../consts/config';

@@ -1,13 +1,13 @@
 import { IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { constants } from 'ethers';
-import { Message, MessageStatus } from '../../types';
+import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
 import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
-import { checkIsMessageDelivered } from '../messages/utils';
+import { checkIsMessageDelivered } from '../messages/deliveryUtils';
 import {
   MessageDeliveryFailingResult,
   MessageDeliveryPendingResult,
@@ -19,7 +19,7 @@ export async function fetchDeliveryStatus(
   multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
-  message: Message,
+  message: Message | MessageStub,
 ): Promise<MessageDeliveryStatusResponse> {
   const destName = multiProvider.tryGetChainName(message.destinationDomainId);
   if (!destName)

@@ -1,8 +1,6 @@
-import { PropsWithChildren } from 'react';
-
 import { useQueryParamChainConfigSync } from './useChainMetadata';
 
-export function ChainConfigSyncer({ children }: PropsWithChildren<Record<never, any>>) {
+export function ChainConfigSyncEffect() {
   useQueryParamChainConfigSync();
-  return <>{children}</>;
+  return null;
 }

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { OGHead } from '../../components/OGHead';
 import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { MessageDetailsLoading } from '../../features/messages/MessageDetailsLoading';
 import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
@@ -12,9 +13,12 @@ import { logger } from '../../utils/logger';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
 // Dynamic import with ssr: false to avoid pino-pretty issues during SSR
-const MessageDetails = dynamic(
-  () => import('../../features/messages/MessageDetails').then((mod) => mod.MessageDetails),
-  { ssr: false },
+const MessageDetailsPage = dynamic(
+  () => import('../../features/messages/MessageDetailsPage').then((mod) => mod.MessageDetailsPage),
+  {
+    ssr: false,
+    loading: () => <MessageDetailsLoading />,
+  },
 );
 
 interface OGData {
@@ -28,6 +32,9 @@ interface PageProps {
   ogData: OGData | null;
   host: string;
 }
+
+const LINK_PREVIEW_BOT_RE =
+  /bot|crawl|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|discordbot|whatsapp|skypeuripreview/i;
 
 const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const router = useRouter();
@@ -60,15 +67,20 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     ? `${host}/api/og?messageId=${ogData.messageId}`
     : `${host}/images/og-preview.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
-  // Render nothing while waiting for client-side router
+
   if (!messageId || typeof messageId !== 'string') {
-    return <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />;
+    return (
+      <>
+        <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
+        <MessageDetailsLoading />
+      </>
+    );
   }
 
   return (
     <>
       <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
-      <MessageDetails messageId={messageId} message={message} />
+      <MessageDetailsPage messageId={messageId} message={message} />
     </>
   );
 };
@@ -82,7 +94,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  if (messageId && typeof messageId === 'string') {
+  const userAgent = ctx.req?.headers['user-agent'] || '';
+  const isBot = LINK_PREVIEW_BOT_RE.test(userAgent);
+
+  if (isBot && messageId && typeof messageId === 'string') {
     try {
       const [messageData, domainNames, chainMetadata] = await Promise.all([
         fetchMessageForOG(messageId),
@@ -108,6 +123,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       // Silently fail - will use default OG tags
     }
   }
+
+  // This response shape varies on bot detection. Without a normalized vary key from the CDN,
+  // shared caching bot and non-bot HTML at the same URL risks cache poisoning.
+  ctx.res.setHeader('Cache-Control', 'private, no-store');
 
   return {
     props: {

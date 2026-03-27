@@ -8,7 +8,7 @@ import { useMultiProvider } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 
-import { checkIsMessageDelivered, extractMessageIdFromTx } from '../utils';
+import { checkIsMessageDelivered, extractMessageIdFromTx } from '../deliveryUtils';
 import { ActiveRebalance, RebalanceInfo } from './types';
 import { isCollateralRoute } from './utils';
 

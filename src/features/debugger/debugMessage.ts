@@ -13,7 +13,6 @@ import { IRegistry } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
-  MAILBOX_VERSION,
   MultiProtocolProvider,
   isProxy,
   proxyImplementation,
@@ -26,8 +25,9 @@ import {
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
+import { MAILBOX_VERSION } from '../../consts/mailbox';
 
-import { Message } from '../../types';
+import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
@@ -44,7 +44,9 @@ export async function debugMessage(
   multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
-  {
+  message: Message | MessageStub,
+): Promise<MessageDebugResult> {
+  const {
     msgId,
     nonce,
     sender,
@@ -53,10 +55,10 @@ export async function debugMessage(
     originDomainId: originDomain,
     destinationDomainId: destDomain,
     body,
-    totalGasAmount,
     isPiMsg,
-  }: Message,
-): Promise<MessageDebugResult> {
+  } = message;
+  const totalGasAmount = 'totalGasAmount' in message ? message.totalGasAmount : undefined;
+
   logger.debug(`Debugging message id: ${msgId}`);
 
   // Prepare some useful data/encodings
@@ -69,7 +71,8 @@ export async function debugMessage(
     recipient,
     body,
   );
-  const destName = multiProvider.tryGetChainName(destDomain)!;
+  const destName = multiProvider.tryGetChainName(destDomain);
+  if (!destName) throw new Error(`Cannot debug message, unknown destination domain ${destDomain}`);
   const originProvider = multiProvider.getEthersV5Provider(originDomain) as Provider;
   const destProvider = multiProvider.getEthersV5Provider(destDomain) as Provider;
   const senderBytes = addressToBytes32(sender);
