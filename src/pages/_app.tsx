@@ -10,10 +10,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 import { AppLayout } from '../AppLayout';
 import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
-import { OGHead } from '../components/OGHead';
-import { OG_BASE_URL } from '../consts/appMetadata';
 import { config } from '../consts/config';
-import { links } from '../consts/links';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 
@@ -82,7 +79,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   if (isSsr) {
     return (
       <div className="font-sans text-black">
-        <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
+        {/* Render page component hidden during SSR so its <Head> OG tags are emitted for crawlers */}
         <div className="hidden" aria-hidden="true">
           <QueryClientProvider client={reactQueryClient}>
             <UrqlProvider value={urqlClient}>
@@ -111,7 +108,6 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   return (
     <div className="font-sans text-black">
-      <OGHead url={links.explorerUrl} image={`${OG_BASE_URL}/images/og-preview.png`} />
       <AppErrorBoundary>
         {appContent}
         <AppClientOverlays />
