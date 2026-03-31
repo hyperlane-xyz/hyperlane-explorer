@@ -33,9 +33,6 @@ interface PageProps {
   host: string;
 }
 
-const LINK_PREVIEW_BOT_RE =
-  /bot|crawl|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|discordbot|whatsapp|skypeuripreview/i;
-
 const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const router = useRouter();
   const { messageId, data } = router.query;
@@ -94,10 +91,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  const userAgent = ctx.req?.headers['user-agent'] || '';
-  const isBot = LINK_PREVIEW_BOT_RE.test(userAgent);
-
-  if (isBot && messageId && typeof messageId === 'string') {
+  if (messageId && typeof messageId === 'string') {
     try {
       const [messageData, domainNames, chainMetadata] = await Promise.all([
         fetchMessageForOG(messageId),
@@ -124,9 +118,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     }
   }
 
-  // This response shape varies on bot detection. Without a normalized vary key from the CDN,
-  // shared caching bot and non-bot HTML at the same URL risks cache poisoning.
-  ctx.res.setHeader('Cache-Control', 'private, no-store');
+  // Short cache for OG data freshness while avoiding re-fetch on every request
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   return {
     props: {
