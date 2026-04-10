@@ -90,30 +90,34 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
           <div className="space-y-2">
             <KeyValueRow
               label="Amount:"
-              labelWidth="w-40 sm:w-48"
+              labelWidth="w-28 sm:w-32"
               display={`${amount} ${originToken.symbol}`}
               blurValue={blur}
               showCopy
             />
             <KeyValueRow
-              label={`Origin token (${originToken.symbol}):`}
-              labelWidth="w-40 sm:w-48"
-              display={originToken.addressOrDenom}
+              label="Origin token:"
+              labelWidth="w-28 sm:w-32"
+              display={originToken.symbol}
+              tooltip={originToken.addressOrDenom}
+              copyValue={originToken.addressOrDenom}
               blurValue={blur}
               link={blockExplorerAddressUrls.originToken}
               showCopy
             />
             <KeyValueRow
-              label={`Destination token (${destinationToken.symbol}):`}
-              labelWidth="w-40 sm:w-48"
-              display={destinationToken.addressOrDenom}
+              label="Destination token:"
+              labelWidth="w-28 sm:w-32"
+              display={destinationToken.symbol}
+              tooltip={destinationToken.addressOrDenom}
+              copyValue={destinationToken.addressOrDenom}
               blurValue={blur}
               link={blockExplorerAddressUrls.destinationToken}
               showCopy
             />
             <KeyValueRow
               label="Transfer recipient:"
-              labelWidth="w-40 sm:w-48"
+              labelWidth="w-28 sm:w-32"
               display={transferRecipient}
               blurValue={blur}
               link={blockExplorerAddressUrls.transferRecipient}
