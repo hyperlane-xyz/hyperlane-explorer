@@ -61,7 +61,7 @@ export function ContentDetailsCard({ message, blur }: Props) {
 
   const rawBytes = useMemo(() => {
     try {
-      if (!originDomainId || !destinationDomainId) return '';
+      if (originDomainId < 0 || destinationDomainId < 0) return '';
       return formatMessage(
         MAILBOX_VERSION,
         nonce,
