@@ -139,16 +139,10 @@ function TokenLogos({
   destinationToken: TokenArgs;
   isDifferentToken: boolean;
 }) {
-  const hasOriginLogo = !!originToken.logoURI;
-  const hasDestLogo = !!destinationToken.logoURI;
-
-  if (!hasOriginLogo && !hasDestLogo) return null;
-
   if (!isDifferentToken) {
-    const token = hasOriginLogo ? originToken : destinationToken;
     return (
       <div className="flex flex-shrink-0 items-center justify-center">
-        <TokenIcon token={token} size={80} />
+        <TokenIcon token={originToken} size={80} />
       </div>
     );
   }
