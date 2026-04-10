@@ -37,7 +37,7 @@ export function useIcaAddress(originDomainId: DomainId, sender?: Address | null)
   return useQuery({
     queryKey: ['useIcaAddress', originDomainId, sender, !!multiProvider],
     queryFn: () => {
-      if (!originDomainId || !multiProvider || !sender || BigNumber.from(sender).isZero())
+      if (originDomainId < 0 || !multiProvider || !sender || BigNumber.from(sender).isZero())
         return null;
       try {
         const provider = multiProvider.getEthersV5Provider(originDomainId);
