@@ -1,4 +1,4 @@
-import { ChainMap, TokenArgs } from '@hyperlane-xyz/sdk';
+import type { ChainMap, TokenArgs, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -83,3 +83,15 @@ export interface IcaCall {
   value: string; // uint256 as string (wei)
   data: string; // Hex encoded call data
 }
+
+// Maps warp route ID (lowercase) to array of token addresses for that route
+export type WarpRouteIdToAddressesMap = Record<
+  string,
+  Array<{ chainName: string; address: Address }>
+>;
+
+// Map of warp route ID (e.g., "USDC/mainnet-cctp") to its configuration
+export type WarpRouteConfigs = Record<string, WarpCoreConfig>;
+
+// Status filter options for message search
+export type MessageStatusFilter = 'all' | 'delivered' | 'pending';

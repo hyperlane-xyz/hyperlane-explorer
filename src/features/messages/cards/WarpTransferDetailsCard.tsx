@@ -1,121 +1,162 @@
+import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import { Tooltip } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo } from 'react';
+
 import { TokenIcon } from '../../../components/icons/TokenIcon';
-import { Card } from '../../../components/layout/Card';
-import SendMoney from '../../../images/icons/send-money.svg';
-import { useMultiProvider } from '../../../store';
-import { Message, WarpRouteDetails } from '../../../types';
-import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
+import { SectionCard } from '../../../components/layout/SectionCard';
+import { useChainMetadataResolver } from '../../../metadataStore';
+import { Message, MessageStub, WarpRouteDetails } from '../../../types';
+import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
 import { KeyValueRow } from './KeyValueRow';
-import { BlockExplorerAddressUrls } from './types';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   warpRouteDetails: WarpRouteDetails | undefined;
   blur: boolean;
 }
 
 export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
-  const multiProvider = useMultiProvider();
-  const [blockExplorerAddressUrls, setBlockExplorerAddressUrls] = useState<
-    BlockExplorerAddressUrls | undefined
-  >(undefined);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const blockExplorerAddressUrls = useMemo(() => {
+    if (!warpRouteDetails) {
+      return {
+        originToken: null,
+        destinationToken: null,
+        transferRecipient: null,
+      };
+    }
 
-  const getBlockExplorerLinks = useCallback(async (): Promise<
-    BlockExplorerAddressUrls | undefined
-  > => {
-    if (!warpRouteDetails) return undefined;
+    const { originToken, destinationToken, transferRecipient } = warpRouteDetails;
 
-    const originToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.originChainId,
-      warpRouteDetails.originToken.addressOrDenom,
-    );
-    const destinationToken = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.destinationToken.addressOrDenom,
-    );
-    const transferRecipient = await tryGetBlockExplorerAddressUrl(
-      multiProvider,
-      message.destinationChainId,
-      warpRouteDetails.transferRecipient,
-    );
-    return { originToken, destinationToken, transferRecipient };
-  }, [message, multiProvider, warpRouteDetails]);
-
-  useEffect(() => {
-    getBlockExplorerLinks()
-      .then((urls) => setBlockExplorerAddressUrls(urls))
-      .catch(() => setBlockExplorerAddressUrls(undefined));
-  }, [getBlockExplorerLinks]);
+    return {
+      originToken: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.originDomainId,
+        originToken.addressOrDenom,
+      ),
+      destinationToken: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.destinationDomainId,
+        destinationToken.addressOrDenom,
+      ),
+      transferRecipient: getBlockExplorerAddressUrl(
+        chainMetadataResolver,
+        message.destinationDomainId,
+        transferRecipient,
+      ),
+    };
+  }, [
+    chainMetadataResolver,
+    message.destinationDomainId,
+    message.originDomainId,
+    warpRouteDetails,
+  ]);
 
   if (!warpRouteDetails) return null;
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
   const isCollateral = isCollateralRoute(destinationToken.standard);
+  const isDifferentToken =
+    originToken.symbol !== destinationToken.symbol ||
+    originToken.logoURI !== destinationToken.logoURI;
 
   return (
-    <Card className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        {warpRouteDetails.originToken.logoURI ? (
-          <TokenIcon token={warpRouteDetails.originToken} size={28} />
-        ) : (
-          <Image src={SendMoney} width={28} height={28} alt="" className="opacity-80" />
-        )}
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Warp Transfer Details</h3>
-          <Tooltip
-            id="warp-route-info"
-            content="Information about the warp route transfer such as the end recipient and amount transferred"
-          />
+    <SectionCard
+      className="w-full"
+      title="Warp Transfer Details"
+      icon={
+        <Tooltip
+          id="warp-route-info"
+          content="Information about the warp route transfer such as the end recipient and amount transferred"
+        />
+      }
+    >
+      <div className="flex gap-4 sm:gap-6">
+        {/* Token Logo Column */}
+        <TokenLogos
+          originToken={originToken}
+          destinationToken={destinationToken}
+          isDifferentToken={isDifferentToken}
+        />
+        {/* Details Column */}
+        <div className="min-w-0 flex-1 space-y-4">
+          {isCollateral && (
+            <div className="rounded bg-primary-50 px-3 py-2 text-xs text-primary-700">
+              <span className="font-medium">Collateral-backed route:</span> This transfer uses
+              locked collateral on the destination chain
+            </div>
+          )}
+          <div className="space-y-2">
+            <KeyValueRow
+              label="Amount:"
+              labelWidth="w-28 sm:w-32"
+              display={`${amount} ${originToken.symbol}`}
+              blurValue={blur}
+              showCopy
+            />
+            <KeyValueRow
+              label="Origin token:"
+              labelWidth="w-28 sm:w-32"
+              display={originToken.symbol}
+              tooltip={originToken.addressOrDenom}
+              copyValue={originToken.addressOrDenom}
+              blurValue={blur}
+              link={blockExplorerAddressUrls.originToken}
+              showCopy
+            />
+            <KeyValueRow
+              label="Destination token:"
+              labelWidth="w-28 sm:w-32"
+              display={destinationToken.symbol}
+              tooltip={destinationToken.addressOrDenom}
+              copyValue={destinationToken.addressOrDenom}
+              blurValue={blur}
+              link={blockExplorerAddressUrls.destinationToken}
+              showCopy
+            />
+            <KeyValueRow
+              label="Transfer recipient:"
+              labelWidth="w-28 sm:w-32"
+              display={transferRecipient}
+              blurValue={blur}
+              link={blockExplorerAddressUrls.transferRecipient}
+              showCopy
+            />
+          </div>
         </div>
       </div>
-      {isCollateral && (
-        <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700">
-          <span className="font-medium">Collateral-backed route:</span> This transfer uses locked
-          collateral on the destination chain
-        </div>
-      )}
-      <div className="flex flex-wrap gap-x-6 gap-y-4">
-        <KeyValueRow
-          label="Amount:"
-          labelWidth="w-20 sm:w-32"
-          display={`${amount} ${originToken.symbol}`}
-          displayWidth="w-64 sm:w-96"
-          blurValue={blur}
-          showCopy
-        />
-        <KeyValueRow
-          label="Origin token:"
-          labelWidth="w-20 sm:w-32"
-          display={originToken.addressOrDenom}
-          displayWidth="w-64 sm:w-96"
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.originToken}
-          showCopy
-        />
-        <KeyValueRow
-          label="Destination token:"
-          labelWidth="w-20 sm:w-32"
-          display={destinationToken.addressOrDenom}
-          displayWidth="w-64 sm:w-96"
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.destinationToken}
-          showCopy
-        />
-        <KeyValueRow
-          label="Transfer recipient:"
-          labelWidth="w-20 sm:w-32"
-          display={transferRecipient}
-          displayWidth="w-64 sm:w-96"
-          blurValue={blur}
-          link={blockExplorerAddressUrls?.transferRecipient}
-          showCopy
-        />
+    </SectionCard>
+  );
+}
+
+function TokenLogos({
+  originToken,
+  destinationToken,
+  isDifferentToken,
+}: {
+  originToken: TokenArgs;
+  destinationToken: TokenArgs;
+  isDifferentToken: boolean;
+}) {
+  if (!isDifferentToken) {
+    return (
+      <div className="flex flex-shrink-0 items-center justify-center">
+        <TokenIcon token={originToken} size={80} />
       </div>
-    </Card>
+    );
+  }
+
+  return (
+    <div className="flex flex-shrink-0 items-center justify-center">
+      <div className="relative" style={{ width: 73, height: 73 }}>
+        <div className="absolute left-0 top-0">
+          <TokenIcon token={originToken} size={48} />
+        </div>
+        <div className="absolute bottom-0 right-0 rounded-full ring-2 ring-white">
+          <TokenIcon token={destinationToken} size={48} />
+        </div>
+      </div>
+    </div>
   );
 }

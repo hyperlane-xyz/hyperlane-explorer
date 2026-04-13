@@ -1,7 +1,6 @@
 import YAML from 'yaml';
 
 import { links } from '../consts/links';
-
 import { logger } from './logger';
 
 // ============================================================================

@@ -1,7 +1,7 @@
+import { fromWei } from '@hyperlane-xyz/utils';
 import { ErrorIcon, Modal, RefreshIcon, useModal } from '@hyperlane-xyz/widgets';
 import Link from 'next/link';
 
-import { fromWei } from '@hyperlane-xyz/utils';
 import { TextButton } from '../../../components/buttons/TextButton';
 import { Color } from '../../../styles/Color';
 import { WarpRouteDetails } from '../../../types';
@@ -70,10 +70,10 @@ export function ActiveRebalanceModal({ warpRouteDetails }: CollateralCardsProps)
   return (
     <div className="space-y-3">
       <TextButton
-        classes="flex gap-1 cursor-pointer text-sm text-blue-500 underline underline-offset-1 transition-all hover:text-blue-600 active:text-blue-700"
+        classes="flex gap-1 cursor-pointer text-sm text-primary-600 underline underline-offset-1 transition-all hover:text-primary-700 active:text-primary-800"
         onClick={open}
       >
-        <RefreshIcon width={20} height={20} color={Color.blue} />
+        <RefreshIcon width={20} height={20} color={Color.primary} />
         View Active Rebalance
       </TextButton>
 
@@ -104,7 +104,7 @@ function RebalanceList({ rebalances }: { rebalances: RebalanceInfo[] }) {
             {rebalance.messageId && (
               <Link
                 href={`/message/${rebalance.messageId}`}
-                className="text-blue-600 underline hover:text-blue-800"
+                className="text-primary-600 underline hover:text-primary-800"
                 target="_blank"
               >
                 View message →

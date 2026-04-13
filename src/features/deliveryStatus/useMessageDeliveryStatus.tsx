@@ -1,54 +1,79 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
+
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
-import { Message, MessageStatus } from '../../types';
+import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
-import { fetchDeliveryStatus } from './fetchDeliveryStatus';
+
+type DeliveryStatusQueryMessage = MessageStub &
+  Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
+type DeliveryStatusQueryKey = readonly [
+  'messageDeliveryStatus',
+  DeliveryStatusQueryMessage,
+  boolean,
+  IRegistry,
+  ChainMap<Partial<ChainMetadata>>,
+];
 
 export function useMessageDeliveryStatus({
   message,
   enabled = true,
 }: {
-  message: Message;
+  message: Message | MessageStub;
   enabled: boolean;
 }) {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
   const registry = useRegistry();
+  const queryMessage = createDeliveryStatusQueryMessage(message);
 
   const { data, error, isFetching } = useQuery({
-    queryKey: ['messageDeliveryStatus', message, !!multiProvider, registry, chainMetadataOverrides],
-    queryFn: async () => {
-      if (!multiProvider || message.status == MessageStatus.Delivered) {
-        return { message };
+    queryKey: [
+      'messageDeliveryStatus',
+      queryMessage,
+      !!multiProvider,
+      registry,
+      chainMetadataOverrides,
+    ] as DeliveryStatusQueryKey,
+    queryFn: async ({ queryKey }) => {
+      const [, messageForQuery] = queryKey;
+      const hasDeliveredDetails =
+        messageForQuery.status === MessageStatus.Delivered &&
+        !!messageForQuery.destination &&
+        'blockNumber' in messageForQuery.destination;
+
+      if (!multiProvider || hasDeliveredDetails) {
+        return { message: messageForQuery };
       }
 
-      const { id, originDomainId, destinationDomainId } = message;
+      const { id, originDomainId, destinationDomainId } = messageForQuery;
 
       if (
         !checkChain(multiProvider, originDomainId) ||
         !checkChain(multiProvider, destinationDomainId)
       ) {
-        return { message };
+        return { message: messageForQuery };
       }
 
       logger.debug('Fetching message delivery status for:', id);
+      const { fetchDeliveryStatus } = await import('./fetchDeliveryStatus');
       const deliverStatus = await fetchDeliveryStatus(
         multiProvider,
         registry,
         chainMetadataOverrides,
-        message,
+        messageForQuery,
       );
 
       if (deliverStatus.status === MessageStatus.Delivered) {
         return {
           message: {
-            ...message,
+            ...messageForQuery,
             status: MessageStatus.Delivered,
             destination: deliverStatus.deliveryTransaction,
           },
@@ -59,13 +84,13 @@ export function useMessageDeliveryStatus({
       ) {
         return {
           message: {
-            ...message,
+            ...messageForQuery,
             status: deliverStatus.status,
           },
           debugResult: deliverStatus.debugResult,
         };
       } else {
-        return { message };
+        return { message: messageForQuery };
       }
     },
     retry: false,
@@ -86,6 +111,16 @@ export function useMessageDeliveryStatus({
     messageWithDeliveryStatus: data?.message || message,
     debugResult: data?.debugResult,
     isDeliveryStatusFetching: isFetching,
+  };
+}
+
+function createDeliveryStatusQueryMessage(
+  message: Message | MessageStub,
+): DeliveryStatusQueryMessage {
+  return {
+    ...message,
+    origin: { ...message.origin },
+    destination: message.destination ? { ...message.destination } : undefined,
   };
 }
 

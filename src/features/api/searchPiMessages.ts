@@ -1,9 +1,8 @@
-import type { NextApiRequest } from 'next';
-import { z } from 'zod';
-
 import { GithubRegistry } from '@hyperlane-xyz/registry';
 import { ChainMetadataSchema, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { Result, failure, success } from '@hyperlane-xyz/utils';
+import type { NextApiRequest } from 'next';
+import { z } from 'zod';
 
 import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';
@@ -11,7 +10,6 @@ import {
   PiMessageQuery,
   fetchMessagesFromPiChain,
 } from '../messages/pi-queries/fetchPiChainMessages';
-
 import { ApiMessage } from './types';
 
 const queryParamSchema = z.object({

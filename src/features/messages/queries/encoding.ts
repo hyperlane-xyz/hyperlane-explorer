@@ -1,4 +1,4 @@
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 import {
   addressToByteHexString,
   base58ToBuffer,

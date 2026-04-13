@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-
-import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
+import { useQuery } from '@tanstack/react-query';
 
 import { useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
@@ -10,7 +9,6 @@ import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
-
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 const MESSAGE_SEARCH_TIMEOUT = 10_000; // 10s

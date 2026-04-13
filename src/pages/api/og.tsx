@@ -1,7 +1,7 @@
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 
-import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { APP_DESCRIPTION } from '../../consts/appMetadata';
 import { links } from '../../consts/links';
 import {
   fetchDomainNames,
@@ -45,25 +45,25 @@ export const config = {
 
 // Global font cache to avoid reloading on every request
 // Edge runtime persists module-level state across requests within the same instance
-let fontCache: ArrayBuffer | null = null;
+let fontCache: { mono: ArrayBuffer } | null = null;
 
-// Load Space Grotesk font for OG images with caching
-async function loadFont(baseUrl: string): Promise<ArrayBuffer> {
+async function loadFonts(baseUrl: string): Promise<{ mono: ArrayBuffer }> {
   if (fontCache) {
     return fontCache;
   }
   try {
-    const fontUrl = new URL('/fonts/SpaceGrotesk-Medium.ttf', baseUrl).toString();
-    const response = await fetch(fontUrl);
-    if (!response.ok) {
-      logger.error(`Failed to fetch font: ${response.status} ${response.statusText}`);
-      return new ArrayBuffer(0);
+    const monoRes = await fetch(new URL('/fonts/PPFraktionMono-Regular.ttf', baseUrl).toString());
+    if (!monoRes.ok) {
+      logger.error('Failed to fetch fonts');
+      return { mono: new ArrayBuffer(0) };
     }
-    fontCache = await response.arrayBuffer();
+    fontCache = {
+      mono: await monoRes.arrayBuffer(),
+    };
     return fontCache;
   } catch (error) {
-    logger.error('Error loading font for OG image:', error);
-    return new ArrayBuffer(0);
+    logger.error('Error loading fonts for OG image:', error);
+    return { mono: new ArrayBuffer(0) };
   }
 }
 
@@ -168,12 +168,23 @@ function getChainLogoUrl(chainName: string): string {
   return `${links.imgPath}/chains/${chainName}/logo.svg`;
 }
 
+function parseLatencyParts(latency: string): { hours: number; minutes: number; seconds: number } {
+  const parts = latency.split(':');
+  return {
+    hours: parseInt(parts[0], 10),
+    minutes: parseInt(parts[1], 10),
+    seconds: parseInt(parts[2], 10),
+  };
+}
+
+function parseLatencySeconds(latency: string): number {
+  const { hours, minutes, seconds } = parseLatencyParts(latency);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 // Format delivery latency string (e.g., "00:01:32" -> "1m 32s")
 function formatDeliveryLatency(latency: string): string {
-  const parts = latency.split(':');
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  const seconds = parseInt(parts[2], 10);
+  const { hours, minutes, seconds } = parseLatencyParts(latency);
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
@@ -183,18 +194,17 @@ export default async function handler(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const messageId = searchParams.get('messageId');
 
-  // Load font from public folder
-  const fontData = await loadFont(origin);
+  const fonts = await loadFonts(origin);
 
   const imageOptions = {
     width: 1200,
     height: 630,
     fonts: [
       {
-        name: 'SpaceGrotesk',
-        data: fontData,
+        name: 'PPFraktionMono',
+        data: fonts.mono,
         style: 'normal' as const,
-        weight: 500 as const,
+        weight: 400 as const,
       },
     ],
   };
@@ -247,6 +257,11 @@ export default async function handler(req: NextRequest) {
   const formattedLatency = messageData.deliveryLatency
     ? formatDeliveryLatency(messageData.deliveryLatency)
     : null;
+  const latencyColor = messageData.deliveryLatency
+    ? parseLatencySeconds(messageData.deliveryLatency) < 300
+      ? '#10b981'
+      : '#94A3B8'
+    : '#94A3B8';
 
   const originChainLogo = getChainLogoUrl(originChainName);
   const destChainLogo = getChainLogoUrl(destChainName);
@@ -279,294 +294,312 @@ export default async function handler(req: NextRequest) {
   const backgroundUrl = `${origin}/images/background.svg`;
 
   return new ImageResponse(
-    (
+    <div
+      style={{
+        background:
+          'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '48px 64px',
+        fontFamily: 'PPFraktionMono, sans-serif',
+        position: 'relative',
+      }}
+    >
+      {/* Grid background */}
+      <img
+        src={backgroundUrl}
+        style={{
+          position: 'absolute',
+          top: '-75%',
+          left: '-75%',
+          width: '250%',
+          height: '250%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          opacity: 0.6,
+        }}
+      />
+      {/* Grid fade overlay - hides grid at top, reveals at bottom */}
       <div
         style={{
-          background: '#0E1320',
-          width: '100%',
-          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            'linear-gradient(to bottom, rgba(13,6,18,0.85) 0%, rgba(13,6,18,0.4) 40%, rgba(13,6,18,0) 70%)',
+        }}
+      />
+
+      {/* Top decorative line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
+        }}
+      />
+
+      {/* Header */}
+      <div
+        style={{
           display: 'flex',
-          flexDirection: 'column',
-          padding: '48px 64px',
-          fontFamily: 'SpaceGrotesk, sans-serif',
-          position: 'relative',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '40px',
         }}
       >
-        {/* Sparkle background */}
-        <img
-          src={backgroundUrl}
-          style={{
-            position: 'absolute',
-            top: '-75%',
-            left: '-75%',
-            width: '250%',
-            height: '250%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-          }}
-        />
-
-        {/* Top decorative line */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #2362C1 0%, #5F8AFA 50%, #2362C1 100%)',
-          }}
-        />
-
-        {/* Header */}
+        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="275" height="67" alt="" />
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '40px',
+            gap: '10px',
+            background: statusBgColor,
+            padding: '14px 24px',
+            borderRadius: '2px',
+            border: `1px solid ${statusColor}`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img
-              src={`${origin}/images/hyperlane-logo-color.svg`}
-              width="44"
-              height="40"
-              alt=""
-              style={{ marginRight: '16px' }}
-            />
-            <span
-              style={{ color: 'white', fontSize: '48px', fontWeight: 600, letterSpacing: '-0.5px' }}
-            >
-              {APP_NAME}
-            </span>
-          </div>
           <div
             style={{
+              width: '14px',
+              height: '14px',
+              borderRadius: '50%',
+              backgroundColor: statusColor,
+            }}
+          />
+          <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
+            {messageData.status}
+          </span>
+        </div>
+      </div>
+
+      {/* Chain Route - Main Content */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 1,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '32px',
+          }}
+        >
+          {/* Origin Chain Box */}
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
+              border: `1px solid ${originColors.primary}50`,
+              borderRadius: '2px',
+              padding: '28px 48px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '10px',
-              background: statusBgColor,
-              padding: '14px 24px',
-              borderRadius: '28px',
-              border: `1px solid ${statusColor}`,
+              minWidth: '280px',
             }}
           >
-            <div
+            <span
               style={{
-                width: '14px',
-                height: '14px',
-                borderRadius: '50%',
-                backgroundColor: statusColor,
+                color: originColors.primary,
+                fontSize: '21px',
+                fontWeight: 500,
+                marginBottom: '12px',
+                letterSpacing: '1px',
+                fontFamily: 'PPFraktionMono, monospace',
               }}
-            />
-            <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
-              {messageData.status}
+            >
+              FROM
             </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img src={originChainLogo} alt="" style={{ height: '56px' }} />
+              <span
+                style={{
+                  color: 'white',
+                  fontSize: '46px',
+                  fontWeight: 600,
+                }}
+              >
+                {originDisplayName}
+              </span>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={`${origin}/images/arrow-right-gradient.svg`} width="72" height="36" alt="" />
+          </div>
+
+          {/* Destination Chain Box */}
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
+              border: `1px solid ${destColors.primary}50`,
+              borderRadius: '2px',
+              padding: '28px 48px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '280px',
+            }}
+          >
+            <span
+              style={{
+                color: destColors.primary,
+                fontSize: '21px',
+                fontWeight: 500,
+                marginBottom: '12px',
+                letterSpacing: '1px',
+                fontFamily: 'PPFraktionMono, monospace',
+              }}
+            >
+              TO
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img src={destChainLogo} alt="" style={{ height: '56px' }} />
+              <span
+                style={{
+                  color: 'white',
+                  fontSize: '46px',
+                  fontWeight: 600,
+                }}
+              >
+                {destDisplayName}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Chain Route - Main Content */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-          }}
-        >
+        {/* Warp transfer details row */}
+        {warpTransfer && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '32px',
+              marginTop: '32px',
+              gap: '14px',
             }}
           >
-            {/* Origin Chain Box */}
-            <div
+            {warpTransfer.token.logoURI && (
+              <img src={warpTransfer.token.logoURI} height="64" alt="" style={{ height: '64px' }} />
+            )}
+            <span
               style={{
-                background: `linear-gradient(135deg, ${originColors.primary}15 0%, ${originColors.secondary || originColors.primary}08 100%)`,
-                border: `1px solid ${originColors.primary}30`,
-                borderRadius: '20px',
-                padding: '28px 48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: '280px',
+                color: '#E2E8F0',
+                fontSize: '50px',
+                fontWeight: 500,
               }}
             >
-              <span
-                style={{
-                  color: originColors.primary,
-                  fontSize: '21px',
-                  fontWeight: 500,
-                  marginBottom: '12px',
-                  letterSpacing: '1px',
-                }}
-              >
-                FROM
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={originChainLogo} alt="" style={{ height: '56px' }} />
-                <span
-                  style={{
-                    color: 'white',
-                    fontSize: '54px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {originDisplayName}
-                </span>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img
-                src={`${origin}/images/arrow-right-gradient.svg`}
-                width="72"
-                height="36"
-                alt=""
-              />
-            </div>
-
-            {/* Destination Chain Box */}
-            <div
-              style={{
-                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}08 0%, ${destColors.primary}15 100%)`,
-                border: `1px solid ${destColors.primary}30`,
-                borderRadius: '20px',
-                padding: '28px 48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: '280px',
-              }}
-            >
-              <span
-                style={{
-                  color: destColors.primary,
-                  fontSize: '21px',
-                  fontWeight: 500,
-                  marginBottom: '12px',
-                  letterSpacing: '1px',
-                }}
-              >
-                TO
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={destChainLogo} alt="" style={{ height: '56px' }} />
-                <span
-                  style={{
-                    color: 'white',
-                    fontSize: '54px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {destDisplayName}
-                </span>
-              </div>
-            </div>
+              {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
+            </span>
           </div>
+        )}
+      </div>
 
-          {/* Warp transfer details row */}
-          {warpTransfer && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: '32px',
-                gap: '14px',
-              }}
-            >
-              {warpTransfer.token.logoURI && (
-                <img
-                  src={warpTransfer.token.logoURI}
-                  height="64"
-                  alt=""
-                  style={{ height: '64px' }}
-                />
-              )}
-              <span style={{ color: '#94A3B8', fontSize: '57px', fontWeight: 500 }}>
-                {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
-              </span>
-            </div>
-          )}
+      {/* Footer with ID, delivery time, and timestamp */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '24px',
+        }}
+      >
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}
+        >
+          <span
+            style={{
+              color: '#6B7280',
+              fontSize: '18px',
+              marginBottom: '8px',
+              letterSpacing: '0.5px',
+            }}
+          >
+            MESSAGE ID
+          </span>
+          <span
+            style={{
+              color: '#94A3B8',
+              fontSize: '26px',
+              fontFamily: 'PPFraktionMono, monospace',
+              background: 'rgba(154, 13, 255, 0.11)',
+              padding: '8px 16px',
+              borderRadius: '2px',
+            }}
+          >
+            {shortMsgId}
+          </span>
         </div>
 
-        {/* Footer with ID, delivery time, and timestamp */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            marginTop: '24px',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(95, 138, 250, 0.2)',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: '24px',
-                marginBottom: '8px',
-                letterSpacing: '0.5px',
-              }}
-            >
-              MESSAGE ID
-            </span>
-            <span
-              style={{
-                color: '#94A3B8',
-                fontSize: '32px',
-                fontFamily: 'monospace',
-                background: 'rgba(35, 98, 193, 0.15)',
-                padding: '8px 16px',
-                borderRadius: '10px',
-              }}
-            >
-              {shortMsgId}
-            </span>
-          </div>
-
-          {formattedLatency && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          {formattedLatency ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <span
                 style={{
                   color: '#6B7280',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   marginBottom: '8px',
                   letterSpacing: '0.5px',
                 }}
               >
                 DELIVERY TIME
               </span>
-              <span style={{ color: '#10b981', fontSize: '32px', fontWeight: 500 }}>
+              <span
+                style={{
+                  color: latencyColor,
+                  fontSize: '26px',
+                  fontWeight: 500,
+                  fontFamily: 'PPFraktionMono, monospace',
+                  padding: '8px 16px',
+                }}
+              >
                 {formattedLatency}
               </span>
             </div>
-          )}
+          ) : null}
+        </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: '24px',
-                marginBottom: '8px',
-                letterSpacing: '0.5px',
-              }}
-            >
-              SENT
-            </span>
-            <span style={{ color: '#94A3B8', fontSize: '32px' }}>{formattedDate}</span>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}>
+          <span
+            style={{
+              color: '#6B7280',
+              fontSize: '18px',
+              marginBottom: '8px',
+              letterSpacing: '0.5px',
+            }}
+          >
+            SENT
+          </span>
+          <span
+            style={{
+              color: '#94A3B8',
+              fontSize: '26px',
+              fontFamily: 'PPFraktionMono, monospace',
+              background: 'rgba(154, 13, 255, 0.11)',
+              padding: '8px 16px',
+              borderRadius: '2px',
+            }}
+          >
+            {formattedDate}
+          </span>
         </div>
       </div>
-    ),
+    </div>,
     imageOptions,
   );
 }
@@ -575,14 +608,15 @@ function DefaultOGImage({ origin }: { origin: string }) {
   return (
     <div
       style={{
-        background: '#0E1320',
+        background:
+          'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
         width: '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'SpaceGrotesk, sans-serif',
+        fontFamily: 'PPFraktionMono, sans-serif',
       }}
     >
       {/* Top decorative line */}
@@ -593,22 +627,12 @@ function DefaultOGImage({ origin }: { origin: string }) {
           left: 0,
           right: 0,
           height: '4px',
-          background: 'linear-gradient(90deg, #2362C1 0%, #5F8AFA 50%, #2362C1 100%)',
+          background: 'linear-gradient(90deg, #4C52FF 0%, #9A0DFF 50%, #4C52FF 100%)',
         }}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-        <img src={`${origin}/images/hyperlane-logo-color.svg`} width="140" height="126" alt="" />
-        <span
-          style={{
-            color: 'white',
-            fontSize: '72px',
-            fontWeight: 600,
-            letterSpacing: '-1px',
-          }}
-        >
-          {APP_NAME}
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
+        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="327" height="80" alt="" />
         <span style={{ color: '#6B7280', fontSize: '28px' }}>{APP_DESCRIPTION}</span>
       </div>
     </div>

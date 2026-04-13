@@ -1,23 +1,20 @@
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { trimToLength } from '@hyperlane-xyz/utils';
+import { ChevronIcon, DatetimeField, Popover, XIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
-import { trimToLength } from '@hyperlane-xyz/utils';
-import {
-  ChevronIcon,
-  DatetimeField,
-  IconButton,
-  Popover,
-  XIcon,
-  useModal,
-} from '@hyperlane-xyz/widgets';
-
-import { ChainSearchModal } from '../../features/chains/ChainSearchModal';
 import { getChainDisplayName } from '../../features/chains/utils';
-import { useMultiProvider } from '../../store';
+import { useChainMetadataResolver } from '../../metadataStore';
 import { Color } from '../../styles/Color';
+import { MessageStatusFilter } from '../../types';
 import { SolidButton } from '../buttons/SolidButton';
 import { TextButton } from '../buttons/TextButton';
+
+const ChainSearchModal = dynamic(() =>
+  import('../../features/chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
 
 interface Props {
   originChain: string | null;
@@ -28,6 +25,8 @@ interface Props {
   onChangeStartTimestamp: (value: number | null) => void;
   endTimestamp: number | null;
   onChangeEndTimestamp: (value: number | null) => void;
+  statusFilter: MessageStatusFilter;
+  onChangeStatus: (value: MessageStatusFilter) => void;
 }
 
 export function SearchFilterBar({
@@ -39,9 +38,11 @@ export function SearchFilterBar({
   onChangeStartTimestamp,
   endTimestamp,
   onChangeEndTimestamp,
+  statusFilter,
+  onChangeStatus,
 }: Props) {
   return (
-    <div className="flex items-center space-x-2 md:space-x-4">
+    <div className="flex flex-wrap items-center gap-2 md:gap-4">
       <ChainSelector text="Origin" value={originChain} onChangeValue={onChangeOrigin} />
       <ChainSelector
         text="Destination"
@@ -54,6 +55,7 @@ export function SearchFilterBar({
         endValue={endTimestamp}
         onChangeEndValue={onChangeEndTimestamp}
       />
+      <StatusSelector value={statusFilter} onChangeValue={onChangeStatus} />
     </div>
   );
 }
@@ -68,11 +70,10 @@ function ChainSelector({
   onChangeValue: (value: string | null) => void;
 }) {
   const { isOpen, open, close } = useModal();
-
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
 
   const chainDisplayName = value
-    ? trimToLength(getChainDisplayName(multiProvider, value, true), 12)
+    ? trimToLength(getChainDisplayName(chainMetadataResolver, value, true), 12)
     : undefined;
 
   const onClickChain = (c: ChainMetadata) => {
@@ -89,8 +90,8 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'flex items-center justify-center rounded-lg border border-pink-500 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
-          value ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          value ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         onClick={open}
       >
@@ -101,12 +102,12 @@ function ChainSelector({
             width={9}
             height={5}
             className="ml-2 opacity-80"
-            color={Color.pink}
+            color={Color.accentDark}
           />
         )}
       </button>
       {value && <ClearButton onClick={onClear} />}
-      <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />
+      {isOpen && <ChainSearchModal isOpen={isOpen} close={close} onClickChain={onClickChain} />}
     </div>
   );
 }
@@ -157,23 +158,23 @@ function DatetimeSelector({
                 width={9}
                 height={5}
                 className="ml-2 opacity-80"
-                color={Color.pink}
+                color={Color.accentDark}
               />
             )}
           </>
         }
         buttonClassname={clsx(
-          'flex items-center justify-center rounded-lg border border-pink-500 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
-          hasValue ? 'bg-pink-500 pr-7 text-white sm:pr-8' : 'text-pink-500',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-60"
       >
         {({ close }) => (
           <div className="p-4" key="date-time-selector">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-blue-500">Time Range</h3>
+              <h3 className="font-medium text-primary-800">Time Range</h3>
               <div className="flex pt-1">
-                <TextButton classes="text-sm font-medium text-pink-500" onClick={onClickClear}>
+                <TextButton classes="text-sm font-medium text-accent-600" onClick={onClickClear}>
                   Clear
                 </TextButton>
               </div>
@@ -200,10 +201,77 @@ function DatetimeSelector({
 
 function ClearButton({ onClick }: { onClick: () => void }) {
   return (
-    <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-      <IconButton onClick={onClick} className="rounded-full bg-pink-300 p-1.5">
-        <XIcon color="white" height={9} width={9} />
-      </IconButton>
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-primary-300/80 p-1 hover:opacity-80"
+    >
+      <XIcon color="white" height={10} width={10} />
+    </button>
+  );
+}
+
+const STATUS_OPTIONS: { value: MessageStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'pending', label: 'Pending' },
+];
+
+function StatusSelector({
+  value,
+  onChangeValue,
+}: {
+  value: MessageStatusFilter;
+  onChangeValue: (value: MessageStatusFilter) => void;
+}) {
+  const currentLabel = STATUS_OPTIONS.find((opt) => opt.value === value)?.label || 'All';
+  const hasValue = value !== 'all';
+
+  return (
+    <div className="relative">
+      <Popover
+        button={
+          <>
+            <span>{hasValue ? currentLabel : 'Status'}</span>
+            {!hasValue && (
+              <ChevronIcon
+                direction="s"
+                width={9}
+                height={5}
+                className="ml-2 opacity-80"
+                color={Color.accentDark}
+              />
+            )}
+          </>
+        }
+        buttonClassname={clsx(
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
+        )}
+        panelClassname="w-36"
+      >
+        {({ close }) => (
+          <div className="p-2" key="status-selector">
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={clsx(
+                  'w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100',
+                  value === option.value && 'bg-accent-50 font-medium text-accent-600',
+                )}
+                onClick={() => {
+                  onChangeValue(option.value);
+                  close();
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </Popover>
+      {hasValue && <ClearButton onClick={() => onChangeValue('all')} />}
     </div>
   );
 }

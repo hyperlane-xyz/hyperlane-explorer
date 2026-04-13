@@ -2,29 +2,33 @@ import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
+
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
-import FuelPump from '../../../images/icons/fuel-pump.svg';
-import { useMultiProvider } from '../../../store';
-import { Message } from '../../../types';
+import { useChainMetadataResolver } from '../../../metadataStore';
+import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
-
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   igpPayments?: AddressTo<GasPayment[]>;
   blur: boolean;
 }
 
+const DEFAULT_GAS_UNIT_DECIMALS = 9;
+
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
+  const totalGasAmountFromMessage =
+    'totalGasAmount' in message ? message.totalGasAmount : undefined;
+  const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
+  const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
   const unitOptions = useMemo(() => {
-    const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
+    const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
     return [
@@ -32,9 +36,9 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       { value: 9, display: 'Gwei' },
       { value: 0, display: 'Wei' },
     ];
-  }, [message, multiProvider]);
+  }, [chainMetadataResolver, message.originDomainId]);
 
-  const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
+  const [decimals, setDecimals] = useState<number>(DEFAULT_GAS_UNIT_DECIMALS);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
@@ -43,6 +47,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           igpPayments[contract].map((p) => ({
             gasAmount: p.gasAmount,
             paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
+            paymentAmountWei: p.paymentAmount,
             contract,
           })),
         )
@@ -53,95 +58,102 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         new BigNumber(0),
       );
       let totalPaymentWei = paymentsWithAddr.reduce(
-        (sum, val) => sum.plus(val.paymentAmount),
+        (sum, val) => sum.plus(val.paymentAmountWei),
         new BigNumber(0),
       );
       let numPayments = paymentsWithAddr.length;
 
       totalGasAmount = new BigNumber(
-        BigNumberMax(totalGasAmount, new BigNumber(message.totalGasAmount || 0)),
+        BigNumberMax(totalGasAmount, new BigNumber(totalGasAmountFromMessage || 0)),
       );
       totalPaymentWei = new BigNumber(
-        BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0)),
+        BigNumberMax(totalPaymentWei, new BigNumber(totalPaymentFromMessage || 0)),
       );
-      numPayments = Math.max(numPayments, message.numPayments || 0);
+      numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
 
       const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
       const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
       return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
-    }, [decimals, message, igpPayments]);
+    }, [
+      decimals,
+      igpPayments,
+      numPaymentsFromMessage,
+      totalGasAmountFromMessage,
+      totalPaymentFromMessage,
+    ]);
 
   return (
-    <Card className="relative w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <Image src={FuelPump} width={24} height={24} alt="" className="opacity-80" />
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Gas Payments</h3>
-          <Tooltip
-            content="Amounts paid to the Interchain Gas Paymaster for message delivery."
-            id="gas-info"
+    <SectionCard
+      className="w-full"
+      title="Interchain Gas Payments"
+      icon={
+        <Tooltip
+          content="Amounts paid to the Interchain Gas Paymaster for message delivery."
+          id="gas-info"
+        />
+      }
+    >
+      <div className="relative space-y-3">
+        <p className="text-xs font-light">
+          Interchain gas payments are required to fund message delivery on the destination chain.{' '}
+          <a
+            href={docLinks.gas}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cursor-pointer text-primary-800 transition-all hover:text-primary-700 active:text-primary-600"
+          >
+            Learn more about gas on Hyperlane.
+          </a>
+        </p>
+        <div className="mr-28 flex flex-wrap gap-x-4 gap-y-2">
+          <KeyValueRow
+            label="Payment count:"
+            labelWidth="w-28"
+            display={numPayments.toString()}
+            allowZeroish={true}
+            blurValue={blur}
+            classes="basis-5/12"
+          />
+          <KeyValueRow
+            label="Total gas amount:"
+            labelWidth="w-28"
+            display={totalGasAmount.toString()}
+            allowZeroish={true}
+            blurValue={blur}
+            classes="basis-5/12"
+          />
+          <KeyValueRow
+            label="Total paid:"
+            labelWidth="w-28"
+            display={paymentFormatted}
+            allowZeroish={true}
+            blurValue={blur}
+            classes="basis-5/12"
+          />
+          <KeyValueRow
+            label="Average price:"
+            labelWidth="w-28"
+            display={avgPrice ? avgPrice.formatted : '-'}
+            allowZeroish={true}
+            blurValue={blur}
+            classes="basis-5/12"
+          />
+        </div>
+        {!!paymentsWithAddr.length && (
+          <div className="pb-8 md:pb-6 md:pt-2">
+            <IgpPaymentsTable payments={paymentsWithAddr} />
+          </div>
+        )}
+        <div className="absolute bottom-0 right-0">
+          <RadioButtons
+            options={unitOptions}
+            selected={decimals}
+            onChange={(value) => setDecimals(parseInt(value.toString(), 10))}
+            label="Gas unit"
           />
         </div>
       </div>
-      <p className="text-sm font-light">
-        Interchain gas payments are required to fund message delivery on the destination chain.{' '}
-        <a
-          href={docLinks.gas}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="cursor-pointer text-blue-500 transition-all hover:text-blue-400 active:text-blue-300"
-        >
-          Learn more about gas on Hyperlane.
-        </a>
-      </p>
-      <div className="mr-36 flex flex-wrap gap-x-4 gap-y-4">
-        <KeyValueRow
-          label="Payment count:"
-          labelWidth="w-28"
-          display={numPayments.toString()}
-          allowZeroish={true}
-          blurValue={blur}
-          classes="basis-5/12"
-        />
-        <KeyValueRow
-          label="Total gas amount:"
-          labelWidth="w-28"
-          display={totalGasAmount.toString()}
-          allowZeroish={true}
-          blurValue={blur}
-          classes="basis-5/12"
-        />
-        <KeyValueRow
-          label="Total paid:"
-          labelWidth="w-28"
-          display={paymentFormatted}
-          allowZeroish={true}
-          blurValue={blur}
-          classes="basis-5/12"
-        />
-        <KeyValueRow
-          label="Average price:"
-          labelWidth="w-28"
-          display={avgPrice ? avgPrice.formatted : '-'}
-          allowZeroish={true}
-          blurValue={blur}
-          classes="basis-5/12"
-        />
-      </div>
-      {!!paymentsWithAddr.length && (
-        <div className="pb-8 md:pb-6 md:pt-2">
-          <IgpPaymentsTable payments={paymentsWithAddr} />
-        </div>
-      )}
-      <div className="absolute bottom-2 right-2">
-        <RadioButtons
-          options={unitOptions}
-          selected={decimals}
-          onChange={(value) => setDecimals(parseInt(value.toString(), 10))}
-          label="Gas unit"
-        />
-      </div>
-    </Card>
+    </SectionCard>
   );
 }
 
@@ -188,6 +200,6 @@ function computeAvgGasPrice(
 }
 
 const style = {
-  th: 'p-1 md:p-2 text-sm text-gray-500 font-normal text-left border border-gray-200 rounded',
-  td: 'p-1 md:p-2 text-xs md:text-sm text-gray-700 text-left border border-gray-200 rounded',
+  th: 'p-1 md:p-1.5 text-xs text-gray-500 font-normal text-left border border-gray-200 rounded',
+  td: 'p-1 md:p-1.5 font-mono text-xxs md:text-xs text-gray-700 text-left border border-gray-200 rounded',
 };

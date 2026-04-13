@@ -1,6 +1,5 @@
-import Image from 'next/image';
-
 import { Fade, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import Image from 'next/image';
 
 import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';

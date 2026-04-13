@@ -2,14 +2,12 @@ import { MAILBOX_VERSION } from '@hyperlane-xyz/sdk';
 import { addressToBytes32, formatMessage, fromWei, strip0x } from '@hyperlane-xyz/utils';
 import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
 import { BigNumber } from 'ethers';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Card } from '../../../components/layout/Card';
-import AccountStar from '../../../images/icons/account-star.svg';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { useMultiProvider } from '../../../store';
-import { IcaCall, Message, MessageStatus } from '../../../types';
+import { IcaCall, Message, MessageStatus, MessageStub } from '../../../types';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { MessageDebugResult } from '../../debugger/types';
 import {
@@ -43,7 +41,7 @@ function extractAddressFromSalt(salt: string | undefined): string | null {
 }
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   blur: boolean;
   debugResult?: MessageDebugResult;
 }
@@ -243,19 +241,16 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   }, [decodeResult]);
 
   return (
-    <Card className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="relative -left-0.5 -top-px">
-          <Image src={AccountStar} width={28} height={28} alt="" className="opacity-80" />
-        </div>
-        <div className="flex items-center pb-1">
-          <h3 className="mr-2 text-md font-medium text-blue-500">Interchain Account Details</h3>
-          <Tooltip
-            id="ica-info"
-            content="Details about this Interchain Account message, including the owner, derived account address, and calls to be executed on the destination chain."
-          />
-        </div>
-      </div>
+    <SectionCard
+      className="w-full"
+      title="Interchain Account Details"
+      icon={
+        <Tooltip
+          id="ica-info"
+          content="Details about this Interchain Account message, including the owner, derived account address, and calls to be executed on the destination chain."
+        />
+      }
+    >
       {decodeResult ? (
         <>
           {/* Message type info */}
@@ -596,7 +591,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
           Unable to decode Interchain Account message body. The message format may be unrecognized.
         </div>
       )}
-    </Card>
+    </SectionCard>
   );
 }
 

@@ -1,6 +1,3 @@
-import { useEffect } from 'react';
-import { z } from 'zod';
-
 import {
   ChainMap,
   ChainMetadata,
@@ -8,8 +5,10 @@ import {
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk';
 import { fromBase64 } from '@hyperlane-xyz/utils';
+import { useEffect } from 'react';
+import { z } from 'zod';
 
-import { useStore } from '../../store';
+import { useStore } from '../../metadataStore';
 import { logger } from '../../utils/logger';
 import { useQueryParam } from '../../utils/queryParams';
 
