@@ -11,7 +11,6 @@ import {
   SearchEmptyError,
   SearchFetching,
   SearchInvalidError,
-  SearchRedirecting,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
@@ -334,7 +333,6 @@ export function MessageSearch() {
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
-        <SearchRedirecting show={!!redirectUrl} />
         <Fade show={showMessageTable && !redirectUrl}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>

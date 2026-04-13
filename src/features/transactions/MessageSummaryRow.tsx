@@ -1,11 +1,10 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
@@ -37,11 +36,6 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     setIsManuallyToggled(true);
     setManualExpandState((prev) => !prev);
   };
-
-  // Reset manual toggle when forceExpanded changes
-  useEffect(() => {
-    setIsManuallyToggled(false);
-  }, [forceExpanded]);
 
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
@@ -77,17 +71,22 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     ? getHumanReadableDuration(destination.timestamp - message.origin.timestamp, 2)
     : undefined;
 
-  // Generate summary line based on message type
-  const summaryLine = useMemo(() => {
+  const { title, summaryLine } = useMemo(() => {
     const route = `${getChainDisplayName(chainMetadataResolver, originChainName, true)} to ${getChainDisplayName(chainMetadataResolver, destinationChainName, true)}`;
 
     switch (messageType) {
       case 'warp':
-        return `${warpRouteDetails?.amount} ${warpRouteDetails?.originToken?.symbol} - ${route}`;
+        return {
+          title: 'Warp Transfer',
+          summaryLine: `${warpRouteDetails?.amount} ${warpRouteDetails?.originToken?.symbol} - ${route}`,
+        };
       case 'ica':
-        return `ICA ${trimToLength(message.msgId, 12)} - ${route}`;
+        return {
+          title: 'Interchain Account Message',
+          summaryLine: `ICA ${trimToLength(message.msgId, 12)} - ${route}`,
+        };
       default:
-        return route;
+        return { title: 'Message', summaryLine: route };
     }
   }, [
     messageType,
@@ -98,24 +97,18 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     message,
   ]);
 
-  // Generate title based on message type
-  const title = useMemo(() => {
-    switch (messageType) {
-      case 'warp':
-        return 'Warp Transfer';
-      case 'ica':
-        return 'Interchain Account Message';
-      default:
-        return 'Message';
-    }
-  }, [messageType]);
-
   const isIcaMsg = messageType === 'ica';
+
+  // Reset manual toggle when forceExpanded changes
+  useEffect(() => {
+    setIsManuallyToggled(false);
+  }, [forceExpanded]);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
       {/* Summary Row (always visible) */}
-      <div
+      <button
+        type="button"
         className="flex w-full cursor-pointer items-center justify-between p-3"
         onClick={handleToggle}
       >
@@ -130,7 +123,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
                 onClick={(e) => e.stopPropagation()}
                 className="text-xs text-blue-500 transition-colors hover:text-blue-600"
               >
-                ↗
+                Open
               </Link>
             </div>
             <p className="truncate text-xs text-gray-500">{summaryLine}</p>
@@ -145,7 +138,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
             className="text-gray-400"
           />
         </div>
-      </div>
+      </button>
 
       {/* Expanded Content */}
       {isExpanded && (
@@ -186,7 +179,7 @@ function StatusBadge({ status, duration }: { status: MessageStatus; duration?: s
   if (status === MessageStatus.Delivered) {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1">
-        <Image src={CheckmarkIcon} width={14} height={14} alt="" />
+        <CheckmarkIcon width={14} height={14} color="#22c55e" />
         <span className="text-xs font-medium text-green-700">
           Delivered{duration && ` (${duration})`}
         </span>
