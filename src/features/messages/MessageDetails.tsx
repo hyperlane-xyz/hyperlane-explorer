@@ -1,15 +1,13 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { Card } from '../../components/layout/Card';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
 import { useMultiProvider, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { logger } from '../../utils/logger';
-import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { ContentDetailsCard } from './cards/ContentDetailsCard';
@@ -17,7 +15,8 @@ import { GasDetailsCard } from './cards/GasDetailsCard';
 import { IcaDetailsCard } from './cards/IcaDetailsCard';
 import { IsmDetailsCard } from './cards/IsmDetailsCard';
 import { TimelineCard } from './cards/TimelineCard';
-import { DestinationTransactionCard, OriginTransactionCard } from './cards/TransactionCard';
+import { OriginTransactionCard } from './cards/OriginTransactionCard';
+import { DestinationTransactionCard } from './cards/TransactionCard';
 import { WarpTransferDetailsCard } from './cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from './ica';
 import { usePiChainMessageQuery } from './pi-queries/usePiChainMessageQuery';
@@ -75,10 +74,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
 
   const { msgId, status, originDomainId, destinationDomainId, origin, destination, isPiMsg } =
     message;
-
-  const duration = destination?.timestamp
-    ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
-    : undefined;
 
   const showTimeline =
     !isPiMsg &&
@@ -139,7 +134,6 @@ export function MessageDetails({ messageId, message: messageFromUrlParams }: Pro
           domainId={destinationDomainId}
           status={status}
           transaction={destination}
-          duration={duration}
           debugResult={debugResult}
           isStatusFetching={isDeliveryStatusFetching}
           isPiMsg={isPiMsg}
@@ -196,7 +190,7 @@ function StatusHeader({
       </div>
     );
   } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
-    icon = <Image src={CheckmarkIcon} width={24} height={24} alt="" />;
+    icon = <CheckmarkIcon width={24} height={24} color="#22c55e" />;
   } else {
     // icon = <Image src={ErrorCircleIcon} width={24} height={24} className="invert" alt="" />;
     icon = null;

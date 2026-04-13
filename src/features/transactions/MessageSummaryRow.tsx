@@ -1,11 +1,10 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
-import CheckmarkIcon from '../../images/icons/checkmark-circle.svg';
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { useMultiProvider, useStore } from '../../store';
 import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
@@ -179,7 +178,6 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
             domainId={destinationDomainId}
             status={status}
             transaction={destination}
-            duration={duration}
             isStatusFetching={false}
             blur={false}
             message={message}
@@ -210,7 +208,7 @@ function StatusBadge({ status, duration }: { status: MessageStatus; duration?: s
   if (status === MessageStatus.Delivered) {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1">
-        <Image src={CheckmarkIcon} width={14} height={14} alt="" />
+        <CheckmarkIcon width={14} height={14} color="#22c55e" />
         <span className="text-xs font-medium text-green-700">
           Delivered{duration && ` (${duration})`}
         </span>

@@ -2,7 +2,7 @@ import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import { useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
-import { OriginTransactionCard } from '../messages/cards/TransactionCard';
+import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
 
 import { MessageSummaryRow } from './MessageSummaryRow';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';

@@ -171,7 +171,7 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
  */
 export function useTransactionMessageCount(originTxHash: string | undefined) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
 
   // Build query for origin tx hash
   const { query, variables } = useMemo(() => {
@@ -197,9 +197,9 @@ export function useTransactionMessageCount(originTxHash: string | undefined) {
   // Parse results
   const messageCount = useMemo(() => {
     if (!data || !originTxHash) return 0;
-    const messages = parseMessageStubResult(multiProvider, scrapedChains, data);
+    const messages = parseMessageStubResult(chainMetadataResolver, scrapedChains, data);
     return messages.length;
-  }, [data, multiProvider, scrapedChains, originTxHash]);
+  }, [data, chainMetadataResolver, scrapedChains, originTxHash]);
 
   return messageCount;
 }

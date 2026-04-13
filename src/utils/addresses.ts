@@ -1,5 +1,4 @@
 import {
-  hexToBech32mPrefix,
   hexToRadixCustomPrefix,
   isZeroishAddress,
   ProtocolType,
@@ -42,7 +41,8 @@ export function formatTxHash(
     case ProtocolType.CosmosNative:
       return strip0x(hash);
     case ProtocolType.Aleo:
-      return hexToBech32mPrefix(hash, 'at');
+      // TODO: re-add when hexToBech32mPrefix is available in @hyperlane-xyz/utils
+      return hash;
     default:
       return hash;
   }
