@@ -1,3 +1,4 @@
+import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
 
@@ -56,6 +57,9 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
 
   const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
   const isCollateral = isCollateralRoute(destinationToken.standard);
+  const isDifferentToken =
+    originToken.symbol !== destinationToken.symbol ||
+    originToken.logoURI !== destinationToken.logoURI;
 
   return (
     <SectionCard
@@ -70,11 +74,11 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     >
       <div className="flex gap-4 sm:gap-6">
         {/* Token Logo Column */}
-        {warpRouteDetails.originToken.logoURI && (
-          <div className="flex flex-shrink-0 items-center justify-center">
-            <TokenIcon token={warpRouteDetails.originToken} size={80} />
-          </div>
-        )}
+        <TokenLogos
+          originToken={originToken}
+          destinationToken={destinationToken}
+          isDifferentToken={isDifferentToken}
+        />
         {/* Details Column */}
         <div className="min-w-0 flex-1 space-y-4">
           {isCollateral && (
@@ -94,7 +98,9 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             <KeyValueRow
               label="Origin token:"
               labelWidth="w-28 sm:w-32"
-              display={originToken.addressOrDenom}
+              display={originToken.symbol}
+              tooltip={originToken.addressOrDenom}
+              copyValue={originToken.addressOrDenom}
               blurValue={blur}
               link={blockExplorerAddressUrls.originToken}
               showCopy
@@ -102,7 +108,9 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             <KeyValueRow
               label="Destination token:"
               labelWidth="w-28 sm:w-32"
-              display={destinationToken.addressOrDenom}
+              display={destinationToken.symbol}
+              tooltip={destinationToken.addressOrDenom}
+              copyValue={destinationToken.addressOrDenom}
               blurValue={blur}
               link={blockExplorerAddressUrls.destinationToken}
               showCopy
@@ -119,5 +127,36 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         </div>
       </div>
     </SectionCard>
+  );
+}
+
+function TokenLogos({
+  originToken,
+  destinationToken,
+  isDifferentToken,
+}: {
+  originToken: TokenArgs;
+  destinationToken: TokenArgs;
+  isDifferentToken: boolean;
+}) {
+  if (!isDifferentToken) {
+    return (
+      <div className="flex flex-shrink-0 items-center justify-center">
+        <TokenIcon token={originToken} size={80} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-shrink-0 items-center justify-center">
+      <div className="relative" style={{ width: 73, height: 73 }}>
+        <div className="absolute left-0 top-0">
+          <TokenIcon token={originToken} size={48} />
+        </div>
+        <div className="absolute bottom-0 right-0 rounded-full ring-2 ring-white">
+          <TokenIcon token={destinationToken} size={48} />
+        </div>
+      </div>
+    </div>
   );
 }
