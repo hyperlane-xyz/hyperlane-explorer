@@ -167,6 +167,10 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [message, warpRouteChainAddressMap, chainMetadataResolver],
   );
+  const isDifferentWarpToken = warpRouteDetails
+    ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
+      warpRouteDetails.originToken.logoURI !== warpRouteDetails.destinationToken.logoURI
+    : false;
   return (
     <>
       <LinkCell
@@ -235,11 +239,25 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       >
         {warpRouteDetails ? (
           <>
-            <TokenIcon token={warpRouteDetails.originToken} size={20} />
+            {isDifferentWarpToken ? (
+              <div className="relative flex-shrink-0" style={{ width: 26, height: 20 }}>
+                <div className="absolute left-0" style={{ top: -1 }}>
+                  <TokenIcon token={warpRouteDetails.originToken} size={16} />
+                </div>
+                <div
+                  className="absolute right-0 rounded-full ring-1 ring-white"
+                  style={{ bottom: -1 }}
+                >
+                  <TokenIcon token={warpRouteDetails.destinationToken} size={16} />
+                </div>
+              </div>
+            ) : (
+              <TokenIcon token={warpRouteDetails.originToken} size={20} />
+            )}
             <div
               className={styles.iconText}
               data-tooltip-id="root-tooltip"
-              data-tooltip-content={`${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}`}
+              data-tooltip-content={`${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}${isDifferentWarpToken ? ` → ${warpRouteDetails.destinationToken.symbol}` : ''}`}
             >
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>
