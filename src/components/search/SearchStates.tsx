@@ -1,6 +1,5 @@
-import Image from 'next/image';
-
 import { Fade, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import Image from 'next/image';
 
 import BugIcon from '../../images/icons/bug.svg';
 import ErrorIcon from '../../images/icons/error-circle.svg';
@@ -127,5 +126,24 @@ export function SearchChainError({ show }: { show: boolean }) {
       text="Sorry, either the origin or the destination chain is invalid. Please choose a different chain or clear your search filters."
       imgWidth={70}
     />
+  );
+}
+
+export function SearchRedirecting({ show }: { show: boolean }) {
+  return (
+    <div className="absolute left-0 right-0 top-10">
+      <Fade show={show}>
+        <div className="my-10 flex justify-center">
+          <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
+            <div className="flex items-center justify-center">
+              <SpinnerIcon width={40} height={40} />
+            </div>
+            <div className="mt-4 text-center font-light leading-loose text-gray-700">
+              Found it! Redirecting...
+            </div>
+          </div>
+        </div>
+      </Fade>
+    </div>
   );
 }

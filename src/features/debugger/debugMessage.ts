@@ -1,7 +1,3 @@
-// Forked from debug script in monorepo but mostly rewritten
-// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, utils as ethersUtils, providers } from 'ethers';
-
 import {
   InterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
   IInterchainSecurityModule__factory as InterchainSecurityModuleFactory,
@@ -14,7 +10,6 @@ import {
   ChainMap,
   ChainMetadata,
   isProxy,
-  MAILBOX_VERSION,
   MultiProtocolProvider,
   proxyImplementation,
 } from '@hyperlane-xyz/sdk';
@@ -26,13 +21,17 @@ import {
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
+// Forked from debug script in monorepo but mostly rewritten
+// https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
+import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import { Message } from '../../types';
+import { debugIgnoredChains } from '../../consts/config';
+import { MAILBOX_VERSION } from '../../consts/mailbox';
+import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import { computeIcaAddress, decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
 
-import { debugIgnoredChains } from '../../consts/config';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
@@ -44,7 +43,9 @@ export async function debugMessage(
   multiProvider: MultiProtocolProvider,
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
-  {
+  message: Message | MessageStub,
+): Promise<MessageDebugResult> {
+  const {
     msgId,
     nonce,
     sender,
@@ -53,10 +54,10 @@ export async function debugMessage(
     originDomainId: originDomain,
     destinationDomainId: destDomain,
     body,
-    totalGasAmount,
     isPiMsg,
-  }: Message,
-): Promise<MessageDebugResult> {
+  } = message;
+  const totalGasAmount = 'totalGasAmount' in message ? message.totalGasAmount : undefined;
+
   logger.debug(`Debugging message id: ${msgId}`);
 
   // Prepare some useful data/encodings
@@ -69,7 +70,8 @@ export async function debugMessage(
     recipient,
     body,
   );
-  const destName = multiProvider.tryGetChainName(destDomain)!;
+  const destName = multiProvider.tryGetChainName(destDomain);
+  if (!destName) throw new Error(`Cannot debug message, unknown destination domain ${destDomain}`);
   const originProvider = multiProvider.getEthersV5Provider(originDomain) as Provider;
   const destProvider = multiProvider.getEthersV5Provider(destDomain) as Provider;
   const senderBytes = addressToBytes32(sender);

@@ -1,7 +1,6 @@
+import { Result, failure, success } from '@hyperlane-xyz/utils';
 import { Client } from '@urql/core';
 import type { NextApiRequest } from 'next';
-
-import { Result, failure, success } from '@hyperlane-xyz/utils';
 
 import { API_GRAPHQL_QUERY_LIMIT } from '../../consts/api';
 import { MessageStatus } from '../../types';
@@ -9,7 +8,6 @@ import { logger } from '../../utils/logger';
 import { buildMessageQuery } from '../messages/queries/build';
 import { MessagesStubQueryResult } from '../messages/queries/fragments';
 import { parseMessageStubResult } from '../messages/queries/parse';
-
 import { parseQueryParams } from './getMessages';
 import { getMultiProvider, getScrapedChains } from './utils';
 

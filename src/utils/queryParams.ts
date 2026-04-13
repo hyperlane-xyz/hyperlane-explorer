@@ -1,5 +1,6 @@
-import { useRouter } from 'next/router';
 import type { ParsedUrlQuery } from 'querystring';
+
+import { useRouter } from 'next/router';
 import { useEffect, useRef } from 'react';
 
 import { logger } from './logger';

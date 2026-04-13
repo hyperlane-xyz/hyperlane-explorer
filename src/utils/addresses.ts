@@ -1,25 +1,48 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { hexToRadixCustomPrefix, ProtocolType, strip0x } from '@hyperlane-xyz/utils';
+import {
+  hexToRadixCustomPrefix,
+  isZeroishAddress,
+  ProtocolType,
+  strip0x,
+} from '@hyperlane-xyz/utils';
+
+import type { ChainMetadataResolver } from '../features/chains/metadataManager';
 
 export function formatAddress(
   address: string,
   domainId: number,
-  multiProvider: MultiProtocolProvider,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
-  if (metadata?.protocol === ProtocolType.Radix)
-    return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
-  return address;
+  if (!address || isZeroishAddress(address)) return address;
+
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
+
+  switch (metadata?.protocol) {
+    case ProtocolType.Radix:
+      return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+    default:
+      return address;
+  }
 }
 
-export function formatTxHash(hash: string, domainId: number, multiProvider: MultiProtocolProvider) {
-  const metadata = multiProvider.tryGetChainMetadata(domainId);
+export function formatTxHash(
+  hash: string,
+  domainId: number,
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
+) {
+  if (!hash || /^0*$/.test(strip0x(hash))) return hash;
+
+  const metadata = chainMetadataResolver.tryGetChainMetadata(domainId);
 
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
       return hexToRadixCustomPrefix(hash, 'txid', metadata?.bech32Prefix);
     case ProtocolType.Cosmos:
       return strip0x(hash);
+    case ProtocolType.CosmosNative:
+      return strip0x(hash);
+    case ProtocolType.Aleo:
+      // TODO: re-add when hexToBech32mPrefix is available in @hyperlane-xyz/utils
+      return hash;
     default:
       return hash;
   }

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { OGHead } from '../../components/OGHead';
 import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
+import { MessageDetailsLoading } from '../../features/messages/MessageDetailsLoading';
 import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
 import { deserializeMessage } from '../../features/messages/utils';
 import { Message } from '../../types';
@@ -12,9 +13,12 @@ import { logger } from '../../utils/logger';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
 // Dynamic import with ssr: false to avoid pino-pretty issues during SSR
-const MessageDetails = dynamic(
-  () => import('../../features/messages/MessageDetails').then((mod) => mod.MessageDetails),
-  { ssr: false },
+const MessageDetailsPage = dynamic(
+  () => import('../../features/messages/MessageDetailsPage').then((mod) => mod.MessageDetailsPage),
+  {
+    ssr: false,
+    loading: () => <MessageDetailsLoading />,
+  },
 );
 
 interface OGData {
@@ -58,33 +62,22 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     : APP_DESCRIPTION;
   const ogImage = ogData
     ? `${host}/api/og?messageId=${ogData.messageId}`
-    : `${host}/images/logo.png`;
+    : `${host}/images/og-preview.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
-  const logoUrl = `${host}/images/logo.png`;
 
-  // Render nothing while waiting for client-side router
   if (!messageId || typeof messageId !== 'string') {
     return (
-      <OGHead
-        title={ogTitle}
-        description={ogDescription}
-        url={ogUrl}
-        image={ogImage}
-        logoUrl={logoUrl}
-      />
+      <>
+        <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
+        <MessageDetailsLoading />
+      </>
     );
   }
 
   return (
     <>
-      <OGHead
-        title={ogTitle}
-        description={ogDescription}
-        url={ogUrl}
-        image={ogImage}
-        logoUrl={logoUrl}
-      />
-      <MessageDetails messageId={messageId} message={message} />
+      <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
+      <MessageDetailsPage messageId={messageId} message={message} />
     </>
   );
 };
@@ -124,6 +117,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       // Silently fail - will use default OG tags
     }
   }
+
+  // Short cache for OG data freshness while avoiding re-fetch on every request
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   return {
     props: {

@@ -1,204 +1,94 @@
-import {
-  GithubRegistry,
-  IRegistry,
-  warpRouteConfigs as publishedWarpRouteConfigs,
-} from '@hyperlane-xyz/registry';
-import {
-  ChainMap,
-  ChainMetadata,
-  ChainMetadataSchema,
-  ChainName,
-  MultiProtocolProvider,
-  WarpCoreConfig,
-  mergeChainMetadataMap,
-} from '@hyperlane-xyz/sdk';
-import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { config } from './consts/config';
-import { links } from './consts/links';
-import { DomainsEntry } from './features/chains/queries/fragments';
-import { WarpRouteChainAddressMap } from './types';
+
+import { useStore as useMetadataStore } from './metadataStore';
 import { logger } from './utils/logger';
 
-// Increment this when persist state has breaking changes
-const PERSIST_STATE_VERSION = 2;
+export {
+  useChainMetadata,
+  useRegistry,
+  useStore,
+  useWarpRouteIdToAddressesMap,
+} from './metadataStore';
 
-// Keeping everything here for now as state is simple
-// Will refactor into slices as necessary
-interface AppState {
-  scrapedDomains: Array<DomainsEntry>;
-  setScrapedDomains: (chains: Array<DomainsEntry>) => void;
-  chainMetadata: ChainMap<ChainMetadata>;
-  setChainMetadata: (metadata: ChainMap<ChainMetadata>) => void;
-  chainMetadataOverrides: ChainMap<Partial<ChainMetadata>>;
-  setChainMetadataOverrides: (overrides?: ChainMap<Partial<ChainMetadata> | undefined>) => void;
+interface ProviderState {
   multiProvider: MultiProtocolProvider;
-  setMultiProvider: (mp: MultiProtocolProvider) => void;
-  registry: IRegistry;
-  setRegistry: (registry: IRegistry) => void;
-  bannerClassName: string;
-  setBanner: (className: string) => void;
-  warpRouteChainAddressMap: WarpRouteChainAddressMap;
-  setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => void;
+  syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
 
-export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      scrapedDomains: [],
-      setScrapedDomains: (domains: Array<DomainsEntry>) => set({ scrapedDomains: domains }),
-      chainMetadata: {},
-      setChainMetadata: (metadata: ChainMap<ChainMetadata>) => set({ chainMetadata: metadata }),
-      chainMetadataOverrides: {},
-      setChainMetadataOverrides: async (
-        overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
-      ) => {
-        logger.debug('Setting chain overrides in store');
-        const { multiProvider, warpRouteChainAddressMap } = await buildMultiProvider(
-          get().registry,
-          overrides,
-        );
-        const filtered = objFilter(overrides, (_, metadata) => !!metadata);
-        set({ chainMetadataOverrides: filtered, multiProvider, warpRouteChainAddressMap });
-      },
-      multiProvider: new MultiProtocolProvider({}),
-      setMultiProvider: (multiProvider: MultiProtocolProvider) => {
-        logger.debug('Setting multiProvider in store');
-        set({ multiProvider });
-      },
-      registry: new GithubRegistry({
-        proxyUrl: config.githubProxy,
-        uri: config.registryUrl,
-        branch: config.registryBranch,
-      }),
-      setRegistry: (registry: IRegistry) => {
-        set({ registry });
-      },
-      bannerClassName: '',
-      setBanner: (className: string) => set({ bannerClassName: className }),
-      warpRouteChainAddressMap: {},
-      setWarpRouteChainAddressMap: (warpRouteChainAddressMap: WarpRouteChainAddressMap) => {
-        set({ warpRouteChainAddressMap });
-      },
-    }),
-    {
-      name: 'hyperlane', // name in storage
-      version: PERSIST_STATE_VERSION,
-      partialize: (state) => ({ chainMetadataOverrides: state.chainMetadataOverrides }), // fields to persist
-      onRehydrateStorage: () => {
-        logger.debug('Rehydrating state');
-        return (state, error) => {
-          if (error || !state) {
-            logger.error('Error during hydration', error);
-            return;
-          }
-          buildMultiProvider(state.registry, state.chainMetadataOverrides)
-            .then(({ metadata, multiProvider, warpRouteChainAddressMap }) => {
-              state.setChainMetadata(metadata);
-              state.setMultiProvider(multiProvider);
-              state.setWarpRouteChainAddressMap(warpRouteChainAddressMap);
-              logger.debug('Rehydration complete');
-            })
-            .catch((e) => logger.error('Error building MultiProtocolProvider', e));
-        };
-      },
-    },
-  ),
-);
+type ProviderChainMetadata = ReturnType<typeof useMetadataStore.getState>['chainMetadata'];
 
-export function useRegistry() {
-  return useStore((s) => s.registry);
+let providerSyncPromise: Promise<void> | null = null;
+let queuedChainMetadata: ProviderChainMetadata | null = null;
+let isProviderStoreSubscribed = false;
+
+function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
+  useProviderStore
+    .getState()
+    .syncMultiProvider(chainMetadata)
+    .catch((error) => logger.error('Error syncing MultiProtocolProvider', error));
+}
+
+const useProviderStore = create<ProviderState>()((set) => ({
+  multiProvider: new MultiProtocolProvider({}),
+  syncMultiProvider: async (requestedChainMetadata) => {
+    let chainMetadata = requestedChainMetadata;
+    if (!chainMetadata || !Object.keys(chainMetadata).length) {
+      const metadataState = useMetadataStore.getState();
+      if (
+        !metadataState.isChainMetadataLoaded ||
+        !Object.keys(metadataState.chainMetadata).length
+      ) {
+        await metadataState.ensureChainMetadata();
+      }
+
+      chainMetadata = useMetadataStore.getState().chainMetadata;
+    }
+
+    if (providerSyncPromise) {
+      queuedChainMetadata = chainMetadata;
+      return providerSyncPromise;
+    }
+
+    providerSyncPromise = Promise.resolve()
+      .then(() => {
+        logger.debug('Syncing MultiProtocolProvider from metadata store');
+        set({ multiProvider: new MultiProtocolProvider(chainMetadata) });
+      })
+      .finally(() => {
+        const nextChainMetadata = queuedChainMetadata;
+        queuedChainMetadata = null;
+        providerSyncPromise = null;
+
+        if (nextChainMetadata && nextChainMetadata !== chainMetadata) {
+          syncMultiProviderSafely(nextChainMetadata);
+        }
+      });
+
+    return providerSyncPromise;
+  },
+}));
+
+function ensureProviderStoreSubscription() {
+  if (isProviderStoreSubscribed) return;
+  isProviderStoreSubscribed = true;
+
+  syncMultiProviderSafely();
+  useMetadataStore.subscribe((state, prevState) => {
+    if (state.chainMetadata !== prevState.chainMetadata) {
+      useProviderStore.setState({ multiProvider: new MultiProtocolProvider({}) });
+      syncMultiProviderSafely(state.chainMetadata);
+    }
+  });
 }
 
 export function useMultiProvider() {
-  return useStore((s) => s.multiProvider);
+  ensureProviderStoreSubscription();
+  return useProviderStore((s) => s.multiProvider);
 }
 
-// Ensures that the multiProvider has been populated during the onRehydrateStorage hook above,
-// otherwise returns undefined
 export function useReadyMultiProvider() {
   const multiProvider = useMultiProvider();
   if (!multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
-}
-
-export function useChainMetadata(chainName?: ChainName) {
-  const multiProvider = useMultiProvider();
-  if (!chainName) return undefined;
-  return multiProvider.tryGetChainMetadata(chainName);
-}
-
-async function buildMultiProvider(
-  registry: IRegistry,
-  overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
-) {
-  logger.debug('Building new MultiProtocolProvider from registry');
-
-  // TODO improve interface so this pre-cache isn't required
-  await registry.listRegistryContent();
-  const registryChainMetadata = await registry.getMetadata();
-
-  // TODO have the registry do this automatically
-  const metadataWithLogos = await promiseObjAll(
-    objMap(
-      registryChainMetadata,
-      async (chainName, metadata): Promise<ChainMetadata> => ({
-        ...metadata,
-        logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
-      }),
-    ),
-  );
-
-  const mergedMetadata = objFilter(
-    mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata),
-    (chain, metadata): metadata is ChainMetadata => {
-      const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
-      if (!parsedMetadata.success) logger.error(`Failed to parse metadata for ${chain}, skipping`);
-      return parsedMetadata.success;
-    },
-  );
-
-  const warpRouteChainAddressMap = await buildWarpRouteChainAddressMap(registry);
-
-  return {
-    metadata: mergedMetadata,
-    multiProvider: new MultiProtocolProvider(mergedMetadata),
-    warpRouteChainAddressMap,
-  };
-}
-
-export async function buildWarpRouteChainAddressMap(
-  registry: IRegistry,
-): Promise<WarpRouteChainAddressMap> {
-  let warpRouteConfigs: Record<string, WarpCoreConfig>;
-
-  try {
-    logger.debug('Building warp route map from GithubRegistry');
-    warpRouteConfigs = await registry.getWarpRoutes();
-  } catch {
-    logger.debug(
-      'Failed to build warp route map from GithubRegistry. Using published warp route configs.',
-    );
-    warpRouteConfigs = publishedWarpRouteConfigs;
-  }
-
-  return Object.values(warpRouteConfigs).reduce((acc, { tokens }) => {
-    if (!tokens.length) return acc;
-
-    // Calculate the wire decimals (max across all tokens in this warp route)
-    // This is the normalized decimal format used in the message body for EVM/Sealevel routes
-    const wireDecimals = Math.max(...tokens.map((t) => t.decimals ?? 18));
-
-    tokens.forEach((token) => {
-      const { chainName, addressOrDenom } = token;
-      if (!addressOrDenom) return;
-      acc[chainName] ||= {};
-      acc[chainName][addressOrDenom] = {
-        ...token,
-        wireDecimals,
-      };
-    });
-    return acc;
-  }, {});
 }

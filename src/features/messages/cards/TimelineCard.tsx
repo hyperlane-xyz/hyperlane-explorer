@@ -1,9 +1,10 @@
 import { MessageTimeline, useMessageStage } from '@hyperlane-xyz/widgets';
+
 import { Card } from '../../../components/layout/Card';
-import { Message } from '../../../types';
+import { Message, MessageStub } from '../../../types';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   blur?: boolean;
 }
 
@@ -12,7 +13,7 @@ export function TimelineCard({ message, blur }: Props) {
   const { stage, timings } = useMessageStage({ message });
 
   return (
-    <Card className="w-full">
+    <Card className="w-full !bg-transparent !shadow-none">
       {/* <div className="flex items-center justify-end">
         <h3 className="text-gray-500 font-medium text-md mr-2">Delivery Timeline</h3>
         <HelpIcon size={16} text="A breakdown of the stages for delivering a message" />

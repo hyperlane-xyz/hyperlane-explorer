@@ -1,8 +1,7 @@
-import { ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { ChainSearchMenu, Modal } from '@hyperlane-xyz/widgets';
 
 import { useMultiProvider, useStore } from '../../store';
-
 import { useScrapedChains } from './queries/useScrapedChains';
 
 export function ChainSearchModal({

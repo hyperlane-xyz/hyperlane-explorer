@@ -1,8 +1,8 @@
-const isDevMode = process?.env?.NODE_ENV === 'development';
-const version = process?.env?.NEXT_PUBLIC_VERSION ?? null;
-const registryUrl = process?.env?.NEXT_PUBLIC_REGISTRY_URL || undefined;
-const registryBranch = process?.env?.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
-const explorerApiKeys = JSON.parse(process?.env?.EXPLORER_API_KEYS || '{}');
+const isDevMode = process.env.NODE_ENV === 'development';
+const version = process.env.NEXT_PUBLIC_VERSION ?? null;
+const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
+const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
+const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
 
 interface Config {
   debug: boolean;
@@ -26,6 +26,6 @@ export const config: Config = Object.freeze({
 
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/mainnet3/agent.ts
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/testnet4/agent.ts
-export const unscrapedChainsInDb = ['proteustestnet', 'viction'];
+export const unscrapedChainsInDb = ['proteustestnet'];
 
 export const debugIgnoredChains = ['treasure', 'treasuretopaz'];

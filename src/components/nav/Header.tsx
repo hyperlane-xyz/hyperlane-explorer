@@ -1,32 +1,68 @@
+import { WideChevronIcon } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 
-import { DropdownMenu, WideChevronIcon } from '@hyperlane-xyz/widgets';
-
+import LogoLockup from '../../../public/images/hyperlane-explorer-logo.svg';
 import { docLinks, links } from '../../consts/links';
-import Explorer from '../../images/logos/hyperlane-explorer.svg';
-import Logo from '../../images/logos/hyperlane-logo.svg';
-import Name from '../../images/logos/hyperlane-name.svg';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
-import { MiniSearchBar } from '../search/MiniSearchBar';
+
+const MiniSearchBar = dynamic(
+  () => import('../search/MiniSearchBar').then((mod) => mod.MiniSearchBar),
+  {
+    loading: () => <div className="h-10 w-44 rounded bg-white/10" />,
+    ssr: false,
+  },
+);
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 
 export function Header({ pathName }: { pathName: string }) {
   // For dynamic sizing on scroll
   const animateHeader = useScrollThresholdListener(100);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const showSearch = !PAGES_EXCLUDING_SEARCH.includes(pathName);
 
   const navLinkClass = (path?: string) =>
     path && pathName === path ? styles.navLink + ' underline' : styles.navLink;
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathName]);
+
+  const onPointerDown = useCallback((event: MouseEvent | TouchEvent) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (mobileMenuRef.current?.contains(target)) return;
+    setIsMobileMenuOpen(false);
+  }, []);
+
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape') setIsMobileMenuOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMobileMenuOpen, onKeyDown, onPointerDown]);
+
   return (
     <header
-      className={`sticky top-0 z-10 w-full bg-blue-500 px-2 transition-all duration-200 ease-in-out sm:px-6 lg:px-12 ${
-        animateHeader ? 'border-b border-white py-1' : 'py-4 sm:py-5'
+      className={`sticky top-0 z-20 w-full bg-black/10 px-2 backdrop-blur-md transition-all duration-200 ease-in-out sm:px-6 lg:px-12 ${
+        animateHeader ? 'py-1' : 'py-4 sm:py-5'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -38,21 +74,19 @@ export function Header({ pathName }: { pathName: string }) {
               animateHeader && 'rotate-[0.01deg] scale-90'
             } transition-all duration-500 ease-in-out`}
           >
-            <Image src={Logo} alt="" className="h-7 w-auto sm:h-8" />
-            <Image src={Name} alt="Hyperlane" className="ml-3 mt-1 hidden h-6 w-auto sm:block" />
-            <Image src={Explorer} alt="Explorer" className="ml-2.5 mt-1 h-5 w-auto sm:h-6" />
+            <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-8 w-auto sm:h-10" />
           </div>
         </Link>
         <nav
-          className={`hidden sm:flex sm:items-center sm:space-x-8 ${
+          className={`hidden sm:flex sm:min-h-[40px] sm:items-center sm:space-x-8 ${
             !showSearch ? 'md:space-x-10' : ''
           }`}
         >
           <Link href="/" className={navLinkClass('/')}>
-            Home
+            HOME
           </Link>
           <a className={navLinkClass()} target="_blank" href={links.home} rel="noopener noreferrer">
-            About
+            ABOUT
           </a>
           {/* <Link href="/api-docs" className={navLinkClass('/api-docs')}>
             API
@@ -63,39 +97,34 @@ export function Header({ pathName }: { pathName: string }) {
             href={docLinks.home}
             rel="noopener noreferrer"
           >
-            Docs
+            DOCS
           </a>
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}
-        <div className="item-center relative mr-2 flex sm:hidden">
-          <DropdownMenu
-            button={<DropdownButton />}
-            buttonClassname="hover:opacity-80 active:opacity-70 transition-all"
-            menuItems={[
-              ({ close }) => (
-                <MobileNavLink href="/" closeDropdown={close} key="Home">
-                  Home
-                </MobileNavLink>
-              ),
-              //  ({ close }) => (
-              //   <MobileNavLink href="/api" closeDropdown={c} key="API">
-              //     API
-              //   </MobileNavLink>
-              // ),
-              ({ close }) => (
-                <MobileNavLink href={docLinks.home} closeDropdown={close} key="Docs">
-                  Docs
-                </MobileNavLink>
-              ),
-              ({ close }) => (
-                <MobileNavLink href={links.home} closeDropdown={close} key="About">
-                  About
-                </MobileNavLink>
-              ),
-            ]}
-            menuClassname="!left-0 !right-0 py-7 px-8 bg-blue-500"
-          />
+        <div className="relative mr-2 flex items-center sm:hidden" ref={mobileMenuRef}>
+          <button
+            type="button"
+            aria-expanded={isMobileMenuOpen}
+            aria-label="Toggle navigation menu"
+            className="rounded border border-white bg-primary-500 px-4 py-1 transition-all hover:opacity-80 active:opacity-70"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+          >
+            <DropdownButton />
+          </button>
+          {isMobileMenuOpen && (
+            <div className="absolute right-0 top-full mt-3 min-w-[12rem] bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
+              <MobileNavLink href="/" closeDropdown={() => setIsMobileMenuOpen(false)}>
+                HOME
+              </MobileNavLink>
+              <MobileNavLink href={docLinks.home} closeDropdown={() => setIsMobileMenuOpen(false)}>
+                DOCS
+              </MobileNavLink>
+              <MobileNavLink href={links.home} closeDropdown={() => setIsMobileMenuOpen(false)}>
+                ABOUT
+              </MobileNavLink>
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -104,29 +133,23 @@ export function Header({ pathName }: { pathName: string }) {
 
 function DropdownButton() {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white bg-pink-500 px-4 py-1">
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="transition-all"
-      />
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="-mt-1 transition-all"
-      />
-      <WideChevronIcon
-        width={10}
-        height={14}
-        direction="s"
-        color={Color.white}
-        className="-mt-1 transition-all"
-      />
+    <div className="flex flex-col items-center">
+      <DropdownChevron className="transition-all" />
+      <DropdownChevron className="-mt-1 transition-all" />
+      <DropdownChevron className="-mt-1 transition-all" />
     </div>
+  );
+}
+
+function DropdownChevron({ className }: { className?: string }) {
+  return (
+    <WideChevronIcon
+      width={10}
+      height={14}
+      direction="s"
+      color={Color.white}
+      className={clsx(className)}
+    />
   );
 }
 
@@ -139,19 +162,17 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="flex cursor-pointer items-center py-4 pl-3 decoration-pink-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
+      className="flex cursor-pointer items-center py-4 pl-3 decoration-primary-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
       onClick={closeDropdown}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-xl font-medium capitalize text-white">{children}</span>
+      <span className="text-xl font-medium uppercase text-white">{children}</span>
     </Link>
   );
 }
 
 const styles = {
   navLink:
-    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-pink-500 underline-offset-[3px] transition-all',
-  dropdownOption:
-    'flex items-center cursor-pointer p-2 mt-1 rounded text-blue-500 font-medium hover:underline decoration-2 underline-offset-4 transition-all',
+    'flex items-center font-medium text-white tracking-wide hover:underline active:opacity-80 decoration-4 decoration-primary-500 underline-offset-[3px] transition-all',
 };

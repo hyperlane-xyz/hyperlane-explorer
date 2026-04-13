@@ -8,9 +8,13 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
@@ -23,10 +27,20 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "types": [
+      "node",
+      "jest"
+    ]
   },
-  "exclude": ["node_modules", "dist"],
-  "include": ["next-env.d.ts", "./src/"],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "include": [
+    "next-env.d.ts",
+    "./src/"
+  ],
   "ts-node": {
     "compilerOptions": {
       "module": "commonjs"

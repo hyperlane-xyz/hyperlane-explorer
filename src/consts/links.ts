@@ -2,15 +2,17 @@ export const links = {
   baseUrl: 'https://www.hyperlane.xyz',
   explorerUrl: 'https://explorer.hyperlane.xyz',
   home: 'https://www.hyperlane.xyz',
+  help: 'https://help.hyperlane.xyz',
   discord: 'https://discord.gg/VK9ZUy3aTV',
   github: 'https://github.com/hyperlane-xyz',
   jobs: 'https://jobs.lever.co/Hyperlane',
+  stake: 'https://app.symbiotic.fi/vault/0xE1F23869776c82f691d9Cb34597Ab1830Fb0De58',
   twitter: 'https://x.com/hyperlane',
   blog: 'https://medium.com/hyperlane',
   tenderlySimDocs:
     'https://docs.tenderly.co/simulations-and-forks/how-to-simulate-a-transaction/using-simulation-ui',
   brand:
-    'https://www.figma.com/file/jC5NORmNDCl6WZgjIRwKX5/Hyperlane-Brand-Assets-%5BExternal%5D?type=design&node-id=0-1&t=6eez9F8gttV7L6VG-0',
+    'https://www.figma.com/design/qtIdrKNMgyeq8e3yQrSzCq/Hyperlane-Brand-Assets?node-id=0-1&t=cYnVQdfLxqq0ekOW-1',
   imgPath: 'https://cdn.jsdelivr.net/gh/hyperlane-xyz/hyperlane-registry@main',
 };
 
