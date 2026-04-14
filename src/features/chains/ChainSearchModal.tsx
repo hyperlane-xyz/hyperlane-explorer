@@ -87,6 +87,7 @@ export function ChainSearchModal({
 
   const handleSelectChain = (metadata: ChainMetadata) => {
     onClickChain?.(metadata);
+    close();
   };
 
   return (
@@ -105,6 +106,7 @@ export function ChainSearchModal({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search chains by name, display name, chain ID, or domain ID"
               placeholder="Chain name or ID"
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-gray-400"
             />
@@ -224,6 +226,7 @@ function AddChainForm({
       </div>
       <textarea
         className="min-h-72 w-full rounded-lg border border-gray-200 p-3 font-mono text-xs outline-none transition-colors focus:border-gray-400"
+        aria-label="Chain metadata YAML or JSON"
         placeholder={PLACEHOLDER_TEXT}
         value={textInput}
         onChange={onChangeInput}
