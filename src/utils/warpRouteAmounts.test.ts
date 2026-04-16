@@ -19,10 +19,21 @@ describe('getWarpRouteAmountParts', () => {
     expect(result).toEqual({ amount: 1_000_000n, decimals: 6 });
   });
 
-  it('parses string scale values', () => {
+  it('handles numeric scale values', () => {
     const messageAmount = 1_000_000_000n;
-    const result = getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: '1000' });
+    const result = getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 1000 });
     expect(result).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
+
+  it('handles fractional scale {numerator, denominator}', () => {
+    // scale = {1, 1e12} means messageAmount = localAmount * 1 / 1e12
+    // so localAmount = messageAmount * 1e12 / 1
+    const messageAmount = 1_000_000n;
+    const result = getWarpRouteAmountParts(messageAmount, {
+      decimals: 18,
+      scale: { numerator: 1, denominator: 1_000_000_000_000 },
+    });
+    expect(result).toEqual({ amount: 1_000_000_000_000_000_000n, decimals: 18 });
   });
 
   it('defaults to 18 decimals when decimals not provided', () => {
