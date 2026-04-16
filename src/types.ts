@@ -66,6 +66,7 @@ export type TokenArgsWithWireDecimals = TokenArgs & { wireDecimals: number };
 
 export interface WarpRouteDetails {
   amount: string;
+  destAmount: string | null;
   transferRecipient: string;
   originToken: TokenArgsWithWireDecimals;
   destinationToken: TokenArgsWithWireDecimals;

@@ -6,6 +6,7 @@ import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
+import { formatAmountWithCommas } from '../../../utils/amount';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
 import { KeyValueRow } from './KeyValueRow';
@@ -55,7 +56,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
 
   if (!warpRouteDetails) return null;
 
-  const { amount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
+  const { amount, destAmount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
   const isCollateral = isCollateralRoute(destinationToken.standard);
   const isDifferentToken =
     originToken.symbol !== destinationToken.symbol ||
@@ -91,10 +92,19 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             <KeyValueRow
               label="Amount:"
               labelWidth="w-28 sm:w-32"
-              display={`${amount} ${originToken.symbol}`}
+              display={`${formatAmountWithCommas(amount)} ${originToken.symbol}`}
               blurValue={blur}
               showCopy
             />
+            {destAmount && (
+              <KeyValueRow
+                label="Received amount:"
+                labelWidth="w-28 sm:w-32"
+                display={`${formatAmountWithCommas(destAmount)} ${destinationToken.symbol}`}
+                blurValue={blur}
+                showCopy
+              />
+            )}
             <KeyValueRow
               label="Origin token:"
               labelWidth="w-28 sm:w-32"

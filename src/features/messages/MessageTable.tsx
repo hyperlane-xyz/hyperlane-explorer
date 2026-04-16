@@ -171,6 +171,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
       warpRouteDetails.originToken.logoURI !== warpRouteDetails.destinationToken.logoURI
     : false;
+  const showWarpTooltip = isDifferentWarpToken || !!warpRouteDetails?.destAmount;
   return (
     <>
       <LinkCell
@@ -257,7 +258,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
             <div
               className={styles.iconText}
               data-tooltip-id="root-tooltip"
-              data-tooltip-content={`${warpRouteDetails.amount} ${warpRouteDetails.originToken.symbol}${isDifferentWarpToken ? ` → ${warpRouteDetails.destinationToken.symbol}` : ''}`}
+              data-tooltip-content={`${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${showWarpTooltip ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}` : ''}`}
             >
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>

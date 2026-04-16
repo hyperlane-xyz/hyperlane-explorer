@@ -1,3 +1,4 @@
+import { scalesEqual } from '@hyperlane-xyz/sdk';
 import {
   bytesToProtocolAddress,
   fromBase64,
@@ -67,12 +68,28 @@ export function parseWarpRouteMessageDetails(
       decimals: effectiveDecimals,
       scale: originToken.scale,
     });
+    const amount = fromWei(amountParts.amount.toString(), amountParts.decimals);
+
+    // Compute destination amount when scales differ
+    let destAmount: string | null = null;
+    if (
+      (originToken.scale || destinationToken.scale) &&
+      !scalesEqual(originToken.scale, destinationToken.scale)
+    ) {
+      const destDecimals = getEffectiveDecimals(destinationToken, originToken);
+      const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
+        decimals: destDecimals,
+        scale: destinationToken.scale,
+      });
+      destAmount = fromWei(destAmountParts.amount.toString(), destAmountParts.decimals);
+    }
 
     return {
-      amount: fromWei(amountParts.amount.toString(), amountParts.decimals),
+      amount,
+      destAmount,
       transferRecipient: address,
-      originToken: originToken,
-      destinationToken: destinationToken,
+      originToken,
+      destinationToken,
     };
   } catch (err) {
     logger.error(`Error parsing warp route details for ${message.id}:`, err);
