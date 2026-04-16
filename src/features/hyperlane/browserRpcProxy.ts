@@ -2,7 +2,7 @@ import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTyp
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 
 const RPC_PROXY_PATH = '/api/rpc-proxy';
-const DEPRIORITIZED_RPC_HOSTS = ['drpc.org', 'llamarpc.com', 'merkle.io'];
+const DEPRIORITIZED_RPC_HOSTS = ['1rpc.io', 'drpc.org', 'llamarpc.com', 'merkle.io'];
 
 function getRpcProxyOrigin() {
   if (typeof window === 'undefined') return null;

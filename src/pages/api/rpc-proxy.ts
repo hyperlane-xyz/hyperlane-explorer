@@ -75,6 +75,30 @@ function getRequestBody(req: NextApiRequest) {
   return JSON.stringify(req.body ?? {});
 }
 
+function getJsonRpcErrorPayload(body: string, message: string) {
+  const buildError = (request: unknown) => {
+    const requestRecord =
+      typeof request === 'object' && request !== null ? (request as Record<string, unknown>) : null;
+
+    return {
+      jsonrpc: requestRecord?.jsonrpc === '2.0' ? '2.0' : '2.0',
+      id: requestRecord?.id ?? null,
+      error: {
+        code: -32000,
+        message,
+      },
+    };
+  };
+
+  try {
+    const parsed = JSON.parse(body);
+    if (Array.isArray(parsed)) return parsed.map(buildError);
+    return buildError(parsed);
+  } catch {
+    return buildError(null);
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -91,15 +115,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid url' });
   }
 
-  const upstream = await fetch(target.url, {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/json',
-      ...target.headers,
-    },
-    body: getRequestBody(req),
-  });
+  const requestBody = getRequestBody(req);
+  let upstream: Response;
+
+  try {
+    upstream = await fetch(target.url, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        ...target.headers,
+      },
+      body: requestBody,
+    });
+  } catch (error) {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json(
+      getJsonRpcErrorPayload(
+        requestBody,
+        error instanceof Error ? `RPC proxy upstream fetch failed: ${error.message}` : 'RPC proxy upstream fetch failed',
+      ),
+    );
+  }
+
+  if (!upstream.ok) {
+    const upstreamBody = await upstream.text();
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json(
+      getJsonRpcErrorPayload(
+        requestBody,
+        `RPC proxy upstream returned ${upstream.status}${upstreamBody ? `: ${upstreamBody}` : ''}`,
+      ),
+    );
+  }
 
   const contentType = upstream.headers.get('content-type');
   if (contentType) res.setHeader('Content-Type', contentType);
