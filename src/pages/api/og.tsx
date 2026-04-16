@@ -149,18 +149,22 @@ function getWarpTransferDetails(
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
-  const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
+  try {
+    const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
+    const amountParts = getWarpRouteAmountParts(parsed.amount, {
+      decimals: effectiveDecimals,
+      scale: originToken.scale,
+    });
+    const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
 
-  const amountParts = getWarpRouteAmountParts(parsed.amount, {
-    decimals: effectiveDecimals,
-    scale: originToken.scale,
-  });
-  const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
-
-  return {
-    token: originToken,
-    amount: formatAmountWithCommas(formattedAmount),
-  };
+    return {
+      token: originToken,
+      amount: formatAmountWithCommas(formattedAmount),
+    };
+  } catch (error) {
+    logger.warn('Failed to parse warp transfer details for OG image:', error);
+    return null;
+  }
 }
 
 // Get chain logo URL from registry CDN

@@ -1,9 +1,9 @@
 import type { ScaleInput } from '@hyperlane-xyz/sdk';
-import { localAmountFromMessage } from '@hyperlane-xyz/sdk';
 
 import { COSMOS_STANDARDS } from '../consts/tokenStandards';
 
 const DEFAULT_TOKEN_DECIMALS = 18;
+const DEFAULT_SCALE = { numerator: 1n, denominator: 1n };
 
 export type WarpRouteAmountConfig = {
   decimals?: number;
@@ -23,6 +23,39 @@ export interface EffectiveDecimalsToken {
   // Both fields supported for compatibility: wireDecimals (preferred) and maxDecimals (legacy).
   wireDecimals?: number;
   maxDecimals?: number;
+}
+
+type NormalizedScale = {
+  numerator: bigint;
+  denominator: bigint;
+};
+
+function normalizeScale(scale: ScaleInput | undefined): NormalizedScale {
+  if (scale === undefined) return DEFAULT_SCALE;
+  if (typeof scale === 'number') {
+    return { numerator: BigInt(scale), denominator: 1n };
+  }
+
+  return {
+    numerator: BigInt(scale.numerator),
+    denominator: BigInt(scale.denominator),
+  };
+}
+
+function assertValidScale(scale: NormalizedScale): void {
+  if (scale.numerator <= 0n || scale.denominator <= 0n) {
+    throw new Error(`Scale must be positive, got ${scale.numerator}/${scale.denominator}`);
+  }
+}
+
+function localAmountFromScale(messageAmount: bigint, scale: ScaleInput | undefined): bigint {
+  if (messageAmount < 0n) {
+    throw new Error('Message amount must be non-negative');
+  }
+
+  const normalized = normalizeScale(scale);
+  assertValidScale(normalized);
+  return (messageAmount * normalized.denominator) / normalized.numerator;
 }
 
 /**
@@ -82,7 +115,7 @@ export function getWarpRouteAmountParts(
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
   return {
-    amount: localAmountFromMessage(messageAmount, scale),
+    amount: localAmountFromScale(messageAmount, scale),
     decimals: tokenDecimals,
   };
 }
