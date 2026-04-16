@@ -13,6 +13,8 @@ const customJestConfig = {
   moduleNameMapper: {
     // Mock aleo-sdk to avoid ESM/WASM issues in tests
     '@hyperlane-xyz/aleo-sdk': '<rootDir>/src/utils/aleo-sdk-noop.js',
+    // Mock tron-sdk runtime to avoid ESM parsing issues in Jest via @hyperlane-xyz/sdk
+    '^@hyperlane-xyz/tron-sdk/runtime$': '<rootDir>/src/utils/tron-sdk-runtime-noop.js',
   },
 }
 
