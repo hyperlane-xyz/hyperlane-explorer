@@ -1,6 +1,5 @@
 import {
   ChainMetadata,
-  ChainMetadataSchema,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
@@ -14,7 +13,9 @@ import { useQueryParam } from '../../utils/queryParams';
 
 const CHAIN_CONFIGS_KEY = 'chains';
 
-const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
+// Use z.any() to avoid TypeScript infinite recursion with deep zod schemas.
+// Items are validated at access time below (must have a string .name).
+const ChainMetadataArraySchema = z.array(z.object({ name: z.string() }).passthrough());
 
 // Look for chainMetadata in the query string and merge them into the store
 // Not to be used directly, should only require a single use in ChainConfigSyncer

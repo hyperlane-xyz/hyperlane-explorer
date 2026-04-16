@@ -2,8 +2,10 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
+import type { MetadataBuildResult } from '../debugger/metadataTypes';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { extractValidatorInfo } from './cards/ismHelpers';
 import { DetailSectionSkeleton } from './MessageDetailsLoading';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
@@ -39,6 +41,7 @@ interface Props {
   destinationChainName: string;
   blur: boolean;
   warpRouteDetails?: WarpRouteDetails;
+  ismDetails?: MetadataBuildResult | null;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
 
@@ -52,6 +55,7 @@ export function MessageDetailsRuntime({
   destinationChainName,
   blur,
   warpRouteDetails,
+  ismDetails,
   onStateChange,
 }: Props) {
   const [piState, setPiState] = useState<{
@@ -121,6 +125,7 @@ export function MessageDetailsRuntime({
         blur={blur}
         message={message || queriedMessage}
         warpRouteDetails={warpRouteDetails}
+        validatorInfo={ismDetails ? extractValidatorInfo(ismDetails) : null}
       />
     </>
   );
