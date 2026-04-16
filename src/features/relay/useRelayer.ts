@@ -20,12 +20,8 @@ function patchRelayerMetadataTimeouts(relayer: HyperlaneRelayer) {
   }
 
   const originalBuild = aggregationMetadataBuilder.build.bind(aggregationMetadataBuilder);
-  aggregationMetadataBuilder.build = (
-    context: unknown,
-    maxDepth = 10,
-    timeoutMs = Math.max(30000, maxDepth * 3000),
-  ) => {
-    return originalBuild(context, maxDepth, timeoutMs);
+  aggregationMetadataBuilder.build = (context: unknown, maxDepth = 10, timeoutMs?: number) => {
+    return originalBuild(context, maxDepth, Math.max(timeoutMs ?? 0, 60000, maxDepth * 5000));
   };
   aggregationMetadataBuilder.__explorerTimeoutPatched = true;
 

@@ -37,12 +37,21 @@ function getRpcPenalty(rpcUrl: string) {
   }
 }
 
+function filterPreferredRpcUrls<
+  RpcUrl extends {
+    http: string;
+  },
+>(rpcUrls: RpcUrl[]) {
+  const preferredRpcUrls = rpcUrls.filter((rpcUrl) => getRpcPenalty(rpcUrl.http) === 0);
+  return preferredRpcUrls.length ? preferredRpcUrls : rpcUrls;
+}
+
 function normalizeRpcUrls<
   RpcUrl extends {
     http: string;
   },
 >(rpcUrls: RpcUrl[]) {
-  return rpcUrls
+  return filterPreferredRpcUrls(rpcUrls)
     .map((rpcUrl, index) => ({
       rpcUrl,
       index,
