@@ -44,6 +44,15 @@ describe('getWarpRouteAmountParts', () => {
     expect(result).toEqual({ amount: 1_000_000_000_000_000_000n, decimals: 18 });
   });
 
+  it('supports rational object scales', () => {
+    const messageAmount = 1_000n;
+    const result = getWarpRouteAmountParts(messageAmount, {
+      decimals: 6,
+      scale: { numerator: 1, denominator: 1000 },
+    });
+    expect(result).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
+
   it('defaults to 18 decimals when decimals not provided', () => {
     const messageAmount = 10n ** 18n;
     const result = getWarpRouteAmountParts(messageAmount, {});
@@ -58,6 +67,15 @@ describe('getWarpRouteAmountParts', () => {
   it('handles negative scale (assertValidScale throws)', () => {
     const messageAmount = 1_000_000n;
     expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: -10 })).toThrow();
+  });
+
+  it('handles invalid rational scales as invalid (falls back to 1)', () => {
+    const messageAmount = 1_000_000n;
+    const result = getWarpRouteAmountParts(messageAmount, {
+      decimals: 6,
+      scale: { numerator: 1.5, denominator: 1 },
+    });
+    expect(result).toEqual({ amount: 1_000_000n, decimals: 6 });
   });
 });
 

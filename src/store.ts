@@ -17,6 +17,8 @@ export {
 
 interface ProviderState {
   multiProvider: ExplorerMultiProvider;
+  isMultiProviderReady: boolean;
+  multiProviderVersion: number;
   syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
 
@@ -35,6 +37,8 @@ function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
 
 const useProviderStore = create<ProviderState>()((set) => ({
   multiProvider: createEmptyMultiProvider(),
+  isMultiProviderReady: false,
+  multiProviderVersion: 0,
   syncMultiProvider: async (requestedChainMetadata) => {
     let chainMetadata = requestedChainMetadata;
     if (!chainMetadata || !Object.keys(chainMetadata).length) {
@@ -54,10 +58,20 @@ const useProviderStore = create<ProviderState>()((set) => ({
       return providerSyncPromise;
     }
 
+    set({ isMultiProviderReady: false });
     providerSyncPromise = Promise.resolve()
       .then(async () => {
         logger.debug('Syncing MultiProtocolProvider from metadata store');
-        set({ multiProvider: await createRuntimeMultiProvider(chainMetadata) });
+        const nextMultiProvider = await createRuntimeMultiProvider(chainMetadata);
+        if (queuedChainMetadata && queuedChainMetadata !== chainMetadata) {
+          logger.debug('Discarding stale MultiProtocolProvider rebuild');
+          return;
+        }
+        set((state) => ({
+          multiProvider: nextMultiProvider,
+          isMultiProviderReady: true,
+          multiProviderVersion: state.multiProviderVersion + 1,
+        }));
       })
       .finally(() => {
         const nextChainMetadata = queuedChainMetadata;
@@ -91,7 +105,16 @@ export function useMultiProvider() {
 }
 
 export function useReadyMultiProvider() {
-  const multiProvider = useMultiProvider();
-  if (!multiProvider.getKnownChainNames().length) return undefined;
+  const { multiProvider, isMultiProviderReady } = useProviderStore((s) => ({
+    multiProvider: s.multiProvider,
+    isMultiProviderReady: s.isMultiProviderReady,
+  }));
+  ensureProviderStoreSubscription();
+  if (!isMultiProviderReady || !multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
+}
+
+export function useMultiProviderVersion() {
+  ensureProviderStoreSubscription();
+  return useProviderStore((s) => s.multiProviderVersion);
 }
