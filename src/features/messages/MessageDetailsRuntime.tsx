@@ -1,8 +1,8 @@
-import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
+import type { MetadataBuildResult } from '../debugger/metadataTypes';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { extractValidatorInfo } from './cards/ismHelpers';

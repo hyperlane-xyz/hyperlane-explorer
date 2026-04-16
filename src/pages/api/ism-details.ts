@@ -1,26 +1,22 @@
 /**
  * API endpoint for fetching ISM details and validator signature status.
- * Uses the SDK's BaseMetadataBuilder to get the full rich result including validator status.
+ * Uses BaseMetadataBuilder from @hyperlane-xyz/relayer for rich validator status.
  */
 
-import type { NextApiRequest, NextApiResponse } from 'next';
-
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
+import { BaseMetadataBuilder } from '@hyperlane-xyz/relayer';
 import {
-  BaseMetadataBuilder,
+  DerivedHookConfig,
   DerivedIsmConfig,
   EvmHookReader,
   EvmIsmReader,
   HyperlaneCore,
   MultiProvider,
 } from '@hyperlane-xyz/sdk';
-
-// DerivedHookConfig is WithAddress<Exclude<HookConfig, Address>>
-// Using any for now until SDK exports this type
-type DerivedHookConfig = any;
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { config as appConfig } from '../../consts/config';
+import type { MetadataBuildResult } from '../../features/debugger/metadataTypes';
 import { logger } from '../../utils/logger';
 
 // Cache for registry, multiProvider and core
@@ -34,19 +30,26 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 60 * 1000; // 1 minute
 
 // Cache for ISM and Hook configs - these are relatively static and expensive to derive
-// ISM cache key includes origin chain because routing ISMs route based on origin
-// Key format for ISM: `${destinationChain}:${originChain}:${address}`
-// Key format for Hook: `${originChain}:${address}`
+// ISM key: `${destinationChain}:${originChain}:${address}`
+// Hook key: `${originChain}:${destinationChain}:${address}`
 const ismConfigCache = new Map<string, { config: DerivedIsmConfig; timestamp: number }>();
 const hookConfigCache = new Map<string, { config: DerivedHookConfig; timestamp: number }>();
 const CONFIG_CACHE_TTL = 30 * 60 * 1000; // 30 minutes - ISM/Hook configs rarely change
+const MAX_CACHE_SIZE = 500;
+
+function evictIfFull(cache: Map<string, { timestamp: number }>) {
+  if (cache.size < MAX_CACHE_SIZE) return;
+  // Evict oldest entry (Map iteration order is insertion order)
+  const oldestKey = cache.keys().next().value;
+  if (oldestKey) cache.delete(oldestKey);
+}
 
 function getIsmCacheKey(destinationChain: string, originChain: string, address: string): string {
   return `${destinationChain}:${originChain}:${address.toLowerCase()}`;
 }
 
-function getHookCacheKey(chain: string, address: string): string {
-  return `${chain}:${address.toLowerCase()}`;
+function getHookCacheKey(originChain: string, destinationChain: string, address: string): string {
+  return `${originChain}:${destinationChain}:${address.toLowerCase()}`;
 }
 
 // Timing helper
@@ -109,18 +112,18 @@ async function getRegistryAndCore() {
   const multiProvider = new MultiProvider(chainMetadata);
   timer.mark('multiProvider_create');
 
-  // Get addresses for all chains to build HyperlaneCore
+  // Get addresses for all chains to build HyperlaneCore (parallel)
   const chainNames = Object.keys(chainMetadata);
+  const addressResults = await Promise.allSettled(
+    chainNames.map(async (name) => {
+      const addresses = await registry.getChainAddresses(name);
+      return { name, addresses };
+    }),
+  );
   const addressesMap: Record<string, any> = {};
-
-  for (const chainName of chainNames) {
-    try {
-      const addresses = await registry.getChainAddresses(chainName);
-      if (addresses) {
-        addressesMap[chainName] = addresses;
-      }
-    } catch (_e) {
-      // Skip chains without addresses
+  for (const r of addressResults) {
+    if (r.status === 'fulfilled' && r.value.addresses) {
+      addressesMap[r.value.name] = r.value.addresses;
     }
   }
   timer.mark('getChainAddresses_all');
@@ -150,24 +153,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const timer = createTimer();
 
   try {
-    const { originTxHash, messageId } = req.body;
+    const { originTxHash, messageId, originDomain } = req.body;
 
-    if (!originTxHash || !messageId) {
-      return res.status(400).json({ error: 'Missing required fields: originTxHash, messageId' });
+    // Validate all required fields upfront
+    if (!originTxHash || !messageId || !originDomain) {
+      return res
+        .status(400)
+        .json({ error: 'Missing required fields: originTxHash, messageId, originDomain' });
     }
 
     const { multiProvider, core, metadataBuilder, fromCache } = await getRegistryAndCore();
     timer.mark('getRegistryAndCore');
     logger.info(
-      `[TIMING] getRegistryAndCore took ${timer.getTimings().getRegistryAndCore}ms (fromCache: ${fromCache})`,
+      `[TIMING] getRegistryAndCore: ${timer.getTimings().getRegistryAndCore}ms (cache: ${fromCache})`,
     );
-
-    // We need to find which chain this transaction is on
-    // For now, require the origin domain to be passed
-    const { originDomain } = req.body;
-    if (!originDomain) {
-      return res.status(400).json({ error: 'Missing required field: originDomain' });
-    }
 
     const originChain = multiProvider.tryGetChainName(originDomain);
     if (!originChain) {
@@ -212,7 +211,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ISM cache key includes origin chain because routing ISMs route based on origin
     const ismCacheKey = getIsmCacheKey(destinationChain, originChain, recipientIsm);
-    const hookCacheKey = getHookCacheKey(originChain, senderHook);
+    const hookCacheKey = getHookCacheKey(originChain, destinationChain, senderHook);
 
     const cachedIsmConfig = ismConfigCache.get(ismCacheKey);
     const cachedHookConfig = hookConfigCache.get(hookCacheKey);
@@ -220,18 +219,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ismCacheValid = cachedIsmConfig && now - cachedIsmConfig.timestamp < CONFIG_CACHE_TTL;
     const hookCacheValid = cachedHookConfig && now - cachedHookConfig.timestamp < CONFIG_CACHE_TTL;
 
-    let ismFromCache = false;
-    let hookFromCache = false;
+    const ismFromCache = ismCacheValid;
+    const hookFromCache = hookCacheValid;
 
     // Derive configs in parallel if needed, use cache if available
-    const ismConfigPromise: Promise<DerivedIsmConfig> = ismCacheValid
-      ? ((ismFromCache = true),
-        logger.info(`[TIMING] ISM config cache HIT for ${ismCacheKey}`),
-        Promise.resolve(cachedIsmConfig!.config))
+    const ismConfigPromise: Promise<DerivedIsmConfig> = ismFromCache
+      ? Promise.resolve(cachedIsmConfig!.config)
       : (async () => {
-          logger.info(`[TIMING] ISM config cache MISS for ${ismCacheKey}, will derive...`);
-          const ismConfigStart = Date.now();
-          // Pass message context to EvmIsmReader for optimized routing ISM derivation
           const evmIsmReader = new EvmIsmReader(
             multiProvider,
             destinationChain,
@@ -239,23 +233,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             message,
           );
           const result = await evmIsmReader.deriveIsmConfig(recipientIsm);
-          logger.info(`[TIMING] deriveIsmConfig completed in ${Date.now() - ismConfigStart}ms`);
-          // Cache with specific origin chain key
+          evictIfFull(ismConfigCache);
           ismConfigCache.set(ismCacheKey, { config: result, timestamp: now });
           return result;
         })();
 
-    const hookConfigPromise: Promise<DerivedHookConfig> = hookCacheValid
-      ? ((hookFromCache = true),
-        logger.info(`[TIMING] Hook config cache HIT for ${hookCacheKey}`),
-        Promise.resolve(cachedHookConfig!.config))
+    const hookConfigPromise: Promise<DerivedHookConfig> = hookFromCache
+      ? Promise.resolve(cachedHookConfig!.config)
       : (async () => {
-          logger.info(`[TIMING] Hook config cache MISS for ${hookCacheKey}, will derive...`);
-          const hookConfigStart = Date.now();
-          // Pass message context to EvmHookReader for optimized routing hook derivation
           const evmHookReader = new EvmHookReader(multiProvider, originChain, undefined, message);
           const result = await evmHookReader.deriveHookConfig(senderHook);
-          logger.info(`[TIMING] deriveHookConfig completed in ${Date.now() - hookConfigStart}ms`);
+          evictIfFull(hookConfigCache);
           hookConfigCache.set(hookCacheKey, { config: result, timestamp: now });
           return result;
         })();
@@ -264,9 +252,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [ismConfig, hookConfig] = await Promise.all([ismConfigPromise, hookConfigPromise]);
 
     timer.mark('deriveIsmAndHookConfig');
-    logger.info(`[TIMING] ISM fromCache: ${ismFromCache}, Hook fromCache: ${hookFromCache}`);
-
-    logger.info('[TIMING] Pre-metadata build timings:', timer.getTimings());
 
     // Build metadata (this includes validator signature status)
     const result: MetadataBuildResult = await metadataBuilder.build({

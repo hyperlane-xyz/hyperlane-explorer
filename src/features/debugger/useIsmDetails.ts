@@ -1,13 +1,13 @@
 /**
  * Hook to fetch ISM details from the backend API.
- * Uses the SDK's BaseMetadataBuilder for real validator signature status.
+ * Uses the relayer metadata builder via the backend for real validator signature status.
  */
 
-import type { MetadataBuildResult } from '@hyperlane-xyz/sdk';
 import { useQuery } from '@tanstack/react-query';
 
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
+import type { MetadataBuildResult } from './metadataTypes';
 
 interface IsmDetailsResponse {
   result: MetadataBuildResult;

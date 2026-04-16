@@ -1,11 +1,12 @@
+import { IsmType } from '@hyperlane-xyz/sdk';
+
 import type {
   AggregationMetadataBuildResult,
   MetadataBuildResult,
   MultisigMetadataBuildResult,
   RoutingMetadataBuildResult,
   ValidatorInfo,
-} from '@hyperlane-xyz/sdk';
-import { IsmType } from '@hyperlane-xyz/sdk';
+} from '../../debugger/metadataTypes';
 
 export function isMultisigResult(
   result: MetadataBuildResult,
@@ -88,7 +89,9 @@ export function getTypeBadgeColor(type: IsmType): string {
 
 /**
  * Extract validator info from a MetadataBuildResult, traversing nested ISMs.
- * Returns the first multisig validator list found, along with its threshold.
+ * Collects ALL multisig branches (aggregation ISMs may have multiple) and
+ * merges them into a single list. Threshold is summed across branches so
+ * hasQuorum is only true when every branch meets its own threshold.
  */
 export function extractValidatorInfo(result: MetadataBuildResult | null | undefined): {
   validators: ValidatorInfo[];
@@ -96,29 +99,35 @@ export function extractValidatorInfo(result: MetadataBuildResult | null | undefi
 } | null {
   if (!result) return null;
 
-  if (isMultisigResult(result)) {
-    if (result.validators && result.validators.length > 0) {
-      return {
-        validators: result.validators,
-        threshold: result.threshold,
-      };
+  const branches: { validators: ValidatorInfo[]; threshold: number }[] = [];
+  collectMultisigBranches(result, branches);
+
+  if (branches.length === 0) return null;
+  if (branches.length === 1) return branches[0];
+
+  // Merge all branches: concatenate validators, sum thresholds
+  return {
+    validators: branches.flatMap((b) => b.validators),
+    threshold: branches.reduce((sum, b) => sum + b.threshold, 0),
+  };
+}
+
+function collectMultisigBranches(
+  result: MetadataBuildResult,
+  out: { validators: ValidatorInfo[]; threshold: number }[],
+) {
+  if (isMultisigResult(result) && result.validators?.length > 0) {
+    out.push({ validators: result.validators, threshold: result.threshold });
+    return;
+  }
+
+  if (isAggregationResult(result) && result.modules) {
+    for (const subModule of result.modules) {
+      collectMultisigBranches(subModule, out);
     }
   }
 
-  if (isAggregationResult(result)) {
-    if (result.modules) {
-      for (const subModule of result.modules) {
-        const info = extractValidatorInfo(subModule);
-        if (info) return info;
-      }
-    }
+  if (isRoutingResult(result) && result.selectedIsm) {
+    collectMultisigBranches(result.selectedIsm, out);
   }
-
-  if (isRoutingResult(result)) {
-    if (result.selectedIsm) {
-      return extractValidatorInfo(result.selectedIsm);
-    }
-  }
-
-  return null;
 }

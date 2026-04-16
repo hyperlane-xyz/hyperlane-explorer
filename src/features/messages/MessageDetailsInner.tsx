@@ -102,9 +102,11 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const blur = !isMessageFound;
   const isIcaMsg = useIsIcaMessage(message);
   const debugResult = activeRuntimeState?.debugResult;
-  const isFullMessage = isMessageFound && 'origin' in message && 'hash' in (message as any).origin;
-  const { data: ismDetails } = useIsmDetails(isFullMessage ? (message as Message) : null);
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
+  const isEvmOrigin = isEvmChain(chainMetadataResolver, originDomainId);
+  const isFullMessage =
+    isMessageFound && isEvmOrigin && 'origin' in message && 'hash' in (message as Message).origin;
+  const { data: ismDetails } = useIsmDetails(isFullMessage ? (message as Message) : null);
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
     : undefined;

@@ -1,4 +1,3 @@
-import type { ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useId, useState } from 'react';
@@ -16,6 +15,7 @@ import {
   MessageTxStub,
   WarpRouteDetails,
 } from '../../../types';
+import type { ValidatorInfo } from '../../debugger/metadataTypes';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';

@@ -1,16 +1,16 @@
-import type {
-  AggregationMetadataBuildResult,
-  MetadataBuildResult,
-  MultisigMetadataBuildResult,
-  RoutingMetadataBuildResult,
-  ValidatorInfo,
-} from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useState } from 'react';
 
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
+import type {
+  AggregationMetadataBuildResult,
+  MetadataBuildResult,
+  MultisigMetadataBuildResult,
+  RoutingMetadataBuildResult,
+  ValidatorInfo,
+} from '../../debugger/metadataTypes';
 import {
   getIsmTypeName,
   getSignedCount,
@@ -152,7 +152,7 @@ function ValidatorList({
   threshold: number;
 }) {
   const signedCount = validators.filter((v) => v.status === 'signed').length;
-  const hasQuorum = signedCount >= threshold;
+  const hasQuorum = signedCount >= threshold && threshold > 0;
 
   return (
     <div className="space-y-2">

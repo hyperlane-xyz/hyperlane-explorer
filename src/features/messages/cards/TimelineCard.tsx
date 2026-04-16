@@ -1,4 +1,3 @@
-import type { MetadataBuildResult, ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import {
   AirplaneIcon,
@@ -13,6 +12,7 @@ import { useState } from 'react';
 
 import { Card } from '../../../components/layout/Card';
 import { Message, MessageStatus, MessageStub } from '../../../types';
+import type { MetadataBuildResult, ValidatorInfo } from '../../debugger/metadataTypes';
 import { extractValidatorInfo } from './ismHelpers';
 
 interface Props {
@@ -88,7 +88,7 @@ function EnhancedMessageTimeline({
           </p>
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Finalized Stage */}
         <div className="flex flex-1 flex-col items-center">
@@ -101,7 +101,7 @@ function EnhancedMessageTimeline({
           </p>
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Validated Stage - WITH VALIDATOR INFO */}
         <div className="flex flex-1 flex-col items-center">
@@ -131,7 +131,7 @@ function EnhancedMessageTimeline({
           )}
         </div>
 
-        <div className="w-1 flex-0 xs:w-2 sm:w-3" />
+        <div className="flex-0 w-1 xs:w-2 sm:w-3" />
 
         {/* Relayed Stage */}
         <div className="flex flex-1 flex-col items-center">
