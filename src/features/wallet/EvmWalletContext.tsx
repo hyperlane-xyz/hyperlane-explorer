@@ -18,6 +18,7 @@ import { WagmiProvider, createConfig, fallback, http } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
 
 import { config } from '../../consts/config';
+import { getBrowserRpcProxyUrl } from '../hyperlane/browserRpcProxy';
 import { useReadyMultiProvider } from '../../store';
 
 const APP_NAME = 'Hyperlane Explorer';
@@ -40,9 +41,24 @@ function getConnectors(walletConnectProjectId?: string) {
   );
 }
 
+function getInitialChains() {
+  const proxiedMainnetRpcUrl = getBrowserRpcProxyUrl('https://ethereum.publicnode.com');
+
+  return [
+    {
+      ...mainnet,
+      rpcUrls: {
+        ...mainnet.rpcUrls,
+        default: { http: [proxiedMainnetRpcUrl] },
+        public: { http: [proxiedMainnetRpcUrl] },
+      },
+    },
+  ];
+}
+
 function initWagmiConfig(multiProvider: ReturnType<typeof useReadyMultiProvider> | null) {
   const chains = multiProvider ? getWagmiChainConfigs(multiProvider) : [];
-  const effectiveChains = chains.length ? chains : [mainnet];
+  const effectiveChains = chains.length ? chains : getInitialChains();
 
   return createConfig({
     chains: [effectiveChains[0], ...effectiveChains.slice(1)],
