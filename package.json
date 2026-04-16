@@ -20,8 +20,6 @@
     "@hyperlane-xyz/registry": "24.3.0",
     "@hyperlane-xyz/sdk": "32.0.0",
     "@hyperlane-xyz/utils": "32.0.0",
-    "@hyperlane-xyz/relayer": "1.1.22",
-    "@hyperlane-xyz/widgets": "31.1.0",
     "@hyperlane-xyz/widgets": "32.0.0",
     "@tanstack/query-core": "^5.71.3",
     "@tanstack/react-query": "^5.62.3",

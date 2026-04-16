@@ -1,24 +1,40 @@
-/**
- * Local type definitions for metadata build results.
- * These mirror the types in @hyperlane-xyz/relayer (metadata/types.ts) which are
- * not re-exported from the package's public API.
- * TODO: Remove once @hyperlane-xyz/relayer re-exports these from its index.
- */
+import type {
+  ChainName,
+  DerivedHookConfig,
+  DerivedIsmConfig,
+  DispatchedMessage,
+  IsmType,
+} from '@hyperlane-xyz/sdk';
+import type { Address, SignatureLike } from '@hyperlane-xyz/utils';
+import type { providers } from 'ethers';
 
-import type { IsmType } from '@hyperlane-xyz/sdk';
+export interface MetadataContext<IsmContext = DerivedIsmConfig, HookContext = DerivedHookConfig> {
+  message: DispatchedMessage;
+  dispatchTx: providers.TransactionReceipt;
+  ism: IsmContext;
+  hook: HookContext;
+}
+
+export const ValidatorStatus = {
+  Signed: 'signed',
+  Pending: 'pending',
+  Error: 'error',
+} as const;
+
+export type ValidatorStatus = (typeof ValidatorStatus)[keyof typeof ValidatorStatus];
 
 export interface ValidatorInfo {
-  address: string;
+  address: Address;
   alias?: string;
-  status: 'signed' | 'pending' | 'error';
-  signature?: string;
+  status: ValidatorStatus;
+  signature?: SignatureLike;
   checkpointIndex?: number;
   error?: string;
 }
 
-interface BaseMetadataBuildResult {
+export interface BaseMetadataBuildResult {
   type: IsmType;
-  ismAddress: string;
+  ismAddress: Address;
   metadata?: string;
 }
 
@@ -34,12 +50,16 @@ export interface AggregationMetadataBuildResult extends BaseMetadataBuildResult 
 }
 
 export interface RoutingMetadataBuildResult extends BaseMetadataBuildResult {
-  originChain: string;
+  originChain: ChainName;
   selectedIsm: MetadataBuildResult;
 }
 
 export type MetadataBuildResult =
+  | BaseMetadataBuildResult
   | MultisigMetadataBuildResult
   | AggregationMetadataBuildResult
-  | RoutingMetadataBuildResult
-  | BaseMetadataBuildResult;
+  | RoutingMetadataBuildResult;
+
+export interface MetadataBuilder {
+  build(context: MetadataContext, maxDepth?: number): Promise<MetadataBuildResult>;
+}

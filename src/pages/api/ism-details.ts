@@ -1,10 +1,9 @@
 /**
  * API endpoint for fetching ISM details and validator signature status.
- * Uses BaseMetadataBuilder from @hyperlane-xyz/relayer for rich validator status.
+ * Uses a small local metadata builder for rich validator status.
  */
 
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import { BaseMetadataBuilder } from '@hyperlane-xyz/relayer';
 import {
   DerivedHookConfig,
   DerivedIsmConfig,
@@ -16,6 +15,7 @@ import {
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { config as appConfig } from '../../consts/config';
+import { BaseMetadataBuilder } from '../../features/debugger/metadata/builder';
 import type { MetadataBuildResult } from '../../features/debugger/metadataTypes';
 import { logger } from '../../utils/logger';
 

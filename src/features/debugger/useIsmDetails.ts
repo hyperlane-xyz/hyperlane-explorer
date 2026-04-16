@@ -1,6 +1,6 @@
 /**
  * Hook to fetch ISM details from the backend API.
- * Uses the relayer metadata builder via the backend for real validator signature status.
+ * Uses the local metadata builder via the backend for real validator signature status.
  */
 
 import { useQuery } from '@tanstack/react-query';
