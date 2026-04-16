@@ -11,6 +11,7 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
+import { useIsmDetails } from '../debugger/useIsmDetails';
 import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
@@ -101,6 +102,8 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const blur = !isMessageFound;
   const isIcaMsg = useIsIcaMessage(message);
   const debugResult = activeRuntimeState?.debugResult;
+  const isFullMessage = isMessageFound && 'origin' in message && 'hash' in (message as any).origin;
+  const { data: ismDetails } = useIsmDetails(isFullMessage ? (message as Message) : null);
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
@@ -183,10 +186,11 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
             destinationChainName={destinationChainName}
             blur={blur}
             warpRouteDetails={warpRouteDetails}
+            ismDetails={ismDetails}
             onStateChange={handleRuntimeStateChange}
           />
         </Suspense>
-        {showTimeline && <TimelineCard message={message} blur={blur} />}
+        {showTimeline && <TimelineCard message={message} blur={blur} ismResult={ismDetails} />}
         {warpRouteDetails && (
           <WarpTransferDetailsCard
             message={message}
@@ -205,9 +209,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           igpPayments={debugResult?.gasDetails?.contractToPayments}
           blur={blur}
         />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-        )}
+        {ismDetails && <IsmDetailsCard result={ismDetails} blur={blur} />}
         {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
       </div>
     </>
