@@ -1,5 +1,5 @@
 import type { ScaleInput } from '@hyperlane-xyz/sdk';
-import { normalizeScale } from '@hyperlane-xyz/sdk';
+import { localAmountFromMessage } from '@hyperlane-xyz/sdk';
 
 import { COSMOS_STANDARDS } from '../consts/tokenStandards';
 
@@ -81,10 +81,8 @@ export function getWarpRouteAmountParts(
   { decimals, scale }: WarpRouteAmountConfig,
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
-  const { numerator, denominator } = normalizeScale(scale);
-  // bigint division truncates toward zero (floor for positive token amounts)
   return {
-    amount: (messageAmount * denominator) / numerator,
+    amount: localAmountFromMessage(messageAmount, scale),
     decimals: tokenDecimals,
   };
 }

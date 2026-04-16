@@ -55,10 +55,9 @@ describe('getWarpRouteAmountParts', () => {
     expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 0 })).toThrow();
   });
 
-  it('handles negative scale (produces negative amount)', () => {
+  it('handles negative scale (assertValidScale throws)', () => {
     const messageAmount = 1_000_000n;
-    const result = getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: -10 });
-    expect(result).toEqual({ amount: -100_000n, decimals: 6 });
+    expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: -10 })).toThrow();
   });
 });
 
