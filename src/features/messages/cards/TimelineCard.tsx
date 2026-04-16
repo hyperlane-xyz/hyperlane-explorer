@@ -1,6 +1,14 @@
 import type { MetadataBuildResult, ValidatorInfo } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
-import { MessageStage, useMessageStage } from '@hyperlane-xyz/widgets';
+import {
+  AirplaneIcon,
+  EnvelopeIcon,
+  LockIcon,
+  MessageStage,
+  ShieldIcon,
+  WideChevronIcon,
+  useMessageStage,
+} from '@hyperlane-xyz/widgets';
 import { useState } from 'react';
 
 import { Card } from '../../../components/layout/Card';
@@ -64,17 +72,7 @@ function EnhancedMessageTimeline({
 
   const signedCount = validators?.filter((v) => v.status === 'signed').length ?? 0;
   const hasQuorum = signedCount >= threshold && threshold > 0;
-
-  // Determine effective stage:
-  // 1. If status shows delivered, stage is Relayed
-  // 2. If quorum is reached from real-time validator data, stage is at least Validated
-  // 3. Otherwise use the stage from useMessageStage
-  let stage = _stage;
-  if (status === MessageStatus.Delivered) {
-    stage = MessageStage.Relayed;
-  } else if (hasQuorum && _stage < MessageStage.Validated) {
-    stage = MessageStage.Validated;
-  }
+  const stage = deriveMessageStage(status, _stage, hasQuorum);
 
   return (
     <div className="flex w-full flex-col pb-1 pt-14">
@@ -187,39 +185,32 @@ function StageBar({
         <div className="h-4 w-0.5 bg-blue-500" />
       </div>
       {/* Chevrons */}
-      {!isFirst && <ChevronWhite />}
-      {!isLast && <ChevronBlue />}
+      {!isFirst && (
+        <div className="absolute -left-3 top-0 h-6 w-3">
+          <WideChevronIcon width={12} height={24} color="white" direction="e" />
+        </div>
+      )}
+      {!isLast && (
+        <div className="absolute -right-3 top-0 h-6 w-3">
+          <WideChevronIcon width={12} height={24} color="#3b82f6" direction="e" />
+        </div>
+      )}
     </div>
   );
 }
 
 function StageIcon({ stage }: { stage: MessageStage }) {
-  const iconMap: Partial<Record<MessageStage, string>> = {
-    [MessageStage.Sent]: '✈',
-    [MessageStage.Finalized]: '🔒',
-    [MessageStage.Validated]: '🛡',
-    [MessageStage.Relayed]: '✉',
+  const iconProps = { width: 20, height: 20, color: 'white' };
+  const iconMap: Partial<Record<MessageStage, React.ReactNode>> = {
+    [MessageStage.Sent]: <AirplaneIcon {...iconProps} />,
+    [MessageStage.Finalized]: <LockIcon {...iconProps} />,
+    [MessageStage.Validated]: <ShieldIcon {...iconProps} />,
+    [MessageStage.Relayed]: <EnvelopeIcon {...iconProps} />,
   };
 
   return (
     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
       {iconMap[stage] || '•'}
-    </div>
-  );
-}
-
-function ChevronWhite() {
-  return (
-    <div className="absolute -left-3 top-0 h-6 w-3 overflow-hidden">
-      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-white" />
-    </div>
-  );
-}
-
-function ChevronBlue() {
-  return (
-    <div className="absolute -right-3 top-0 h-6 w-3 overflow-hidden">
-      <div className="h-0 w-0 border-y-[12px] border-l-[12px] border-y-transparent border-l-blue-500" />
     </div>
   );
 }
@@ -329,6 +320,16 @@ function getStageHeader(
   }
   if (timing) return `${label}: ${timing} sec`;
   else return label;
+}
+
+function deriveMessageStage(
+  status: MessageStatus,
+  proposedStage: MessageStage,
+  hasQuorum: boolean,
+): MessageStage {
+  if (status === MessageStatus.Delivered) return MessageStage.Relayed;
+  if (hasQuorum && proposedStage < MessageStage.Validated) return MessageStage.Validated;
+  return proposedStage;
 }
 
 function getStageOpacityClass(
