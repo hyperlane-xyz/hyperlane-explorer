@@ -7,6 +7,7 @@ import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'rea
 
 import LogoLockup from '../../../public/images/hyperlane-explorer-logo.svg';
 import { docLinks, links } from '../../consts/links';
+import { ConnectWalletButton } from '../../features/wallet/ConnectWalletButton';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
 
@@ -99,6 +100,7 @@ export function Header({ pathName }: { pathName: string }) {
           >
             DOCS
           </a>
+          <ConnectWalletButton />
           {showSearch && <MiniSearchBar />}
         </nav>
         {/* Dropdown menu, used on mobile */}

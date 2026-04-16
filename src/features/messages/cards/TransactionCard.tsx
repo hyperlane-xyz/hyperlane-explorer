@@ -15,6 +15,7 @@ import {
   MessageTxStub,
   WarpRouteDetails,
 } from '../../../types';
+import { isEvmChain } from '../../chains/utils';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
@@ -25,6 +26,10 @@ import { TransactionDetailsRows } from './TransactionDetailsRows';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
+const SelfRelayButton = dynamic(
+  () => import('../../relay/SelfRelayButton').then((mod) => mod.SelfRelayButton),
+  { ssr: false },
 );
 
 export function DestinationTransactionCard({
@@ -53,6 +58,10 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
+  const canSelfRelay =
+    !!message &&
+    isEvmChain(multiProvider, message.originDomainId) &&
+    isEvmChain(multiProvider, message.destinationDomainId);
 
   const { isOpen, open, close } = useModal();
 
@@ -105,6 +114,7 @@ export function DestinationTransactionCard({
               </div>
             )}
             <CallDataModal debugResult={debugResult} />
+            {message && canSelfRelay && <SelfRelayButton message={message} />}
           </DeliveryStatus>
         )}
       </>
@@ -157,6 +167,7 @@ export function DestinationTransactionCard({
                 <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
               </div>
               <CallDataModal debugResult={debugResult} />
+              {message && canSelfRelay && <SelfRelayButton message={message} />}
             </div>
           </DeliveryStatus>
         )}
