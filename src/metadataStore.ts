@@ -222,7 +222,7 @@ export function useWarpRouteIdToAddressesMap() {
   return useStore((s) => s.warpRouteIdToAddressesMap);
 }
 
-export async function loadWarpRouteData(registry: IRegistry): Promise<{
+async function loadWarpRouteData(registry: IRegistry): Promise<{
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
   warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
   warpRouteConfigs: WarpRouteConfigs;

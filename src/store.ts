@@ -58,6 +58,8 @@ const useProviderStore = create<ProviderState>()((set) => ({
       return providerSyncPromise;
     }
 
+    const hadReadyProvider =
+      useProviderStore.getState().multiProvider.getKnownChainNames().length > 0;
     set({ isMultiProviderReady: false });
     providerSyncPromise = Promise.resolve()
       .then(async () => {
@@ -72,6 +74,13 @@ const useProviderStore = create<ProviderState>()((set) => ({
           isMultiProviderReady: true,
           multiProviderVersion: state.multiProviderVersion + 1,
         }));
+      })
+      .catch((error) => {
+        // Preserve the last known-good provider readiness if a rebuild fails.
+        if (hadReadyProvider) {
+          set({ isMultiProviderReady: true });
+        }
+        throw error;
       })
       .finally(() => {
         const nextChainMetadata = queuedChainMetadata;
