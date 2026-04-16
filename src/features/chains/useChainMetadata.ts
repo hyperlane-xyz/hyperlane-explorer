@@ -1,6 +1,5 @@
 import {
   ChainMetadata,
-  ChainMetadataSchema,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
