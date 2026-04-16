@@ -3,7 +3,7 @@ import { MovableCollateralRouter__factory } from '@hyperlane-xyz/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useMultiProvider } from '../../../store';
+import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { checkIsMessageDelivered, extractMessageIdFromTx } from '../deliveryUtils';
@@ -141,7 +141,8 @@ async function fetchActiveRebalances(
 export function useActiveRebalances(
   warpRouteDetails: WarpRouteDetails | undefined,
 ): ActiveRebalance | undefined {
-  const multiProvider = useMultiProvider();
+  const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
 
   const shouldCheck = useMemo(() => {
     if (!warpRouteDetails) return false;
@@ -169,8 +170,8 @@ export function useActiveRebalances(
   // Create stable query key from primitive values
   // We intentionally use only primitives (not the full tokenInfo object) for cache key stability
   const queryKey = useMemo(
-    () => ['activeRebalances', tokenInfo?.chainName, tokenInfo?.address],
-    [tokenInfo?.chainName, tokenInfo?.address],
+    () => ['activeRebalances', tokenInfo?.chainName, tokenInfo?.address, multiProviderVersion],
+    [tokenInfo?.chainName, tokenInfo?.address, multiProviderVersion],
   );
 
   const { data: activeRebalances } = useQuery({
@@ -178,10 +179,10 @@ export function useActiveRebalances(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey,
     queryFn: () => {
-      if (!tokenInfo) return Promise.resolve(undefined);
+      if (!tokenInfo || !multiProvider) return Promise.resolve(undefined);
       return fetchActiveRebalances(tokenInfo.address, tokenInfo.chainName, multiProvider);
     },
-    enabled: !!tokenInfo && shouldCheck,
+    enabled: !!tokenInfo && shouldCheck && !!multiProvider,
     refetchInterval: REBALANCE_REFETCH_INTERVAL,
     staleTime: REBALANCE_STALE_TIME,
   });

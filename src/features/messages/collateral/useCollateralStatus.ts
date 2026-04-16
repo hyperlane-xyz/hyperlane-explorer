@@ -8,7 +8,7 @@ import { toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
-import { useMultiProvider } from '../../../store';
+import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
@@ -129,7 +129,8 @@ export function useCollateralStatus(
   message: Message | MessageStub | undefined,
   warpRouteDetails: WarpRouteDetails | undefined,
 ): CollateralInfo {
-  const multiProvider = useMultiProvider();
+  const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
 
   const shouldCheck = useMemo(() => {
     if (!message || !warpRouteDetails) {
@@ -164,8 +165,13 @@ export function useCollateralStatus(
   // Create stable query key from primitive values
   // We intentionally use only primitives (not the full destinationToken object) for cache key stability
   const queryKey = useMemo(
-    () => ['collateralBalance', destinationToken?.chainName, destinationToken?.addressOrDenom],
-    [destinationToken?.chainName, destinationToken?.addressOrDenom],
+    () => [
+      'collateralBalance',
+      destinationToken?.chainName,
+      destinationToken?.addressOrDenom,
+      multiProviderVersion,
+    ],
+    [destinationToken?.chainName, destinationToken?.addressOrDenom, multiProviderVersion],
   );
 
   const {
@@ -177,10 +183,10 @@ export function useCollateralStatus(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey,
     queryFn: () => {
-      if (!destinationToken) return Promise.resolve(undefined);
+      if (!destinationToken || !multiProvider) return Promise.resolve(undefined);
       return fetchCollateralBalance(destinationToken, multiProvider);
     },
-    enabled: !!destinationToken && shouldCheck,
+    enabled: !!destinationToken && shouldCheck && !!multiProvider,
     refetchInterval: COLLATERAL_REFETCH_INTERVAL,
     staleTime: COLLATERAL_STALE_TIME,
   });
