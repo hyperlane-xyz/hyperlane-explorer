@@ -8,6 +8,25 @@ import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { logger } from '../../utils/logger';
 import { ensureBrowserS3ProxyPatch } from './patchS3ValidatorFetch';
 
+function patchRelayerMetadataTimeouts(relayer: HyperlaneRelayer) {
+  const aggregationMetadataBuilder = (relayer as any).metadataBuilder?.aggregationMetadataBuilder;
+  if (!aggregationMetadataBuilder || aggregationMetadataBuilder.__explorerTimeoutPatched) {
+    return relayer;
+  }
+
+  const originalBuild = aggregationMetadataBuilder.build.bind(aggregationMetadataBuilder);
+  aggregationMetadataBuilder.build = (
+    context: unknown,
+    maxDepth = 10,
+    timeoutMs = Math.max(30000, maxDepth * 3000),
+  ) => {
+    return originalBuild(context, maxDepth, timeoutMs);
+  };
+  aggregationMetadataBuilder.__explorerTimeoutPatched = true;
+
+  return relayer;
+}
+
 export function useRelayer() {
   ensureBrowserS3ProxyPatch();
 
@@ -64,7 +83,7 @@ export function useRelayer() {
 
   const relayer = useMemo(() => {
     if (!core) return null;
-    return new HyperlaneRelayer({ core, caching: true });
+    return patchRelayerMetadataTimeouts(new HyperlaneRelayer({ core, caching: true }));
   }, [core]);
 
   return {

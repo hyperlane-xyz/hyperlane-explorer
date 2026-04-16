@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (upstream.status === 404) {
-    return res.status(404).end();
+    return res.status(204).end();
   }
 
   if (!upstream.ok) {

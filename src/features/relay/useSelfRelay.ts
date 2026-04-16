@@ -35,6 +35,18 @@ function getRelayError(error: unknown) {
     return new Error('Waiting for validator checkpoints. Try again in a few minutes.');
   }
 
+  if (message.includes('Merkle proofs are not yet supported')) {
+    return new Error(
+      'Self-relay is not available for this message yet. Its destination ISM requires Merkle-proof metadata that the TS relayer cannot build yet.',
+    );
+  }
+
+  if (message.includes('Unable to build metadata')) {
+    return new Error(
+      'Self-relay could not build destination metadata yet. Validators may still be publishing checkpoints, or this ISM path may not be supported yet.',
+    );
+  }
+
   return error instanceof Error ? error : new Error(message);
 }
 
