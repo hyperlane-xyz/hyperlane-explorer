@@ -13,9 +13,12 @@ describe('getWarpRouteAmountParts', () => {
     expect(result).toEqual({ amount: 10n ** 18n, decimals: 18 });
   });
 
-  it('throws for non-integer scale (normalizeScale rejects it)', () => {
+  it('falls back to scale=1 for non-integer scale', () => {
     const messageAmount = 1_000_000n;
-    expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 1.5 })).toThrow();
+    expect(getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 1.5 })).toEqual({
+      amount: 1_000_000n,
+      decimals: 6,
+    });
   });
 
   it('handles numeric scale values', () => {
@@ -59,14 +62,20 @@ describe('getWarpRouteAmountParts', () => {
     expect(result).toEqual({ amount: 10n ** 18n, decimals: 18 });
   });
 
-  it('handles zero scale (division by zero throws)', () => {
+  it('falls back to scale=1 for zero scale', () => {
     const messageAmount = 1_000_000n;
-    expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 0 })).toThrow();
+    expect(getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: 0 })).toEqual({
+      amount: 1_000_000n,
+      decimals: 6,
+    });
   });
 
-  it('handles negative scale (assertValidScale throws)', () => {
+  it('falls back to scale=1 for negative scale', () => {
     const messageAmount = 1_000_000n;
-    expect(() => getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: -10 })).toThrow();
+    expect(getWarpRouteAmountParts(messageAmount, { decimals: 6, scale: -10 })).toEqual({
+      amount: 1_000_000n,
+      decimals: 6,
+    });
   });
 
   it('handles invalid rational scales as invalid (falls back to 1)', () => {
