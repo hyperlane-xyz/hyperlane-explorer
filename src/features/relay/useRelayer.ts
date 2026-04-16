@@ -6,8 +6,11 @@ import { useMemo } from 'react';
 
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { logger } from '../../utils/logger';
+import { ensureBrowserS3ProxyPatch } from './patchS3ValidatorFetch';
 
 export function useRelayer() {
+  ensureBrowserS3ProxyPatch();
+
   const runtimeMultiProvider = useReadyMultiProvider();
   const registry = useRegistry();
   const chainMetadata = useStore((s) => s.chainMetadata);
