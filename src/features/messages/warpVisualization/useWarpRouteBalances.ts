@@ -7,7 +7,7 @@ import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useMultiProvider } from '../../../store';
+import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
@@ -154,7 +154,8 @@ export function useWarpRouteBalances(
   _transferAmount?: bigint,
   enabled = true,
 ): WarpRouteBalances {
-  const multiProvider = useMultiProvider();
+  const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
 
   const tokensToFetch = useMemo(() => tokens?.filter(shouldFetchSupply) || [], [tokens]);
 
@@ -165,7 +166,10 @@ export function useWarpRouteBalances(
     [tokensToFetch],
   );
 
-  const queryKey = useMemo(() => ['warpRouteBalances', routeId, tokensKey], [routeId, tokensKey]);
+  const queryKey = useMemo(
+    () => ['warpRouteBalances', routeId, tokensKey, multiProviderVersion],
+    [routeId, tokensKey, multiProviderVersion],
+  );
 
   const {
     data: balances,
@@ -175,8 +179,8 @@ export function useWarpRouteBalances(
   } = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
-    queryFn: () => fetchAllBalances(multiProvider, tokensToFetch),
-    enabled: enabled && tokensToFetch.length > 0 && !!routeId,
+    queryFn: () => fetchAllBalances(multiProvider!, tokensToFetch),
+    enabled: enabled && !!multiProvider && tokensToFetch.length > 0 && !!routeId,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

@@ -3,7 +3,6 @@ import type { ScaleInput } from '@hyperlane-xyz/sdk';
 import { COSMOS_STANDARDS } from '../consts/tokenStandards';
 
 const DEFAULT_TOKEN_DECIMALS = 18;
-const DEFAULT_SCALE = { numerator: 1n, denominator: 1n };
 
 export type WarpRouteAmountConfig = {
   decimals?: number;
@@ -25,37 +24,35 @@ export interface EffectiveDecimalsToken {
   maxDecimals?: number;
 }
 
-type NormalizedScale = {
-  numerator: bigint;
-  denominator: bigint;
-};
+type ParsedScale = { numerator: bigint; denominator: bigint };
 
-function normalizeScale(scale: ScaleInput | undefined): NormalizedScale {
-  if (scale === undefined) return DEFAULT_SCALE;
+function toIntegerBigInt(value: number | bigint): bigint | null {
+  if (typeof value === 'bigint') return value;
+  if (!Number.isFinite(value) || !Number.isInteger(value)) return null;
+  if (!Number.isSafeInteger(value)) return null;
+  return BigInt(value);
+}
+
+function parseScale(scale: WarpRouteAmountConfig['scale']): ParsedScale | null {
+  if (scale === undefined || scale === null) return null;
+  if (typeof scale === 'string') {
+    try {
+      const parsed = BigInt(scale);
+      return parsed > 0n ? { numerator: parsed, denominator: 1n } : null;
+    } catch {
+      return null;
+    }
+  }
   if (typeof scale === 'number') {
+    if (!Number.isFinite(scale) || scale <= 0 || !Number.isInteger(scale)) return null;
+    if (!Number.isSafeInteger(scale)) return null;
     return { numerator: BigInt(scale), denominator: 1n };
   }
-
-  return {
-    numerator: BigInt(scale.numerator),
-    denominator: BigInt(scale.denominator),
-  };
-}
-
-function assertValidScale(scale: NormalizedScale): void {
-  if (scale.numerator <= 0n || scale.denominator <= 0n) {
-    throw new Error(`Scale must be positive, got ${scale.numerator}/${scale.denominator}`);
-  }
-}
-
-function localAmountFromScale(messageAmount: bigint, scale: ScaleInput | undefined): bigint {
-  if (messageAmount < 0n) {
-    throw new Error('Message amount must be non-negative');
-  }
-
-  const normalized = normalizeScale(scale);
-  assertValidScale(normalized);
-  return (messageAmount * normalized.denominator) / normalized.numerator;
+  const numerator = toIntegerBigInt(scale.numerator);
+  const denominator = toIntegerBigInt(scale.denominator);
+  if (numerator === null || denominator === null) return null;
+  if (numerator <= 0n || denominator <= 0n) return null;
+  return { numerator, denominator };
 }
 
 /**
@@ -114,8 +111,10 @@ export function getWarpRouteAmountParts(
   { decimals, scale }: WarpRouteAmountConfig,
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
+  const scaleValue = parseScale(scale) ?? { numerator: 1n, denominator: 1n };
+  // bigint division truncates toward zero (floor for positive token amounts)
   return {
-    amount: localAmountFromScale(messageAmount, scale),
+    amount: (messageAmount * scaleValue.denominator) / scaleValue.numerator,
     decimals: tokenDecimals,
   };
 }
