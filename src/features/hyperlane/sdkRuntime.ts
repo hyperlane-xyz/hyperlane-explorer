@@ -2,6 +2,8 @@ import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTyp
 import { MultiProviderAdapter } from '@hyperlane-xyz/sdk/providers/MultiProviderAdapter';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 
+import { proxyChainMetadataRpcUrls } from './browserRpcProxy';
+
 export type ExplorerMultiProvider = MultiProviderAdapter<{ mailbox?: string }>;
 
 export function createEmptyMultiProvider(): ExplorerMultiProvider {
@@ -15,7 +17,7 @@ export async function createRuntimeMultiProvider(
   chainMetadata: ChainMap<ChainMetadata<{ mailbox?: string }>>,
 ): Promise<ExplorerMultiProvider> {
   const { evmRuntimeProviderBuilders } = await import('@hyperlane-xyz/sdk/providers/runtime/evm');
-  return new MultiProviderAdapter(chainMetadata, {
+  return new MultiProviderAdapter(proxyChainMetadataRpcUrls(chainMetadata), {
     providerBuilders: evmRuntimeProviderBuilders,
   });
 }

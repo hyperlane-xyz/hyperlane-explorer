@@ -85,15 +85,16 @@ export function useSelfRelay() {
         throw new Error(`Could not fetch transaction receipt for ${message.origin.hash}`);
       }
 
-      evmMultiProvider.setSharedSigner(signer);
-
       try {
+        evmMultiProvider.setSharedSigner(signer);
         const result = await relayer.relayMessage(txReceipt);
         logger.debug(`Self-relay completed for message ${message.msgId}`, result);
         return result;
       } catch (error) {
         logger.error(`Self-relay failed for message ${message.msgId}`, error);
         throw getRelayError(error);
+      } finally {
+        evmMultiProvider.setSharedSigner(null);
       }
     },
     [address, chainId, connector, evmMultiProvider, isConnected, relayer, switchChainAsync],
@@ -105,7 +106,7 @@ export function useSelfRelay() {
       toast.success('Message relayed successfully');
     },
     onError: (error) => {
-      toast.error(`Relay failed: ${getRelayError(error).message}`);
+      toast.error(`Relay failed: ${error instanceof Error ? error.message : 'Unknown relay error'}`);
     },
   });
 

@@ -1,6 +1,11 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
+import { useIsWalletReady } from './EvmWalletContext';
+
 export function ConnectWalletButton() {
+  const isWalletReady = useIsWalletReady();
+  if (!isWalletReady) return null;
+
   return (
     <ConnectButton.Custom>
       {({ account, chain, mounted, openAccountModal, openChainModal, openConnectModal }) => {

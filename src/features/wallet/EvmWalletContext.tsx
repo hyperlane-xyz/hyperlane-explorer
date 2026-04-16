@@ -7,14 +7,21 @@ import {
   walletConnectWallet,
 } from '@rainbow-me/rainbowkit/wallets';
 import { injected } from '@wagmi/connectors';
-import { PropsWithChildren, useMemo } from 'react';
+import {
+  PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { WagmiProvider, createConfig, fallback, http } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
 
 import { config } from '../../consts/config';
-import { useMultiProvider } from '../../store';
+import { useReadyMultiProvider } from '../../store';
 
 const APP_NAME = 'Hyperlane Explorer';
+const WalletReadyContext = createContext(false);
 
 function getConnectors(walletConnectProjectId?: string) {
   if (!walletConnectProjectId) return [injected()];
@@ -33,7 +40,7 @@ function getConnectors(walletConnectProjectId?: string) {
   );
 }
 
-function initWagmiConfig(multiProvider: ReturnType<typeof useMultiProvider> | null) {
+function initWagmiConfig(multiProvider: ReturnType<typeof useReadyMultiProvider> | null) {
   const chains = multiProvider ? getWagmiChainConfigs(multiProvider) : [];
   const effectiveChains = chains.length ? chains : [mainnet];
 
@@ -52,15 +59,27 @@ function initWagmiConfig(multiProvider: ReturnType<typeof useMultiProvider> | nu
 }
 
 export function EvmWalletContext({ children }: PropsWithChildren) {
-  const multiProvider = useMultiProvider();
+  const multiProvider = useReadyMultiProvider();
+  const [wagmiConfig, setWagmiConfig] = useState(() => initWagmiConfig(null));
+  const [isWalletReady, setIsWalletReady] = useState(false);
 
-  const wagmiConfig = useMemo(() => {
-    return initWagmiConfig(multiProvider.getKnownChainNames().length ? multiProvider : null);
-  }, [multiProvider]);
+  useEffect(() => {
+    if (!multiProvider || isWalletReady) return;
+    setWagmiConfig(initWagmiConfig(multiProvider));
+    setIsWalletReady(true);
+  }, [isWalletReady, multiProvider]);
 
   return (
     <WagmiProvider config={wagmiConfig}>
-      <RainbowKitProvider>{children}</RainbowKitProvider>
+      <RainbowKitProvider>
+        <WalletReadyContext.Provider value={isWalletReady}>
+          {children}
+        </WalletReadyContext.Provider>
+      </RainbowKitProvider>
     </WagmiProvider>
   );
+}
+
+export function useIsWalletReady() {
+  return useContext(WalletReadyContext);
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 
 import { Message, MessageStatus, MessageStub } from '../../types';
+import { useIsWalletReady } from '../wallet/EvmWalletContext';
 import { useSelfRelay } from './useSelfRelay';
 
 export function SelfRelayButton({
@@ -13,6 +14,7 @@ export function SelfRelayButton({
   message: Message | MessageStub;
   disabled?: boolean;
 }) {
+  const isWalletReady = useIsWalletReady();
   const { isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { isReady, isRelaying, relay } = useSelfRelay();
@@ -35,6 +37,7 @@ export function SelfRelayButton({
   }, [isConnected, message, openConnectModal, relay]);
 
   if (message.status === MessageStatus.Delivered) return null;
+  if (!isWalletReady) return null;
 
   return (
     <button

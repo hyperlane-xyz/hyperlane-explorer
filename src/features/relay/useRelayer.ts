@@ -4,9 +4,14 @@ import { ProtocolType } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { proxyChainMetadataRpcUrls } from '../hyperlane/browserRpcProxy';
 import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { logger } from '../../utils/logger';
 import { ensureBrowserS3ProxyPatch } from './patchS3ValidatorFetch';
+
+if (typeof window !== 'undefined') {
+  ensureBrowserS3ProxyPatch();
+}
 
 function patchRelayerMetadataTimeouts(relayer: HyperlaneRelayer) {
   const aggregationMetadataBuilder = (relayer as any).metadataBuilder?.aggregationMetadataBuilder;
@@ -28,8 +33,6 @@ function patchRelayerMetadataTimeouts(relayer: HyperlaneRelayer) {
 }
 
 export function useRelayer() {
-  ensureBrowserS3ProxyPatch();
-
   const runtimeMultiProvider = useReadyMultiProvider();
   const registry = useRegistry();
   const chainMetadata = useStore((s) => s.chainMetadata);
@@ -63,7 +66,7 @@ export function useRelayer() {
     if (!evmChainMetadata || !Object.keys(evmChainMetadata).length) return null;
 
     try {
-      return new MultiProvider(evmChainMetadata);
+      return new MultiProvider(proxyChainMetadataRpcUrls(evmChainMetadata));
     } catch (error) {
       logger.error('Failed to create self-relay MultiProvider', error);
       return null;
