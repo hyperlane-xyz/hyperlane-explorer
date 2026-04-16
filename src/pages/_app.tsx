@@ -96,22 +96,24 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   const appContent = (
     <QueryClientProvider client={reactQueryClient}>
-      <UrqlProvider value={urqlClient}>
-        <AppLayout pathName={router.pathname}>
-          {pendingRoute ? (
-            getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
-          ) : (
-            <Component {...pageProps} />
-          )}
-        </AppLayout>
-      </UrqlProvider>
+      <EvmWalletContext>
+        <UrqlProvider value={urqlClient}>
+          <AppLayout pathName={router.pathname}>
+            {pendingRoute ? (
+              getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
+            ) : (
+              <Component {...pageProps} />
+            )}
+          </AppLayout>
+        </UrqlProvider>
+      </EvmWalletContext>
     </QueryClientProvider>
   );
 
   return (
     <div className="font-sans text-black">
       <AppErrorBoundary>
-        <EvmWalletContext>{appContent}</EvmWalletContext>
+        {appContent}
         <AppClientOverlays />
       </AppErrorBoundary>
     </div>
