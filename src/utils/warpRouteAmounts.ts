@@ -1,6 +1,7 @@
 import type { ScaleInput } from '@hyperlane-xyz/sdk';
 
 import { COSMOS_STANDARDS } from '../consts/tokenStandards';
+import { logger } from './logger';
 
 const DEFAULT_TOKEN_DECIMALS = 18;
 
@@ -111,7 +112,11 @@ export function getWarpRouteAmountParts(
   { decimals, scale }: WarpRouteAmountConfig,
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
-  const scaleValue = parseScale(scale) ?? { numerator: 1n, denominator: 1n };
+  const parsedScale = parseScale(scale);
+  if (scale != null && !parsedScale) {
+    logger.warn('Invalid warp route scale; falling back to 1:1', { scale });
+  }
+  const scaleValue = parsedScale ?? { numerator: 1n, denominator: 1n };
   // bigint division truncates toward zero (floor for positive token amounts)
   return {
     amount: (messageAmount * scaleValue.denominator) / scaleValue.numerator,

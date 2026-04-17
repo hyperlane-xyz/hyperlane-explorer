@@ -60,7 +60,9 @@ const useProviderStore = create<ProviderState>()((set) => ({
 
     const hadReadyProvider =
       useProviderStore.getState().multiProvider.getKnownChainNames().length > 0;
-    set({ isMultiProviderReady: false });
+    if (!hadReadyProvider) {
+      set({ isMultiProviderReady: false });
+    }
     providerSyncPromise = Promise.resolve()
       .then(async () => {
         logger.debug('Syncing MultiProtocolProvider from metadata store');
@@ -114,10 +116,8 @@ export function useMultiProvider() {
 }
 
 export function useReadyMultiProvider() {
-  const { multiProvider, isMultiProviderReady } = useProviderStore((s) => ({
-    multiProvider: s.multiProvider,
-    isMultiProviderReady: s.isMultiProviderReady,
-  }));
+  const multiProvider = useProviderStore((s) => s.multiProvider);
+  const isMultiProviderReady = useProviderStore((s) => s.isMultiProviderReady);
   ensureProviderStoreSubscription();
   if (!isMultiProviderReady || !multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
