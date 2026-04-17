@@ -1,3 +1,4 @@
+import { type ChainMetadata, TokenStandard } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 
 import { MessageStatus, type MessageStub, type WarpRouteChainAddressMap } from '../../types';
@@ -55,7 +56,7 @@ function buildTestSetup({
     [ORIGIN_CHAIN]: {
       [SENDER_BYTES32]: {
         chainName: ORIGIN_CHAIN,
-        standard: 'EvmHypCollateral' as any,
+        standard: TokenStandard.EvmHypCollateral,
         addressOrDenom: SENDER,
         decimals: originToken.decimals,
         symbol: 'ORIG',
@@ -67,7 +68,7 @@ function buildTestSetup({
     [DEST_CHAIN]: {
       [RECIPIENT_BYTES32]: {
         chainName: DEST_CHAIN,
-        standard: 'EvmHypSynthetic' as any,
+        standard: TokenStandard.EvmHypSynthetic,
         addressOrDenom: RECIPIENT,
         decimals: destToken.decimals,
         symbol: 'DEST',
@@ -78,14 +79,22 @@ function buildTestSetup({
     },
   };
 
+  const originMetadata = {
+    name: ORIGIN_CHAIN,
+    chainId: 1,
+    domainId: ORIGIN_DOMAIN,
+    protocol: ProtocolType.Ethereum,
+  } as ChainMetadata;
+  const destMetadata = {
+    name: DEST_CHAIN,
+    chainId: 2,
+    domainId: DEST_DOMAIN,
+    protocol: ProtocolType.Ethereum,
+  } as ChainMetadata;
   const chainMetadataResolver = {
-    tryGetChainMetadata: (chain: string | number) => {
-      if (chain === ORIGIN_DOMAIN) {
-        return { name: ORIGIN_CHAIN, protocol: ProtocolType.Ethereum } as any;
-      }
-      if (chain === DEST_DOMAIN) {
-        return { name: DEST_CHAIN, protocol: ProtocolType.Ethereum } as any;
-      }
+    tryGetChainMetadata: (chain: string | number): ChainMetadata | undefined => {
+      if (chain === ORIGIN_DOMAIN) return originMetadata;
+      if (chain === DEST_DOMAIN) return destMetadata;
       return undefined;
     },
   };
@@ -108,7 +117,8 @@ describe('parseWarpRouteMessageDetails', () => {
         chainMetadataResolver,
       );
 
-      expect(result?.destAmount).toBeNull();
+      expect(result).toBeDefined();
+      expect(result!.destAmount).toBeNull();
     });
 
     it('returns null when scales are equivalent fractions', () => {
@@ -125,7 +135,8 @@ describe('parseWarpRouteMessageDetails', () => {
         chainMetadataResolver,
       );
 
-      expect(result?.destAmount).toBeNull();
+      expect(result).toBeDefined();
+      expect(result!.destAmount).toBeNull();
     });
 
     it('computes destAmount using dest scale when scales differ (VRA-style)', () => {
@@ -144,8 +155,51 @@ describe('parseWarpRouteMessageDetails', () => {
         chainMetadataResolver,
       );
 
-      expect(result?.amount).toBe('1');
-      expect(result?.destAmount).toBe('10');
+      expect(result).toBeDefined();
+      expect(result!.amount).toBe('1');
+      expect(result!.destAmount).toBe('10');
+    });
+
+    it('computes destAmount when only origin has scale (BSC USDT scale-down style)', () => {
+      // Origin: 18 dec with scale {1, 1e12} (scale-down). Dest: 6 dec, no scale.
+      // Sending 1 USDT from origin: localAmount=1e18, message=1e18*1/1e12=1e6.
+      // Dest (no scale): localAmount = 1e6 → fromWei(1e6, 6) = "1".
+      const { message, warpRouteChainAddressMap, chainMetadataResolver } = buildTestSetup({
+        originToken: { decimals: 18, scale: { numerator: 1, denominator: 1_000_000_000_000 } },
+        destToken: { decimals: 6 },
+        messageAmount: 1_000_000n,
+      });
+
+      const result = parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        chainMetadataResolver,
+      );
+
+      expect(result).toBeDefined();
+      expect(result!.amount).toBe('1');
+      expect(result!.destAmount).toBe('1');
+    });
+
+    it('computes destAmount when only dest has scale (same decimals)', () => {
+      // Origin: 18 dec, no scale. Dest: 18 dec with scale-down {1, 10}.
+      // Sending 1 token from origin: localAmount=1e18, message=1e18 (no scale).
+      // Dest: localAmount = 1e18 * 10 / 1 = 1e19 → fromWei(1e19, 18) = "10".
+      const { message, warpRouteChainAddressMap, chainMetadataResolver } = buildTestSetup({
+        originToken: { decimals: 18 },
+        destToken: { decimals: 18, scale: { numerator: 1, denominator: 10 } },
+        messageAmount: 10n ** 18n,
+      });
+
+      const result = parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        chainMetadataResolver,
+      );
+
+      expect(result).toBeDefined();
+      expect(result!.amount).toBe('1');
+      expect(result!.destAmount).toBe('10');
     });
   });
 });

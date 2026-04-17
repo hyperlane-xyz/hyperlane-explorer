@@ -171,10 +171,10 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
       warpRouteDetails.originToken.logoURI !== warpRouteDetails.destinationToken.logoURI
     : false;
-  const showWarpTooltip = isDifferentWarpToken || !isNullish(warpRouteDetails?.destAmount);
+  const showDestInTooltip = isDifferentWarpToken || !isNullish(warpRouteDetails?.destAmount);
   const warpTooltipContent = warpRouteDetails
     ? `${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${
-        showWarpTooltip
+        showDestInTooltip
           ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}`
           : ''
       }`

@@ -70,12 +70,13 @@ export function parseWarpRouteMessageDetails(
     });
     const amount = fromWei(amountParts.amount.toString(), amountParts.decimals);
 
-    // Compute destination amount when scales differ
+    // Compute destination amount when scales differ. Always use destinationToken.decimals
+    // (not wireDecimals): after applying dest scale, the local amount is in dest's native
+    // decimal space, which is how the receiving user sees their balance.
     let destAmount: string | null = null;
     if (!scalesEqual(originToken.scale, destinationToken.scale)) {
-      const destDecimals = getEffectiveDecimals(destinationToken, originToken);
       const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
-        decimals: destDecimals,
+        decimals: destinationToken.decimals,
         scale: destinationToken.scale,
       });
       destAmount = fromWei(destAmountParts.amount.toString(), destAmountParts.decimals);

@@ -94,6 +94,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               label="Amount:"
               labelWidth="w-28 sm:w-32"
               display={`${formatAmountWithCommas(amount)} ${originToken.symbol}`}
+              copyValue={amount}
               blurValue={blur}
               showCopy
             />
@@ -102,6 +103,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
                 label="Received amount:"
                 labelWidth="w-28 sm:w-32"
                 display={`${formatAmountWithCommas(destAmount)} ${destinationToken.symbol}`}
+                copyValue={destAmount}
                 blurValue={blur}
                 showCopy
               />
