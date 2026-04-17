@@ -98,12 +98,12 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               blurValue={blur}
               showCopy
             />
-            {!isNullish(destAmount) && (
+            {(!isNullish(destAmount) || isDifferentToken) && (
               <KeyValueRow
                 label="Received amount:"
                 labelWidth="w-28 sm:w-32"
-                display={`${formatAmountWithCommas(destAmount)} ${destinationToken.symbol}`}
-                copyValue={destAmount}
+                display={`${formatAmountWithCommas(destAmount ?? amount)} ${destinationToken.symbol}`}
+                copyValue={destAmount ?? amount}
                 blurValue={blur}
                 showCopy
               />
