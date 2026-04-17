@@ -1,4 +1,4 @@
-import { shortenAddress } from '@hyperlane-xyz/utils';
+import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
@@ -171,7 +171,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
       warpRouteDetails.originToken.logoURI !== warpRouteDetails.destinationToken.logoURI
     : false;
-  const showWarpTooltip = isDifferentWarpToken || !!warpRouteDetails?.destAmount;
+  const showWarpTooltip = isDifferentWarpToken || !isNullish(warpRouteDetails?.destAmount);
+  const warpTooltipContent = warpRouteDetails
+    ? `${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${
+        showWarpTooltip
+          ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}`
+          : ''
+      }`
+    : '';
   return (
     <>
       <LinkCell
@@ -258,7 +265,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
             <div
               className={styles.iconText}
               data-tooltip-id="root-tooltip"
-              data-tooltip-content={`${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${showWarpTooltip ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}` : ''}`}
+              data-tooltip-content={warpTooltipContent}
             >
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>

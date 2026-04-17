@@ -1,4 +1,5 @@
 import type { TokenArgs } from '@hyperlane-xyz/sdk';
+import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
 
@@ -96,7 +97,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               blurValue={blur}
               showCopy
             />
-            {destAmount && (
+            {!isNullish(destAmount) && (
               <KeyValueRow
                 label="Received amount:"
                 labelWidth="w-28 sm:w-32"

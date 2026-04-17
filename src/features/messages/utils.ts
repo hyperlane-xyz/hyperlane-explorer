@@ -72,10 +72,7 @@ export function parseWarpRouteMessageDetails(
 
     // Compute destination amount when scales differ
     let destAmount: string | null = null;
-    if (
-      (originToken.scale || destinationToken.scale) &&
-      !scalesEqual(originToken.scale, destinationToken.scale)
-    ) {
+    if (!scalesEqual(originToken.scale, destinationToken.scale)) {
       const destDecimals = getEffectiveDecimals(destinationToken, originToken);
       const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
         decimals: destDecimals,
