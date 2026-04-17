@@ -1,3 +1,4 @@
+import { scalesEqual } from '@hyperlane-xyz/sdk';
 import {
   bytesToProtocolAddress,
   fromBase64,
@@ -67,12 +68,26 @@ export function parseWarpRouteMessageDetails(
       decimals: effectiveDecimals,
       scale: originToken.scale,
     });
+    const amount = fromWei(amountParts.amount.toString(), amountParts.decimals);
+
+    // Compute destination amount when scales differ. Always use destinationToken.decimals
+    // (not wireDecimals): after applying dest scale, the local amount is in dest's native
+    // decimal space, which is how the receiving user sees their balance.
+    let destAmount: string | null = null;
+    if (!scalesEqual(originToken.scale, destinationToken.scale)) {
+      const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
+        decimals: destinationToken.decimals,
+        scale: destinationToken.scale,
+      });
+      destAmount = fromWei(destAmountParts.amount.toString(), destAmountParts.decimals);
+    }
 
     return {
-      amount: fromWei(amountParts.amount.toString(), amountParts.decimals),
+      amount,
+      destAmount,
       transferRecipient: address,
-      originToken: originToken,
-      destinationToken: destinationToken,
+      originToken,
+      destinationToken,
     };
   } catch (err) {
     logger.error(`Error parsing warp route details for ${message.id}:`, err);
