@@ -7,12 +7,14 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
+import '@rainbow-me/rainbowkit/styles.css';
 import { AppLayout } from '../AppLayout';
 import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { config } from '../consts/config';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
+import { EvmWalletContext } from '../features/wallet/EvmWalletContext';
 
 import '../styles/global.css';
 
@@ -94,15 +96,17 @@ export default function App({ Component, router, pageProps }: AppProps) {
 
   const appContent = (
     <QueryClientProvider client={reactQueryClient}>
-      <UrqlProvider value={urqlClient}>
-        <AppLayout pathName={router.pathname}>
-          {pendingRoute ? (
-            getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
-          ) : (
-            <Component {...pageProps} />
-          )}
-        </AppLayout>
-      </UrqlProvider>
+      <EvmWalletContext>
+        <UrqlProvider value={urqlClient}>
+          <AppLayout pathName={router.pathname}>
+            {pendingRoute ? (
+              getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
+            ) : (
+              <Component {...pageProps} />
+            )}
+          </AppLayout>
+        </UrqlProvider>
+      </EvmWalletContext>
     </QueryClientProvider>
   );
 
