@@ -91,7 +91,11 @@ export function ChainSearchModal({
   };
 
   return (
-    <Modal isOpen={isOpen} close={close} panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]">
+    <Modal
+      isOpen={isOpen}
+      close={close}
+      panelClassname="p-4 sm:p-5 max-w-2xl min-h-[50vh] max-h-[85vh] overflow-x-hidden"
+    >
       {isAddingChain ? (
         <AddChainForm
           allChainMetadata={allChainMetadata}
@@ -119,7 +123,7 @@ export function ChainSearchModal({
             </button>
           </div>
 
-          <div className="max-h-[55vh] overflow-y-auto">
+          <div className="max-h-[62vh] overflow-y-auto overflow-x-hidden">
             {visibleChains.length ? (
               <div className="flex flex-col divide-y divide-gray-100">
                 {visibleChains.map((metadata) => (
