@@ -15,6 +15,8 @@ export function useWarpFees(
     queryKey: ['warpFees', message.id, warpRouteDetails?.originToken.addressOrDenom],
     queryFn: () => fetchWarpFees(message, warpRouteDetails!, multiProvider),
     enabled: !!warpRouteDetails,
+    // Successful results (including legitimate `null` for "no fees detected") never go stale —
+    // tx receipts are immutable. Transient errors still retry per React Query defaults.
     staleTime: Infinity,
   });
 
