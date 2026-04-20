@@ -1,10 +1,13 @@
+import type { ScaleInput } from '@hyperlane-xyz/sdk';
+
 import { COSMOS_STANDARDS } from '../consts/tokenStandards';
 
 const DEFAULT_TOKEN_DECIMALS = 18;
+const DEFAULT_SCALE = { numerator: 1n, denominator: 1n };
 
 export type WarpRouteAmountConfig = {
   decimals?: number;
-  scale?: number | string;
+  scale?: ScaleInput;
 };
 
 export type WarpRouteAmountParts = {
@@ -14,12 +17,45 @@ export type WarpRouteAmountParts = {
 
 export interface EffectiveDecimalsToken {
   decimals?: number;
-  scale?: number;
+  scale?: ScaleInput;
   standard?: string;
   // Wire decimals = max decimals across all tokens in a warp route.
   // Both fields supported for compatibility: wireDecimals (preferred) and maxDecimals (legacy).
   wireDecimals?: number;
   maxDecimals?: number;
+}
+
+type NormalizedScale = {
+  numerator: bigint;
+  denominator: bigint;
+};
+
+function normalizeScale(scale: ScaleInput | undefined): NormalizedScale {
+  if (scale === undefined) return DEFAULT_SCALE;
+  if (typeof scale === 'number') {
+    return { numerator: BigInt(scale), denominator: 1n };
+  }
+
+  return {
+    numerator: BigInt(scale.numerator),
+    denominator: BigInt(scale.denominator),
+  };
+}
+
+function assertValidScale(scale: NormalizedScale): void {
+  if (scale.numerator <= 0n || scale.denominator <= 0n) {
+    throw new Error(`Scale must be positive, got ${scale.numerator}/${scale.denominator}`);
+  }
+}
+
+function localAmountFromScale(messageAmount: bigint, scale: ScaleInput | undefined): bigint {
+  if (messageAmount < 0n) {
+    throw new Error('Message amount must be non-negative');
+  }
+
+  const normalized = normalizeScale(scale);
+  assertValidScale(normalized);
+  return (messageAmount * normalized.denominator) / normalized.numerator;
 }
 
 /**
@@ -59,26 +95,12 @@ export function getEffectiveDecimals(
   );
 }
 
-function parseScale(scale: WarpRouteAmountConfig['scale']): bigint | null {
-  if (scale === undefined || scale === null) return null;
-  if (typeof scale === 'string') {
-    try {
-      const parsed = BigInt(scale);
-      return parsed > 0n ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  if (!Number.isFinite(scale) || scale <= 0 || !Number.isInteger(scale)) return null;
-  if (!Number.isSafeInteger(scale)) return null;
-  return BigInt(scale);
-}
-
 /**
  * Extract amount parts from a warp route message.
  *
  * When `scale` is explicitly defined in the token config, divide the message
- * amount by that scale. Otherwise, assume the message amount is already in
+ * amount by that scale (i.e. multiply by denominator/numerator).
+ * Otherwise, assume the message amount is already in
  * the origin token's native decimal format (scale = 1).
  *
  * This handles two patterns:
@@ -92,10 +114,8 @@ export function getWarpRouteAmountParts(
   { decimals, scale }: WarpRouteAmountConfig,
 ): WarpRouteAmountParts {
   const tokenDecimals = decimals ?? DEFAULT_TOKEN_DECIMALS;
-  const scaleValue = parseScale(scale) ?? 1n;
-  // bigint division truncates toward zero (floor for positive token amounts)
   return {
-    amount: messageAmount / scaleValue,
+    amount: localAmountFromScale(messageAmount, scale),
     decimals: tokenDecimals,
   };
 }

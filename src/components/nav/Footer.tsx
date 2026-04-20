@@ -1,13 +1,12 @@
+import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
 // Partly copied from https://github.com/hyperlane-xyz/hyperlane-website/blob/main/src/components/nav/Footer.tsx
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { GithubIcon, TwitterIcon } from '@hyperlane-xyz/widgets';
-
+import LogoLockup from '../../../public/images/hyperlane-explorer-logo.svg';
 import { docLinks, links } from '../../consts/links';
 import { Color } from '../../styles/Color';
 import { QuestionMarkIcon } from '../icons/QuestionMarkIcon';
-import LogoLockup from '/public/images/hyperlane-explorer-logo.svg';
 
 const footerLinks1 = [
   { title: 'Docs', url: docLinks.home, external: true },

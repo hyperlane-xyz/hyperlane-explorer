@@ -1,7 +1,8 @@
-import { TokenArgs } from '@hyperlane-xyz/sdk';
+import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import { isHttpsUrl, isRelativeUrl } from '@hyperlane-xyz/utils';
 import { Circle } from '@hyperlane-xyz/widgets';
 import { useState } from 'react';
+
 import { links } from '../../consts/links';
 
 interface Props {

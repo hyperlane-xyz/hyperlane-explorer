@@ -1,4 +1,4 @@
-import { ChainMap, TokenArgs, WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import type { ChainMap, TokenArgs, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -66,6 +66,7 @@ export type TokenArgsWithWireDecimals = TokenArgs & { wireDecimals: number };
 
 export interface WarpRouteDetails {
   amount: string;
+  destAmount: string | null;
   transferRecipient: string;
   originToken: TokenArgsWithWireDecimals;
   destinationToken: TokenArgsWithWireDecimals;

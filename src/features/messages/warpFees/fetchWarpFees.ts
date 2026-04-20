@@ -3,7 +3,8 @@ import { IERC20__factory, TokenRouter__factory } from '@hyperlane-xyz/core';
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { fromWei } from '@hyperlane-xyz/utils';
 import { BigNumber } from 'ethers';
-import { Message, WarpRouteDetails } from '../../../types';
+
+import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { formatAmountCompact } from '../../../utils/amount';
 import { logger } from '../../../utils/logger';
 
@@ -32,7 +33,7 @@ const erc20Iface = IERC20__factory.createInterface();
  * Does not work for smart contract wallet / multisig senders where tx.from != ERC20 sender.
  */
 export async function fetchWarpFees(
-  message: Message,
+  message: Message | MessageStub,
   warpRouteDetails: WarpRouteDetails,
   multiProvider: MultiProtocolProvider,
 ): Promise<WarpFeeBreakdown | null> {

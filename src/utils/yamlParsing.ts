@@ -1,7 +1,7 @@
+import type { ScaleInput } from '@hyperlane-xyz/sdk';
 import YAML from 'yaml';
 
 import { links } from '../consts/links';
-
 import { logger } from './logger';
 
 // ============================================================================
@@ -297,7 +297,7 @@ export interface WarpToken {
   // Wire format decimals = max decimals among all tokens in this warp route
   // Used for decoding scaled amounts in message body (see og.tsx for details)
   wireDecimals: number;
-  scale?: number;
+  scale?: ScaleInput;
   logoURI: string;
   chainName: string;
   addressOrDenom: string;
@@ -311,7 +311,7 @@ interface WarpRouteConfigEntry {
   addressOrDenom?: string;
   chainName?: string;
   decimals?: number;
-  scale?: number;
+  scale?: ScaleInput;
   symbol?: string;
   name?: string;
   logoURI?: string;

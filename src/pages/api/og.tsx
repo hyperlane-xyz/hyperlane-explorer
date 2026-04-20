@@ -149,18 +149,22 @@ function getWarpTransferDetails(
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
-  const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
+  try {
+    const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
+    const amountParts = getWarpRouteAmountParts(parsed.amount, {
+      decimals: effectiveDecimals,
+      scale: originToken.scale,
+    });
+    const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
 
-  const amountParts = getWarpRouteAmountParts(parsed.amount, {
-    decimals: effectiveDecimals,
-    scale: originToken.scale,
-  });
-  const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
-
-  return {
-    token: originToken,
-    amount: formatAmountWithCommas(formattedAmount),
-  };
+    return {
+      token: originToken,
+      amount: formatAmountWithCommas(formattedAmount),
+    };
+  } catch (error) {
+    logger.warn('Failed to parse warp transfer details for OG image:', error);
+    return null;
+  }
 }
 
 // Get chain logo URL from registry CDN
@@ -294,331 +298,312 @@ export default async function handler(req: NextRequest) {
   const backgroundUrl = `${origin}/images/background.svg`;
 
   return new ImageResponse(
-    (
+    <div
+      style={{
+        background:
+          'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '48px 64px',
+        fontFamily: 'PPFraktionMono, sans-serif',
+        position: 'relative',
+      }}
+    >
+      {/* Grid background */}
+      <img
+        src={backgroundUrl}
+        style={{
+          position: 'absolute',
+          top: '-75%',
+          left: '-75%',
+          width: '250%',
+          height: '250%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          opacity: 0.6,
+        }}
+      />
+      {/* Grid fade overlay - hides grid at top, reveals at bottom */}
       <div
         style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background:
-            'radial-gradient(ellipse 120% 80% at 50% 100%, #2d1145 0%, #1a0a28 50%, #0d0612 100%)',
-          width: '100%',
-          height: '100%',
+            'linear-gradient(to bottom, rgba(13,6,18,0.85) 0%, rgba(13,6,18,0.4) 40%, rgba(13,6,18,0) 70%)',
+        }}
+      />
+
+      {/* Top decorative line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
+        }}
+      />
+
+      {/* Header */}
+      <div
+        style={{
           display: 'flex',
-          flexDirection: 'column',
-          padding: '48px 64px',
-          fontFamily: 'PPFraktionMono, sans-serif',
-          position: 'relative',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '40px',
         }}
       >
-        {/* Grid background */}
-        <img
-          src={backgroundUrl}
-          style={{
-            position: 'absolute',
-            top: '-75%',
-            left: '-75%',
-            width: '250%',
-            height: '250%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-            opacity: 0.6,
-          }}
-        />
-        {/* Grid fade overlay - hides grid at top, reveals at bottom */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background:
-              'linear-gradient(to bottom, rgba(13,6,18,0.85) 0%, rgba(13,6,18,0.4) 40%, rgba(13,6,18,0) 70%)',
-          }}
-        />
-
-        {/* Top decorative line */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #9A0DFF 0%, #FF4FE9 50%, #9A0DFF 100%)',
-          }}
-        />
-
-        {/* Header */}
+        <img src={`${origin}/images/hyperlane-explorer-logo.svg`} width="275" height="67" alt="" />
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '40px',
+            gap: '10px',
+            background: statusBgColor,
+            padding: '14px 24px',
+            borderRadius: '2px',
+            border: `1px solid ${statusColor}`,
           }}
         >
-          <img
-            src={`${origin}/images/hyperlane-explorer-logo.svg`}
-            width="275"
-            height="67"
-            alt=""
-          />
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              background: statusBgColor,
-              padding: '14px 24px',
+              width: '14px',
+              height: '14px',
+              borderRadius: '50%',
+              backgroundColor: statusColor,
+            }}
+          />
+          <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
+            {messageData.status}
+          </span>
+        </div>
+      </div>
+
+      {/* Chain Route - Main Content */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 1,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '32px',
+          }}
+        >
+          {/* Origin Chain Box */}
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
+              border: `1px solid ${originColors.primary}50`,
               borderRadius: '2px',
-              border: `1px solid ${statusColor}`,
+              padding: '28px 48px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '280px',
             }}
           >
-            <div
+            <span
               style={{
-                width: '14px',
-                height: '14px',
-                borderRadius: '50%',
-                backgroundColor: statusColor,
+                color: originColors.primary,
+                fontSize: '21px',
+                fontWeight: 500,
+                marginBottom: '12px',
+                letterSpacing: '1px',
+                fontFamily: 'PPFraktionMono, monospace',
               }}
-            />
-            <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
-              {messageData.status}
+            >
+              FROM
             </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img src={originChainLogo} alt="" style={{ height: '56px' }} />
+              <span
+                style={{
+                  color: 'white',
+                  fontSize: '46px',
+                  fontWeight: 600,
+                }}
+              >
+                {originDisplayName}
+              </span>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={`${origin}/images/arrow-right-gradient.svg`} width="72" height="36" alt="" />
+          </div>
+
+          {/* Destination Chain Box */}
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
+              border: `1px solid ${destColors.primary}50`,
+              borderRadius: '2px',
+              padding: '28px 48px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '280px',
+            }}
+          >
+            <span
+              style={{
+                color: destColors.primary,
+                fontSize: '21px',
+                fontWeight: 500,
+                marginBottom: '12px',
+                letterSpacing: '1px',
+                fontFamily: 'PPFraktionMono, monospace',
+              }}
+            >
+              TO
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img src={destChainLogo} alt="" style={{ height: '56px' }} />
+              <span
+                style={{
+                  color: 'white',
+                  fontSize: '46px',
+                  fontWeight: 600,
+                }}
+              >
+                {destDisplayName}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Chain Route - Main Content */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-          }}
-        >
+        {/* Warp transfer details row */}
+        {warpTransfer && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '32px',
+              marginTop: '32px',
+              gap: '14px',
             }}
           >
-            {/* Origin Chain Box */}
-            <div
+            {warpTransfer.token.logoURI && (
+              <img src={warpTransfer.token.logoURI} height="64" alt="" style={{ height: '64px' }} />
+            )}
+            <span
               style={{
-                background: `linear-gradient(135deg, ${originColors.primary}25 0%, ${originColors.secondary || originColors.primary}12 100%)`,
-                border: `1px solid ${originColors.primary}50`,
-                borderRadius: '2px',
-                padding: '28px 48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: '280px',
+                color: '#E2E8F0',
+                fontSize: '50px',
+                fontWeight: 500,
               }}
             >
-              <span
-                style={{
-                  color: originColors.primary,
-                  fontSize: '21px',
-                  fontWeight: 500,
-                  marginBottom: '12px',
-                  letterSpacing: '1px',
-                  fontFamily: 'PPFraktionMono, monospace',
-                }}
-              >
-                FROM
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={originChainLogo} alt="" style={{ height: '56px' }} />
-                <span
-                  style={{
-                    color: 'white',
-                    fontSize: '46px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {originDisplayName}
-                </span>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img
-                src={`${origin}/images/arrow-right-gradient.svg`}
-                width="72"
-                height="36"
-                alt=""
-              />
-            </div>
-
-            {/* Destination Chain Box */}
-            <div
-              style={{
-                background: `linear-gradient(135deg, ${destColors.secondary || destColors.primary}12 0%, ${destColors.primary}25 100%)`,
-                border: `1px solid ${destColors.primary}50`,
-                borderRadius: '2px',
-                padding: '28px 48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: '280px',
-              }}
-            >
-              <span
-                style={{
-                  color: destColors.primary,
-                  fontSize: '21px',
-                  fontWeight: 500,
-                  marginBottom: '12px',
-                  letterSpacing: '1px',
-                  fontFamily: 'PPFraktionMono, monospace',
-                }}
-              >
-                TO
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={destChainLogo} alt="" style={{ height: '56px' }} />
-                <span
-                  style={{
-                    color: 'white',
-                    fontSize: '46px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {destDisplayName}
-                </span>
-              </div>
-            </div>
+              {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
+            </span>
           </div>
+        )}
+      </div>
 
-          {/* Warp transfer details row */}
-          {warpTransfer && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: '32px',
-                gap: '14px',
-              }}
-            >
-              {warpTransfer.token.logoURI && (
-                <img
-                  src={warpTransfer.token.logoURI}
-                  height="64"
-                  alt=""
-                  style={{ height: '64px' }}
-                />
-              )}
-              <span
-                style={{
-                  color: '#E2E8F0',
-                  fontSize: '50px',
-                  fontWeight: 500,
-                }}
-              >
-                {warpTransfer.amount} {sanitizeSymbol(warpTransfer.token.symbol)}
-              </span>
-            </div>
-          )}
+      {/* Footer with ID, delivery time, and timestamp */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '24px',
+        }}
+      >
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}
+        >
+          <span
+            style={{
+              color: '#6B7280',
+              fontSize: '18px',
+              marginBottom: '8px',
+              letterSpacing: '0.5px',
+            }}
+          >
+            MESSAGE ID
+          </span>
+          <span
+            style={{
+              color: '#94A3B8',
+              fontSize: '26px',
+              fontFamily: 'PPFraktionMono, monospace',
+              background: 'rgba(154, 13, 255, 0.11)',
+              padding: '8px 16px',
+              borderRadius: '2px',
+            }}
+          >
+            {shortMsgId}
+          </span>
         </div>
 
-        {/* Footer with ID, delivery time, and timestamp */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '24px',
-          }}
-        >
-          <div
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}
-          >
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: '18px',
-                marginBottom: '8px',
-                letterSpacing: '0.5px',
-              }}
-            >
-              MESSAGE ID
-            </span>
-            <span
-              style={{
-                color: '#94A3B8',
-                fontSize: '26px',
-                fontFamily: 'PPFraktionMono, monospace',
-                background: 'rgba(154, 13, 255, 0.11)',
-                padding: '8px 16px',
-                borderRadius: '2px',
-              }}
-            >
-              {shortMsgId}
-            </span>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          {formattedLatency ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span
+                style={{
+                  color: '#6B7280',
+                  fontSize: '18px',
+                  marginBottom: '8px',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                DELIVERY TIME
+              </span>
+              <span
+                style={{
+                  color: latencyColor,
+                  fontSize: '26px',
+                  fontWeight: 500,
+                  fontFamily: 'PPFraktionMono, monospace',
+                  padding: '8px 16px',
+                }}
+              >
+                {formattedLatency}
+              </span>
+            </div>
+          ) : null}
+        </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-            {formattedLatency ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span
-                  style={{
-                    color: '#6B7280',
-                    fontSize: '18px',
-                    marginBottom: '8px',
-                    letterSpacing: '0.5px',
-                  }}
-                >
-                  DELIVERY TIME
-                </span>
-                <span
-                  style={{
-                    color: latencyColor,
-                    fontSize: '26px',
-                    fontWeight: 500,
-                    fontFamily: 'PPFraktionMono, monospace',
-                    padding: '8px 16px',
-                  }}
-                >
-                  {formattedLatency}
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          <div
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1 }}>
+          <span
+            style={{
+              color: '#6B7280',
+              fontSize: '18px',
+              marginBottom: '8px',
+              letterSpacing: '0.5px',
+            }}
           >
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: '18px',
-                marginBottom: '8px',
-                letterSpacing: '0.5px',
-              }}
-            >
-              SENT
-            </span>
-            <span
-              style={{
-                color: '#94A3B8',
-                fontSize: '26px',
-                fontFamily: 'PPFraktionMono, monospace',
-                background: 'rgba(154, 13, 255, 0.11)',
-                padding: '8px 16px',
-                borderRadius: '2px',
-              }}
-            >
-              {formattedDate}
-            </span>
-          </div>
+            SENT
+          </span>
+          <span
+            style={{
+              color: '#94A3B8',
+              fontSize: '26px',
+              fontFamily: 'PPFraktionMono, monospace',
+              background: 'rgba(154, 13, 255, 0.11)',
+              padding: '8px 16px',
+              borderRadius: '2px',
+            }}
+          >
+            {formattedDate}
+          </span>
         </div>
       </div>
-    ),
+    </div>,
     imageOptions,
   );
 }

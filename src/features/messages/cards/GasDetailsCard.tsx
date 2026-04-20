@@ -3,26 +3,32 @@ import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import { useMemo, useState } from 'react';
+
 import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
-import { useMultiProvider } from '../../../store';
-import { Message } from '../../../types';
+import { useChainMetadataResolver } from '../../../metadataStore';
+import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
-
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
-  message: Message;
+  message: Message | MessageStub;
   igpPayments?: AddressTo<GasPayment[]>;
   blur: boolean;
 }
 
+const DEFAULT_GAS_UNIT_DECIMALS = 9;
+
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
-  const multiProvider = useMultiProvider();
+  const chainMetadataResolver = useChainMetadataResolver();
+  const totalGasAmountFromMessage =
+    'totalGasAmount' in message ? message.totalGasAmount : undefined;
+  const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
+  const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
   const unitOptions = useMemo(() => {
-    const originMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
+    const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
     return [
@@ -30,9 +36,9 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       { value: 9, display: 'Gwei' },
       { value: 0, display: 'Wei' },
     ];
-  }, [message, multiProvider]);
+  }, [chainMetadataResolver, message.originDomainId]);
 
-  const [decimals, setDecimals] = useState<number>(unitOptions[1].value);
+  const [decimals, setDecimals] = useState<number>(DEFAULT_GAS_UNIT_DECIMALS);
 
   const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
     useMemo(() => {
@@ -41,6 +47,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           igpPayments[contract].map((p) => ({
             gasAmount: p.gasAmount,
             paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
+            paymentAmountWei: p.paymentAmount,
             contract,
           })),
         )
@@ -51,23 +58,29 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         new BigNumber(0),
       );
       let totalPaymentWei = paymentsWithAddr.reduce(
-        (sum, val) => sum.plus(val.paymentAmount),
+        (sum, val) => sum.plus(val.paymentAmountWei),
         new BigNumber(0),
       );
       let numPayments = paymentsWithAddr.length;
 
       totalGasAmount = new BigNumber(
-        BigNumberMax(totalGasAmount, new BigNumber(message.totalGasAmount || 0)),
+        BigNumberMax(totalGasAmount, new BigNumber(totalGasAmountFromMessage || 0)),
       );
       totalPaymentWei = new BigNumber(
-        BigNumberMax(totalPaymentWei, new BigNumber(message.totalPayment || 0)),
+        BigNumberMax(totalPaymentWei, new BigNumber(totalPaymentFromMessage || 0)),
       );
-      numPayments = Math.max(numPayments, message.numPayments || 0);
+      numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
 
       const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
       const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
       return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
-    }, [decimals, message, igpPayments]);
+    }, [
+      decimals,
+      igpPayments,
+      numPaymentsFromMessage,
+      totalGasAmountFromMessage,
+      totalPaymentFromMessage,
+    ]);
 
   return (
     <SectionCard

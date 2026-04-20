@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
+import dynamic from 'next/dynamic';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
-import { SearchFilterBar } from '../../components/search/SearchFilterBar';
 import {
   SearchChainError,
   SearchEmptyError,
@@ -12,15 +11,26 @@ import {
   SearchInvalidError,
   SearchUnknownError,
 } from '../../components/search/SearchStates';
-import { useReadyMultiProvider, useWarpRouteIdToAddressesMap } from '../../store';
+import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
 import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
+import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';
+import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
-
 import { MessageTable } from './MessageTable';
-import { usePiChainMessageSearchQuery } from './pi-queries/usePiChainMessageQuery';
+import { DEFAULT_PI_MESSAGE_SEARCH_STATE, PiMessageSearchState } from './piSearchState';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
+import { SearchFilterBarSkeleton } from './SearchFilterBarSkeleton';
+
+const SearchFilterBar = dynamic(
+  () => import('../../components/search/SearchFilterBar').then((mod) => mod.SearchFilterBar),
+  { loading: () => <SearchFilterBarSkeleton /> },
+);
+const PiMessageSearchBridge = dynamic(
+  () => import('./PiMessageSearchBridge').then((mod) => mod.PiMessageSearchBridge),
+  { ssr: false },
+);
 
 function parseStatusFilter(value: string): MessageStatusFilter {
   if (value === 'delivered' || value === 'pending') return value;
@@ -50,8 +60,13 @@ enum MESSAGE_QUERY_PARAMS {
 
 export function MessageSearch() {
   // Chain metadata
-  const multiProvider = useReadyMultiProvider();
+  const isChainMetadataReady = useChainMetadataReady();
+  const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
   const warpRouteIdToAddressesMap = useWarpRouteIdToAddressesMap();
+  const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
+  const [piSearchState, setPiSearchState] = useState<PiMessageSearchState>(
+    DEFAULT_PI_MESSAGE_SEARCH_STATE,
+  );
 
   // Query params from URL - isRouterReady indicates router has hydrated
   const [
@@ -144,6 +159,25 @@ export function MessageSearch() {
   // Check if search input looks like a warp route but wasn't found (after map is loaded)
   const isUnknownWarpRoute = looksLikeWarpRoute && isWarpRouteMapLoaded && !detectedWarpRouteId;
 
+  useEffect(() => {
+    ensureChainMetadata().catch((e) => logger.error('Error loading chain metadata', e));
+  }, [ensureChainMetadata]);
+
+  useEffect(() => {
+    if (isWarpRouteMapLoaded) return;
+
+    const loadWarpRouteData = () => {
+      ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
+    };
+
+    if (looksLikeWarpRoute) {
+      loadWarpRouteData();
+      return;
+    }
+
+    return scheduleWhenIdle(loadWarpRouteData, { timeout: 2_000, fallbackDelay: 1_500 });
+  }, [ensureWarpRouteData, isWarpRouteMapLoaded, looksLikeWarpRoute]);
+
   // GraphQL query and results
   const {
     isValidInput,
@@ -165,26 +199,26 @@ export function MessageSearch() {
     warpRouteAddresses,
   );
 
-  // Run permissionless interop chains query if needed
-  const {
-    isError: isPiError,
-    isFetching: isPiFetching,
-    hasRun: hasPiRun,
-    messageList: piMessageList,
-    isMessagesFound: isPiMessagesFound,
-  } = usePiChainMessageSearchQuery({
-    sanitizedInput,
-    startTimeFilter,
-    endTimeFilter,
-    pause: !hasRun || isMessagesFound,
-  });
+  const shouldRunPiSearch = !!sanitizedInput && hasRun && !isMessagesFound;
+
+  useEffect(() => {
+    setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
+  }, [sanitizedInput, startTimeFilter, endTimeFilter]);
+
+  const prevShouldRunPiSearchRef = useRef(shouldRunPiSearch);
+  useEffect(() => {
+    if (prevShouldRunPiSearchRef.current && !shouldRunPiSearch) {
+      setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
+    }
+    prevShouldRunPiSearchRef.current = shouldRunPiSearch;
+  }, [shouldRunPiSearch]);
 
   // Coalesce GraphQL + PI results
-  const isAnyFetching = isFetching || isPiFetching;
-  const isAnyError = isError || isPiError;
-  const hasAllRun = hasRun && hasPiRun;
-  const isAnyMessageFound = isMessagesFound || isPiMessagesFound;
-  const messageListResult = isMessagesFound ? messageList : piMessageList;
+  const isAnyFetching = isFetching || piSearchState.isFetching;
+  const isAnyError = isError || piSearchState.isError;
+  const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
+  const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
+  const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
 
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
@@ -193,7 +227,7 @@ export function MessageSearch() {
     isValidOrigin &&
     isValidDestination &&
     isAnyMessageFound &&
-    !!multiProvider;
+    isChainMetadataReady;
 
   // Keep url in sync - use raw filter values, not validated ones, to preserve URL params
   // even when chain metadata hasn't loaded yet
@@ -216,6 +250,15 @@ export function MessageSearch() {
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, message id, or warp route"
       />
+      {shouldRunPiSearch && (
+        <PiMessageSearchBridge
+          key={`${sanitizedInput}:${startTimeFilter ?? ''}:${endTimeFilter ?? ''}`}
+          sanitizedInput={sanitizedInput}
+          startTimeFilter={startTimeFilter}
+          endTimeFilter={endTimeFilter}
+          onStateChange={setPiSearchState}
+        />
+      )}
       <Card className="relative mt-4 min-h-[38rem] w-full" padding="">
         <div className="flex items-center justify-between px-2 pb-3 pt-3.5 sm:px-4 md:px-5">
           <h2 className="w-min pl-0.5 font-medium text-primary-800 sm:w-fit">
@@ -242,7 +285,7 @@ export function MessageSearch() {
         </Fade>
         <SearchFetching
           show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
-          isPiFetching={isPiFetching}
+          isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
           show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
@@ -275,7 +318,7 @@ export function MessageSearch() {
           </div>
         )}
         <SearchChainError
-          show={(!isValidOrigin || !isValidDestination) && isValidInput && !!multiProvider}
+          show={(!isValidOrigin || !isValidDestination) && isValidInput && isChainMetadataReady}
         />
       </Card>
     </>

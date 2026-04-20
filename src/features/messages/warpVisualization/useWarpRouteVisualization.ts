@@ -1,10 +1,9 @@
-import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import type { WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { useMemo } from 'react';
 
 import { useStore } from '../../../store';
 import { WarpRouteConfigs, WarpRouteDetails } from '../../../types';
 import { normalizeAddressToHex } from '../../../utils/yamlParsing';
-
 import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
 
 /**

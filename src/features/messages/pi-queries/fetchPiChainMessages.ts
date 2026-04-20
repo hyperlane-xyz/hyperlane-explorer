@@ -1,11 +1,9 @@
-import { BigNumber, constants, ethers, providers } from 'ethers';
-
 import {
   IInterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
   Mailbox__factory as MailboxFactory,
 } from '@hyperlane-xyz/core';
-import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { IRegistry } from '@hyperlane-xyz/registry';
+import type { ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import {
   ProtocolType,
   addressToBytes32,
@@ -16,6 +14,7 @@ import {
   normalizeAddress,
   parseMessage,
 } from '@hyperlane-xyz/utils';
+import { BigNumber, constants, ethers, providers } from 'ethers';
 
 import { PI_MESSAGE_LOG_CHECK_BLOCK_RANGE } from '../../../consts/values';
 import { ExtendedLog, Message, MessageStatus } from '../../../types';

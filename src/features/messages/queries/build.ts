@@ -2,7 +2,6 @@ import { isAddress } from '@hyperlane-xyz/utils';
 
 import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
-
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
 

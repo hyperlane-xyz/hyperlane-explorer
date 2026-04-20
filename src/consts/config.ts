@@ -1,8 +1,8 @@
-const isDevMode = process?.env?.NODE_ENV === 'development';
-const version = process?.env?.NEXT_PUBLIC_VERSION ?? null;
-const registryUrl = process?.env?.NEXT_PUBLIC_REGISTRY_URL || undefined;
-const registryBranch = process?.env?.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
-const explorerApiKeys = JSON.parse(process?.env?.EXPLORER_API_KEYS || '{}');
+const isDevMode = process.env.NODE_ENV === 'development';
+const version = process.env.NEXT_PUBLIC_VERSION ?? null;
+const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
+const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
+const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
 
 interface Config {
   debug: boolean;

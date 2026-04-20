@@ -1,13 +1,18 @@
 import Head from 'next/head';
 
-import { APP_DESCRIPTION, APP_NAME, OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../consts/appMetadata';
+import {
+  APP_DESCRIPTION,
+  APP_NAME,
+  OG_BASE_URL,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_WIDTH,
+} from '../consts/appMetadata';
 
 interface OGHeadProps {
   title?: string;
   description?: string;
   url?: string;
   image?: string;
-  logoUrl?: string;
 }
 
 /**
@@ -19,7 +24,6 @@ export function OGHead({
   description = APP_DESCRIPTION,
   url,
   image,
-  logoUrl,
 }: OGHeadProps) {
   return (
     <Head>
@@ -42,7 +46,7 @@ export function OGHead({
         </>
       )}
       <meta key="og:description" property="og:description" content={description} />
-      {logoUrl && <meta key="og:logo" property="og:logo" content={logoUrl} />}
+      <meta key="og:logo" property="og:logo" content={`${OG_BASE_URL}/images/logo.svg`} />
 
       {/* Twitter Card */}
       <meta key="twitter:card" name="twitter:card" content="summary_large_image" />

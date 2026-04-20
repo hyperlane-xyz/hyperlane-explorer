@@ -1,5 +1,7 @@
 import { isZeroish } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import { memo } from 'react';
+
 import { truncateString } from '../../../utils/string';
 
 interface Props {
@@ -9,27 +11,31 @@ interface Props {
   displayWidth?: string;
   subDisplay?: string;
   showCopy?: boolean;
+  copyValue?: string;
   blurValue?: boolean;
   classes?: string;
   allowZeroish?: boolean;
   link?: string | null;
   copyButtonClasses?: string | null;
   truncateMiddle?: boolean;
+  tooltip?: string;
 }
 
-export function KeyValueRow({
+export const KeyValueRow = memo(function KeyValueRow({
   label,
   labelWidth,
   display,
   displayWidth,
   subDisplay,
   showCopy,
+  copyValue,
   blurValue,
   classes,
   allowZeroish = false,
   link,
   copyButtonClasses = '',
   truncateMiddle = false,
+  tooltip,
 }: Props) {
   const useFallbackVal = isZeroish(display) && !allowZeroish;
   const displayValue = !useFallbackVal
@@ -42,13 +48,17 @@ export function KeyValueRow({
     <div className={`flex items-center gap-2 font-light ${classes}`}>
       <label className={`shrink-0 text-sm text-gray-500 ${labelWidth}`}>{label}</label>
       <div className={`flex min-w-0 flex-1 items-center ${displayWidth || ''}`}>
-        <span className={`min-w-0 truncate font-mono text-sm ${blurValue && 'blur-xs'}`}>
+        <span
+          className={`min-w-0 truncate font-mono text-sm ${blurValue && 'blur-xs'}`}
+          data-tooltip-id={tooltip ? 'root-tooltip' : undefined}
+          data-tooltip-content={tooltip}
+        >
           {displayValue}
           {subDisplay && !useFallbackVal && <span className="ml-2 text-xs">{subDisplay}</span>}
         </span>
         {showCopy && !useFallbackVal && (
           <CopyButton
-            copyValue={display}
+            copyValue={copyValue || display}
             width={12}
             height={12}
             className={`ml-1.5 shrink-0 opacity-60 ${copyButtonClasses}`}
@@ -58,7 +68,7 @@ export function KeyValueRow({
       </div>
     </div>
   );
-}
+});
 
 function LinkIcon({ href }: { href: string }) {
   return (
