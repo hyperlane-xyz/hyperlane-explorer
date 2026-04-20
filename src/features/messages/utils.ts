@@ -1,6 +1,6 @@
+import { scalesEqual } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
-import { scalesEqual } from '@hyperlane-xyz/sdk';
 import {
   bytesToProtocolAddress,
   fromBase64,
