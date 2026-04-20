@@ -5,12 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import {
-  useMultiProviderVersion,
-  useReadyMultiProvider,
-  useRegistry,
-  useStore,
-} from '../../store';
+import { useMultiProviderVersion, useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
