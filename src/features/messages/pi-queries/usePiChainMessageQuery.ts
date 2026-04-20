@@ -3,7 +3,7 @@ import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTyp
 import { ensure0x, timeout } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 
-import { useReadyMultiProvider, useRegistry } from '../../../store';
+import { useMultiProviderVersion, useReadyMultiProvider, useRegistry } from '../../../store';
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
@@ -31,6 +31,7 @@ export function usePiChainMessageSearchQuery({
 }) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
 
   const { isLoading, isError, data } = useQuery({
@@ -39,7 +40,7 @@ export function usePiChainMessageSearchQuery({
       sanitizedInput,
       startTimeFilter,
       endTimeFilter,
-      !!multiProvider,
+      multiProviderVersion,
       registry,
       pause,
     ],
