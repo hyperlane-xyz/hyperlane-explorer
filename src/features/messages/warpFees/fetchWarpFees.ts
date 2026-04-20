@@ -96,14 +96,16 @@ export async function fetchWarpFees(
         routerAddress,
         // For collateral routes the ERC20 token differs from the router;
         // for synthetic routes the router IS the ERC20 token.
-        warpRouteDetails.originToken.collateralAddressOrDenom || routerAddress,
+        warpRouteDetails.originToken.collateralAddressOrDenom ?? routerAddress,
         message.origin.from,
       );
   if (!totalTransferred || totalTransferred.isZero()) return null;
 
   const feeRaw = totalTransferred.sub(sentAmount);
   if (feeRaw.isNegative()) {
-    logger.warn('Negative warp fee detected, likely a parsing issue');
+    // Invariant violation: user can't bridge more than they paid. Log loudly
+    // so regressions in the parsing flow are easy to spot.
+    logger.error('Negative warp fee detected, likely a parsing issue');
     return null;
   }
   if (feeRaw.isZero()) return null;
@@ -113,7 +115,7 @@ export async function fetchWarpFees(
     // (e.g. 0.0000015 USDT), so `formatAmountWithCommas`' 6-digit cap would
     // misrepresent the value users are trying to verify against the tx logs.
     bridgeFee: fromWei(feeRaw.toString(), decimals),
-    tokenSymbol: symbol || 'tokens',
+    tokenSymbol: symbol ?? 'tokens',
     totalSent: fromWei(totalTransferred.toString(), decimals),
   };
 }
@@ -307,20 +309,24 @@ function countSentTransferRemotes(logs: Array<RawLog>): number {
 }
 
 /**
- * Find the IGP `GasPayment(bytes32 indexed messageId, ...)` event for this
- * specific message. Correlates by `messageId` directly, so no slicing needed.
+ * Sum all IGP `GasPayment(bytes32 indexed messageId, ...)` events for this
+ * message. A single message can have multiple payments (e.g. quoted then
+ * topped up via `payForGas`), so all matching events must be summed.
  */
 export function parseIgpPaymentForMessage(logs: Array<RawLog>, msgId: string): BigNumber | null {
   const normalizedMsgId = msgId.toLowerCase();
+  let total = BigNumber.from(0);
+  let found = false;
   for (const log of logs) {
     try {
       const parsed = igpIface.parseLog(log);
       if (parsed.name !== 'GasPayment') continue;
       if ((parsed.args.messageId as string).toLowerCase() !== normalizedMsgId) continue;
-      return BigNumber.from(parsed.args.payment);
+      total = total.add(parsed.args.payment);
+      found = true;
     } catch {
       // Not an IGP event
     }
   }
-  return null;
+  return found ? total : null;
 }

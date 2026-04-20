@@ -20,6 +20,8 @@ interface Props {
 
 export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const warpFees = useWarpFees(message, warpRouteDetails);
+
   const blockExplorerAddressUrls = useMemo(() => {
     if (!warpRouteDetails) {
       return {
@@ -54,8 +56,6 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     message.originDomainId,
     warpRouteDetails,
   ]);
-
-  const warpFees = useWarpFees(message, warpRouteDetails);
 
   if (!warpRouteDetails) return null;
 

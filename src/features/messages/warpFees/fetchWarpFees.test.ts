@@ -246,6 +246,17 @@ describe('parseIgpPaymentForMessage', () => {
     const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
     expect(result).toBeNull();
   });
+
+  it('sums multiple GasPayments for the same message (top-ups)', () => {
+    const logs = [
+      makeGasPaymentLog(MSG_ID_1, 1, BigNumber.from(100000), BigNumber.from(100), IGP),
+      makeGasPaymentLog(MSG_ID_1, 1, BigNumber.from(50000), BigNumber.from(50), IGP),
+      // Other message in the same tx should not count.
+      makeGasPaymentLog(MSG_ID_2, 1, BigNumber.from(25000), BigNumber.from(25), IGP),
+    ];
+    const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
+    expect(result?.eq(BigNumber.from(150))).toBe(true);
+  });
 });
 
 describe('normalizeDecimals', () => {
