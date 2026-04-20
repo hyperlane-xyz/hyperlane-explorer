@@ -5,7 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
+import {
+  useMultiProviderVersion,
+  useReadyMultiProvider,
+  useRegistry,
+  useStore,
+} from '../../store';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
@@ -17,7 +22,7 @@ type DeliveryStatusQueryMessage = MessageStub &
 type DeliveryStatusQueryKey = readonly [
   'messageDeliveryStatus',
   DeliveryStatusQueryMessage,
-  boolean,
+  number,
   IRegistry,
   ChainMap<Partial<ChainMetadata>>,
 ];
@@ -31,6 +36,7 @@ export function useMessageDeliveryStatus({
 }) {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
   const queryMessage = createDeliveryStatusQueryMessage(message);
 
@@ -38,7 +44,7 @@ export function useMessageDeliveryStatus({
     queryKey: [
       'messageDeliveryStatus',
       queryMessage,
-      !!multiProvider,
+      multiProviderVersion,
       registry,
       chainMetadataOverrides,
     ] as DeliveryStatusQueryKey,
