@@ -2,6 +2,7 @@ import { BigNumber, utils } from 'ethers';
 
 import {
   normalizeDecimals,
+  parseIgpPaymentForMessage,
   parseSentTransferRemoteAmount,
   parseTotalTokenPulledFromUser,
   sliceLogsForMessage,
@@ -14,6 +15,9 @@ const routerIface = new utils.Interface([
   'event SentTransferRemote(uint32 indexed destination, bytes32 indexed recipient, uint256 amountOrId)',
 ]);
 const mailboxIface = new utils.Interface(['event DispatchId(bytes32 indexed messageId)']);
+const igpIface = new utils.Interface([
+  'event GasPayment(bytes32 indexed messageId, uint32 indexed destinationDomain, uint256 gasAmount, uint256 payment)',
+]);
 
 function makeTransferLog(from: string, to: string, value: BigNumber, address: string) {
   const log = erc20Iface.encodeEventLog(erc20Iface.getEvent('Transfer'), [from, to, value]);
@@ -37,6 +41,22 @@ function makeSentTransferRemoteLog(
 function makeDispatchIdLog(messageId: string, mailboxAddress: string) {
   const log = mailboxIface.encodeEventLog(mailboxIface.getEvent('DispatchId'), [messageId]);
   return { ...log, address: mailboxAddress };
+}
+
+function makeGasPaymentLog(
+  messageId: string,
+  destDomain: number,
+  gasAmount: BigNumber,
+  payment: BigNumber,
+  igpAddress: string,
+) {
+  const log = igpIface.encodeEventLog(igpIface.getEvent('GasPayment'), [
+    messageId,
+    destDomain,
+    gasAmount,
+    payment,
+  ]);
+  return { ...log, address: igpAddress };
 }
 
 const ROUTER = utils.getAddress('0x1234567890123456789012345678901234567890');
@@ -197,6 +217,34 @@ describe('sliceLogsForMessage', () => {
     const logs = [makeDispatchIdLog(MSG_ID_1, MAILBOX)];
     const slice = sliceLogsForMessage(logs, MSG_ID_1.toUpperCase());
     expect(slice).toHaveLength(1);
+  });
+});
+
+describe('parseIgpPaymentForMessage', () => {
+  const IGP = utils.getAddress('0x0000000000000000000000000000000000000199');
+
+  it('finds the GasPayment matching msgId', () => {
+    const logs = [makeGasPaymentLog(MSG_ID_1, 1, BigNumber.from(210887), BigNumber.from(100), IGP)];
+    const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
+    expect(result?.eq(BigNumber.from(100))).toBe(true);
+  });
+
+  it('ignores GasPayments for other messages', () => {
+    const logs = [makeGasPaymentLog(MSG_ID_2, 1, BigNumber.from(210887), BigNumber.from(100), IGP)];
+    const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
+    expect(result).toBeNull();
+  });
+
+  it('is case-insensitive when matching msgId', () => {
+    const logs = [makeGasPaymentLog(MSG_ID_1, 1, BigNumber.from(1), BigNumber.from(42), IGP)];
+    const result = parseIgpPaymentForMessage(logs, MSG_ID_1.toUpperCase());
+    expect(result?.eq(BigNumber.from(42))).toBe(true);
+  });
+
+  it('returns null when no GasPayment events exist', () => {
+    const logs = [makeDispatchIdLog(MSG_ID_1, MAILBOX)];
+    const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
+    expect(result).toBeNull();
   });
 });
 

@@ -1,5 +1,9 @@
-// eslint-disable-next-line camelcase
-import { IERC20__factory, Mailbox__factory, TokenRouter__factory } from '@hyperlane-xyz/core';
+import {
+  IERC20__factory, // eslint-disable-line camelcase
+  InterchainGasPaymaster__factory, // eslint-disable-line camelcase
+  Mailbox__factory, // eslint-disable-line camelcase
+  TokenRouter__factory, // eslint-disable-line camelcase
+} from '@hyperlane-xyz/core';
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
 import { BigNumber } from 'ethers';
@@ -21,22 +25,30 @@ const routerIface = TokenRouter__factory.createInterface();
 const erc20Iface = IERC20__factory.createInterface();
 // eslint-disable-next-line camelcase
 const mailboxIface = Mailbox__factory.createInterface();
+// eslint-disable-next-line camelcase
+const igpIface = InterchainGasPaymaster__factory.createInterface();
 
 type RawLog = { address: string; topics: Array<string>; data: string };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const NATIVE_HYP_STANDARDS = new Set(['EvmHypNative', 'TronHypNative']);
 
 /**
  * Parse warp route fees from the origin transaction receipt.
  *
- * Bridge fee = total tokens pulled from the user − `SentTransferRemote` amount
- * (reversed through the token's scale/wireDecimals). Log scanning is scoped
- * to the slice bounded by this message's `Mailbox.DispatchId`, so txs that
- * dispatch multiple warp sends are attributed correctly.
+ * Two paths:
+ *   - **ERC20 routes** (collateral / synthetic): fee = tokens pulled from user
+ *     − `SentTransferRemote` amount, reversed through the token's scale.
+ *   - **Native routes** (`HypNative`): fee = `tx.value` − `SentTransferRemote`
+ *     amount − `IGP.GasPayment.payment`. Skipped for multi-send native txs
+ *     since `tx.value` can't be split per message.
  *
- * Supports EVM-like chains (Ethereum + Tron). Non-EVM chains, native-token
- * routes, txs without a matching `DispatchId`, and zero-fee routes return
- * `null`.
+ * Log scanning is scoped to the slice bounded by this message's
+ * `Mailbox.DispatchId`, so txs that dispatch multiple warp sends are
+ * attributed correctly (for ERC20 paths).
+ *
+ * Supports EVM-like chains (Ethereum + Tron). Non-EVM chains, txs without a
+ * matching `DispatchId`, and zero-fee routes return `null`.
  *
  * Throws on transient provider errors so React Query retries; returns `null`
  * for structural reasons that won't resolve on retry.
@@ -65,29 +77,26 @@ export async function fetchWarpFees(
   if (!receipt) throw new Error(`No receipt for tx ${message.origin.hash}`);
 
   const routerAddress = warpRouteDetails.originToken.addressOrDenom;
-  // For collateral routes the ERC20 token differs from the router;
-  // for synthetic routes the router IS the ERC20 token.
-  const tokenAddress = warpRouteDetails.originToken.collateralAddressOrDenom || routerAddress;
-
   const messageLogs = sliceLogsForMessage(receipt.logs, message.msgId);
   if (!messageLogs) return null;
 
-  // SentTransferRemote amount is the wire/message amount — reversed via the
-  // token's scale (or wireDecimals fallback) to native decimals below.
   const sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
   if (!sentAmountWire) return null;
 
-  // Total amount pulled from user, in native token decimals. Handles both
-  // collateral pulls (Transfer user→router) and synthetic burns (Transfer user→0x0).
-  const totalTransferred = parseTotalTokenPulledFromUser(
-    messageLogs,
-    routerAddress,
-    tokenAddress,
-    message.origin.from,
-  );
-  if (!totalTransferred || totalTransferred.isZero()) return null;
-
   const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken);
+
+  const isNative = NATIVE_HYP_STANDARDS.has(warpRouteDetails.originToken.standard);
+  const totalTransferred = isNative
+    ? await parseTotalNativePulledFromUser(provider, receipt.logs, message, sentAmount)
+    : parseTotalTokenPulledFromUser(
+        messageLogs,
+        routerAddress,
+        // For collateral routes the ERC20 token differs from the router;
+        // for synthetic routes the router IS the ERC20 token.
+        warpRouteDetails.originToken.collateralAddressOrDenom || routerAddress,
+        message.origin.from,
+      );
+  if (!totalTransferred || totalTransferred.isZero()) return null;
 
   const feeRaw = totalTransferred.sub(sentAmount);
   if (feeRaw.isNegative()) {
@@ -254,4 +263,66 @@ export function parseTotalTokenPulledFromUser(
   }
 
   return found ? total : null;
+}
+
+/**
+ * For native-token routes, reconstruct the user's payment from `tx.value`.
+ *
+ * Native routes don't emit an ERC20 `Transfer` for the user's contribution —
+ * it's sent as `msg.value`. We derive the effective pull as:
+ *   `tx.value − igpPayment`
+ * where `igpPayment` is the IGP `GasPayment(messageId)` event matching this
+ * message. The caller then computes `fee = result − sentAmount`.
+ *
+ * Returns `null` if:
+ *   - The tx contains multiple `SentTransferRemote` events (multicall /
+ *     batched native sends — `tx.value` can't be split across messages).
+ *   - `tx.value` ≤ `sentAmount` (nothing left for fee to begin with).
+ */
+async function parseTotalNativePulledFromUser(
+  provider: { getTransaction(hash: string): Promise<{ value: BigNumber } | null> },
+  allLogs: Array<RawLog>,
+  message: Message | MessageStub,
+  sentAmount: BigNumber,
+): Promise<BigNumber | null> {
+  if (countSentTransferRemotes(allLogs) !== 1) return null;
+
+  const tx = await provider.getTransaction(message.origin.hash);
+  if (!tx) throw new Error(`No tx for hash ${message.origin.hash}`);
+
+  const igpPayment = parseIgpPaymentForMessage(allLogs, message.msgId) ?? BigNumber.from(0);
+  const netPaid = tx.value.sub(igpPayment);
+  if (netPaid.lte(sentAmount)) return null;
+  return netPaid;
+}
+
+function countSentTransferRemotes(logs: Array<RawLog>): number {
+  let count = 0;
+  for (const log of logs) {
+    try {
+      if (routerIface.parseLog(log).name === 'SentTransferRemote') count++;
+    } catch {
+      // not a TokenRouter event
+    }
+  }
+  return count;
+}
+
+/**
+ * Find the IGP `GasPayment(bytes32 indexed messageId, ...)` event for this
+ * specific message. Correlates by `messageId` directly, so no slicing needed.
+ */
+export function parseIgpPaymentForMessage(logs: Array<RawLog>, msgId: string): BigNumber | null {
+  const normalizedMsgId = msgId.toLowerCase();
+  for (const log of logs) {
+    try {
+      const parsed = igpIface.parseLog(log);
+      if (parsed.name !== 'GasPayment') continue;
+      if ((parsed.args.messageId as string).toLowerCase() !== normalizedMsgId) continue;
+      return BigNumber.from(parsed.args.payment);
+    } catch {
+      // Not an IGP event
+    }
+  }
+  return null;
 }
