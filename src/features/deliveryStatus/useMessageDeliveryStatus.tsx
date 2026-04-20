@@ -98,7 +98,7 @@ export function useMessageDeliveryStatus({
     retry: false,
     refetchInterval: (query) =>
       query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
-    enabled,
+    enabled: enabled && !!multiProvider,
   });
 
   useEffect(() => {
