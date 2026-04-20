@@ -157,7 +157,7 @@ export function useWarpRouteBalances(
   const multiProvider = useReadyMultiProvider();
   const multiProviderVersion = useMultiProviderVersion();
 
-  const tokensToFetch = useMemo(() => tokens?.filter(shouldFetchSupply) || [], [tokens]);
+  const tokensToFetch = useMemo(() => tokens?.filter(shouldFetchSupply) ?? [], [tokens]);
 
   // Create a stable string key from tokens - this prevents queryKey from changing
   // when tokensToFetch array reference changes but content is the same
@@ -179,7 +179,10 @@ export function useWarpRouteBalances(
   } = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps -- multiProvider is stable, tokensToFetch is derived from tokens which is in queryKey via chain:address mapping
     queryKey,
-    queryFn: () => fetchAllBalances(multiProvider!, tokensToFetch),
+    queryFn: () => {
+      if (!multiProvider) return Promise.resolve({});
+      return fetchAllBalances(multiProvider, tokensToFetch);
+    },
     enabled: enabled && !!multiProvider && tokensToFetch.length > 0 && !!routeId,
     staleTime: Infinity,
     refetchOnMount: false,

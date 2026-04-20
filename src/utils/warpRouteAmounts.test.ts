@@ -86,6 +86,46 @@ describe('getWarpRouteAmountParts', () => {
     });
     expect(result).toEqual({ amount: 1_000_000n, decimals: 6 });
   });
+
+  it('falls back to scale=1 for NaN numerator in rational scale', () => {
+    const messageAmount = 1_000_000n;
+    expect(
+      getWarpRouteAmountParts(messageAmount, {
+        decimals: 6,
+        scale: { numerator: Number.NaN, denominator: 1 },
+      }),
+    ).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
+
+  it('falls back to scale=1 for Infinity numerator in rational scale', () => {
+    const messageAmount = 1_000_000n;
+    expect(
+      getWarpRouteAmountParts(messageAmount, {
+        decimals: 6,
+        scale: { numerator: Number.POSITIVE_INFINITY, denominator: 1 },
+      }),
+    ).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
+
+  it('falls back to scale=1 for zero denominator in rational scale', () => {
+    const messageAmount = 1_000_000n;
+    expect(
+      getWarpRouteAmountParts(messageAmount, {
+        decimals: 6,
+        scale: { numerator: 1, denominator: 0 },
+      }),
+    ).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
+
+  it('falls back to scale=1 for negative denominator in rational scale', () => {
+    const messageAmount = 1_000_000n;
+    expect(
+      getWarpRouteAmountParts(messageAmount, {
+        decimals: 6,
+        scale: { numerator: 1, denominator: -1 },
+      }),
+    ).toEqual({ amount: 1_000_000n, decimals: 6 });
+  });
 });
 
 describe('getWarpRouteAmountParts caller context scenarios', () => {

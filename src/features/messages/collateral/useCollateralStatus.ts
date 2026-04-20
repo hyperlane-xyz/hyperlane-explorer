@@ -4,7 +4,7 @@ import {
   EvmHypXERC20LockboxAdapter,
 } from '@hyperlane-xyz/sdk/token/adapters/EvmTokenAdapter';
 import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
-import { toWei } from '@hyperlane-xyz/utils';
+import { ProtocolType, toWei } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
@@ -41,6 +41,15 @@ async function fetchCollateralBalance(
     if (!chainMetadata) {
       logger.warn('Chain not configured in multiProvider', {
         chain: destinationToken.chainName,
+        token: destinationToken.symbol,
+      });
+      return undefined;
+    }
+
+    if (chainMetadata.protocol !== ProtocolType.Ethereum) {
+      logger.debug('Skipping collateral check for non-EVM chain', {
+        chain: destinationToken.chainName,
+        protocol: chainMetadata.protocol,
         token: destinationToken.symbol,
       });
       return undefined;

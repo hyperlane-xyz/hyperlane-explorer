@@ -47,10 +47,8 @@ export function ChainSearchModal({
   const chainMetadataResolver = useChainMetadataResolver();
   const chainMetadata = useChainMetadataMap();
   const { chains } = useScrapedChains(chainMetadataResolver);
-  const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
-    chainMetadataOverrides: s.chainMetadataOverrides,
-    setChainMetadataOverrides: s.setChainMetadataOverrides,
-  }));
+  const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides);
+  const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
 
   const mergedChainMetadata = useMemo(
     () => mergeChainMetadataMap(chains, chainMetadataOverrides),
