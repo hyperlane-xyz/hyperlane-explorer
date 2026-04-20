@@ -4,7 +4,7 @@ import {
   Mailbox__factory, // eslint-disable-line camelcase
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider, PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
 import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
 import { BigNumber } from 'ethers';
 
@@ -31,7 +31,8 @@ const igpIface = InterchainGasPaymaster__factory.createInterface();
 type RawLog = { address: string; topics: Array<string>; data: string };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-const NATIVE_HYP_STANDARDS = new Set(['EvmHypNative', 'TronHypNative']);
+// All HypNative standards across protocols, from the SDK (matches Token.isHypNative()).
+const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIVE_STANDARD));
 
 /**
  * Parse warp route fees from the origin transaction receipt.
@@ -39,13 +40,15 @@ const NATIVE_HYP_STANDARDS = new Set(['EvmHypNative', 'TronHypNative']);
  * Two paths:
  *   - **ERC20 routes** (collateral / synthetic): fee = tokens pulled from user
  *     − `SentTransferRemote` amount, reversed through the token's scale.
- *   - **Native routes** (`HypNative`): fee = `tx.value` − `SentTransferRemote`
- *     amount − `IGP.GasPayment.payment`. Skipped for multi-send native txs
- *     since `tx.value` can't be split per message.
+ *   - **Native routes** (`HypNative`): fee = (`tx.value` − `IGP.GasPayment.payment`)
+ *     − `SentTransferRemote` amount. IGP is always excluded so it doesn't leak
+ *     into "warp fee". Skipped for multi-send native txs since `tx.value`
+ *     can't be split per message. Any `ProtocolFee` hook charge is included
+ *     in the displayed fee (it's a bridge fee, not user gas).
  *
- * Log scanning is scoped to the slice bounded by this message's
- * `Mailbox.DispatchId`, so txs that dispatch multiple warp sends are
- * attributed correctly (for ERC20 paths).
+ * Log scanning for ERC20 pulls is scoped to the slice bounded by this
+ * message's `Mailbox.DispatchId`, so multi-send ERC20 txs are attributed
+ * correctly. IGP `GasPayment` is correlated by `messageId` directly.
  *
  * Supports EVM-like chains (Ethereum + Tron). Non-EVM chains, txs without a
  * matching `DispatchId`, and zero-fee routes return `null`.
@@ -85,9 +88,9 @@ export async function fetchWarpFees(
 
   const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken);
 
-  const isNative = NATIVE_HYP_STANDARDS.has(warpRouteDetails.originToken.standard);
+  const isNative = HYP_NATIVE_STANDARDS.has(warpRouteDetails.originToken.standard);
   const totalTransferred = isNative
-    ? await parseTotalNativePulledFromUser(provider, receipt.logs, message, sentAmount)
+    ? await parseTotalNativePulledFromUser(provider, receipt.logs, message)
     : parseTotalTokenPulledFromUser(
         messageLogs,
         routerAddress,
@@ -266,24 +269,21 @@ export function parseTotalTokenPulledFromUser(
 }
 
 /**
- * For native-token routes, reconstruct the user's payment from `tx.value`.
+ * For native-token routes, reconstruct the user's payment to the warp route
+ * from `tx.value`, excluding IGP gas payment so it doesn't leak into fees.
  *
  * Native routes don't emit an ERC20 `Transfer` for the user's contribution —
- * it's sent as `msg.value`. We derive the effective pull as:
- *   `tx.value − igpPayment`
- * where `igpPayment` is the IGP `GasPayment(messageId)` event matching this
- * message. The caller then computes `fee = result − sentAmount`.
+ * it rides on `msg.value`. Returns `tx.value − igpPayment`; the caller then
+ * subtracts `sentAmount` to get the fee. Negative / zero results are caught
+ * by the caller's `feeRaw.isNegative()` / `feeRaw.isZero()` guards.
  *
- * Returns `null` if:
- *   - The tx contains multiple `SentTransferRemote` events (multicall /
- *     batched native sends — `tx.value` can't be split across messages).
- *   - `tx.value` ≤ `sentAmount` (nothing left for fee to begin with).
+ * Returns `null` if the tx contains multiple `SentTransferRemote` events
+ * (multi-send native — `tx.value` can't be split across messages).
  */
 async function parseTotalNativePulledFromUser(
   provider: { getTransaction(hash: string): Promise<{ value: BigNumber } | null> },
   allLogs: Array<RawLog>,
   message: Message | MessageStub,
-  sentAmount: BigNumber,
 ): Promise<BigNumber | null> {
   if (countSentTransferRemotes(allLogs) !== 1) return null;
 
@@ -291,9 +291,7 @@ async function parseTotalNativePulledFromUser(
   if (!tx) throw new Error(`No tx for hash ${message.origin.hash}`);
 
   const igpPayment = parseIgpPaymentForMessage(allLogs, message.msgId) ?? BigNumber.from(0);
-  const netPaid = tx.value.sub(igpPayment);
-  if (netPaid.lte(sentAmount)) return null;
-  return netPaid;
+  return tx.value.sub(igpPayment);
 }
 
 function countSentTransferRemotes(logs: Array<RawLog>): number {
