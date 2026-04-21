@@ -1,7 +1,6 @@
 import { BigNumber, utils } from 'ethers';
 
 import {
-  normalizeDecimals,
   parseIgpPaymentForMessage,
   parseSentTransferRemoteAmount,
   parseTotalTokenPulledFromUser,
@@ -256,24 +255,5 @@ describe('parseIgpPaymentForMessage', () => {
     ];
     const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
     expect(result?.eq(BigNumber.from(150))).toBe(true);
-  });
-});
-
-describe('normalizeDecimals', () => {
-  it('returns value unchanged when decimals are equal', () => {
-    const value = BigNumber.from('1000000');
-    expect(normalizeDecimals(value, 6, 6).eq(value)).toBe(true);
-  });
-
-  it('scales down when fromDecimals > toDecimals', () => {
-    const value = BigNumber.from('1000000000000000000'); // 1e18
-    const result = normalizeDecimals(value, 18, 6);
-    expect(result.eq(BigNumber.from('1000000'))).toBe(true); // 1e6
-  });
-
-  it('scales up when fromDecimals < toDecimals', () => {
-    const value = BigNumber.from('1000000'); // 1e6
-    const result = normalizeDecimals(value, 6, 18);
-    expect(result.eq(BigNumber.from('1000000000000000000'))).toBe(true); // 1e18
   });
 });

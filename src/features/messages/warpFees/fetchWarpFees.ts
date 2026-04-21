@@ -5,7 +5,12 @@ import {
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
 import { MultiProtocolProvider, PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
-import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
+import {
+  ProtocolType,
+  convertDecimalsToIntegerString,
+  fromWei,
+  isEVMLike,
+} from '@hyperlane-xyz/utils';
 import { BigNumber, constants } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
@@ -156,19 +161,6 @@ function parseDispatchIdLog(log: RawLog): string | null {
   }
 }
 
-/** Normalize a BigNumber from one decimal basis to another */
-export function normalizeDecimals(
-  value: BigNumber,
-  fromDecimals: number,
-  toDecimals: number,
-): BigNumber {
-  if (fromDecimals === toDecimals) return value;
-  if (fromDecimals > toDecimals) {
-    return value.div(BigNumber.from(10).pow(fromDecimals - toDecimals));
-  }
-  return value.mul(BigNumber.from(10).pow(toDecimals - fromDecimals));
-}
-
 /**
  * Reverse the origin router's `_outboundAmount` scaling back to the local
  * (native-decimals) amount.
@@ -176,7 +168,7 @@ export function normalizeDecimals(
  * If the token has an explicit `scale`, use `getWarpRouteAmountParts` — it
  * mirrors the Solidity `mulDiv(scaleNumerator, scaleDenominator)`. Otherwise
  * assume the wire amount is in `wireDecimals` (the legacy max-decimals route
- * normalization) and rescale to native.
+ * normalization) and rescale to native via the shared `convertDecimals` util.
  */
 function sentAmountToLocal(
   sentAmountWire: BigNumber,
@@ -191,7 +183,9 @@ function sentAmountToLocal(
     return BigNumber.from(amount.toString());
   }
   const wireDecimals = originToken.wireDecimals ?? nativeDecimals;
-  return normalizeDecimals(sentAmountWire, wireDecimals, nativeDecimals);
+  return BigNumber.from(
+    convertDecimalsToIntegerString(wireDecimals, nativeDecimals, sentAmountWire.toString()),
+  );
 }
 
 export function parseSentTransferRemoteAmount(
