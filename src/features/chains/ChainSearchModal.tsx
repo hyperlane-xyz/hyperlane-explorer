@@ -1,6 +1,5 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { ChainSearchMenu, Modal } from '@hyperlane-xyz/widgets';
-import { ChainSortByOption } from '@hyperlane-xyz/widgets/chains/ChainSearchMenu';
 
 import { useChainMetadataMap, useStore } from '../../metadataStore';
 
@@ -33,7 +32,6 @@ export function ChainSearchModal({
         onClickChain={handleClickChain}
         showAddChainButton={true}
         showAddChainMenu={showAddChainMenu}
-        defaultSortField={ChainSortByOption.Name}
       />
     </Modal>
   );
