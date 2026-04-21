@@ -4,7 +4,7 @@ import {
   Mailbox__factory, // eslint-disable-line camelcase
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
-import { MultiProtocolProvider, PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
+import { PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
 import {
   ProtocolType,
   convertDecimalsToIntegerString,
@@ -16,6 +16,7 @@ import { BigNumber, constants } from 'ethers';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { getWarpRouteAmountParts } from '../../../utils/warpRouteAmounts';
+import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 
 export interface WarpFeeBreakdown {
   bridgeFee: string;
@@ -63,7 +64,7 @@ const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIV
 export async function fetchWarpFees(
   message: Message | MessageStub,
   warpRouteDetails: WarpRouteDetails,
-  multiProvider: MultiProtocolProvider,
+  multiProvider: ExplorerMultiProvider,
 ): Promise<WarpFeeBreakdown | null> {
   const chainMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
   if (!chainMetadata || !isEVMLike(chainMetadata.protocol)) return null;
