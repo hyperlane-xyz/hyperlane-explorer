@@ -1,5 +1,5 @@
 import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
-import {
+import type {
   EvmHypVSXERC20LockboxAdapter,
   EvmHypXERC20LockboxAdapter,
 } from '@hyperlane-xyz/sdk/token/adapters/EvmTokenAdapter';

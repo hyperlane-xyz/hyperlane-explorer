@@ -21,7 +21,8 @@ export function ChainSearchModal({
   const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
 
   const handleClickChain = (metadata: ChainMetadata) => {
-    onClickChain?.(metadata);
+    if (!onClickChain) return;
+    onClickChain(metadata);
     close();
   };
 
