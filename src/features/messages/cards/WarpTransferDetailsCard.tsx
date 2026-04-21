@@ -65,7 +65,6 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     originToken.symbol !== destinationToken.symbol ||
     originToken.logoURI !== destinationToken.logoURI;
   const receivedAmount = destAmount ?? amount;
-  const labelWidth = 'w-28 sm:w-32';
 
   return (
     <SectionCard
@@ -96,7 +95,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
           <div className="grid grid-cols-1 gap-y-1.5 sm:grid-cols-2 sm:gap-x-2">
             <KeyValueRow
               label="Amount:"
-              labelWidth={labelWidth}
+              labelWidth={styles.labelWidthXs}
               display={`${formatAmountWithCommas(amount)} ${originToken.symbol}`}
               copyValue={amount}
               blurValue={blur}
@@ -104,7 +103,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             />
             <KeyValueRow
               label="Received amount:"
-              labelWidth={labelWidth}
+              labelWidth={styles.labelWidthMd}
               display={`${formatAmountWithCommas(receivedAmount)} ${destinationToken.symbol}`}
               copyValue={receivedAmount}
               blurValue={blur}
@@ -112,7 +111,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             />
             <KeyValueRow
               label="Origin token:"
-              labelWidth={labelWidth}
+              labelWidth={styles.labelWidthXs}
               display={originToken.symbol}
               tooltip={originToken.addressOrDenom}
               copyValue={originToken.addressOrDenom}
@@ -122,7 +121,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             />
             <KeyValueRow
               label="Destination token:"
-              labelWidth={labelWidth}
+              labelWidth={styles.labelWidthMd}
               display={destinationToken.symbol}
               tooltip={destinationToken.addressOrDenom}
               copyValue={destinationToken.addressOrDenom}
@@ -134,13 +133,13 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               <>
                 <KeyValueRow
                   label="Total sent:"
-                  labelWidth={labelWidth}
+                  labelWidth={styles.labelWidthXs}
                   display={`${warpFees.totalSent} ${warpFees.tokenSymbol}`}
                   blurValue={blur}
                 />
                 <KeyValueRow
                   label="Warp fee:"
-                  labelWidth={labelWidth}
+                  labelWidth={styles.labelWidthMd}
                   display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}`}
                   blurValue={blur}
                 />
@@ -148,7 +147,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             )}
             <KeyValueRow
               label="Transfer recipient:"
-              labelWidth={labelWidth}
+              labelWidth={styles.labelWidthMd}
               display={transferRecipient}
               blurValue={blur}
               link={blockExplorerAddressUrls.transferRecipient}
@@ -173,7 +172,7 @@ function TokenLogos({
 }) {
   if (!isDifferentToken) {
     return (
-      <div className="flex flex-shrink-0 items-center justify-center">
+      <div className="w- flex flex-shrink-0 items-center justify-center">
         <TokenIcon token={originToken} size={80} />
       </div>
     );
@@ -192,3 +191,8 @@ function TokenLogos({
     </div>
   );
 }
+
+const styles = {
+  labelWidthXs: 'w-28 sm:w-32',
+  labelWidthMd: 'w-28 sm:w-40',
+};
