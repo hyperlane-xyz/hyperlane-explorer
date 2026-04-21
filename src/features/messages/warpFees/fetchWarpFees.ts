@@ -6,7 +6,7 @@ import {
 } from '@hyperlane-xyz/core';
 import { MultiProtocolProvider, PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
 import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
@@ -30,7 +30,6 @@ const igpIface = InterchainGasPaymaster__factory.createInterface();
 
 type RawLog = { address: string; topics: Array<string>; data: string };
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 // All HypNative standards across protocols, from the SDK (matches Token.isHypNative()).
 const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIVE_STANDARD));
 
@@ -86,7 +85,7 @@ export async function fetchWarpFees(
   const sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
   if (!sentAmountWire) return null;
 
-  const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken);
+  const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken, decimals);
 
   const isNative = HYP_NATIVE_STANDARDS.has(warpRouteDetails.originToken.standard);
   const totalTransferred = isNative
@@ -182,15 +181,15 @@ export function normalizeDecimals(
 function sentAmountToLocal(
   sentAmountWire: BigNumber,
   originToken: WarpRouteDetails['originToken'],
+  nativeDecimals: number,
 ): BigNumber {
   if (originToken.scale !== undefined) {
     const { amount } = getWarpRouteAmountParts(BigInt(sentAmountWire.toString()), {
-      decimals: originToken.decimals,
+      decimals: nativeDecimals,
       scale: originToken.scale,
     });
     return BigNumber.from(amount.toString());
   }
-  const nativeDecimals = originToken.decimals ?? 18;
   const wireDecimals = originToken.wireDecimals ?? nativeDecimals;
   return normalizeDecimals(sentAmountWire, wireDecimals, nativeDecimals);
 }
@@ -258,7 +257,7 @@ export function parseTotalTokenPulledFromUser(
       const to = (parsed.args.to as string).toLowerCase();
       if (from !== lowerSender) continue;
       const isCollateralPull = to === lowerRouter;
-      const isBurn = to === ZERO_ADDRESS;
+      const isBurn = to === constants.AddressZero;
       if (!isCollateralPull && !isBurn) continue;
       total = total.add(parsed.args.value);
       found = true;
