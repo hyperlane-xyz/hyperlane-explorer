@@ -187,8 +187,8 @@ Responsiveness
   }
 }
 
-.explorer-chain-search-modal .htw-z-30 {
-  z-index: 60;
+.htw-z-30 {
+  z-index: 60 !important;
 }
 
 /*
