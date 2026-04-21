@@ -1,5 +1,4 @@
 import type { TokenArgs } from '@hyperlane-xyz/sdk';
-import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useMemo } from 'react';
 
@@ -10,6 +9,7 @@ import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { formatAmountWithCommas } from '../../../utils/amount';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
+import { useWarpFees } from '../warpFees/useWarpFees';
 import { KeyValueRow } from './KeyValueRow';
 
 interface Props {
@@ -20,6 +20,8 @@ interface Props {
 
 export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const warpFees = useWarpFees(message, warpRouteDetails);
+
   const blockExplorerAddressUrls = useMemo(() => {
     if (!warpRouteDetails) {
       return {
@@ -62,6 +64,8 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
   const isDifferentToken =
     originToken.symbol !== destinationToken.symbol ||
     originToken.logoURI !== destinationToken.logoURI;
+  const receivedAmount = destAmount ?? amount;
+  const labelWidth = 'w-28 sm:w-32';
 
   return (
     <SectionCard
@@ -89,28 +93,26 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               locked collateral on the destination chain
             </div>
           )}
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-y-1.5 sm:grid-cols-2 sm:gap-x-2">
             <KeyValueRow
               label="Amount:"
-              labelWidth="w-28 sm:w-32"
+              labelWidth={labelWidth}
               display={`${formatAmountWithCommas(amount)} ${originToken.symbol}`}
               copyValue={amount}
               blurValue={blur}
               showCopy
             />
-            {(!isNullish(destAmount) || isDifferentToken) && (
-              <KeyValueRow
-                label="Received amount:"
-                labelWidth="w-28 sm:w-32"
-                display={`${formatAmountWithCommas(destAmount ?? amount)} ${destinationToken.symbol}`}
-                copyValue={destAmount ?? amount}
-                blurValue={blur}
-                showCopy
-              />
-            )}
+            <KeyValueRow
+              label="Received amount:"
+              labelWidth={labelWidth}
+              display={`${formatAmountWithCommas(receivedAmount)} ${destinationToken.symbol}`}
+              copyValue={receivedAmount}
+              blurValue={blur}
+              showCopy
+            />
             <KeyValueRow
               label="Origin token:"
-              labelWidth="w-28 sm:w-32"
+              labelWidth={labelWidth}
               display={originToken.symbol}
               tooltip={originToken.addressOrDenom}
               copyValue={originToken.addressOrDenom}
@@ -120,7 +122,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
             />
             <KeyValueRow
               label="Destination token:"
-              labelWidth="w-28 sm:w-32"
+              labelWidth={labelWidth}
               display={destinationToken.symbol}
               tooltip={destinationToken.addressOrDenom}
               copyValue={destinationToken.addressOrDenom}
@@ -128,13 +130,30 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
               link={blockExplorerAddressUrls.destinationToken}
               showCopy
             />
+            {warpFees && (
+              <>
+                <KeyValueRow
+                  label="Total sent:"
+                  labelWidth={labelWidth}
+                  display={`${warpFees.totalSent} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+                <KeyValueRow
+                  label="Warp fee:"
+                  labelWidth={labelWidth}
+                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}`}
+                  blurValue={blur}
+                />
+              </>
+            )}
             <KeyValueRow
               label="Transfer recipient:"
-              labelWidth="w-28 sm:w-32"
+              labelWidth={labelWidth}
               display={transferRecipient}
               blurValue={blur}
               link={blockExplorerAddressUrls.transferRecipient}
               showCopy
+              classes="sm:col-span-2"
             />
           </div>
         </div>
