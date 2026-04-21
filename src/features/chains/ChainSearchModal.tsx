@@ -1,7 +1,8 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { ChainSearchMenu, Modal } from '@hyperlane-xyz/widgets';
 
-import { useChainMetadataMap, useStore } from '../../metadataStore';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
+import { useScrapedChains } from './queries/useScrapedChains';
 
 export function ChainSearchModal({
   isOpen,
@@ -14,7 +15,8 @@ export function ChainSearchModal({
   onClickChain?: (metadata: ChainMetadata) => void;
   showAddChainMenu?: boolean;
 }) {
-  const chainMetadata = useChainMetadataMap();
+  const chainMetadataResolver = useChainMetadataResolver();
+  const { chains } = useScrapedChains(chainMetadataResolver);
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides);
   const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
 
@@ -24,9 +26,9 @@ export function ChainSearchModal({
   };
 
   return (
-    <Modal isOpen={isOpen} close={close} panelClassname="max-w-4xl overflow-hidden p-4 sm:p-5">
+    <Modal isOpen={isOpen} close={close} panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]">
       <ChainSearchMenu
-        chainMetadata={chainMetadata}
+        chainMetadata={chains}
         overrideChainMetadata={chainMetadataOverrides}
         onChangeOverrideMetadata={setChainMetadataOverrides}
         onClickChain={handleClickChain}
