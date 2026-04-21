@@ -103,7 +103,6 @@ function CompactChainNode({
 
   const explorerUrl = explorerUrls[`${token.chainName}:${token.addressOrDenom}`];
 
-  // Get display name from multiProvider if available
   const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
 

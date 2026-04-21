@@ -1,3 +1,4 @@
+import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,7 +13,7 @@ import {
   SearchUnknownError,
 } from '../../components/search/SearchStates';
 import { useChainMetadataReady, useStore, useWarpRouteIdToAddressesMap } from '../../metadataStore';
-import { MessageStatusFilter, WarpRouteIdToAddressesMap } from '../../types';
+import { MessageStatusFilter } from '../../types';
 import { logger } from '../../utils/logger';
 import { tryToDecimalNumber } from '../../utils/number';
 import { useMultipleQueryParams, useSyncQueryParam } from '../../utils/queryParams';

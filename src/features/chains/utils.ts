@@ -1,9 +1,9 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
 import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { ProtocolType, toTitleCase } from '@hyperlane-xyz/utils';
 
 import { Environment } from '../../consts/environments';
-import type { ChainMetadataResolver } from './metadataManager';
 import { DomainsEntry } from './queries/fragments';
 
 export async function getMailboxAddress(

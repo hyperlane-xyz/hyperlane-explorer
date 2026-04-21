@@ -1,7 +1,8 @@
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
+
 import { Message, MessageStatus, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
-import type { ChainMetadataResolver } from '../../chains/metadataManager';
 import { DomainsEntry } from '../../chains/queries/fragments';
 import { isPiChain } from '../../chains/utils';
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';

@@ -1,6 +1,10 @@
-import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { create } from 'zustand';
 
+import {
+  createEmptyMultiProvider,
+  createRuntimeMultiProvider,
+  type ExplorerMultiProvider,
+} from './features/hyperlane/sdkRuntime';
 import { useStore as useMetadataStore } from './metadataStore';
 import { logger } from './utils/logger';
 
@@ -12,7 +16,9 @@ export {
 } from './metadataStore';
 
 interface ProviderState {
-  multiProvider: MultiProtocolProvider;
+  multiProvider: ExplorerMultiProvider;
+  isMultiProviderReady: boolean;
+  multiProviderVersion: number;
   syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
 
@@ -30,7 +36,9 @@ function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
 }
 
 const useProviderStore = create<ProviderState>()((set) => ({
-  multiProvider: new MultiProtocolProvider({}),
+  multiProvider: createEmptyMultiProvider(),
+  isMultiProviderReady: false,
+  multiProviderVersion: 0,
   syncMultiProvider: async (requestedChainMetadata) => {
     let chainMetadata = requestedChainMetadata;
     if (!chainMetadata || !Object.keys(chainMetadata).length) {
@@ -50,10 +58,31 @@ const useProviderStore = create<ProviderState>()((set) => ({
       return providerSyncPromise;
     }
 
+    const hadReadyProvider =
+      useProviderStore.getState().multiProvider.getKnownChainNames().length > 0;
+    if (!hadReadyProvider) {
+      set({ isMultiProviderReady: false });
+    }
     providerSyncPromise = Promise.resolve()
-      .then(() => {
+      .then(async () => {
         logger.debug('Syncing MultiProtocolProvider from metadata store');
-        set({ multiProvider: new MultiProtocolProvider(chainMetadata) });
+        const nextMultiProvider = await createRuntimeMultiProvider(chainMetadata);
+        if (queuedChainMetadata && queuedChainMetadata !== chainMetadata) {
+          logger.debug('Discarding stale MultiProtocolProvider rebuild');
+          return;
+        }
+        set((state) => ({
+          multiProvider: nextMultiProvider,
+          isMultiProviderReady: true,
+          multiProviderVersion: state.multiProviderVersion + 1,
+        }));
+      })
+      .catch((error) => {
+        // Preserve the last known-good provider readiness if a rebuild fails.
+        if (hadReadyProvider) {
+          set({ isMultiProviderReady: true });
+        }
+        throw error;
       })
       .finally(() => {
         const nextChainMetadata = queuedChainMetadata;
@@ -76,7 +105,6 @@ function ensureProviderStoreSubscription() {
   syncMultiProviderSafely();
   useMetadataStore.subscribe((state, prevState) => {
     if (state.chainMetadata !== prevState.chainMetadata) {
-      useProviderStore.setState({ multiProvider: new MultiProtocolProvider({}) });
       syncMultiProviderSafely(state.chainMetadata);
     }
   });
@@ -88,7 +116,14 @@ export function useMultiProvider() {
 }
 
 export function useReadyMultiProvider() {
-  const multiProvider = useMultiProvider();
-  if (!multiProvider.getKnownChainNames().length) return undefined;
+  const multiProvider = useProviderStore((s) => s.multiProvider);
+  const isMultiProviderReady = useProviderStore((s) => s.isMultiProviderReady);
+  ensureProviderStoreSubscription();
+  if (!isMultiProviderReady || !multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
+}
+
+export function useMultiProviderVersion() {
+  ensureProviderStoreSubscription();
+  return useProviderStore((s) => s.multiProviderVersion);
 }

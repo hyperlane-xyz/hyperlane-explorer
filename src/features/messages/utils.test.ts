@@ -1,7 +1,9 @@
 import { type ChainMetadata, TokenStandard } from '@hyperlane-xyz/sdk';
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
+import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 
-import { MessageStatus, type MessageStub, type WarpRouteChainAddressMap } from '../../types';
+import { MessageStatus, type MessageStub } from '../../types';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const ORIGIN_DOMAIN = 1;
@@ -91,11 +93,11 @@ function buildTestSetup({
     domainId: DEST_DOMAIN,
     protocol: ProtocolType.Ethereum,
   } as ChainMetadata;
-  const chainMetadataResolver = {
-    tryGetChainMetadata: (chain: string | number): ChainMetadata | undefined => {
+  const chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'> = {
+    tryGetChainMetadata: (chain: string | number): ChainMetadata | null => {
       if (chain === ORIGIN_DOMAIN) return originMetadata;
       if (chain === DEST_DOMAIN) return destMetadata;
-      return undefined;
+      return null;
     },
   };
 

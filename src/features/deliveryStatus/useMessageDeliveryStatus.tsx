@@ -1,22 +1,23 @@
 import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
+import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-import { useReadyMultiProvider, useRegistry, useStore } from '../../store';
+import { useMultiProviderVersion, useReadyMultiProvider, useRegistry, useStore } from '../../store';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 
 type DeliveryStatusQueryMessage = MessageStub &
   Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
 type DeliveryStatusQueryKey = readonly [
   'messageDeliveryStatus',
   DeliveryStatusQueryMessage,
-  boolean,
+  number,
   IRegistry,
   ChainMap<Partial<ChainMetadata>>,
 ];
@@ -30,6 +31,7 @@ export function useMessageDeliveryStatus({
 }) {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides) || {};
   const multiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
   const queryMessage = createDeliveryStatusQueryMessage(message);
 
@@ -37,7 +39,7 @@ export function useMessageDeliveryStatus({
     queryKey: [
       'messageDeliveryStatus',
       queryMessage,
-      !!multiProvider,
+      multiProviderVersion,
       registry,
       chainMetadataOverrides,
     ] as DeliveryStatusQueryKey,
@@ -96,10 +98,9 @@ export function useMessageDeliveryStatus({
     retry: false,
     refetchInterval: (query) =>
       query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
-    enabled,
+    enabled: enabled && !!multiProvider,
   });
 
-  // Show toast on error
   useEffect(() => {
     if (error) {
       logger.error('Error fetching delivery status', error);

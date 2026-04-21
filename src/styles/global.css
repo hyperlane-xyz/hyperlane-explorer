@@ -187,6 +187,10 @@ Responsiveness
   }
 }
 
+.htw-z-30 {
+  z-index: 60 !important;
+}
+
 /*
 Common animations
 =================

@@ -6,13 +6,7 @@ import {
   IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import {
-  ChainMap,
-  ChainMetadata,
-  MultiProtocolProvider,
-  isProxy,
-  proxyImplementation,
-} from '@hyperlane-xyz/sdk';
+import { ChainMap, ChainMetadata, isProxy, proxyImplementation } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -30,6 +24,7 @@ import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
+import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { isIcaMessage, tryDecodeIcaBody, tryFetchIcaAddress } from '../messages/ica';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
