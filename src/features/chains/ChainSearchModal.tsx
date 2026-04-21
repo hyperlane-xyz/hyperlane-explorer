@@ -27,7 +27,11 @@ export function ChainSearchModal({
   };
 
   return (
-    <Modal isOpen={isOpen} close={close} panelClassname="p-4 sm:p-5 max-w-lg min-h-[40vh]">
+    <Modal
+      isOpen={isOpen}
+      close={close}
+      panelClassname="explorer-chain-search-modal p-4 sm:p-5 max-w-lg min-h-[40vh]"
+    >
       <ChainSearchMenu
         chainMetadata={chains}
         overrideChainMetadata={chainMetadataOverrides}

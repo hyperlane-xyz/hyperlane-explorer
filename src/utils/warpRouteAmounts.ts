@@ -56,6 +56,11 @@ function parseScale(scale: WarpRouteAmountConfig['scale']): ParsedScale | null {
   return { numerator, denominator };
 }
 
+function localAmountFromScale(messageAmount: bigint, scale: ParsedScale): bigint {
+  // bigint division truncates toward zero (floor for positive token amounts)
+  return (messageAmount * scale.denominator) / scale.numerator;
+}
+
 /**
  * Determine the effective decimals for decoding a warp route message amount.
  *
@@ -117,9 +122,8 @@ export function getWarpRouteAmountParts(
     logger.warn('Invalid warp route scale; falling back to 1:1', { scale });
   }
   const scaleValue = parsedScale ?? { numerator: 1n, denominator: 1n };
-  // bigint division truncates toward zero (floor for positive token amounts)
   return {
-    amount: (messageAmount * scaleValue.denominator) / scaleValue.numerator,
+    amount: localAmountFromScale(messageAmount, scaleValue),
     decimals: tokenDecimals,
   };
 }
