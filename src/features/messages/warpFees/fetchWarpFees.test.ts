@@ -91,38 +91,41 @@ describe('parseSentTransferRemoteAmount', () => {
 });
 
 describe('parseTotalTokenPulledFromUser', () => {
-  it('sums ERC20 transfers from sender to router', () => {
+  it('sums ERC20 transfers to router', () => {
     const logs = [
       makeTransferLog(SENDER, ROUTER, BigNumber.from('1000000'), TOKEN),
       makeTransferLog(SENDER, ROUTER, BigNumber.from('50000'), TOKEN),
     ];
-    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result?.eq(BigNumber.from('1050000'))).toBe(true);
   });
 
-  it('ignores transfers from a different sender (smart-wallet / intermediary)', () => {
-    const other = utils.getAddress('0x0000000000000000000000000000000000000042');
-    const logs = [makeTransferLog(other, ROUTER, BigNumber.from('1000000'), TOKEN)];
-    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN, SENDER);
-    expect(result).toBeNull();
+  it('counts aggregator / intermediary pulls (from != tx.from)', () => {
+    // Aggregator / vault contract pulls tokens on the user's behalf and
+    // forwards to the router. The Transfer's `from` is the intermediary,
+    // not the user's EOA — still a legitimate pull for this message.
+    const aggregator = utils.getAddress('0x0000000000000000000000000000000000000042');
+    const logs = [makeTransferLog(aggregator, ROUTER, BigNumber.from('1000000'), TOKEN)];
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
+    expect(result?.eq(BigNumber.from('1000000'))).toBe(true);
   });
 
   it('ignores transfers to other addresses', () => {
     const other = utils.getAddress('0x0000000000000000000000000000000000000003');
     const logs = [makeTransferLog(SENDER, other, BigNumber.from('1000000'), TOKEN)];
-    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result).toBeNull();
   });
 
   it('ignores transfers from a different token contract', () => {
     const otherToken = utils.getAddress('0x0000000000000000000000000000000000000099');
     const logs = [makeTransferLog(SENDER, ROUTER, BigNumber.from('1000000'), otherToken)];
-    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result).toBeNull();
   });
 
   it('returns null when no matching transfers found', () => {
-    const result = parseTotalTokenPulledFromUser([], ROUTER, TOKEN, SENDER);
+    const result = parseTotalTokenPulledFromUser([], ROUTER, TOKEN);
     expect(result).toBeNull();
   });
 
@@ -130,8 +133,18 @@ describe('parseTotalTokenPulledFromUser', () => {
     // HypERC20 synthetic: router IS the token; _transferFromSender burns from user.
     const synth = ROUTER;
     const logs = [makeTransferLog(SENDER, ZERO, BigNumber.from('5004'), synth)];
-    const result = parseTotalTokenPulledFromUser(logs, synth, synth, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, synth, synth);
     expect(result?.eq(BigNumber.from('5004'))).toBe(true);
+  });
+
+  it('counts intermediary-initiated synthetic burns (Transfer aggregator→0x0)', () => {
+    // User calls an aggregator which eventually burns on the synthetic router.
+    // The burn's `from` is the intermediary, not the user's EOA.
+    const synth = ROUTER;
+    const intermediary = utils.getAddress('0x00000000000000000000000000000000000abcde');
+    const logs = [makeTransferLog(intermediary, ZERO, BigNumber.from('751748260'), synth)];
+    const result = parseTotalTokenPulledFromUser(logs, synth, synth);
+    expect(result?.eq(BigNumber.from('751748260'))).toBe(true);
   });
 
   it('ignores mints (Transfer 0x0→feeRecipient) in synthetic fee flow', () => {
@@ -140,20 +153,20 @@ describe('parseTotalTokenPulledFromUser', () => {
       makeTransferLog(SENDER, ZERO, BigNumber.from('5004'), synth), // burn — counted
       makeTransferLog(ZERO, FEE_RECIPIENT, BigNumber.from('4'), synth), // mint — ignored
     ];
-    const result = parseTotalTokenPulledFromUser(logs, synth, synth, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, synth, synth);
     expect(result?.eq(BigNumber.from('5004'))).toBe(true);
   });
 
   it('ignores wrapper-token mints to router (xERC20/lockbox routes)', () => {
     // Ethereum USDT → Igra: user pulls 200 USDT to router; router receives
     // 180e18 mint of a wrapper token. Only the user→router USDT transfer
-    // should count — the mint has `from == 0x0`, not sender.
+    // should count — the mint has `from == 0x0`.
     const wrapper = utils.getAddress('0x00000000000000000000000000000000beef0001');
     const logs = [
       makeTransferLog(SENDER, ROUTER, BigNumber.from('200000000'), TOKEN), // 200 USDT
       makeTransferLog(ZERO, ROUTER, BigNumber.from('180000000000000000000'), wrapper), // 180e18 mint
     ];
-    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN, SENDER);
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result?.eq(BigNumber.from('200000000'))).toBe(true);
   });
 });
@@ -189,7 +202,7 @@ describe('sliceLogsForMessage', () => {
     const slice2 = sliceLogsForMessage(logs, MSG_ID_2);
     expect(slice2).toHaveLength(3);
     const sent = parseSentTransferRemoteAmount(slice2!, ROUTER);
-    const total = parseTotalTokenPulledFromUser(slice2!, ROUTER, TOKEN, SENDER);
+    const total = parseTotalTokenPulledFromUser(slice2!, ROUTER, TOKEN);
     expect(sent?.eq(BigNumber.from('500000'))).toBe(true);
     expect(total?.eq(BigNumber.from('500025'))).toBe(true);
   });
@@ -207,7 +220,7 @@ describe('sliceLogsForMessage', () => {
     const slice1 = sliceLogsForMessage(logs, MSG_ID_1);
     expect(slice1).toHaveLength(3);
     const sent = parseSentTransferRemoteAmount(slice1!, ROUTER);
-    const total = parseTotalTokenPulledFromUser(slice1!, ROUTER, TOKEN, SENDER);
+    const total = parseTotalTokenPulledFromUser(slice1!, ROUTER, TOKEN);
     expect(sent?.eq(BigNumber.from('1000000'))).toBe(true);
     expect(total?.eq(BigNumber.from('1000050'))).toBe(true);
   });
