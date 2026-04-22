@@ -102,7 +102,6 @@ export async function fetchWarpFees(
         // For collateral routes the ERC20 token differs from the router;
         // for synthetic routes the router IS the ERC20 token.
         warpRouteDetails.originToken.collateralAddressOrDenom ?? routerAddress,
-        message.origin.from,
       );
   if (!totalTransferred || totalTransferred.isZero()) return null;
 
@@ -219,26 +218,25 @@ export function parseSentTransferRemoteAmount(
  *     emits `Transfer(user, 0x0, charge)`.
  *
  * Filters:
- *   - `from == senderAddress`: excludes mints (0x0 → …) and intra-router
- *     transfers (router → vault → …) that would otherwise inflate the total.
- *     Essential for lockbox / xERC20-VS / yield-vault routes where the tx
- *     contains mints of wrapper tokens to the router.
+ *   - `from != 0x0`: excludes mints. Lockbox / xERC20-VS / yield-vault routes
+ *     mint wrapper tokens to the router — those are router-side accounting,
+ *     not user pulls.
  *   - `to == router || to == 0x0`: accepts both pull patterns in one pass;
- *     the fee-recipient leg (`router → feeRecipient`) is excluded by
- *     the `from == user` gate.
+ *     the fee-recipient leg (`router → feeRecipient` / `0x0 → feeRecipient`)
+ *     is excluded because `to` is the fee recipient, not router/0x0.
  *
- * Limitation: smart-contract wallets / paymasters where `tx.from` isn't the
- * ERC20 sender will return `null` here. Correctness wins over coverage.
+ * No sender filter: per-message log slicing already scopes events to a single
+ * transferRemote call, so any qualifying Transfer inside the slice was pulled
+ * for this send. This also supports aggregator / smart-wallet senders where
+ * `tx.from` isn't the ERC20 sender.
  */
 export function parseTotalTokenPulledFromUser(
   logs: Array<RawLog>,
   routerAddress: string,
   tokenAddress: string,
-  senderAddress: string,
 ): BigNumber | null {
   const lowerRouter = routerAddress.toLowerCase();
   const lowerToken = tokenAddress.toLowerCase();
-  const lowerSender = senderAddress.toLowerCase();
 
   let total = BigNumber.from(0);
   let found = false;
@@ -250,7 +248,7 @@ export function parseTotalTokenPulledFromUser(
       if (parsed.name !== 'Transfer') continue;
       const from = (parsed.args.from as string).toLowerCase();
       const to = (parsed.args.to as string).toLowerCase();
-      if (from !== lowerSender) continue;
+      if (from === constants.AddressZero) continue; // exclude mints
       const isCollateralPull = to === lowerRouter;
       const isBurn = to === constants.AddressZero;
       if (!isCollateralPull && !isBurn) continue;
