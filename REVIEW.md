@@ -23,6 +23,9 @@
 - Preserve intentional metadata-only vs provider-backed boundaries; don't collapse `metadataStore.ts` back into `store.ts` unless there is a concrete functional need
 - **Deduplicate** - Move repeated code/types to shared files
 - **Extract utilities** - Shared functions belong in utils packages
+- **Prefer shared widgets surfaces** - If behavior belongs in widgets, upstream/fix the shared component instead of growing Explorer-only clones
+- **Narrow runtime surfaces without dropping parity** - Keep supported protocol behavior; if a broad import is the problem, prefer a narrower runtime subpath over removing support
+- **Keep last-known-good provider state** - During async provider rebuilds, avoid eagerly swapping to empty placeholders if the old provider can safely remain live until replacement
 
 ## Testing
 
@@ -44,6 +47,9 @@
 - **PI chains** - Permissionless Interop chains have separate query paths in `src/features/messages/pi-queries/`
 - **Edge runtime** - Can't import @hyperlane-xyz/utils in edge runtime (API routes)
 - **Export reusable components** - Common UI patterns should be extracted
+- **Provider-backed queries need readiness + versioning** - If queries depend on the runtime provider, gate them on the ready provider and include provider version in the query key
+- **Avoid alloc-heavy store selectors** - Prefer individual Zustand selectors or shallow-equal slices over returning fresh objects each render
+- **Use shared chain menu behavior** - Chain search/filter/sort/add/edit behavior should stay aligned with widgets unless Explorer has a real product-specific divergence
 
 ## UI Consistency
 
