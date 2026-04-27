@@ -1,7 +1,12 @@
 import { type ChainMetadata, TokenStandard } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
-import { addressToBytes32, ProtocolType } from '@hyperlane-xyz/utils';
+import {
+  addressToBytes32,
+  bytesToProtocolAddress,
+  fromHexString,
+  ProtocolType,
+} from '@hyperlane-xyz/utils';
 
 import { MessageStatus, type MessageStub } from '../../types';
 import { parseWarpRouteMessageDetails } from './utils';
@@ -183,16 +188,20 @@ describe('parseWarpRouteMessageDetails', () => {
       expect(result!.destAmount).toBe('1');
     });
 
-    it('matches a Tron destination token whose registry address is base58 (T...)', () => {
-      // USDT TRC20 on Tron — registry stores the base58 form, but the wire
-      // recipient is bytes32 hex. The fix in formatAddress converts the wire
-      // recipient back to base58 so the warp route lookup can match.
-      const TRON_USDT_BASE58 = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-      const TRON_USDT_BYTES32 = addressToBytes32(TRON_USDT_BASE58, ProtocolType.Tron);
+    it('matches a Tron destination token whose registry key is EVM-shaped hex', () => {
+      // Production shape: hyperlane-registry stores Tron warp-route addresses as
+      // EVM-style hex (e.g. 0xbf80...3421ec), while postgresByteaToAddress decodes
+      // the wire recipient to Tron base58 before parseWarpRouteMessageDetails sees it.
+      const TRON_ROUTER_HEX = '0xbf8078818627110fD05827Ca0aa9E4518d3421ec';
+      const TRON_ROUTER_BYTES32 = addressToBytes32(TRON_ROUTER_HEX, ProtocolType.Ethereum);
+      const TRON_ROUTER_BASE58 = bytesToProtocolAddress(
+        fromHexString(TRON_ROUTER_BYTES32),
+        ProtocolType.Tron,
+      );
 
       const messageAmount = 10n ** 6n;
       const amountHex = messageAmount.toString(16).padStart(64, '0');
-      const recipientHex = TRON_USDT_BYTES32.slice(2);
+      const recipientHex = TRON_ROUTER_BYTES32.slice(2);
       const body = '0x' + recipientHex + amountHex;
 
       const message: MessageStub = {
@@ -201,12 +210,12 @@ describe('parseWarpRouteMessageDetails', () => {
         msgId: '0xabc',
         nonce: 1,
         sender: SENDER_BYTES32,
-        recipient: TRON_USDT_BYTES32,
+        recipient: TRON_ROUTER_BASE58,
         originChainId: 1,
         originDomainId: ORIGIN_DOMAIN,
         destinationChainId: 728126428,
         destinationDomainId: DEST_DOMAIN,
-        origin: { timestamp: 0, hash: '0x0', from: SENDER, to: TRON_USDT_BASE58 },
+        origin: { timestamp: 0, hash: '0x0', from: SENDER, to: TRON_ROUTER_BASE58 },
         body,
       };
 
@@ -223,10 +232,10 @@ describe('parseWarpRouteMessageDetails', () => {
           },
         },
         tron: {
-          [TRON_USDT_BASE58]: {
+          [TRON_ROUTER_HEX]: {
             chainName: 'tron',
             standard: TokenStandard.EvmHypSynthetic,
-            addressOrDenom: TRON_USDT_BASE58,
+            addressOrDenom: TRON_ROUTER_HEX,
             decimals: 6,
             symbol: 'USDT',
             name: 'Tether USD',
@@ -262,8 +271,9 @@ describe('parseWarpRouteMessageDetails', () => {
       );
 
       expect(result).toBeDefined();
+      expect(result!.originToken.symbol).toBe('USDT');
       expect(result!.destinationToken.symbol).toBe('USDT');
-      expect(result!.transferRecipient).toBe(TRON_USDT_BASE58);
+      expect(result!.transferRecipient).toBe(TRON_ROUTER_BASE58);
     });
 
     it('computes destAmount when only dest has scale (same decimals)', () => {
