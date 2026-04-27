@@ -57,8 +57,8 @@ importers:
         specifier: 11.3.1
         version: 11.3.1(@ethersproject/abi@5.8.0)(@ethersproject/providers@5.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/sinon-chai@4.0.0)
       '@hyperlane-xyz/registry':
-        specifier: 24.3.0
-        version: 24.3.0
+        specifier: 25.0.0
+        version: 25.0.0
       '@hyperlane-xyz/sdk':
         specifier: 33.0.2
         version: 33.0.2(@ethersproject/abi@5.8.0)(@ethersproject/providers@5.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@react-native-async-storage/async-storage@1.24.0(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.14)(bufferutil@4.0.8)(react@19.2.4)(utf-8-validate@5.0.10)))(@types/sinon-chai@4.0.0)(bufferutil@4.0.8)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.2)(utf-8-validate@5.0.10)
@@ -948,6 +948,10 @@ packages:
 
   '@hyperlane-xyz/registry@24.3.0':
     resolution: {integrity: sha512-nd0ndJf7HmakuFCwm0gKOZoVXQukEaVponXecjCuIGM8apGA0M9AhhBbsRD2f+JjKmOcZ2vehQaQfd270tGBXQ==}
+    engines: {node: '>=24'}
+
+  '@hyperlane-xyz/registry@25.0.0':
+    resolution: {integrity: sha512-V39zhKQkCF0UcbFoJu+KR7a28G+8JVdpp61XrlvG6taZyxuMVksJthPCmRJUlojZCZLPhrzX2fK9NIDHie59cw==}
     engines: {node: '>=24'}
 
   '@hyperlane-xyz/sdk@33.0.2':
@@ -9109,6 +9113,12 @@ snapshots:
       - utf-8-validate
 
   '@hyperlane-xyz/registry@24.3.0':
+    dependencies:
+      jszip: 3.10.1
+      yaml: 2.4.5
+      zod: 3.24.2
+
+  '@hyperlane-xyz/registry@25.0.0':
     dependencies:
       jszip: 3.10.1
       yaml: 2.4.5
