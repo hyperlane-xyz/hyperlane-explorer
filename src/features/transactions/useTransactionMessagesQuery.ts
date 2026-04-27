@@ -69,9 +69,11 @@ export function useTransactionMessagesQuery(txHash: string) {
   return {
     isFetching,
     isError: !!error,
+    error,
     hasRun: !!data,
     isMessagesFound,
     messageList,
     originInfo,
+    refetch: reExecutor,
   };
 }

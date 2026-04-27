@@ -267,10 +267,14 @@ export function MessageSearch() {
   ]);
 
   // Perform the redirect
+  const lastPushedRedirectUrl = useRef<string | null>(null);
   useEffect(() => {
-    if (redirectUrl) {
-      router.push(redirectUrl).catch((e) => logger.error('Error redirecting search result', e));
-    }
+    if (!redirectUrl || lastPushedRedirectUrl.current === redirectUrl) return;
+    lastPushedRedirectUrl.current = redirectUrl;
+    router.push(redirectUrl).catch((e) => {
+      lastPushedRedirectUrl.current = null;
+      logger.error('Error redirecting search result', e);
+    });
   }, [redirectUrl, router]);
 
   // Show message list if there are no errors and filters are valid

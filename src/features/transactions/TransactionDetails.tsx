@@ -1,8 +1,10 @@
 import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
+import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
+import { useTransactionMessageCount } from '../messages/queries/useMessageQuery';
 import { MessageSummaryRow } from './MessageSummaryRow';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
 
@@ -13,8 +15,15 @@ interface Props {
 export function TransactionDetails({ txHash }: Props) {
   const [allExpanded, setAllExpanded] = useState(false);
 
-  const { isFetching, isError, hasRun, isMessagesFound, messageList, originInfo } =
+  const { isFetching, isError, error, hasRun, isMessagesFound, messageList, originInfo, refetch } =
     useTransactionMessagesQuery(txHash);
+  const txMessageCount = useTransactionMessageCount(txHash);
+  const isMessageListTruncated = txMessageCount > messageList.length;
+
+  useEffect(() => {
+    if (!error) return;
+    logger.error('Error loading transaction messages', error);
+  }, [error]);
 
   // Loading state
   if (isFetching && !hasRun) {
@@ -31,7 +40,16 @@ export function TransactionDetails({ txHash }: Props) {
     return (
       <TransactionStateCard>
         <p className="text-red-500">Error loading transaction</p>
-        <p className="text-sm text-gray-500">Please check the transaction hash and try again.</p>
+        <p className="max-w-md text-sm text-gray-500">
+          {error?.message || 'Please check the transaction hash and try again.'}
+        </p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="text-sm font-medium text-blue-500 transition-colors hover:text-blue-600"
+        >
+          Retry
+        </button>
       </TransactionStateCard>
     );
   }
@@ -65,7 +83,10 @@ export function TransactionDetails({ txHash }: Props) {
       <Card className="mt-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-md font-medium text-blue-500">Messages ({messageList.length})</h3>
+            <h3 className="text-md font-medium text-blue-500">
+              Messages ({isMessageListTruncated ? `${messageList.length} of ` : ''}
+              {isMessageListTruncated ? txMessageCount : messageList.length})
+            </h3>
             <Tooltip
               id="messages-info"
               content="All Hyperlane messages dispatched in this transaction."
@@ -80,6 +101,12 @@ export function TransactionDetails({ txHash }: Props) {
             </button>
           )}
         </div>
+
+        {isMessageListTruncated && (
+          <p className="text-xs text-gray-500">
+            Showing first {messageList.length} of {txMessageCount} messages.
+          </p>
+        )}
 
         <div className="space-y-3">
           {messageList.map((message, index) => (
