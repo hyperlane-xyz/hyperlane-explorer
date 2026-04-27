@@ -5,12 +5,7 @@ import {
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
 import { PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
-import {
-  ProtocolType,
-  convertDecimalsToIntegerString,
-  fromWei,
-  isEVMLike,
-} from '@hyperlane-xyz/utils';
+import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
 import { BigNumber, constants } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
@@ -163,29 +158,20 @@ function parseDispatchIdLog(log: RawLog): string | null {
 
 /**
  * Reverse the origin router's `_outboundAmount` scaling back to the local
- * (native-decimals) amount.
- *
- * If the token has an explicit `scale`, use `getWarpRouteAmountParts` — it
- * mirrors the Solidity `mulDiv(scaleNumerator, scaleDenominator)`. Otherwise
- * assume the wire amount is in `wireDecimals` (the legacy max-decimals route
- * normalization) and rescale to native via the shared `convertDecimals` util.
+ * (native-decimals) amount. With no explicit `scale`, the on-chain default
+ * is identity, so the wire amount already equals the local amount.
  */
 function sentAmountToLocal(
   sentAmountWire: BigNumber,
   originToken: WarpRouteDetails['originToken'],
   nativeDecimals: number,
 ): BigNumber {
-  if (originToken.scale !== undefined) {
-    const { amount } = getWarpRouteAmountParts(BigInt(sentAmountWire.toString()), {
-      decimals: nativeDecimals,
-      scale: originToken.scale,
-    });
-    return BigNumber.from(amount.toString());
-  }
-  const wireDecimals = originToken.wireDecimals ?? nativeDecimals;
-  return BigNumber.from(
-    convertDecimalsToIntegerString(wireDecimals, nativeDecimals, sentAmountWire.toString()),
-  );
+  if (originToken.scale === undefined) return sentAmountWire;
+  const { amount } = getWarpRouteAmountParts(BigInt(sentAmountWire.toString()), {
+    decimals: nativeDecimals,
+    scale: originToken.scale,
+  });
+  return BigNumber.from(amount.toString());
 }
 
 export function parseSentTransferRemoteAmount(

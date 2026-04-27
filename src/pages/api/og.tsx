@@ -16,7 +16,7 @@ import {
   type ChainColors,
 } from '../../utils/colorExtraction';
 import { logger } from '../../utils/logger';
-import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 import {
   fetchChainMetadata,
   fetchWarpRouteMap,
@@ -127,7 +127,6 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
 function getWarpTransferDetails(
   messageData: MessageOGData,
   originChainName: string,
-  destChainName: string,
   warpRouteMap: WarpRouteMap,
 ): WarpTransferDetails | null {
   if (!messageData.body) return null;
@@ -141,18 +140,12 @@ function getWarpTransferDetails(
   const originToken = originChainTokens.get(normalizedSender);
   if (!originToken) return null;
 
-  const normalizedRecipient = normalizeAddressToHex(messageData.recipient);
-
-  const destChainTokens = warpRouteMap.get(destChainName);
-  const destToken = destChainTokens?.get(normalizedRecipient);
-
   const parsed = parseWarpMessageBody(messageData.body);
   if (!parsed) return null;
 
   try {
-    const effectiveDecimals = getEffectiveDecimals(originToken, destToken);
     const amountParts = getWarpRouteAmountParts(parsed.amount, {
-      decimals: effectiveDecimals,
+      decimals: originToken.decimals,
       scale: originToken.scale,
     });
     const formattedAmount = formatTokenAmount(amountParts.amount, amountParts.decimals);
@@ -237,12 +230,7 @@ export default async function handler(req: NextRequest) {
   const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
   const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
 
-  const warpTransfer = getWarpTransferDetails(
-    messageData,
-    originChainName,
-    destChainName,
-    warpRouteMap,
-  );
+  const warpTransfer = getWarpTransferDetails(messageData, originChainName, warpRouteMap);
 
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
   const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';
