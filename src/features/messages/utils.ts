@@ -14,7 +14,7 @@ import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
-import { getEffectiveDecimals, getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
+import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
   return toBase64(msg);
@@ -63,17 +63,12 @@ export function parseWarpRouteMessageDetails(
       destinationMetadata.bech32Prefix,
     );
 
-    const effectiveDecimals = getEffectiveDecimals(originToken, destinationToken);
-
     const amountParts = getWarpRouteAmountParts(parsedMessage.amount, {
-      decimals: effectiveDecimals,
+      decimals: originToken.decimals,
       scale: originToken.scale,
     });
     const amount = fromWei(amountParts.amount.toString(), amountParts.decimals);
 
-    // Compute destination amount when scales differ. Always use destinationToken.decimals
-    // (not wireDecimals): after applying dest scale, the local amount is in dest's native
-    // decimal space, which is how the receiving user sees their balance.
     let destAmount: string | null = null;
     if (!scalesEqual(originToken.scale, destinationToken.scale)) {
       const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
