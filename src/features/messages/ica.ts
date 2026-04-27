@@ -7,11 +7,13 @@ import { useMemo } from 'react';
 import { useQuery as useUrqlQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../metadataStore';
-import { useReadyMultiProvider } from '../../store';
+import { useReadyMultiProvider, useRegistry } from '../../store';
 import { IcaCall, Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
+import { isPiChain } from '../chains/utils';
 import type { ExplorerMultiProvider } from '../hyperlane/sdkRuntime';
+import { PiQueryType, fetchMessagesFromPiChain } from './pi-queries/fetchPiChainMessages';
 import { MessageIdentifierType, buildMessageQuery } from './queries/build';
 import { MessagesStubQueryResult } from './queries/fragments';
 import { parseMessageStubResult } from './queries/parse';
@@ -844,12 +846,18 @@ export function useCcipReadIsmUrls(
  */
 export function useRelatedIcaMessage(
   originTxHash: string | undefined,
+  originDomainId: DomainId | undefined,
   currentMsgId: string | undefined,
   currentCommitment: string | undefined,
   currentMessageType: IcaMessageType | undefined,
 ) {
   const { scrapedDomains } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
+  const multiProvider = useReadyMultiProvider();
+  const registry = useRegistry();
+  const isPiOrigin =
+    originDomainId !== undefined &&
+    isPiChain(chainMetadataResolver, scrapedDomains, originDomainId);
 
   // Only search for related messages if this is a COMMITMENT or REVEAL message
   const shouldSearch =
@@ -879,14 +887,38 @@ export function useRelatedIcaMessage(
   const [{ data, fetching, error }] = useUrqlQuery<MessagesStubQueryResult>({
     query,
     variables,
-    pause: !shouldSearch,
+    pause: !shouldSearch || isPiOrigin,
+  });
+
+  const {
+    data: piMessages,
+    isFetching: isPiFetching,
+    isError: isPiError,
+  } = useQuery({
+    queryKey: ['relatedIcaPiMessages', originTxHash, originDomainId, currentMsgId],
+    queryFn: async () => {
+      if (!originTxHash || originDomainId === undefined || !multiProvider) return [];
+      const originMetadata = chainMetadataResolver.tryGetChainMetadata(originDomainId);
+      if (!originMetadata) return [];
+      return fetchMessagesFromPiChain(
+        originMetadata,
+        { input: originTxHash },
+        multiProvider,
+        registry,
+        PiQueryType.TxHash,
+      );
+    },
+    enabled: shouldSearch && isPiOrigin && !!multiProvider,
+    retry: false,
   });
 
   // Parse and find the related message
   const relatedMessage = useMemo(() => {
-    if (!data || !currentCommitment || !currentMsgId) return null;
+    if (!currentCommitment || !currentMsgId) return null;
 
-    const messages = parseMessageStubResult(chainMetadataResolver, scrapedDomains, data);
+    const messages = isPiOrigin
+      ? piMessages || []
+      : parseMessageStubResult(chainMetadataResolver, scrapedDomains, data);
 
     // Find the related message by matching commitment hash
     for (const msg of messages) {
@@ -918,6 +950,8 @@ export function useRelatedIcaMessage(
     return null;
   }, [
     data,
+    piMessages,
+    isPiOrigin,
     chainMetadataResolver,
     scrapedDomains,
     currentMsgId,
@@ -929,7 +963,7 @@ export function useRelatedIcaMessage(
     relatedMessage: relatedMessage?.message,
     relatedMessageType: relatedMessage?.messageType,
     relatedDecoded: relatedMessage?.decoded,
-    isFetching: fetching,
-    isError: !!error,
+    isFetching: isPiOrigin ? isPiFetching : fetching,
+    isError: isPiOrigin ? isPiError : !!error,
   };
 }
