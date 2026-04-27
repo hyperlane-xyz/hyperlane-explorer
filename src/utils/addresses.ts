@@ -1,7 +1,10 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import {
+  bytesToProtocolAddress,
+  fromHexString,
   hexToBech32mPrefix,
   hexToRadixCustomPrefix,
+  isAddressTron,
   isZeroishAddress,
   ProtocolType,
   strip0x,
@@ -19,6 +22,11 @@ export function formatAddress(
   switch (metadata?.protocol) {
     case ProtocolType.Radix:
       return hexToRadixCustomPrefix(address, 'component', metadata?.bech32Prefix, 30);
+    case ProtocolType.Tron:
+      // Wire format is bytes32 hex; registry stores Tron token addresses as base58.
+      // Convert so warp route lookups (endsWith match) and UI both use base58.
+      if (isAddressTron(address)) return address;
+      return bytesToProtocolAddress(fromHexString(address), ProtocolType.Tron);
     default:
       return address;
   }
