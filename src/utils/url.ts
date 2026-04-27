@@ -1,6 +1,6 @@
 import type { ChainMetadata, ChainNameOrId } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import { isZeroishAddress } from '@hyperlane-xyz/utils';
+import { convertToProtocolAddress, isZeroishAddress, ProtocolType } from '@hyperlane-xyz/utils';
 
 import { logger } from './logger';
 
@@ -16,7 +16,7 @@ export function getBlockExplorerTxUrl(
   const baseUrl = getExplorerBaseUrl(metadata);
   if (!baseUrl) return null;
 
-  const urlPathStub = isLegacyTransactionPath(metadata.name) ? 'transaction' : 'tx';
+  const urlPathStub = isLegacyTransactionPath(metadata) ? 'transaction' : 'tx';
   return appendToPath(baseUrl, `${urlPathStub}/${hash}`)?.toString() || null;
 }
 
@@ -31,10 +31,22 @@ export function getBlockExplorerAddressUrl(
   if (!metadata) return null;
 
   const baseUrl = getExplorerBaseUrl(metadata);
-  const urlPathStub = getExplorerAddressPathStub(metadata, address);
+  const linkAddress = toExplorerAddress(metadata, address);
+  const urlPathStub = getExplorerAddressPathStub(metadata, linkAddress);
   if (!baseUrl || !urlPathStub) return null;
 
-  return appendToPath(baseUrl, `${urlPathStub}/${address}`)?.toString() || null;
+  return appendToPath(baseUrl, `${urlPathStub}/${linkAddress}`)?.toString() || null;
+}
+
+// Tron warp-route entries are stored in the registry as EVM-shaped hex
+// (`0x...`); Tronscan needs the base58 form (`T...`). Convert before linking.
+function toExplorerAddress(metadata: ChainMetadata, address: string): string {
+  if (metadata.protocol !== ProtocolType.Tron) return address;
+  try {
+    return convertToProtocolAddress(address, ProtocolType.Tron);
+  } catch {
+    return address;
+  }
 }
 
 export function tryGetBlockExplorerAddressUrl(
@@ -58,6 +70,16 @@ function getExplorerBaseUrl(metadata: ChainMetadata, index = 0) {
 
 function appendToPath(baseUrl: string, pathExtension: string) {
   try {
+    // SPA hash routing (e.g. Tronscan: `https://tronscan.org/#/transaction/<hash>`).
+    // `new URL` parses `#` as the fragment delimiter, so we'd otherwise drop the path
+    // into the URL path instead of into the hash where Tronscan's router reads it.
+    const hashIdx = baseUrl.indexOf('#');
+    if (hashIdx !== -1) {
+      const origin = baseUrl.slice(0, hashIdx);
+      const hashContent = baseUrl.slice(hashIdx + 1).replace(/\/$/, '');
+      return new URL(`${origin}#${hashContent}/${pathExtension}`);
+    }
+
     const base = new URL(baseUrl);
     let currentPath = base.pathname;
     if (currentPath.endsWith('/')) currentPath = currentPath.slice(0, -1);
@@ -79,8 +101,9 @@ function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
   return family === 'voyager' ? 'contract' : 'address';
 }
 
-function isLegacyTransactionPath(chainName: string) {
+function isLegacyTransactionPath(metadata: ChainMetadata) {
+  if (metadata.blockExplorers?.[0]?.family === 'tronscan') return true;
   return ['nautilus', 'proteustestnet', 'radix', 'radixtestnet', 'aleo', 'aleotestnet'].includes(
-    chainName,
+    metadata.name,
   );
 }

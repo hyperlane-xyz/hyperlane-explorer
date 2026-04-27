@@ -29,6 +29,22 @@ const validMetadata: ChainMetadata = {
   ],
 };
 
+const tronMetadata: ChainMetadata = {
+  ...validMetadata,
+  name: 'tron',
+  protocol: ProtocolType.Tron,
+  blockExplorers: [
+    {
+      name: 'Tronscan',
+      url: 'https://tronscan.org/#',
+      apiUrl: 'https://tronscan.org/#',
+      family: 'tronscan' as NonNullable<
+        NonNullable<ChainMetadata['blockExplorers']>[number]['family']
+      >,
+    },
+  ],
+};
+
 const malformedExplorerMetadata: ChainMetadata = {
   ...validMetadata,
   name: 'broken',
@@ -71,6 +87,22 @@ describe('url utils', () => {
     await expect(tryGetBlockExplorerAddressUrl(resolver, 'ethereum', '0xabc')).resolves.toBe(
       'https://etherscan.io/address/0xabc',
     );
+  });
+
+  it('routes Tronscan urls inside the SPA hash fragment', () => {
+    const resolver = createResolver(tronMetadata);
+
+    expect(getBlockExplorerTxUrl(resolver, 'tron', 'abc123')).toBe(
+      'https://tronscan.org/#/transaction/abc123',
+    );
+    expect(getBlockExplorerAddressUrl(resolver, 'tron', 'TLckRZh8CmnVe9Nqe77ESz87Pp6tXWv5Hi')).toBe(
+      'https://tronscan.org/#/address/TLckRZh8CmnVe9Nqe77ESz87Pp6tXWv5Hi',
+    );
+    // Hex-form Tron registry addresses (e.g. warp route addressOrDenom) are
+    // converted to base58 so Tronscan can resolve them.
+    expect(
+      getBlockExplorerAddressUrl(resolver, 'tron', '0xbf8078818627110fD05827Ca0aa9E4518d3421ec'),
+    ).toMatch(/^https:\/\/tronscan\.org\/#\/address\/T[1-9A-HJ-NP-Za-km-z]{33}$/);
   });
 
   it('returns null instead of throwing for malformed explorer metadata', async () => {
