@@ -1,7 +1,7 @@
 import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
-import { useRouter } from 'next/router';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
