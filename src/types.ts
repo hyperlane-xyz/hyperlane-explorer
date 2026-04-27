@@ -1,4 +1,4 @@
-import type { TokenArgsWithWireDecimals as WarpRouteTokenArgsWithWireDecimals } from '@hyperlane-xyz/sdk/warp/read';
+import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import type { providers } from 'ethers';
 
 // TODO consider reconciling with SDK's MessageStatus
@@ -66,8 +66,8 @@ export interface WarpRouteDetails {
   amount: string;
   destAmount: string | null;
   transferRecipient: string;
-  originToken: WarpRouteTokenArgsWithWireDecimals;
-  destinationToken: WarpRouteTokenArgsWithWireDecimals;
+  originToken: TokenArgs;
+  destinationToken: TokenArgs;
 }
 
 // Status filter options for message search

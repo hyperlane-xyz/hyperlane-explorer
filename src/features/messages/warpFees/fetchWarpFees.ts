@@ -86,7 +86,7 @@ export async function fetchWarpFees(
   const sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
   if (!sentAmountWire) return null;
 
-  const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken, decimals);
+  const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken);
 
   const isNative = HYP_NATIVE_STANDARDS.has(warpRouteDetails.originToken.standard);
   const totalTransferred = isNative
@@ -164,11 +164,9 @@ function parseDispatchIdLog(log: RawLog): string | null {
 function sentAmountToLocal(
   sentAmountWire: BigNumber,
   originToken: WarpRouteDetails['originToken'],
-  nativeDecimals: number,
 ): BigNumber {
   if (originToken.scale === undefined) return sentAmountWire;
   const { amount } = getWarpRouteAmountParts(BigInt(sentAmountWire.toString()), {
-    decimals: nativeDecimals,
     scale: originToken.scale,
   });
   return BigNumber.from(amount.toString());

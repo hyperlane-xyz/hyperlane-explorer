@@ -79,10 +79,8 @@ function sanitizeSymbol(symbol: string): string {
  * Parse warp route message body to extract recipient and amount.
  * Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage.
  *
- * The amount in the message body depends on the token standard:
- * - If scale is explicitly set, amount = localAmount * scale
- * - Cosmos standards: amount is in origin token's native decimals (no normalization)
- * - EVM/Sealevel standards: amount may be normalized to wire decimals (max in route)
+ * Wire amount = `localAmount * scale`; scale defaults to identity when unset,
+ * so the wire amount is in the origin token's native-decimal space.
  */
 function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
   try {
