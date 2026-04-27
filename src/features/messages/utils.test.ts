@@ -57,8 +57,8 @@ function buildTestSetup({
     body,
   };
 
-  // Token map keys use the full bytes32 format since sender/recipient in messages
-  // are bytes32 and getTokenFromWarpRouteChainAddressMap matches with endsWith
+  // Token map keys use bytes32 while messages may carry protocol-native addresses;
+  // getTokenFromWarpRouteChainAddressMap canonicalizes both before matching.
   const warpRouteChainAddressMap: WarpRouteChainAddressMap = {
     [ORIGIN_CHAIN]: {
       [SENDER_BYTES32]: {
@@ -274,6 +274,91 @@ describe('parseWarpRouteMessageDetails', () => {
       expect(result!.originToken.symbol).toBe('USDT');
       expect(result!.destinationToken.symbol).toBe('USDT');
       expect(result!.transferRecipient).toBe(TRON_ROUTER_BASE58);
+    });
+
+    it('matches a Tron origin token whose registry key is EVM-shaped hex', () => {
+      const TRON_ROUTER_HEX = '0xbf8078818627110fD05827Ca0aa9E4518d3421ec';
+      const TRON_ROUTER_BYTES32 = addressToBytes32(TRON_ROUTER_HEX, ProtocolType.Ethereum);
+      const TRON_ROUTER_BASE58 = bytesToProtocolAddress(
+        fromHexString(TRON_ROUTER_BYTES32),
+        ProtocolType.Tron,
+      );
+
+      const messageAmount = 10n ** 6n;
+      const amountHex = messageAmount.toString(16).padStart(64, '0');
+      const recipientHex = RECIPIENT_BYTES32.slice(2);
+      const body = '0x' + recipientHex + amountHex;
+
+      const message: MessageStub = {
+        status: MessageStatus.Delivered,
+        id: 'test-id',
+        msgId: '0xabc',
+        nonce: 1,
+        sender: TRON_ROUTER_BASE58,
+        recipient: RECIPIENT,
+        originChainId: 728126428,
+        originDomainId: ORIGIN_DOMAIN,
+        destinationChainId: 1,
+        destinationDomainId: DEST_DOMAIN,
+        origin: { timestamp: 0, hash: '0x0', from: TRON_ROUTER_BASE58, to: RECIPIENT },
+        body,
+      };
+
+      const warpRouteChainAddressMap: WarpRouteChainAddressMap = {
+        tron: {
+          [TRON_ROUTER_HEX]: {
+            chainName: 'tron',
+            standard: TokenStandard.EvmHypCollateral,
+            addressOrDenom: TRON_ROUTER_HEX,
+            decimals: 6,
+            symbol: 'USDT',
+            name: 'Tether USD',
+            wireDecimals: 6,
+          },
+        },
+        [DEST_CHAIN]: {
+          [RECIPIENT_BYTES32]: {
+            chainName: DEST_CHAIN,
+            standard: TokenStandard.EvmHypSynthetic,
+            addressOrDenom: RECIPIENT,
+            decimals: 6,
+            symbol: 'USDT',
+            name: 'Tether USD',
+            wireDecimals: 6,
+          },
+        },
+      };
+
+      const originMetadata = {
+        name: 'tron',
+        chainId: 728126428,
+        domainId: ORIGIN_DOMAIN,
+        protocol: ProtocolType.Tron,
+      } as ChainMetadata;
+      const destMetadata = {
+        name: DEST_CHAIN,
+        chainId: 1,
+        domainId: DEST_DOMAIN,
+        protocol: ProtocolType.Ethereum,
+      } as ChainMetadata;
+      const chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'> = {
+        tryGetChainMetadata: (chain: string | number): ChainMetadata | null => {
+          if (chain === ORIGIN_DOMAIN) return originMetadata;
+          if (chain === DEST_DOMAIN) return destMetadata;
+          return null;
+        },
+      };
+
+      const result = parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        chainMetadataResolver,
+      );
+
+      expect(result).toBeDefined();
+      expect(result!.originToken.symbol).toBe('USDT');
+      expect(result!.destinationToken.symbol).toBe('USDT');
+      expect(result!.transferRecipient).toBe(RECIPIENT);
     });
 
     it('computes destAmount when only dest has scale (same decimals)', () => {
