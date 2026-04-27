@@ -38,7 +38,8 @@ describe('getTokenFromWarpRouteChainAddressMap', () => {
   });
 
   it('keeps suffix fallback for non-address denom keys', () => {
-    const denom = 'factory/neutron1dvzvf870mx9uf65uqhx40yzx9gu4xlqqq2pnx362a0ndmustww3smumrf5/eclip';
+    const denom =
+      'factory/neutron1dvzvf870mx9uf65uqhx40yzx9gu4xlqqq2pnx362a0ndmustww3smumrf5/eclip';
     const metadata = {
       name: 'neutron',
       protocol: ProtocolType.Cosmos,
