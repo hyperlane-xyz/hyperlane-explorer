@@ -1,9 +1,8 @@
-import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../metadataStore';
-import { isWindowVisible } from '../../utils/window';
+import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery } from '../messages/queries/build';
 import { MessagesQueryResult } from '../messages/queries/fragments';
@@ -51,10 +50,10 @@ export function useTransactionMessagesQuery(txHash: string) {
 
   // Setup interval to re-query (only if not all delivered)
   const reExecutor = useCallback(() => {
-    if (!txHash || allDelivered || !isWindowVisible()) return;
+    if (!txHash || allDelivered) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, txHash, allDelivered]);
-  useInterval(reExecutor, TX_AUTO_REFRESH_DELAY);
+  useVisibleInterval(reExecutor, TX_AUTO_REFRESH_DELAY);
 
   // Extract common origin transaction info from the first message
   const originInfo = useMemo(() => {
