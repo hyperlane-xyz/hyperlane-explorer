@@ -118,7 +118,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [chainMetadataResolver, message, warpRouteChainAddressMap],
   );
-  const txMessageCount = useTransactionMessageCount(origin.hash);
+  const txMessageCount = useTransactionMessageCount(isMessageFound ? origin.hash : undefined);
   const showTxLink = txMessageCount > 1;
   const handleRuntimeStateChange = useCallback(
     (value: MessageDetailsRuntimeState) =>

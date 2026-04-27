@@ -1,10 +1,9 @@
+import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
-import { useInterval } from '@hyperlane-xyz/widgets';
-
 import { useChainMetadataResolver } from '../../metadataStore';
-import { Message } from '../../types';
+import { isWindowVisible } from '../../utils/window';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery } from '../messages/queries/build';
 import { MessagesQueryResult } from '../messages/queries/fragments';
@@ -73,12 +72,7 @@ export function useTransactionMessagesQuery(txHash: string) {
     isError: !!error,
     hasRun: !!data,
     isMessagesFound,
-    messageList: messageList as Message[],
+    messageList,
     originInfo,
-    refetch: reExecutor,
   };
-}
-
-function isWindowVisible() {
-  return document.visibilityState === 'visible';
 }

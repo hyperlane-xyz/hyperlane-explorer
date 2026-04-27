@@ -1,9 +1,8 @@
 import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
-
 import { MessageSummaryRow } from './MessageSummaryRow';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
 
@@ -20,47 +19,33 @@ export function TransactionDetails({ txHash }: Props) {
   // Loading state
   if (isFetching && !hasRun) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <Card className="flex min-h-[20rem] items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <SpinnerIcon width={40} height={40} />
-            <p className="text-gray-500">Loading transaction messages...</p>
-          </div>
-        </Card>
-      </div>
+      <TransactionStateCard>
+        <SpinnerIcon width={40} height={40} />
+        <p className="text-gray-500">Loading transaction messages...</p>
+      </TransactionStateCard>
     );
   }
 
   // Error state
   if (isError) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <Card className="flex min-h-[20rem] items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-red-500">Error loading transaction</p>
-            <p className="text-sm text-gray-500">
-              Please check the transaction hash and try again.
-            </p>
-          </div>
-        </Card>
-      </div>
+      <TransactionStateCard>
+        <p className="text-red-500">Error loading transaction</p>
+        <p className="text-sm text-gray-500">Please check the transaction hash and try again.</p>
+      </TransactionStateCard>
     );
   }
 
   // Not found state
   if (hasRun && !isMessagesFound) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <Card className="flex min-h-[20rem] items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-gray-700">No messages found</p>
-            <p className="max-w-md text-sm text-gray-500">
-              No Hyperlane messages were found for this transaction hash. The transaction may not
-              have dispatched any messages, or it may not be indexed yet.
-            </p>
-          </div>
-        </Card>
-      </div>
+      <TransactionStateCard>
+        <p className="text-gray-700">No messages found</p>
+        <p className="max-w-md text-sm text-gray-500">
+          No Hyperlane messages were found for this transaction hash. The transaction may not have
+          dispatched any messages, or it may not be indexed yet.
+        </p>
+      </TransactionStateCard>
     );
   }
 
@@ -113,6 +98,16 @@ export function TransactionDetails({ txHash }: Props) {
             <span>Refreshing...</span>
           </div>
         )}
+      </Card>
+    </div>
+  );
+}
+
+function TransactionStateCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Card className="flex min-h-[20rem] items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-center">{children}</div>
       </Card>
     </div>
   );

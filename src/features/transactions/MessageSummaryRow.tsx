@@ -31,10 +31,9 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   // Use forceExpanded unless user has manually toggled
   const isExpanded = isManuallyToggled ? manualExpandState : (forceExpanded ?? false);
 
-  const handleToggle = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const toggleExpanded = () => {
     setIsManuallyToggled(true);
-    setManualExpandState((prev) => !prev);
+    setManualExpandState(!isExpanded);
   };
 
   const chainMetadataResolver = useChainMetadataResolver();
@@ -49,53 +48,35 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     [message, warpRouteChainAddressMap, chainMetadataResolver],
   );
 
-  // Detect message type
-  const { messageType } = useMemo(() => {
-    // Check warp route first
-    if (warpRouteDetails) {
-      return { messageType: 'warp' as MessageType };
-    }
-
-    if (isIcaMessage({ sender: message.sender, recipient: message.recipient })) {
-      return { messageType: 'ica' as MessageType };
-    }
-
-    return { messageType: 'generic' as MessageType };
-  }, [message, warpRouteDetails]);
-
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
 
+  const { messageType, title, summaryLine } = useMemo(() => {
+    const route = `${getChainDisplayName(chainMetadataResolver, originChainName, true)} to ${getChainDisplayName(chainMetadataResolver, destinationChainName, true)}`;
+
+    if (warpRouteDetails) {
+      return {
+        messageType: 'warp' as MessageType,
+        title: 'Warp Transfer',
+        summaryLine: `${warpRouteDetails.amount} ${warpRouteDetails.originToken?.symbol} - ${route}`,
+      };
+    }
+
+    if (isIcaMessage({ sender: message.sender, recipient: message.recipient })) {
+      return {
+        messageType: 'ica' as MessageType,
+        title: 'Interchain Account Message',
+        summaryLine: `ICA ${trimToLength(message.msgId, 12)} - ${route}`,
+      };
+    }
+
+    return { messageType: 'generic' as MessageType, title: 'Message', summaryLine: route };
+  }, [chainMetadataResolver, destinationChainName, originChainName, message, warpRouteDetails]);
+
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - message.origin.timestamp, 2)
     : undefined;
-
-  const { title, summaryLine } = useMemo(() => {
-    const route = `${getChainDisplayName(chainMetadataResolver, originChainName, true)} to ${getChainDisplayName(chainMetadataResolver, destinationChainName, true)}`;
-
-    switch (messageType) {
-      case 'warp':
-        return {
-          title: 'Warp Transfer',
-          summaryLine: `${warpRouteDetails?.amount} ${warpRouteDetails?.originToken?.symbol} - ${route}`,
-        };
-      case 'ica':
-        return {
-          title: 'Interchain Account Message',
-          summaryLine: `ICA ${trimToLength(message.msgId, 12)} - ${route}`,
-        };
-      default:
-        return { title: 'Message', summaryLine: route };
-    }
-  }, [
-    messageType,
-    warpRouteDetails,
-    chainMetadataResolver,
-    originChainName,
-    destinationChainName,
-    message,
-  ]);
 
   const isIcaMsg = messageType === 'ica';
 
@@ -107,38 +88,39 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
       {/* Summary Row (always visible) */}
-      <button
-        type="button"
-        className="flex w-full cursor-pointer items-center justify-between p-3"
-        onClick={handleToggle}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="shrink-0 text-sm font-medium text-gray-500">#{index + 1}</span>
-          <ChainLogo chainName={destinationChainName} size={20} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-800">{title}</span>
-              <Link
-                href={`/message/${message.msgId}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-blue-500 transition-colors hover:text-blue-600"
-              >
-                Open
-              </Link>
+      <div className="flex w-full items-center justify-between gap-3 p-3">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between text-left"
+          onClick={toggleExpanded}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="shrink-0 text-sm font-medium text-gray-500">#{index + 1}</span>
+            <ChainLogo chainName={destinationChainName} size={20} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-800">{title}</span>
+              </div>
+              <p className="truncate text-xs text-gray-500">{summaryLine}</p>
             </div>
-            <p className="truncate text-xs text-gray-500">{summaryLine}</p>
           </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <StatusBadge status={status} duration={duration} />
-          <ChevronIcon
-            width={18}
-            height={18}
-            direction={isExpanded ? 'n' : 's'}
-            className="text-gray-400"
-          />
-        </div>
-      </button>
+          <div className="ml-3 flex shrink-0 items-center gap-3">
+            <StatusBadge status={status} duration={duration} />
+            <ChevronIcon
+              width={18}
+              height={18}
+              direction={isExpanded ? 'n' : 's'}
+              className="text-gray-400"
+            />
+          </div>
+        </button>
+        <Link
+          href={`/message/${message.msgId}`}
+          className="shrink-0 text-xs text-blue-500 transition-colors hover:text-blue-600"
+        >
+          Open
+        </Link>
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && (

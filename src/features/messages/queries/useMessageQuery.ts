@@ -4,6 +4,7 @@ import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter } from '../../../types';
+import { isWindowVisible } from '../../../utils/window';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -170,40 +171,36 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
  * Used to determine if we should show the "View all messages in this transaction" link.
  */
 export function useTransactionMessageCount(originTxHash: string | undefined) {
-  const { scrapedDomains: scrapedChains } = useScrapedDomains();
-  const chainMetadataResolver = useChainMetadataResolver();
-
-  // Build query for origin tx hash
-  const { query, variables } = useMemo(() => {
-    if (!originTxHash) {
-      // Return a no-op query
-      return buildMessageQuery(
-        MessageIdentifierType.OriginTxHash,
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-        1,
-        true,
-      );
+  const query = `
+    query ($identifier: bytea!) @cached(ttl: 5) {
+      message_view_aggregate(where: {origin_tx_hash: {_eq: $identifier}}) {
+        aggregate {
+          count
+        }
+      }
     }
-    return buildMessageQuery(MessageIdentifierType.OriginTxHash, originTxHash, 1000, true);
-  }, [originTxHash]);
+  `;
+  const variables = useMemo(
+    () => ({ identifier: searchValueToPostgresBytea(originTxHash || '') }),
+    [originTxHash],
+  );
 
   // Execute query
-  const [{ data }] = useQuery<MessagesStubQueryResult>({
+  const [{ data }] = useQuery<TransactionMessageCountQueryResult>({
     query,
     variables,
     pause: !originTxHash,
   });
 
-  // Parse results
-  const messageCount = useMemo(() => {
-    if (!data || !originTxHash) return 0;
-    const messages = parseMessageStubResult(chainMetadataResolver, scrapedChains, data);
-    return messages.length;
-  }, [data, chainMetadataResolver, scrapedChains, originTxHash]);
+  const messageCount = data?.message_view_aggregate.aggregate?.count;
 
-  return messageCount;
+  return messageCount || 0;
 }
 
-function isWindowVisible() {
-  return document.visibilityState === 'visible';
+interface TransactionMessageCountQueryResult {
+  message_view_aggregate: {
+    aggregate: {
+      count: number;
+    } | null;
+  };
 }
