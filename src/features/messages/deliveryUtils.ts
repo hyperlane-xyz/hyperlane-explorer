@@ -74,8 +74,10 @@ export async function extractMessageIdFromTx(
 
 /**
  * Checks if a Hyperlane message has been delivered on the destination chain.
- * Queries for ProcessId events on the destination mailbox, with a fallback to
- * calling the mailbox.delivered() method if logs are unreliable.
+ * Tries ProcessId logs in a recent block window first; on miss, uses
+ * mailbox.processedAt() to locate the exact delivery block and fetch the log
+ * there so the caller still gets a tx hash. Falls back to mailbox.delivered()
+ * for pre-v3 mailboxes that don't expose processedAt.
  */
 export async function checkIsMessageDelivered(
   msgId: string,
@@ -116,12 +118,39 @@ export async function checkIsMessageDelivered(
   }
 
   try {
-    logger.debug(`Querying mailbox about msgId ${msgId}`);
-    const isDelivered = await mailbox.delivered(msgId);
-    logger.debug(`Mailbox delivery status for ${msgId}: ${isDelivered}`);
-    return { isDelivered };
-  } catch (error) {
-    logger.warn(`Error checking delivered status for msgId ${msgId}`, error);
+    logger.debug(`Querying mailbox.processedAt for msgId ${msgId}`);
+    const processedBlock = await mailbox.processedAt(msgId);
+    if (processedBlock > 0) {
+      try {
+        const logs = await mailbox.queryFilter(
+          mailbox.filters.ProcessId(msgId),
+          processedBlock,
+          processedBlock,
+        );
+        if (logs?.length) {
+          const log = logs[0];
+          return {
+            isDelivered: true,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+          };
+        }
+        logger.warn(`processedAt returned ${processedBlock} but no ProcessId log at that block`);
+      } catch (error) {
+        logger.warn(`Error querying ProcessId log at block ${processedBlock}`, error);
+      }
+      return { isDelivered: true, blockNumber: processedBlock };
+    }
     return { isDelivered: false };
+  } catch (error) {
+    // Pre-v3 mailboxes don't expose processedAt; fall back to the boolean.
+    logger.warn(`Error calling processedAt for msgId ${msgId}, falling back to delivered()`, error);
+    try {
+      const isDelivered = await mailbox.delivered(msgId);
+      return { isDelivered };
+    } catch (error2) {
+      logger.warn(`Error checking delivered status for msgId ${msgId}`, error2);
+      return { isDelivered: false };
+    }
   }
 }

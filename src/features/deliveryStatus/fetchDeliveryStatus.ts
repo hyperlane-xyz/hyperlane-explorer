@@ -43,16 +43,17 @@ export async function fetchDeliveryStatus(
   );
 
   if (isDelivered) {
-    const txDetails = await fetchTransactionDetails(
+    const { tx: txDetails, blockTimestamp } = await fetchTransactionDetails(
       multiProvider,
       message.destinationDomainId,
       transactionHash,
+      blockNumber,
     );
     // If a delivery (aka process) tx is found, mark as success
     const result: MessageDeliverySuccessResult = {
       status: MessageStatus.Delivered,
       deliveryTransaction: {
-        timestamp: toDecimalNumber(txDetails?.timestamp || 0) * 1000,
+        timestamp: toDecimalNumber(blockTimestamp ?? txDetails?.timestamp ?? 0) * 1000,
         hash: transactionHash || constants.HashZero,
         from: txDetails?.from || constants.AddressZero,
         to: txDetails?.to || constants.AddressZero,
@@ -84,13 +85,18 @@ export async function fetchDeliveryStatus(
   }
 }
 
-function fetchTransactionDetails(
+async function fetchTransactionDetails(
   multiProvider: MultiProtocolProvider,
   domainId: DomainId,
   txHash?: string,
+  blockNumber?: number,
 ) {
-  if (!txHash) return null;
+  if (!txHash) return { tx: null, blockTimestamp: undefined };
   logger.debug(`Searching for transaction details for ${txHash}`);
   const provider = multiProvider.getEthersV5Provider(domainId);
-  return provider.getTransaction(txHash);
+  const [tx, block] = await Promise.all([
+    provider.getTransaction(txHash),
+    blockNumber ? provider.getBlock(blockNumber).catch(() => null) : Promise.resolve(null),
+  ]);
+  return { tx, blockTimestamp: block?.timestamp };
 }
