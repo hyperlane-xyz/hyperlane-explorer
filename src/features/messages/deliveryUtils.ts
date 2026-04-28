@@ -143,8 +143,13 @@ export async function checkIsMessageDelivered(
     }
     return { isDelivered: false };
   } catch (error) {
-    // Pre-v3 mailboxes don't expose processedAt; fall back to the boolean.
-    logger.warn(`Error calling processedAt for msgId ${msgId}, falling back to delivered()`, error);
+    // processedAt may revert on pre-v3 mailboxes that don't expose it, or on
+    // transient RPC issues. Either way, fall back to the boolean so we don't
+    // block the UI; tx-hash recovery is lost in this branch.
+    logger.warn(
+      `processedAt call failed for msgId ${msgId} (pre-v3 mailbox or RPC issue); falling back to delivered()`,
+      error,
+    );
     try {
       const isDelivered = await mailbox.delivered(msgId);
       return { isDelivered };
