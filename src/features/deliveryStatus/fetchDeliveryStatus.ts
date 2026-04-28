@@ -91,7 +91,7 @@ async function fetchTransactionDetails(
   txHash?: string,
   blockNumber?: number,
 ) {
-  if (!txHash && !blockNumber) return { tx: null, blockTimestamp: undefined };
+  if (!txHash && !blockNumber) return { tx: null, blockTimestamp: null };
   logger.debug(`Searching for transaction details for ${txHash ?? `block ${blockNumber}`}`);
   const provider = multiProvider.getEthersV5Provider(domainId);
   const [tx, block] = await Promise.all([
@@ -108,5 +108,5 @@ async function fetchTransactionDetails(
         })
       : Promise.resolve(null),
   ]);
-  return { tx, blockTimestamp: block?.timestamp };
+  return { tx, blockTimestamp: block?.timestamp ?? null };
 }
