@@ -1,6 +1,7 @@
 import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
@@ -221,6 +222,61 @@ export function MessageSearch() {
   const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
 
+  // Compute redirect URL for direct message/tx lookups
+  const router = useRouter();
+  const redirectUrl = useMemo(() => {
+    // Wait for queries to complete
+    if (!hasAllRun || isAnyFetching) return null;
+
+    // Only redirect searches entered by the user.
+    if (!hasInput) return null;
+
+    // Don't redirect if filters are applied
+    if (originChainFilter || destinationChainFilter || startTimeFilter || endTimeFilter)
+      return null;
+
+    // Only GraphQL-backed results can be shown on the tx page today.
+    if (!isMessagesFound || !messageList.length) return null;
+
+    const firstMessage = messageList[0];
+
+    // Single result → always go to message page
+    if (messageList.length === 1) {
+      return `/message/${firstMessage.msgId}`;
+    }
+
+    // Multiple results + origin tx hash match → go to tx page
+    // Only redirect if GraphQL found results (tx page uses GraphQL only, not PI)
+    const inputLower = sanitizedInput.toLowerCase();
+    if (isMessagesFound && firstMessage.origin?.hash?.toLowerCase() === inputLower) {
+      return `/tx/${firstMessage.origin.hash}`;
+    }
+
+    return null;
+  }, [
+    destinationChainFilter,
+    endTimeFilter,
+    hasAllRun,
+    hasInput,
+    isAnyFetching,
+    isMessagesFound,
+    messageList,
+    originChainFilter,
+    sanitizedInput,
+    startTimeFilter,
+  ]);
+
+  // Perform the redirect
+  const lastPushedRedirectUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (!redirectUrl || lastPushedRedirectUrl.current === redirectUrl) return;
+    lastPushedRedirectUrl.current = redirectUrl;
+    router.push(redirectUrl).catch((e) => {
+      lastPushedRedirectUrl.current = null;
+      logger.error('Error redirecting search result', e);
+    });
+  }, [redirectUrl, router]);
+
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
     !isAnyError &&
@@ -281,7 +337,7 @@ export function MessageSearch() {
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
-        <Fade show={showMessageTable}>
+        <Fade show={showMessageTable && !redirectUrl}>
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
@@ -289,7 +345,7 @@ export function MessageSearch() {
           isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
-          show={!isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
+          show={!redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
           hasInput={hasInput}
           allowAddress={true}
         />

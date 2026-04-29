@@ -1,9 +1,9 @@
-import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter } from '../../../types';
+import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -107,10 +107,10 @@ export function useMessageSearchQuery(
 
   // Auto-refresh query periodically
   const refresh = useCallback(() => {
-    if (!query || !isValidInput || !isWindowVisible()) return;
+    if (!query || !isValidInput) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
-  useInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
+  useVisibleInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
@@ -151,10 +151,10 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
 
   // Setup interval to re-query
   const reExecutor = useCallback(() => {
-    if (pause || isDelivered || !isWindowVisible()) return;
+    if (pause || isDelivered) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [pause, isDelivered, reexecuteQuery]);
-  useInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
+  useVisibleInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
 
   return {
     isFetching,
@@ -165,6 +165,41 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   };
 }
 
-function isWindowVisible() {
-  return document.visibilityState === 'visible';
+/**
+ * Hook to count messages in a given origin transaction.
+ * Used to determine if we should show the "View all messages in this transaction" link.
+ */
+export function useTransactionMessageCount(originTxHash: string | undefined) {
+  const query = `
+    query ($identifier: bytea!) @cached(ttl: 5) {
+      message_view_aggregate(where: {origin_tx_hash: {_eq: $identifier}}) {
+        aggregate {
+          count
+        }
+      }
+    }
+  `;
+  const variables = useMemo(
+    () => ({ identifier: searchValueToPostgresBytea(originTxHash || '') }),
+    [originTxHash],
+  );
+
+  // Execute query
+  const [{ data }] = useQuery<TransactionMessageCountQueryResult>({
+    query,
+    variables,
+    pause: !originTxHash,
+  });
+
+  const messageCount = data?.message_view_aggregate.aggregate?.count;
+
+  return messageCount || 0;
+}
+
+interface TransactionMessageCountQueryResult {
+  message_view_aggregate: {
+    aggregate: {
+      count: number;
+    } | null;
+  };
 }
