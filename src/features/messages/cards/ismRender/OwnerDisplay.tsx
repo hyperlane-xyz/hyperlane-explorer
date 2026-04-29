@@ -29,22 +29,13 @@ export function OwnerDisplay({ owner, ownerKind, safeInfo, chainName }: Props) {
 }
 
 function OwnerKindBadge({ kind, safeInfo }: { kind: OwnerKind; safeInfo?: SafeInfo }) {
-  if (kind === 'safe') {
-    const label = safeInfo?.ownerCount
-      ? `Safe ${safeInfo.threshold}/${safeInfo.ownerCount}`
-      : `Safe (threshold ${safeInfo?.threshold ?? '?'})`;
-    return (
-      <span className="rounded bg-primary-50 px-1.5 py-0.5 text-xs font-medium text-primary-700">
-        {label}
-      </span>
-    );
-  }
-  if (kind === 'eoa') {
-    return (
-      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-        EOA
-      </span>
-    );
-  }
-  return null;
+  if (kind !== 'safe') return null;
+  const label = safeInfo?.ownerCount
+    ? `Safe ${safeInfo.threshold}/${safeInfo.ownerCount}`
+    : `Safe (threshold ${safeInfo?.threshold ?? '?'})`;
+  return (
+    <span className="rounded bg-primary-50 px-1.5 py-0.5 text-xs font-medium text-primary-700">
+      {label}
+    </span>
+  );
 }
