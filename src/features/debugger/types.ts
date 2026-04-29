@@ -25,6 +25,11 @@ export interface MessageDebugResult {
     contract: Address;
     mailbox: Address;
   };
+  icaDetails?: {
+    failedCallIndex: number; // 0-based index of the failed call
+    totalCalls: number;
+    errorReason: string;
+  };
 }
 
 export interface GasPayment {

@@ -15,7 +15,7 @@ import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
 } from './cards/OriginTransactionCard';
-import { useIsIcaMessage } from './icaUtils';
+import { useIsIcaMessage } from './ica';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
@@ -99,7 +99,10 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     (needsRuntimeMessageLookup && !activeRuntimeState?.hasRun);
   const isError = isGraphQlError || !!activeRuntimeState?.isError;
   const blur = !isMessageFound;
-  const isIcaMsg = useIsIcaMessage(message);
+  const isIcaMsg = useIsIcaMessage({
+    sender: message.sender,
+    recipient: message.recipient,
+  });
   const debugResult = activeRuntimeState?.debugResult;
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
   const duration = destination?.timestamp
@@ -208,7 +211,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         {debugResult?.ismDetails && (
           <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
         )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} />}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
       </div>
     </>
   );

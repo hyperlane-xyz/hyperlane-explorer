@@ -70,5 +70,11 @@ export interface WarpRouteDetails {
   destinationToken: TokenArgs;
 }
 
+export interface IcaCall {
+  to: Address;
+  value: string;
+  data: string;
+}
+
 // Status filter options for message search
 export type MessageStatusFilter = 'all' | 'delivered' | 'pending';
