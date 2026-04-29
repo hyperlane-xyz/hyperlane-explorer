@@ -1,7 +1,7 @@
 import { ISafe__factory, Mailbox__factory, MailboxClient__factory } from '@hyperlane-xyz/core';
 import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
-import { isZeroishAddress, ProtocolType } from '@hyperlane-xyz/utils';
+import { isZeroishAddress, ProtocolType, timeout } from '@hyperlane-xyz/utils';
 import { ethers } from 'ethers';
 
 import { AbortError, wrapWithAbort } from './abortableProvider';
@@ -50,22 +50,6 @@ export interface FetchWarpRouteIsmInput {
 const SAFE_GET_OWNERS_ABI = ['function getOwners() view returns (address[])'];
 const SIDE_TIMEOUT_MS = 60_000;
 const PER_CALL_TIMEOUT_MS = 20_000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`RPC timed out (${ms}ms)`)), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(timer);
-        reject(e);
-      },
-    );
-  });
-}
 
 function checkAborted(signal?: AbortSignal) {
   if (signal?.aborted) throw new AbortError();
@@ -184,9 +168,9 @@ async function fetchSide(
     const router = MailboxClient__factory.connect(side.tokenAddress, provider);
 
     const [ismAddrRaw, mailboxAddr, ownerRaw] = await Promise.all([
-      withTimeout(router.interchainSecurityModule(), PER_CALL_TIMEOUT_MS),
-      withTimeout(router.mailbox(), PER_CALL_TIMEOUT_MS),
-      withTimeout(router.owner(), PER_CALL_TIMEOUT_MS),
+      timeout(router.interchainSecurityModule(), PER_CALL_TIMEOUT_MS),
+      timeout(router.mailbox(), PER_CALL_TIMEOUT_MS),
+      timeout(router.owner(), PER_CALL_TIMEOUT_MS),
     ]);
     checkAborted(signal);
 

@@ -1,7 +1,9 @@
 import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { type DerivedIsmConfig, EvmIsmReader, IsmType, MultiProvider } from '@hyperlane-xyz/sdk';
+import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { ethers } from 'ethers';
 
+import { getChainDisplayName } from '../../chains/utils';
 import { wrapWithAbort } from './abortableProvider';
 
 export interface IsmNode {
@@ -202,6 +204,8 @@ function extractChildAddresses(
 ): Array<{ label?: string; address: string }> {
   const out: Array<{ label?: string; address: string }> = [];
   const type = cfg.type as string;
+  const resolver = createChainMetadataResolver(chainMetadata);
+  const display = (chainName: string) => getChainDisplayName(resolver, chainName);
 
   if (type === IsmType.AGGREGATION || type === IsmType.STORAGE_AGGREGATION) {
     const modules = (cfg as unknown as { modules: Array<{ address: string }> }).modules ?? [];
@@ -216,8 +220,7 @@ function extractChildAddresses(
     const domains =
       (cfg as unknown as { domains: Record<string, { address: string }> }).domains ?? {};
     for (const [chainName, child] of Object.entries(domains)) {
-      if (child?.address)
-        out.push({ label: chainDisplayLabel(chainMetadata, chainName), address: child.address });
+      if (child?.address) out.push({ label: display(chainName), address: child.address });
     }
   } else if (type === IsmType.AMOUNT_ROUTING) {
     const lower = (cfg as unknown as { lowerIsm?: { address: string } }).lowerIsm;
@@ -228,22 +231,12 @@ function extractChildAddresses(
     const isms = (cfg as unknown as { isms?: Record<string, string> }).isms ?? {};
     for (const [chainName, addr] of Object.entries(isms)) {
       if (addr && addr !== ethers.constants.AddressZero) {
-        out.push({ label: chainDisplayLabel(chainMetadata, chainName), address: addr });
+        out.push({ label: display(chainName), address: addr });
       }
     }
   }
 
   return out;
-}
-
-function chainDisplayLabel(chainMetadata: ChainMap<ChainMetadata>, chainName: string): string {
-  const meta = chainMetadata[chainName];
-  return meta?.displayName || meta?.displayNameShort || titleCase(chainName);
-}
-
-function titleCase(name: string): string {
-  if (!name) return name;
-  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 async function walkChildrenInParallel(
