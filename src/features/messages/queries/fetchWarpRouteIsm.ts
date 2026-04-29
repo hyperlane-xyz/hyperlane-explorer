@@ -58,29 +58,9 @@ function checkAborted(signal?: AbortSignal) {
 export async function fetchWarpRouteIsm(
   input: FetchWarpRouteIsmInput,
 ): Promise<WarpRouteIsmResult> {
-  const wrappedProviders: ChainMap<ethers.providers.Provider> = {};
-  for (const [chain, provider] of Object.entries(input.providers)) {
-    wrappedProviders[chain] = wrapWithAbort(provider, input.signal);
-  }
-  const sdkMultiProvider = new MultiProvider(input.chainMetadata, {
-    providers: wrappedProviders,
-  });
-
   const [origin, destination] = await Promise.all([
-    runSideWithTimeout(
-      input.chainMetadata,
-      wrappedProviders,
-      sdkMultiProvider,
-      input.origin,
-      input.signal,
-    ),
-    runSideWithTimeout(
-      input.chainMetadata,
-      wrappedProviders,
-      sdkMultiProvider,
-      input.destination,
-      input.signal,
-    ),
+    runSideWithTimeout(input.chainMetadata, input.providers, input.origin, input.signal),
+    runSideWithTimeout(input.chainMetadata, input.providers, input.destination, input.signal),
   ]);
 
   return { origin, destination };
@@ -88,24 +68,34 @@ export async function fetchWarpRouteIsm(
 
 async function runSideWithTimeout(
   chainMetadata: ChainMap<ChainMetadata>,
-  providers: ChainMap<ethers.providers.Provider>,
-  sdkMultiProvider: MultiProvider,
+  rawProviders: ChainMap<ethers.providers.Provider>,
   side: { chainName: string; tokenAddress: string },
   parentSignal?: AbortSignal,
 ): Promise<WarpRouteIsmSideResult> {
   // Compose a side-scoped abort signal that fires when either:
   //  (a) the parent signal aborts (React Query unmount / navigation), or
   //  (b) the side-level timeout elapses.
-  // This way the timeout doesn't just race a UI message — it actually halts
-  // the underlying walk via the same abort plumbing the rest of the code uses.
   const ctrl = new AbortController();
   if (parentSignal?.aborted) ctrl.abort();
   const parentListener = () => ctrl.abort();
   parentSignal?.addEventListener('abort', parentListener);
   const timer = setTimeout(() => ctrl.abort(), SIDE_TIMEOUT_MS);
 
+  // Wrap providers + build the SDK MultiProvider scoped to THIS side's signal.
+  // Critical: doing the wrap here (not at the top of fetchWarpRouteIsm) means
+  // the upfront router/mailbox/Safe reads AND the walker all see the side
+  // timeout — without this, timeout fires the UI message but the underlying
+  // SmartProvider retry chain keeps firing requests.
+  const wrappedProviders: ChainMap<ethers.providers.Provider> = {};
+  for (const [chain, provider] of Object.entries(rawProviders)) {
+    wrappedProviders[chain] = wrapWithAbort(provider, ctrl.signal);
+  }
+  const sdkMultiProvider = new MultiProvider(chainMetadata, {
+    providers: wrappedProviders,
+  });
+
   try {
-    return await fetchSide(chainMetadata, providers, sdkMultiProvider, side, ctrl.signal);
+    return await fetchSide(chainMetadata, wrappedProviders, sdkMultiProvider, side, ctrl.signal);
   } catch (e) {
     // If the abort came from our own timeout (parent didn't abort), surface as a timeout error.
     if ((e instanceof AbortError || e instanceof IsmWalkAbortError) && !parentSignal?.aborted) {
@@ -253,6 +243,9 @@ async function detectOwner(
 
   try {
     const safe = ISafe__factory.connect(owner, provider);
+    // Two-method probe matches SDK's Safe detection (EvmWarpRouteReader):
+    // a random contract might implement getThreshold(), so requiring nonce()
+    // to also succeed reduces false positives.
     const [threshold] = await Promise.all([safe.getThreshold(), safe.nonce()]);
 
     let ownerCount = 0;

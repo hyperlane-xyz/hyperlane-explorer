@@ -3,8 +3,9 @@ import { type DerivedIsmConfig, EvmIsmReader, IsmType, MultiProvider } from '@hy
 import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { ethers } from 'ethers';
 
+import { logger } from '../../../utils/logger';
 import { getChainDisplayName } from '../../chains/utils';
-import { wrapWithAbort } from './abortableProvider';
+import { AbortError, wrapWithAbort } from './abortableProvider';
 
 export interface IsmNode {
   address: string;
@@ -113,6 +114,7 @@ function labelFor(type: string): string {
 export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Promise<IsmNode> {
   checkAborted(ctx.signal);
   if (depth > MAX_DEPTH) {
+    logger.warn(`ISM walk hit max depth (${MAX_DEPTH}) at ${address} on ${ctx.chainName}`);
     return { address, typeLabel: 'Unknown', error: 'Max recursion depth' };
   }
 
@@ -131,19 +133,18 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
     const callProvider = wrapWithAbort(baseProvider, callCtrl.signal);
 
     // Read moduleType first so we always have at least a coarse type label
-    // even if the deeper SDK derivation fails / times out.
+    // even if the deeper SDK derivation fails / times out. A flaky moduleType
+    // probe shouldn't kill the branch — stash the error and still try the
+    // deeper derive, only fall back to "Unknown" if that also fails.
     let coarseLabel = 'Unknown';
+    let coarseError: string | undefined;
     try {
       const ism = new ethers.Contract(address, ISM_MODULE_TYPE_ABI, callProvider);
       const moduleType: number = await ism.moduleType();
       coarseLabel = MODULE_TYPE_FALLBACK_LABELS[moduleType] ?? `Type ${moduleType}`;
     } catch (e) {
-      if (e instanceof IsmWalkAbortError) throw e;
-      return {
-        address,
-        typeLabel: 'Unknown',
-        error: e instanceof Error ? e.message : String(e),
-      };
+      if (e instanceof AbortError || e instanceof IsmWalkAbortError) throw e;
+      coarseError = e instanceof Error ? e.message : String(e);
     }
 
     checkAborted(ctx.signal);
@@ -161,7 +162,11 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
     try {
       cfg = await reader.deriveIsmConfigFromAddress(address);
     } catch (e) {
-      if (e instanceof IsmWalkAbortError) throw e;
+      // Real aborts (parent navigation / side timeout / per-call timeout
+      // routed through wrapWithAbort) must propagate, not get folded into a
+      // per-node error — otherwise the walk completes with all-error nodes
+      // instead of cancelling cleanly.
+      if (e instanceof AbortError || e instanceof IsmWalkAbortError) throw e;
       // Distinguish per-call timeout from other failures
       if (callCtrl.signal.aborted && !ctx.signal?.aborted) {
         deriveError = `Timed out (${PER_NODE_TIMEOUT_MS}ms)`;
@@ -176,7 +181,7 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
       return {
         address,
         typeLabel: coarseLabel,
-        error: deriveError,
+        error: deriveError ?? coarseError,
       };
     }
 

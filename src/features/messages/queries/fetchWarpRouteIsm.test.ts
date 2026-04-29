@@ -222,6 +222,7 @@ describe('fetchWarpRouteIsm', () => {
       destination: { chainName: 'arbitrum', tokenAddress: TOKEN_ADDRESS },
     });
 
+    expect(result.origin.kind).toBe('data');
     if (result.origin.kind === 'data') {
       expect(result.origin.value.ownerKind).toBe('eoa');
       expect(result.origin.value.safeInfo).toBeUndefined();
@@ -240,6 +241,7 @@ describe('fetchWarpRouteIsm', () => {
       destination: { chainName: 'arbitrum', tokenAddress: TOKEN_ADDRESS },
     });
 
+    expect(result.origin.kind).toBe('data');
     if (result.origin.kind === 'data') {
       expect(result.origin.value.ownerKind).toBe('safe');
       expect(result.origin.value.safeInfo).toEqual({ threshold: 2, ownerCount: 3 });
@@ -258,6 +260,7 @@ describe('fetchWarpRouteIsm', () => {
       destination: { chainName: 'arbitrum', tokenAddress: TOKEN_ADDRESS },
     });
 
+    expect(result.origin.kind).toBe('data');
     if (result.origin.kind === 'data') {
       expect(result.origin.value.ownerKind).toBe('safe');
       expect(result.origin.value.safeInfo).toEqual({ threshold: 1, ownerCount: 0 });

@@ -40,10 +40,13 @@ export function wrapWithAbort(
       ) {
         return async (...args: unknown[]) => {
           if (signal?.aborted) throw new AbortError();
-          return value.apply(target, args);
+          // Bind `this` to the Proxy (receiver) so SmartProvider's internal
+          // `this.performWithFallback(...)` / `this.wrapProviderPerform(...)`
+          // hops re-enter the proxy and check abort on every retry attempt.
+          return value.apply(receiver, args);
         };
       }
-      return typeof value === 'function' ? value.bind(target) : value;
+      return typeof value === 'function' ? value.bind(receiver) : value;
     },
   }) as ethers.providers.Provider;
 }

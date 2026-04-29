@@ -1,5 +1,6 @@
 import { ChevronIcon, LockIcon, SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
-import { useMemo, useState } from 'react';
+import clsx from 'clsx';
+import { useState } from 'react';
 
 import { Card } from '../../../components/layout/Card';
 import { useChainMetadataResolver } from '../../../metadataStore';
@@ -22,14 +23,9 @@ export function WarpRouteIsmDetailsCard({ message, warpRouteDetails, blur }: Pro
   const chainMetadataResolver = useChainMetadataResolver();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const originChainName = useMemo(
-    () => multiProvider.tryGetChainName(message.originDomainId) ?? undefined,
-    [multiProvider, message.originDomainId],
-  );
-  const destinationChainName = useMemo(
-    () => multiProvider.tryGetChainName(message.destinationDomainId) ?? undefined,
-    [multiProvider, message.destinationDomainId],
-  );
+  const originChainName = multiProvider.tryGetChainName(message.originDomainId) ?? undefined;
+  const destinationChainName =
+    multiProvider.tryGetChainName(message.destinationDomainId) ?? undefined;
   const originDisplay = getChainDisplayName(chainMetadataResolver, originChainName);
   const destinationDisplay = getChainDisplayName(chainMetadataResolver, destinationChainName);
 
@@ -44,17 +40,28 @@ export function WarpRouteIsmDetailsCard({ message, warpRouteDetails, blur }: Pro
   if (!warpRouteDetails) return null;
 
   return (
-    <Card className={blur ? 'w-full blur-xs' : 'w-full'}>
+    <Card className={clsx('w-full', blur && 'blur-xs')}>
       <div className="flex w-full items-center justify-between">
-        <button onClick={() => setIsExpanded((v) => !v)} className="flex items-center gap-2">
-          <LockIcon width={22} height={26} color="#3d304c" className="opacity-70" />
-          <h3 className="text-md font-medium text-primary-800">Warp Route Security</h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsExpanded((v) => !v)}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} Warp Route Security`}
+            className="flex items-center gap-2"
+          >
+            <LockIcon width={22} height={26} color="#3d304c" className="opacity-70" />
+            <h3 className="text-md font-medium text-primary-800">Warp Route Security</h3>
+          </button>
           <Tooltip
             id="warp-route-ism-info"
             content="ISM configuration and ownership for the warp route's origin and destination tokens."
           />
-        </button>
-        <button onClick={() => setIsExpanded((v) => !v)}>
+        </div>
+        <button
+          onClick={() => setIsExpanded((v) => !v)}
+          aria-expanded={isExpanded}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} Warp Route Security`}
+        >
           <ChevronIcon
             width={20}
             height={20}

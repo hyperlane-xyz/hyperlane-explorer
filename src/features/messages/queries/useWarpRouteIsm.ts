@@ -78,6 +78,10 @@ export function useWarpRouteIsm({
     },
     enabled: isReady,
     retry: false,
+    // staleTime Infinity: while the card is mounted (expanded OR collapsed),
+    // never refetch — collapse/re-expand is free.
+    // gcTime 0: evict on unmount so navigating to a different message doesn't
+    // show stale ISM data from the previous one.
     staleTime: Infinity,
     gcTime: 0,
     refetchOnMount: false,
