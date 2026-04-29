@@ -63,7 +63,6 @@ function checkAborted(signal?: AbortSignal) {
   if (signal?.aborted) throw new IsmWalkAbortError();
 }
 
-
 const MODULE_TYPE_FALLBACK_LABELS: Record<number, string> = {
   0: 'Unused ISM',
   1: 'Routing ISM',

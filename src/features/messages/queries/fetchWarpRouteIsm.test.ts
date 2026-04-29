@@ -189,7 +189,11 @@ describe('fetchWarpRouteIsm', () => {
     mailboxFactoryMock.mockReturnValue({
       defaultIsm: () => Promise.resolve(DEFAULT_ISM_ADDRESS),
     });
-    setupWalkSuccess({ address: DEFAULT_ISM_ADDRESS, moduleType: 5, typeLabel: 'Message ID Multisig' });
+    setupWalkSuccess({
+      address: DEFAULT_ISM_ADDRESS,
+      moduleType: 5,
+      typeLabel: 'Message ID Multisig',
+    });
     setupSafeNo();
 
     const result = await fetchWarpRouteIsm({

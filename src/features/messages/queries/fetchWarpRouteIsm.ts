@@ -1,8 +1,4 @@
-import {
-  ISafe__factory,
-  Mailbox__factory,
-  MailboxClient__factory,
-} from '@hyperlane-xyz/core';
+import { ISafe__factory, Mailbox__factory, MailboxClient__factory } from '@hyperlane-xyz/core';
 import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { MultiProvider } from '@hyperlane-xyz/sdk';
 import { isZeroishAddress, ProtocolType } from '@hyperlane-xyz/utils';
@@ -87,8 +83,20 @@ export async function fetchWarpRouteIsm(
   });
 
   const [origin, destination] = await Promise.all([
-    runSideWithTimeout(input.chainMetadata, wrappedProviders, sdkMultiProvider, input.origin, input.signal),
-    runSideWithTimeout(input.chainMetadata, wrappedProviders, sdkMultiProvider, input.destination, input.signal),
+    runSideWithTimeout(
+      input.chainMetadata,
+      wrappedProviders,
+      sdkMultiProvider,
+      input.origin,
+      input.signal,
+    ),
+    runSideWithTimeout(
+      input.chainMetadata,
+      wrappedProviders,
+      sdkMultiProvider,
+      input.destination,
+      input.signal,
+    ),
   ]);
 
   return { origin, destination };
@@ -116,10 +124,7 @@ async function runSideWithTimeout(
     return await fetchSide(chainMetadata, providers, sdkMultiProvider, side, ctrl.signal);
   } catch (e) {
     // If the abort came from our own timeout (parent didn't abort), surface as a timeout error.
-    if (
-      (e instanceof AbortError || e instanceof IsmWalkAbortError) &&
-      !parentSignal?.aborted
-    ) {
+    if ((e instanceof AbortError || e instanceof IsmWalkAbortError) && !parentSignal?.aborted) {
       return {
         kind: 'error',
         value: {

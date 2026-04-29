@@ -154,4 +154,3 @@ function SideData({ data }: { data: WarpRouteIsmSide }) {
     </div>
   );
 }
-
