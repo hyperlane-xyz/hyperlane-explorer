@@ -17,7 +17,7 @@ export function OwnerDisplay({ owner, ownerKind, safeInfo, chainName }: Props) {
     <div className="flex items-center gap-2 text-sm">
       <span className="font-bold text-gray-800">Owner</span>
       {isZero ? (
-        <span className="text-gray-500">No owner (immutable)</span>
+        <span className="text-gray-500">Ownership renounced</span>
       ) : (
         <>
           <AddressInline address={owner} chainName={chainName} />

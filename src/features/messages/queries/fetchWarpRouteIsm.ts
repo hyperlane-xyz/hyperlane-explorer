@@ -7,7 +7,7 @@ import { ethers } from 'ethers';
 import { AbortError, wrapWithAbort } from './abortableProvider';
 import { walkIsm, IsmWalkAbortError, type IsmNode } from './walkIsm';
 
-export type OwnerKind = 'eoa' | 'safe' | 'unknown';
+export type OwnerKind = 'eoa' | 'safe';
 export type SafeInfo = { threshold: number; ownerCount: number };
 export type IsmSource = 'token' | 'mailbox-default';
 
@@ -94,19 +94,42 @@ async function runSideWithTimeout(
     providers: wrappedProviders,
   });
 
+  const timeoutResult: WarpRouteIsmSideResult = {
+    kind: 'error',
+    value: {
+      chainName: side.chainName,
+      tokenAddress: side.tokenAddress,
+      error: `Timed out after ${SIDE_TIMEOUT_MS / 1000}s`,
+    },
+  };
+
+  // Race fetchSide against the side abort signal so the user-visible result
+  // is bounded exactly by SIDE_TIMEOUT_MS.
+  //
+  // TODO: ethers v5's underlying `fetchJson` has its own uncancellable retry
+  // loop (up to 12 attempts on HTTP 429), invisible to our abort proxy. After
+  // the user-visible timeout fires, a tail of background RPC requests can
+  // continue until those fetchJson loops exhaust. To fully kill the tail we'd
+  // need to bypass the explorer's SmartProvider for this feature and build
+  // our own provider chain with `throttleLimit: 1` on each connection (or
+  // override `connection.fetchFunc` with an AbortSignal-aware fetch).
+  const sideTimeoutPromise = new Promise<WarpRouteIsmSideResult>((resolve) => {
+    if (ctrl.signal.aborted) {
+      resolve(timeoutResult);
+    } else {
+      ctrl.signal.addEventListener('abort', () => resolve(timeoutResult), { once: true });
+    }
+  });
+
   try {
-    return await fetchSide(chainMetadata, wrappedProviders, sdkMultiProvider, side, ctrl.signal);
+    return await Promise.race([
+      fetchSide(chainMetadata, wrappedProviders, sdkMultiProvider, side, ctrl.signal),
+      sideTimeoutPromise,
+    ]);
   } catch (e) {
     // If the abort came from our own timeout (parent didn't abort), surface as a timeout error.
     if ((e instanceof AbortError || e instanceof IsmWalkAbortError) && !parentSignal?.aborted) {
-      return {
-        kind: 'error',
-        value: {
-          chainName: side.chainName,
-          tokenAddress: side.tokenAddress,
-          error: `Timed out after ${SIDE_TIMEOUT_MS / 1000}s`,
-        },
-      };
+      return timeoutResult;
     }
     throw e;
   } finally {
@@ -212,12 +235,18 @@ async function walkIsmTolerant(
   }
   try {
     const tree = await walkIsm(
-      { multiProvider: sdkMultiProvider, chainMetadata, chainName, signal },
+      {
+        multiProvider: sdkMultiProvider,
+        chainMetadata,
+        chainName,
+        signal,
+        visited: new Set<string>(),
+      },
       ismAddress,
     );
     return { tree };
   } catch (e) {
-    if (e instanceof IsmWalkAbortError) throw e;
+    if (e instanceof AbortError || e instanceof IsmWalkAbortError) throw e;
     return { tree: null, error: e instanceof Error ? e.message : String(e) };
   }
 }

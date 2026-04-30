@@ -41,35 +41,36 @@ export function WarpRouteIsmDetailsCard({ message, warpRouteDetails, blur }: Pro
 
   return (
     <Card className={clsx('w-full', blur && 'blur-xs')}>
-      <div className="flex w-full items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsExpanded((v) => !v)}
-            aria-expanded={isExpanded}
-            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} Warp Route Security`}
-            className="flex items-center gap-2"
-          >
-            <LockIcon width={22} height={26} color="#3d304c" className="opacity-70" />
-            <h3 className="text-md font-medium text-primary-800">Warp Route Security</h3>
-          </button>
+      <button
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-expanded={isExpanded}
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} Warp Route Security`}
+        className="flex w-full items-center gap-2"
+      >
+        <LockIcon width={22} height={26} color="#3d304c" className="opacity-70" />
+        <h3 className="text-md font-medium text-primary-800">Warp Route Security</h3>
+        {/* Stop propagation so clicking / Enter on the help icon doesn't
+            toggle the card. The tooltip itself is hover-driven so this is
+            mostly cosmetic, but it preserves the click-to-not-toggle
+            expectation a screen reader / keyboard user might have. */}
+        <span
+          role="presentation"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onKeyUp={(e) => e.stopPropagation()}
+        >
           <Tooltip
             id="warp-route-ism-info"
             content="ISM configuration and ownership for the warp route's origin and destination tokens."
           />
-        </div>
-        <button
-          onClick={() => setIsExpanded((v) => !v)}
-          aria-expanded={isExpanded}
-          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} Warp Route Security`}
-        >
-          <ChevronIcon
-            width={20}
-            height={20}
-            direction={isExpanded ? 'n' : 's'}
-            className="text-gray-400"
-          />
-        </button>
-      </div>
+        </span>
+        <ChevronIcon
+          width={20}
+          height={20}
+          direction={isExpanded ? 'n' : 's'}
+          className="ml-auto text-gray-400"
+        />
+      </button>
 
       {isExpanded && (
         <div className="mt-4 space-y-5">

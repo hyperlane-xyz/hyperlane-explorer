@@ -3,7 +3,7 @@ import type { ethers } from 'ethers';
 import { useMemo } from 'react';
 
 import { useStore } from '../../../metadataStore';
-import { useReadyMultiProvider } from '../../../store';
+import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import { fetchWarpRouteIsm, type WarpRouteIsmResult } from './fetchWarpRouteIsm';
 
@@ -30,6 +30,7 @@ export function useWarpRouteIsm({
 }: UseWarpRouteIsmInput): UseWarpRouteIsmResult {
   const chainMetadata = useStore((s) => s.chainMetadata);
   const explorerMultiProvider = useReadyMultiProvider();
+  const multiProviderVersion = useMultiProviderVersion();
 
   const queryKey = useMemo(
     () => [
@@ -38,8 +39,15 @@ export function useWarpRouteIsm({
       originTokenAddress,
       destinationChainName,
       destinationTokenAddress,
+      multiProviderVersion,
     ],
-    [originChainName, originTokenAddress, destinationChainName, destinationTokenAddress],
+    [
+      originChainName,
+      originTokenAddress,
+      destinationChainName,
+      destinationTokenAddress,
+      multiProviderVersion,
+    ],
   );
 
   const isReady =
@@ -92,6 +100,6 @@ export function useWarpRouteIsm({
   return {
     data,
     isLoading: isLoading && isReady,
-    error: error ? String(error) : undefined,
+    error: error ? (error instanceof Error ? error.message : String(error)) : undefined,
   };
 }

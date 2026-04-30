@@ -36,6 +36,11 @@ interface WalkContext {
   chainMetadata: ChainMap<ChainMetadata>;
   chainName: string;
   signal?: AbortSignal;
+  // Cycle guard. ISM graphs aren't enforced acyclic at the contract level (a
+  // misconfigured DomainRoutingIsm could route back to itself / an ancestor),
+  // and MAX_DEPTH only bounds the depth — without this, a cycle would still
+  // fire ~MAX_DEPTH worth of duplicate RPCs.
+  visited: Set<string>;
 }
 
 const SHALLOW_TYPE = '__shallow__' as const;
@@ -117,6 +122,11 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
     logger.warn(`ISM walk hit max depth (${MAX_DEPTH}) at ${address} on ${ctx.chainName}`);
     return { address, typeLabel: 'Unknown', error: 'Max recursion depth' };
   }
+  const lowerAddr = address.toLowerCase();
+  if (ctx.visited.has(lowerAddr)) {
+    return { address, typeLabel: 'Unknown', error: 'Cycle detected' };
+  }
+  ctx.visited.add(lowerAddr);
 
   // Per-call abort controller. Aborts on parent abort OR per-call timeout.
   // Critical: the wrapped provider for THIS call watches this signal, so when
@@ -239,6 +249,11 @@ function extractChildAddresses(
         out.push({ label: display(chainName), address: addr });
       }
     }
+  } else {
+    // Field signal for any future SDK ISM type we don't yet handle here. Most
+    // unhandled types are genuinely childless leaves (Multisig / Pausable /
+    // TrustedRelayer / etc.) so this is debug-level, not warn.
+    logger.debug(`extractChildAddresses: no children handler for type "${type}"`);
   }
 
   return out;
@@ -265,7 +280,7 @@ async function walkChildrenInParallel(
             const node = await walkIsm(ctx, entry.address, depth + 1);
             out[i] = { label: entry.label, node };
           } catch (e) {
-            if (e instanceof IsmWalkAbortError) throw e;
+            if (e instanceof AbortError || e instanceof IsmWalkAbortError) throw e;
             out[i] = {
               label: entry.label,
               node: {
