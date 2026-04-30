@@ -36,10 +36,10 @@ interface WalkContext {
   chainMetadata: ChainMap<ChainMetadata>;
   chainName: string;
   signal?: AbortSignal;
-  // Cycle guard. ISM graphs aren't enforced acyclic at the contract level (a
-  // misconfigured DomainRoutingIsm could route back to itself / an ancestor),
-  // and MAX_DEPTH only bounds the depth — without this, a cycle would still
-  // fire ~MAX_DEPTH worth of duplicate RPCs.
+  // Path-local cycle guard. Recursion-stack semantics: address is in the Set
+  // while we're walking through it, removed when we return. A back-edge on
+  // the same path → cycle; sibling references to the same shared sub-ISM
+  // (a legitimate DAG) are NOT cycles and walk normally.
   visited: Set<string>;
 }
 
@@ -122,6 +122,10 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
     logger.warn(`ISM walk hit max depth (${MAX_DEPTH}) at ${address} on ${ctx.chainName}`);
     return { address, typeLabel: 'Unknown', error: 'Max recursion depth' };
   }
+  // Path-local cycle detection: only flag a back-edge on the CURRENT recursion
+  // path. A side-global Set would mis-label legitimate DAGs (e.g. an
+  // Aggregation whose two slots share a Pausable, or two Routing branches
+  // sharing a common Multisig leaf) as cycles. Add on entry, delete in finally.
   const lowerAddr = address.toLowerCase();
   if (ctx.visited.has(lowerAddr)) {
     return { address, typeLabel: 'Unknown', error: 'Cycle detected' };
@@ -208,6 +212,7 @@ export async function walkIsm(ctx: WalkContext, address: string, depth = 0): Pro
 
     return node;
   } finally {
+    ctx.visited.delete(lowerAddr);
     clearTimeout(callTimer);
     ctx.signal?.removeEventListener('abort', onParentAbort);
   }

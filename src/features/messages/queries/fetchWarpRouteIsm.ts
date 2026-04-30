@@ -133,6 +133,13 @@ async function runSideWithTimeout(
     }
     throw e;
   } finally {
+    // Abort the side's controller on ANY completion path (success, per-call
+    // timeout error, side timeout, parent abort). Without this, a per-call
+    // `timeout()` rejection unwinds through the success path and leaves
+    // `ctrl` un-aborted — wrapped providers wouldn't short-circuit, and
+    // SmartProvider's retry/fallback chain on the abandoned call would
+    // keep firing background RPCs. Idempotent in already-aborted cases.
+    ctrl.abort();
     clearTimeout(timer);
     parentSignal?.removeEventListener('abort', parentListener);
   }
