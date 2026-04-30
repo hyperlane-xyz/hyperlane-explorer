@@ -52,6 +52,10 @@ const WarpTransferDetailsCard = dynamic(
   () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
 );
+const WarpRouteIsmDetailsCard = dynamic(
+  () => import('./cards/WarpRouteIsmDetailsCard').then((mod) => mod.WarpRouteIsmDetailsCard),
+  { loading: () => <DetailCardSkeleton className="w-full" /> },
+);
 const TimelineCard = dynamic(() => import('./cards/TimelineCard').then((mod) => mod.TimelineCard), {
   loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
 });
@@ -188,11 +192,18 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         </Suspense>
         {showTimeline && <TimelineCard message={message} blur={blur} />}
         {warpRouteDetails && (
-          <WarpTransferDetailsCard
-            message={message}
-            warpRouteDetails={warpRouteDetails}
-            blur={blur}
-          />
+          <>
+            <WarpTransferDetailsCard
+              message={message}
+              warpRouteDetails={warpRouteDetails}
+              blur={blur}
+            />
+            <WarpRouteIsmDetailsCard
+              message={message}
+              warpRouteDetails={warpRouteDetails}
+              blur={blur}
+            />
+          </>
         )}
         <WarpRouteVisualizationCard
           message={message}
