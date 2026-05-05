@@ -62,9 +62,26 @@ export function buildIcaRouterAddressMap(): ChainMap<Address> {
 // Cached ICA router address map built at module load time
 const ICA_ROUTER_MAP = buildIcaRouterAddressMap();
 
-// Get all known ICA router addresses as a Set for fast lookup
-function getIcaRouterAddresses(): Set<string> {
-  return new Set(Object.values(ICA_ROUTER_MAP).map((addr) => addr.toLowerCase()));
+// Normalize to bytes32 hex so registry entries (EVM-style 0x hex) and
+// resolved message addresses (e.g. base58 for Tron) compare equal when they
+// represent the same on-chain contract.
+function toCanonicalBytes32(addr: Address): string | null {
+  if (!addr) return null;
+  try {
+    return addressToBytes32(addr).toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+// Get all known ICA router addresses, canonicalized to bytes32 hex
+function getIcaRouterBytes32Set(): Set<string> {
+  const set = new Set<string>();
+  for (const addr of Object.values(ICA_ROUTER_MAP)) {
+    const canonical = toCanonicalBytes32(addr);
+    if (canonical) set.add(canonical);
+  }
+  return set;
 }
 
 /**
@@ -73,8 +90,9 @@ function getIcaRouterAddresses(): Set<string> {
 export function isAddressIcaRouter(addr: Address): boolean {
   if (!addr) return false;
   try {
-    const icaRouters = getIcaRouterAddresses();
-    return icaRouters.has(addr.toLowerCase());
+    const canonical = toCanonicalBytes32(addr);
+    if (!canonical) return false;
+    return getIcaRouterBytes32Set().has(canonical);
   } catch (error) {
     logger.warn('Error checking if address is ICA router', error, addr);
     return false;
