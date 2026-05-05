@@ -294,9 +294,6 @@ export interface WarpToken {
   symbol: string;
   name: string;
   decimals: number;
-  // Wire format decimals = max decimals among all tokens in this warp route
-  // Used for decoding scaled amounts in message body (see og.tsx for details)
-  wireDecimals: number;
   scale?: ScaleInput;
   logoURI: string;
   chainName: string;
@@ -335,13 +332,6 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
     for (const route of Object.values(data)) {
       if (!route?.tokens) continue;
 
-      // Calculate max decimals for this warp route (wire format decimals)
-      // This is how warp routes normalize amounts across chains with different decimals
-      const wireDecimals = route.tokens.reduce(
-        (max, t) => (t.decimals !== undefined && t.decimals > max ? t.decimals : max),
-        0,
-      );
-
       for (const token of route.tokens) {
         if (
           !token.addressOrDenom ||
@@ -367,7 +357,6 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
           chainName,
           decimals: token.decimals,
           scale: token.scale,
-          wireDecimals,
           logoURI: logoURI.startsWith('/') ? `${links.imgPath}${logoURI}` : logoURI,
           name: token.name || '',
           symbol: token.symbol,

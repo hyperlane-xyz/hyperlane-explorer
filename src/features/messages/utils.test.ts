@@ -23,7 +23,6 @@ const RECIPIENT_BYTES32 = '0x000000000000000000000000' + RECIPIENT.slice(2);
 interface TokenConfig {
   decimals: number;
   scale?: number | { numerator: number; denominator: number };
-  wireDecimals?: number;
 }
 
 function buildTestSetup({
@@ -35,8 +34,6 @@ function buildTestSetup({
   destToken: TokenConfig;
   messageAmount: bigint;
 }) {
-  const wireDecimals = Math.max(originToken.decimals, destToken.decimals);
-
   // Message body: 32 bytes recipient + 32 bytes amount
   const amountHex = messageAmount.toString(16).padStart(64, '0');
   const recipientHex = RECIPIENT_BYTES32.slice(2);
@@ -69,7 +66,7 @@ function buildTestSetup({
         symbol: 'ORIG',
         name: 'Origin',
         scale: originToken.scale,
-        wireDecimals: originToken.wireDecimals ?? wireDecimals,
+        wireDecimals: originToken.decimals,
       },
     },
     [DEST_CHAIN]: {
@@ -81,7 +78,7 @@ function buildTestSetup({
         symbol: 'DEST',
         name: 'Destination',
         scale: destToken.scale,
-        wireDecimals: destToken.wireDecimals ?? wireDecimals,
+        wireDecimals: destToken.decimals,
       },
     },
   };
