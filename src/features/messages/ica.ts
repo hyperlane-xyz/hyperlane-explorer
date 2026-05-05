@@ -447,8 +447,26 @@ function isMulticallAddress(address: Address, chainName: string): boolean {
 function tryDecodeMulticall(
   txData: string,
   mailboxInterface: utils.Interface,
+  mailboxAddress: string | undefined,
 ): Array<{ metadata: string; message: string }> {
   const results: Array<{ metadata: string; message: string }> = [];
+  if (!mailboxAddress) return results;
+  const mailboxLower = mailboxAddress.toLowerCase();
+
+  const tryParseProcessCall = (target: string, callData: string) => {
+    if (target.toLowerCase() !== mailboxLower) return;
+    try {
+      const parsed = mailboxInterface.parseTransaction({ data: callData });
+      if (parsed.name === 'process') {
+        results.push({
+          metadata: parsed.args[0] as string,
+          message: parsed.args[1] as string,
+        });
+      }
+    } catch {
+      // Not a process call, continue
+    }
+  };
 
   try {
     const selector = txData.slice(0, 10);
@@ -465,20 +483,7 @@ function tryDecodeMulticall(
         allowFailure: boolean;
         callData: string;
       }>;
-
-      for (const call of calls) {
-        try {
-          const parsed = mailboxInterface.parseTransaction({ data: call.callData });
-          if (parsed.name === 'process') {
-            results.push({
-              metadata: parsed.args[0] as string,
-              message: parsed.args[1] as string,
-            });
-          }
-        } catch {
-          // Not a process call, continue
-        }
-      }
+      for (const call of calls) tryParseProcessCall(call.target, call.callData);
       return results;
     }
 
@@ -495,20 +500,7 @@ function tryDecodeMulticall(
         value: BigNumber;
         callData: string;
       }>;
-
-      for (const call of calls) {
-        try {
-          const parsed = mailboxInterface.parseTransaction({ data: call.callData });
-          if (parsed.name === 'process') {
-            results.push({
-              metadata: parsed.args[0] as string,
-              message: parsed.args[1] as string,
-            });
-          }
-        } catch {
-          // Not a process call, continue
-        }
-      }
+      for (const call of calls) tryParseProcessCall(call.target, call.callData);
       return results;
     }
 
@@ -520,20 +512,7 @@ function tryDecodeMulticall(
         '0x' + txData.slice(10),
       );
       const calls = decoded[1] as Array<{ target: string; callData: string }>;
-
-      for (const call of calls) {
-        try {
-          const parsed = mailboxInterface.parseTransaction({ data: call.callData });
-          if (parsed.name === 'process') {
-            results.push({
-              metadata: parsed.args[0] as string,
-              message: parsed.args[1] as string,
-            });
-          }
-        } catch {
-          // Not a process call, continue
-        }
-      }
+      for (const call of calls) tryParseProcessCall(call.target, call.callData);
       return results;
     }
 
@@ -545,20 +524,7 @@ function tryDecodeMulticall(
         '0x' + txData.slice(10),
       );
       const calls = decoded[0] as Array<{ target: string; callData: string }>;
-
-      for (const call of calls) {
-        try {
-          const parsed = mailboxInterface.parseTransaction({ data: call.callData });
-          if (parsed.name === 'process') {
-            results.push({
-              metadata: parsed.args[0] as string,
-              message: parsed.args[1] as string,
-            });
-          }
-        } catch {
-          // Not a process call, continue
-        }
-      }
+      for (const call of calls) tryParseProcessCall(call.target, call.callData);
       return results;
     }
   } catch (error) {
@@ -619,7 +585,7 @@ export async function fetchRevealCalls(
     // Check if this is a multicall transaction
     if (isMulticallAddress(tx.to, destinationChainName)) {
       logger.debug('Multicall transaction detected');
-      const processCalls = tryDecodeMulticall(tx.data, mailboxInterface);
+      const processCalls = tryDecodeMulticall(tx.data, mailboxInterface, mailboxAddress);
 
       if (processCalls.length > 0) {
         // Find the process call that matches our message ID
@@ -664,7 +630,7 @@ export async function fetchRevealCalls(
     }
 
     // Try multicall decode
-    const processCalls = tryDecodeMulticall(tx.data, mailboxInterface);
+    const processCalls = tryDecodeMulticall(tx.data, mailboxInterface, mailboxAddress);
     if (processCalls.length > 0) {
       const { messageId: computeMessageId } = await import('@hyperlane-xyz/utils');
 

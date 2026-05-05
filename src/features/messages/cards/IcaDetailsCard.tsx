@@ -1,5 +1,6 @@
 import { addressToBytes32, formatMessage, fromWei, strip0x } from '@hyperlane-xyz/utils';
 import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import { BigNumber } from 'ethers';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -46,12 +47,12 @@ interface Props {
   debugResult?: MessageDebugResult;
 }
 
-function getFormattedCallValue(value: string) {
+function getFormattedCallValue(value: string, nativeDecimals: number) {
   try {
     const hasValue = BigNumber.from(value).gt(0);
     return {
       hasValue,
-      formattedValue: hasValue ? fromWei(value, 18) : '0',
+      formattedValue: hasValue ? fromWei(value, nativeDecimals) : '0',
     };
   } catch {
     return { hasValue: false, formattedValue: '0' };
@@ -76,6 +77,8 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || undefined;
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || undefined;
+  const destinationNativeDecimals =
+    chainMetadataResolver.tryGetChainMetadata(destinationDomainId)?.nativeToken?.decimals ?? 18;
 
   const decodeResult = useMemo(() => decodeIcaBody(body), [body]);
 
@@ -603,6 +606,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                       explorerUrl={explorerUrls[`call-${i}`]}
                       blur={blur}
                       failedCallIndex={failedCallIndex}
+                      nativeDecimals={destinationNativeDecimals}
                     />
                   ))}
 
@@ -634,6 +638,7 @@ function IcaCallDetails({
   explorerUrl,
   blur,
   failedCallIndex,
+  nativeDecimals,
 }: {
   call: IcaCall;
   index: number;
@@ -641,24 +646,24 @@ function IcaCallDetails({
   explorerUrl: string | null | undefined;
   blur: boolean;
   failedCallIndex: number;
+  nativeDecimals: number;
 }) {
   const { hasValue, formattedValue } = useMemo(
-    () => getFormattedCallValue(call.value),
-    [call.value],
+    () => getFormattedCallValue(call.value, nativeDecimals),
+    [call.value, nativeDecimals],
   );
 
-  // Determine call state for styling
   const isFailed = failedCallIndex === index;
 
-  // Determine styling based on state
-  const borderClass = isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50';
-  const labelClass = isFailed ? 'text-red-600' : 'text-gray-600';
-  const statusSuffix = isFailed ? ' - Failed' : '';
-
   return (
-    <div className={`rounded-md border p-3 ${borderClass}`}>
-      <label className={`text-xs font-medium ${labelClass}`}>
-        {`Call ${index + 1} of ${total}${statusSuffix}`}
+    <div
+      className={clsx(
+        'rounded-md border p-3',
+        isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50',
+      )}
+    >
+      <label className={clsx('text-xs font-medium', isFailed ? 'text-red-600' : 'text-gray-600')}>
+        {`Call ${index + 1} of ${total}${isFailed ? ' - Failed' : ''}`}
       </label>
       <div className="mt-2 space-y-2">
         <KeyValueRow
