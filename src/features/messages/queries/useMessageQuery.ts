@@ -14,15 +14,6 @@ const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
 const LATEST_QUERY_LIMIT = 100;
 const SEARCH_QUERY_LIMIT = 50;
-const TRANSACTION_MESSAGE_COUNT_QUERY = `
-  query ($identifier: bytea!) @cached(ttl: 5) {
-    message_view_aggregate(where: {origin_tx_hash: {_eq: $identifier}}) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
 
 // Larger batch size for pending filter since most messages are delivered quickly,
 // so we need to fetch more to find pending ones.
@@ -171,35 +162,5 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     hasRun: !!data,
     isMessageFound,
     message,
-  };
-}
-
-/**
- * Hook to count messages in a given origin transaction.
- * Used to determine if we should show the "View all messages in this transaction" link.
- */
-export function useTransactionMessageCount(originTxHash: string | undefined) {
-  const variables = useMemo(
-    () => ({ identifier: searchValueToPostgresBytea(originTxHash || '') }),
-    [originTxHash],
-  );
-
-  // Execute query
-  const [{ data }] = useQuery<TransactionMessageCountQueryResult>({
-    query: TRANSACTION_MESSAGE_COUNT_QUERY,
-    variables,
-    pause: !originTxHash,
-  });
-
-  const messageCount = data?.message_view_aggregate.aggregate?.count;
-
-  return messageCount ?? 0;
-}
-
-interface TransactionMessageCountQueryResult {
-  message_view_aggregate: {
-    aggregate: {
-      count: number;
-    } | null;
   };
 }

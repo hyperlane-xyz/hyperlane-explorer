@@ -12,6 +12,7 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName, isEvmChain } from '../chains/utils';
+import { useTransactionMessageCount } from '../transactions/useTransactionMessageCount';
 import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
@@ -20,7 +21,7 @@ import { useIsIcaMessage } from './icaUtils';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
-import { useMessageQuery, useTransactionMessageCount } from './queries/useMessageQuery';
+import { useMessageQuery } from './queries/useMessageQuery';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const ContentDetailsCard = dynamic(

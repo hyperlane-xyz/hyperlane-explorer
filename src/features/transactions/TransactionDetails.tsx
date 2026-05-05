@@ -4,8 +4,8 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Card } from '../../components/layout/Card';
 import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
-import { useTransactionMessageCount } from '../messages/queries/useMessageQuery';
 import { MessageSummaryRow } from './MessageSummaryRow';
+import { useTransactionMessageCount } from './useTransactionMessageCount';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
 
 interface Props {

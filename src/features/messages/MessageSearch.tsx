@@ -2,7 +2,7 @@ import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -92,7 +92,6 @@ export function MessageSearch() {
 
   // Search text input
   const [searchInput, setSearchInput] = useState(defaultSearchQuery);
-  const hasUserEditedSearchRef = useRef(false);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const trimmedInput = debouncedSearchInput.trim();
   const hasInput = !!trimmedInput;
@@ -233,8 +232,15 @@ export function MessageSearch() {
     if (!hasInput) return null;
 
     // Don't redirect if filters are applied
-    if (originChainFilter || destinationChainFilter || startTimeFilter || endTimeFilter)
+    if (
+      originChainFilter ||
+      destinationChainFilter ||
+      startTimeFilter ||
+      endTimeFilter ||
+      statusFilter !== 'all'
+    ) {
       return null;
+    }
 
     // Only GraphQL-backed results can be shown on the tx page today.
     if (!isMessagesFound || !messageList.length) return null;
@@ -265,28 +271,16 @@ export function MessageSearch() {
     originChainFilter,
     sanitizedInput,
     startTimeFilter,
+    statusFilter,
   ]);
 
-  // Perform the redirect
-  const lastPushedRedirectUrl = useRef<string | null>(null);
+  // Perform the redirect after search confirms the target page.
   useEffect(() => {
-    if (
-      !redirectUrl ||
-      !hasUserEditedSearchRef.current ||
-      lastPushedRedirectUrl.current === redirectUrl
-    )
-      return;
-    lastPushedRedirectUrl.current = redirectUrl;
+    if (!redirectUrl) return;
     router.push(redirectUrl).catch((e) => {
-      lastPushedRedirectUrl.current = null;
       logger.error('Error redirecting search result', e);
     });
   }, [redirectUrl, router]);
-
-  const onChangeSearchInput = useCallback((value: string) => {
-    hasUserEditedSearchRef.current = true;
-    setSearchInput(value);
-  }, []);
 
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
@@ -314,7 +308,7 @@ export function MessageSearch() {
     <>
       <SearchBar
         value={searchInput}
-        onChangeValue={onChangeSearchInput}
+        onChangeValue={setSearchInput}
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, message id, or warp route"
       />

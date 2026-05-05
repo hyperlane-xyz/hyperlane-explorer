@@ -25,15 +25,10 @@ interface Props {
 type MessageType = 'warp' | 'ica' | 'generic';
 
 export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
-  const [isManuallyToggled, setIsManuallyToggled] = useState(false);
-  const [manualExpandState, setManualExpandState] = useState(false);
-
-  // Use forceExpanded unless user has manually toggled
-  const isExpanded = isManuallyToggled ? manualExpandState : (forceExpanded ?? false);
+  const [isExpanded, setIsExpanded] = useState(forceExpanded ?? false);
 
   const toggleExpanded = () => {
-    setIsManuallyToggled(true);
-    setManualExpandState(!isExpanded);
+    setIsExpanded((prev) => !prev);
   };
 
   const chainMetadataResolver = useChainMetadataResolver();
@@ -80,9 +75,8 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
   const isIcaMsg = messageType === 'ica';
 
-  // Reset manual toggle when forceExpanded changes
   useEffect(() => {
-    setIsManuallyToggled(false);
+    setIsExpanded(forceExpanded ?? false);
   }, [forceExpanded]);
 
   return (
