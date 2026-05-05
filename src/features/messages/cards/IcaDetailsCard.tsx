@@ -72,7 +72,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   } = message;
   const isDelivered = status === MessageStatus.Delivered;
   const chainMetadataResolver = useChainMetadataResolver();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || undefined;
   const destinationChainName =
