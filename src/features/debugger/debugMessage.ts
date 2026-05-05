@@ -12,6 +12,8 @@ import {
   errorToString,
   formatMessage,
   isValidAddress,
+  isEVMLike,
+  ProtocolType,
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
@@ -89,6 +91,8 @@ export async function debugMessage(
     senderBytes,
     body,
     destName,
+    destDomain,
+    multiProvider,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   else details.calldataDetails = deliveryResult.calldataDetails;
@@ -151,6 +155,8 @@ async function debugMessageDelivery(
   senderBytes: string,
   body: string,
   destName: string,
+  destDomain: DomainId,
+  multiProvider: MultiProtocolProvider,
 ) {
   const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
@@ -208,6 +214,8 @@ async function debugMessageDelivery(
       recipient,
       body,
       originDomain,
+      destDomain,
+      multiProvider,
       destProvider,
     );
     if (icaDebugResult) {
@@ -403,8 +411,13 @@ async function tryDebugIcaMsg(
   recipient: Address,
   body: string,
   originDomainId: DomainId,
+  destinationDomainId: DomainId,
+  multiProvider: MultiProtocolProvider,
   destinationProvider: Provider,
 ): Promise<IcaDebugResult | null> {
+  if (!isEVMLike(multiProvider.tryGetProtocol(destinationDomainId) ?? ProtocolType.Unknown)) {
+    return null;
+  }
   if (!isIcaMessage({ sender, recipient })) return null;
   logger.debug('Message is for an ICA');
 

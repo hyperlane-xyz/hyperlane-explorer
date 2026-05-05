@@ -14,7 +14,7 @@ import { useQuery as useUrqlQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../metadataStore';
 import { useReadyMultiProvider, useRegistry } from '../../store';
-import { IcaCall, Message, MessageStub } from '../../types';
+import { IcaCall } from '../../types';
 import { logger } from '../../utils/logger';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { isPiChain } from '../chains/utils';
@@ -46,7 +46,7 @@ export interface DecodedIcaMessage {
 }
 
 // Build a map of chainName -> ICA router address from the registry
-export function buildIcaRouterAddressMap(): ChainMap<Address> {
+function buildIcaRouterAddressMap(): ChainMap<Address> {
   const map: ChainMap<Address> = {};
 
   for (const [chainName, addresses] of Object.entries(chainAddresses)) {
@@ -261,22 +261,6 @@ export function decodeIcaBody(body: string): DecodedIcaMessage | null {
 }
 
 /**
- * Parse ICA message details from a message
- */
-export function parseIcaMessageDetails(message: Message | MessageStub): DecodedIcaMessage | null {
-  const { body, sender, recipient } = message;
-
-  // First verify this is an ICA message
-  if (!isIcaMessage({ sender, recipient })) {
-    return null;
-  }
-
-  if (!body) return null;
-
-  return decodeIcaBody(body);
-}
-
-/**
  * Get the ICA router address for a given chain
  */
 export function getIcaRouterAddress(chainName: string): Address | undefined {
@@ -341,7 +325,7 @@ export async function computeIcaAddress(
  * - Bytes 20-52: Salt (bytes32)
  * - Bytes 52+: ABI-encoded CallLib.Call[]
  */
-export function decodeRevealMetadata(metadata: string): {
+function decodeRevealMetadata(metadata: string): {
   icaAddress: string;
   salt: string;
   calls: IcaCall[];

@@ -3,6 +3,7 @@ import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { BigNumber } from 'ethers';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { SectionCard } from '../../../components/layout/SectionCard';
@@ -23,6 +24,7 @@ import { KeyValueRow } from './KeyValueRow';
 
 /**
  * Check if a bytes32 salt contains an address (first 12 bytes are zeros, last 20 bytes are non-zero).
+ * This is surfaced as User only for ICA user-salt mode, where the router encodes the EOA in bytes12(0) + address.
  * Returns the address if valid, or null otherwise.
  */
 function extractAddressFromSalt(salt: string | undefined): string | null {
@@ -57,6 +59,78 @@ function getFormattedCallValue(value: string, nativeDecimals: number) {
   } catch {
     return { hasValue: false, formattedValue: '0' };
   }
+}
+
+type IcaStatusTone = 'done' | 'pending';
+
+const ICA_STATUS_TONE_STYLES: Record<
+  IcaStatusTone,
+  {
+    border: string;
+    bg: string;
+    status: string;
+    title: string;
+    body: string;
+  }
+> = {
+  done: {
+    border: 'border-green-200',
+    bg: 'bg-green-100/40',
+    status: 'text-green-600',
+    title: 'text-green-800',
+    body: 'text-green-800',
+  },
+  pending: {
+    border: 'border-amber-200',
+    bg: 'bg-amber-50',
+    status: 'text-amber-600',
+    title: 'text-amber-800',
+    body: 'text-amber-800',
+  },
+};
+
+function IcaStatusPanel({
+  tone,
+  statusLabel,
+  title,
+  titleAccessory,
+  commitment,
+  footer,
+}: {
+  tone: IcaStatusTone;
+  statusLabel: string;
+  title: string;
+  titleAccessory?: ReactNode;
+  commitment: string;
+  footer?: ReactNode;
+}) {
+  const styles = ICA_STATUS_TONE_STYLES[tone];
+
+  return (
+    <div className={clsx('rounded border p-3', styles.border, styles.bg)}>
+      <div className="flex items-start gap-2">
+        <span className={clsx('text-xs font-medium', styles.status)}>{statusLabel}</span>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={clsx('text-sm font-medium', styles.title)}>{title}</span>
+            {titleAccessory}
+          </div>
+          <div className="mt-2 flex items-start gap-2">
+            <div className={clsx('min-w-0 flex-1 break-all font-mono text-xs', styles.body)}>
+              {commitment}
+            </div>
+            <CopyButton
+              copyValue={commitment}
+              width={12}
+              height={12}
+              className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+            />
+          </div>
+          {footer}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function IcaDetailsCard({ message, blur, debugResult }: Props) {
@@ -298,79 +372,55 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 {relatedMessage &&
                 relatedMessageType === IcaMessageType.REVEAL &&
                 relatedMessage.status === MessageStatus.Delivered ? (
-                  <div className="rounded border border-green-200 bg-green-100/40 p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-green-600">Done</span>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-green-800">
-                          Commitment Revealed
-                        </div>
-                        <div className="mt-2 flex items-start gap-2">
-                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
-                            {decodeResult.commitment}
-                          </div>
-                          <CopyButton
-                            copyValue={decodeResult.commitment}
-                            width={12}
-                            height={12}
-                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                          />
-                        </div>
-                        <div className="mt-2">
-                          <Link
-                            href={`/message/${relatedMessage.msgId}`}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
-                          >
-                            View REVEAL message
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <IcaStatusPanel
+                    tone="done"
+                    statusLabel="Done"
+                    title="Commitment Revealed"
+                    commitment={decodeResult.commitment}
+                    titleAccessory={
+                      <Link
+                        href={`/message/${relatedMessage.msgId}`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
+                      >
+                        View REVEAL message
+                      </Link>
+                    }
+                  />
                 ) : (
-                  <div className="rounded border border-amber-200 bg-amber-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-amber-600">Pending</span>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-amber-800">
-                          {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
-                            ? 'Reveal Pending Delivery'
-                            : 'Commitment Pending Reveal'}
-                        </div>
-                        <div className="mt-2 flex items-start gap-2">
-                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
-                            {decodeResult.commitment}
-                          </div>
-                          <CopyButton
-                            copyValue={decodeResult.commitment}
-                            width={12}
-                            height={12}
-                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                          />
-                        </div>
+                  <IcaStatusPanel
+                    tone="pending"
+                    statusLabel="Pending"
+                    title={
+                      relatedMessage && relatedMessageType === IcaMessageType.REVEAL
+                        ? 'Reveal Pending Delivery'
+                        : 'Commitment Pending Reveal'
+                    }
+                    commitment={decodeResult.commitment}
+                    titleAccessory={
+                      relatedMessage && relatedMessageType === IcaMessageType.REVEAL ? (
+                        <Link
+                          href={`/message/${relatedMessage.msgId}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                        >
+                          View REVEAL message
+                        </Link>
+                      ) : null
+                    }
+                    footer={
+                      <>
                         <div className="mt-2 text-xs text-amber-700">
                           {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
                             ? 'The REVEAL message is waiting to be delivered on the destination chain.'
                             : 'A subsequent REVEAL message with matching calls must be sent to execute.'}
                         </div>
-                        {relatedMessage && relatedMessageType === IcaMessageType.REVEAL && (
-                          <div className="mt-2">
-                            <Link
-                              href={`/message/${relatedMessage.msgId}`}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
-                            >
-                              View REVEAL message
-                            </Link>
-                          </div>
-                        )}
                         {isRelatedFetching && (
                           <div className="mt-2 text-xs text-amber-600">
                             Looking for related REVEAL message...
                           </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </>
+                    }
+                  />
                 )}
               </div>
             )}
@@ -379,82 +429,58 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
             {decodeResult.messageType === IcaMessageType.REVEAL && decodeResult.commitment && (
               <div>
                 {isDelivered ? (
-                  <div className="rounded border border-green-200 bg-green-100/40 p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-green-600">Done</span>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-green-800">
-                          Commitment Revealed
+                  <IcaStatusPanel
+                    tone="done"
+                    statusLabel="Done"
+                    title="Commitment Revealed"
+                    commitment={decodeResult.commitment}
+                    titleAccessory={
+                      relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT ? (
+                        <Link
+                          href={`/message/${relatedMessage.msgId}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
+                        >
+                          View corresponding COMMITMENT message
+                        </Link>
+                      ) : null
+                    }
+                    footer={
+                      isRelatedFetching ? (
+                        <div className="mt-2 text-xs text-green-600">
+                          Looking for related COMMITMENT message...
                         </div>
-                        <div className="mt-2 flex items-start gap-2">
-                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
-                            {decodeResult.commitment}
-                          </div>
-                          <CopyButton
-                            copyValue={decodeResult.commitment}
-                            width={12}
-                            height={12}
-                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                          />
-                        </div>
-                        {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
-                          <div className="mt-2">
-                            <Link
-                              href={`/message/${relatedMessage.msgId}`}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
-                            >
-                              View corresponding COMMITMENT message
-                            </Link>
-                          </div>
-                        )}
-                        {isRelatedFetching && (
-                          <div className="mt-2 text-xs text-green-600">
-                            Looking for related COMMITMENT message...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                      ) : null
+                    }
+                  />
                 ) : (
-                  <div className="rounded border border-amber-200 bg-amber-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-amber-600">Pending</span>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-amber-800">
-                          Revealing Commitment
-                        </div>
-                        <div className="mt-2 flex items-start gap-2">
-                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
-                            {decodeResult.commitment}
-                          </div>
-                          <CopyButton
-                            copyValue={decodeResult.commitment}
-                            width={12}
-                            height={12}
-                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                          />
-                        </div>
+                  <IcaStatusPanel
+                    tone="pending"
+                    statusLabel="Pending"
+                    title="Revealing Commitment"
+                    commitment={decodeResult.commitment}
+                    titleAccessory={
+                      relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT ? (
+                        <Link
+                          href={`/message/${relatedMessage.msgId}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                        >
+                          View corresponding COMMITMENT message
+                        </Link>
+                      ) : null
+                    }
+                    footer={
+                      <>
                         <div className="mt-2 text-xs text-amber-700">
                           Waiting for message to be delivered on the destination chain.
                         </div>
-                        {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
-                          <div className="mt-2">
-                            <Link
-                              href={`/message/${relatedMessage.msgId}`}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
-                            >
-                              View corresponding COMMITMENT message
-                            </Link>
-                          </div>
-                        )}
                         {isRelatedFetching && (
                           <div className="mt-2 text-xs text-amber-600">
                             Looking for related COMMITMENT message...
                           </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </>
+                    }
+                  />
                 )}
                 {/* CCIP Read ISM section - only show when pending to help debug delivery issues */}
                 {!isDelivered && (
