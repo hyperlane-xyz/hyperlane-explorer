@@ -72,7 +72,6 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   } = message;
   const isDelivered = status === MessageStatus.Delivered;
   const chainMetadataResolver = useChainMetadataResolver();
-  const [isExpanded, setIsExpanded] = useState(true);
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || undefined;
   const destinationChainName =
@@ -271,370 +270,357 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   }, [getExplorerUrls]);
 
   return (
-    <Card className="w-full space-y-4" padding="p-0">
-      <div className="flex items-center justify-between bg-gray-150 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary-400" />
-          <h3 className="text-sm font-medium text-gray-700">Interchain Account Details</h3>
-          <Tooltip
-            id="ica-info"
-            content="Details about this Interchain Account message, including the owner, derived account address, and calls to be executed on the destination chain."
-          />
-        </div>
-        <button
-          type="button"
-          className="text-xs font-medium text-blue-500 hover:text-blue-600"
-          onClick={() => setIsExpanded((value) => !value)}
-        >
-          {isExpanded ? 'Hide details' : 'Show details'}
-        </button>
+    <Card className="w-full">
+      <div className="flex items-center gap-2">
+        <h3 className="text-md font-medium text-primary-800">Interchain Account Details</h3>
+        <Tooltip
+          id="ica-info"
+          content="Details about this Interchain Account message, including the owner, derived account address, and calls to be executed on the destination chain."
+        />
       </div>
-      {isExpanded && (
-        <div className="space-y-4 p-3 sm:p-4">
-          {decodeResult ? (
-            <>
-              {/* Message type info */}
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">{messageTypeLabel}</span>
-                <span className="mx-1">-</span>
-                <span>{messageTypeDescription}</span>
-              </div>
-              {/* Status section for COMMITMENT type - at the top */}
-              {decodeResult.messageType === IcaMessageType.COMMITMENT &&
-                decodeResult.commitment && (
-                  <div>
-                    {relatedMessage &&
-                    relatedMessageType === IcaMessageType.REVEAL &&
-                    relatedMessage.status === MessageStatus.Delivered ? (
-                      <div className="rounded-md border border-green-200 bg-green-50 p-3">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-green-600">Done</span>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-green-800">
-                              Commitment Revealed
-                            </div>
-                            <div className="mt-2 flex items-start gap-2">
-                              <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
-                                {decodeResult.commitment}
-                              </div>
-                              <CopyButton
-                                copyValue={decodeResult.commitment}
-                                width={12}
-                                height={12}
-                                className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                              />
-                            </div>
-                            <div className="mt-2">
-                              <Link
-                                href={`/message/${relatedMessage.msgId}`}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
-                              >
-                                View REVEAL message
-                              </Link>
-                            </div>
+      <div className="mt-4 space-y-4">
+        {decodeResult ? (
+          <>
+            {/* Message type info */}
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{messageTypeLabel}</span>
+              <span className="mx-1">-</span>
+              <span>{messageTypeDescription}</span>
+            </div>
+            {/* Status section for COMMITMENT type - at the top */}
+            {decodeResult.messageType === IcaMessageType.COMMITMENT && decodeResult.commitment && (
+              <div>
+                {relatedMessage &&
+                relatedMessageType === IcaMessageType.REVEAL &&
+                relatedMessage.status === MessageStatus.Delivered ? (
+                  <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-medium text-green-600">Done</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-green-800">
+                          Commitment Revealed
+                        </div>
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
+                            {decodeResult.commitment}
                           </div>
+                          <CopyButton
+                            copyValue={decodeResult.commitment}
+                            width={12}
+                            height={12}
+                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          />
+                        </div>
+                        <div className="mt-2">
+                          <Link
+                            href={`/message/${relatedMessage.msgId}`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
+                          >
+                            View REVEAL message
+                          </Link>
                         </div>
                       </div>
-                    ) : (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-amber-600">Pending</span>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-amber-800">
-                              {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
-                                ? 'Reveal Pending Delivery'
-                                : 'Commitment Pending Reveal'}
-                            </div>
-                            <div className="mt-2 flex items-start gap-2">
-                              <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
-                                {decodeResult.commitment}
-                              </div>
-                              <CopyButton
-                                copyValue={decodeResult.commitment}
-                                width={12}
-                                height={12}
-                                className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                              />
-                            </div>
-                            <div className="mt-2 text-xs text-amber-700">
-                              {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
-                                ? 'The REVEAL message is waiting to be delivered on the destination chain.'
-                                : 'A subsequent REVEAL message with matching calls must be sent to execute.'}
-                            </div>
-                            {relatedMessage && relatedMessageType === IcaMessageType.REVEAL && (
-                              <div className="mt-2">
-                                <Link
-                                  href={`/message/${relatedMessage.msgId}`}
-                                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
-                                >
-                                  View REVEAL message
-                                </Link>
-                              </div>
-                            )}
-                            {isRelatedFetching && (
-                              <div className="mt-2 text-xs text-amber-600">
-                                Looking for related REVEAL message...
-                              </div>
-                            )}
-                          </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-medium text-amber-600">Pending</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-amber-800">
+                          {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
+                            ? 'Reveal Pending Delivery'
+                            : 'Commitment Pending Reveal'}
                         </div>
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
+                            {decodeResult.commitment}
+                          </div>
+                          <CopyButton
+                            copyValue={decodeResult.commitment}
+                            width={12}
+                            height={12}
+                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          />
+                        </div>
+                        <div className="mt-2 text-xs text-amber-700">
+                          {relatedMessage && relatedMessageType === IcaMessageType.REVEAL
+                            ? 'The REVEAL message is waiting to be delivered on the destination chain.'
+                            : 'A subsequent REVEAL message with matching calls must be sent to execute.'}
+                        </div>
+                        {relatedMessage && relatedMessageType === IcaMessageType.REVEAL && (
+                          <div className="mt-2">
+                            <Link
+                              href={`/message/${relatedMessage.msgId}`}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                            >
+                              View REVEAL message
+                            </Link>
+                          </div>
+                        )}
+                        {isRelatedFetching && (
+                          <div className="mt-2 text-xs text-amber-600">
+                            Looking for related REVEAL message...
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
+              </div>
+            )}
 
-              {/* Status section for REVEAL type - at the top */}
-              {decodeResult.messageType === IcaMessageType.REVEAL && decodeResult.commitment && (
-                <div>
-                  {isDelivered ? (
-                    <div className="rounded-md border border-green-200 bg-green-50 p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-green-600">Done</span>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-green-800">
-                            Commitment Revealed
-                          </div>
-                          <div className="mt-2 flex items-start gap-2">
-                            <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
-                              {decodeResult.commitment}
-                            </div>
-                            <CopyButton
-                              copyValue={decodeResult.commitment}
-                              width={12}
-                              height={12}
-                              className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                            />
-                          </div>
-                          {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
-                            <div className="mt-2">
-                              <Link
-                                href={`/message/${relatedMessage.msgId}`}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
-                              >
-                                View corresponding COMMITMENT message
-                              </Link>
-                            </div>
-                          )}
-                          {isRelatedFetching && (
-                            <div className="mt-2 text-xs text-green-600">
-                              Looking for related COMMITMENT message...
-                            </div>
-                          )}
+            {/* Status section for REVEAL type - at the top */}
+            {decodeResult.messageType === IcaMessageType.REVEAL && decodeResult.commitment && (
+              <div>
+                {isDelivered ? (
+                  <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-medium text-green-600">Done</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-green-800">
+                          Commitment Revealed
                         </div>
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-green-800">
+                            {decodeResult.commitment}
+                          </div>
+                          <CopyButton
+                            copyValue={decodeResult.commitment}
+                            width={12}
+                            height={12}
+                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          />
+                        </div>
+                        {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
+                          <div className="mt-2">
+                            <Link
+                              href={`/message/${relatedMessage.msgId}`}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
+                            >
+                              View corresponding COMMITMENT message
+                            </Link>
+                          </div>
+                        )}
+                        {isRelatedFetching && (
+                          <div className="mt-2 text-xs text-green-600">
+                            Looking for related COMMITMENT message...
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-amber-600">Pending</span>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-amber-800">
-                            Revealing Commitment
-                          </div>
-                          <div className="mt-2 flex items-start gap-2">
-                            <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
-                              {decodeResult.commitment}
-                            </div>
-                            <CopyButton
-                              copyValue={decodeResult.commitment}
-                              width={12}
-                              height={12}
-                              className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
-                            />
-                          </div>
-                          <div className="mt-2 text-xs text-amber-700">
-                            Waiting for message to be delivered on the destination chain.
-                          </div>
-                          {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
-                            <div className="mt-2">
-                              <Link
-                                href={`/message/${relatedMessage.msgId}`}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
-                              >
-                                View corresponding COMMITMENT message
-                              </Link>
-                            </div>
-                          )}
-                          {isRelatedFetching && (
-                            <div className="mt-2 text-xs text-amber-600">
-                              Looking for related COMMITMENT message...
-                            </div>
-                          )}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-medium text-amber-600">Pending</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-amber-800">
+                          Revealing Commitment
                         </div>
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="min-w-0 flex-1 break-all font-mono text-xs text-amber-800">
+                            {decodeResult.commitment}
+                          </div>
+                          <CopyButton
+                            copyValue={decodeResult.commitment}
+                            width={12}
+                            height={12}
+                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          />
+                        </div>
+                        <div className="mt-2 text-xs text-amber-700">
+                          Waiting for message to be delivered on the destination chain.
+                        </div>
+                        {relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT && (
+                          <div className="mt-2">
+                            <Link
+                              href={`/message/${relatedMessage.msgId}`}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                            >
+                              View corresponding COMMITMENT message
+                            </Link>
+                          </div>
+                        )}
+                        {isRelatedFetching && (
+                          <div className="mt-2 text-xs text-amber-600">
+                            Looking for related COMMITMENT message...
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                  {/* CCIP Read ISM section - only show when pending to help debug delivery issues */}
-                  {!isDelivered && (
-                    <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-                      <label className="text-xs font-medium text-gray-600">CCIP Read Gateway</label>
-                      {isCcipFetching ? (
-                        <div className="mt-2 text-xs text-gray-500">Fetching gateway URLs...</div>
-                      ) : ccipReadData?.urls && ccipReadData.urls.length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {ccipReadData.urls.map((url, i) => (
-                            <div key={i} className="break-all font-mono text-xs text-gray-600">
-                              {url}
-                            </div>
-                          ))}
-                        </div>
-                      ) : isCcipError ? (
-                        <div className="mt-2 text-xs text-red-600">
-                          Failed to fetch gateway URLs from ISM contract.
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-xs text-gray-500">
-                          No gateway URLs configured. The ISM may not support CCIP Read.
-                        </div>
-                      )}
+                  </div>
+                )}
+                {/* CCIP Read ISM section - only show when pending to help debug delivery issues */}
+                {!isDelivered && (
+                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
+                    <label className="text-xs font-medium text-gray-600">CCIP Read Gateway</label>
+                    {isCcipFetching ? (
+                      <div className="mt-2 text-xs text-gray-500">Fetching gateway URLs...</div>
+                    ) : ccipReadData?.urls && ccipReadData.urls.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {ccipReadData.urls.map((url, i) => (
+                          <div key={i} className="break-all font-mono text-xs text-gray-600">
+                            {url}
+                          </div>
+                        ))}
+                      </div>
+                    ) : isCcipError ? (
+                      <div className="mt-2 text-xs text-red-600">
+                        Failed to fetch gateway URLs from ISM contract.
+                      </div>
+                    ) : (
                       <div className="mt-2 text-xs text-gray-500">
-                        The secret calls must be posted to this gateway by the commitment sender,
-                        who specifies which relayers are authorized to fetch and deliver the calls.
+                        No gateway URLs configured. The ISM may not support CCIP Read.
                       </div>
-                      <div className="mt-2 text-xs text-amber-600">
-                        If delivery is failing, the calls may not have been posted to the gateway,
-                        or no authorized relayer is available.
-                      </div>
+                    )}
+                    <div className="mt-2 text-xs text-gray-500">
+                      The secret calls must be posted to this gateway by the commitment sender, who
+                      specifies which relayers are authorized to fetch and deliver the calls.
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="mt-2 text-xs text-amber-600">
+                      If delivery is failing, the calls may not have been posted to the gateway, or
+                      no authorized relayer is available.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-              {displayOwner && (
+            {displayOwner && (
+              <KeyValueRow
+                label="Owner:"
+                labelWidth="w-28 sm:w-36"
+                display={displayOwner}
+                displayWidth="flex-1 min-w-0"
+                link={explorerUrls['owner'] || undefined}
+                showCopy={true}
+                blurValue={blur}
+              />
+            )}
+
+            {/* Show ICA address when we have owner data */}
+            {displayOwner && (
+              <KeyValueRow
+                label="Account:"
+                labelWidth="w-28 sm:w-36"
+                display={
+                  icaAddress
+                    ? icaAddress
+                    : isIcaFetching
+                      ? 'Computing...'
+                      : isIcaError
+                        ? 'Error computing'
+                        : 'Unknown'
+                }
+                displayWidth="flex-1 min-w-0"
+                link={icaAddress ? explorerUrls['ica'] || undefined : undefined}
+                showCopy={!!icaAddress}
+                blurValue={blur}
+              />
+            )}
+
+            {/* Show ISM when available and non-zero */}
+            {displayIsm && displayIsm !== '0x0000000000000000000000000000000000000000' && (
+              <KeyValueRow
+                label="ISM:"
+                labelWidth="w-28 sm:w-36"
+                display={displayIsm}
+                displayWidth="flex-1 min-w-0"
+                link={explorerUrls['ism'] || undefined}
+                showCopy={true}
+                blurValue={blur}
+              />
+            )}
+
+            {displaySalt && displaySalt !== '0x' + '0'.repeat(64) && (
+              <>
                 <KeyValueRow
-                  label="Owner:"
+                  label="Salt:"
                   labelWidth="w-28 sm:w-36"
-                  display={displayOwner}
+                  display={displaySalt}
                   displayWidth="flex-1 min-w-0"
-                  link={explorerUrls['owner'] || undefined}
                   showCopy={true}
                   blurValue={blur}
                 />
-              )}
-
-              {/* Show ICA address when we have owner data */}
-              {displayOwner && (
-                <KeyValueRow
-                  label="Account:"
-                  labelWidth="w-28 sm:w-36"
-                  display={
-                    icaAddress
-                      ? icaAddress
-                      : isIcaFetching
-                        ? 'Computing...'
-                        : isIcaError
-                          ? 'Error computing'
-                          : 'Unknown'
-                  }
-                  displayWidth="flex-1 min-w-0"
-                  link={icaAddress ? explorerUrls['ica'] || undefined : undefined}
-                  showCopy={!!icaAddress}
-                  blurValue={blur}
-                />
-              )}
-
-              {/* Show ISM when available and non-zero */}
-              {displayIsm && displayIsm !== '0x0000000000000000000000000000000000000000' && (
-                <KeyValueRow
-                  label="ISM:"
-                  labelWidth="w-28 sm:w-36"
-                  display={displayIsm}
-                  displayWidth="flex-1 min-w-0"
-                  link={explorerUrls['ism'] || undefined}
-                  showCopy={true}
-                  blurValue={blur}
-                />
-              )}
-
-              {displaySalt && displaySalt !== '0x' + '0'.repeat(64) && (
-                <>
+                {saltAddress && (
                   <KeyValueRow
-                    label="Salt:"
+                    label="User:"
                     labelWidth="w-28 sm:w-36"
-                    display={displaySalt}
+                    display={saltAddress}
                     displayWidth="flex-1 min-w-0"
+                    link={explorerUrls['saltAddress'] || undefined}
                     showCopy={true}
                     blurValue={blur}
                   />
-                  {saltAddress && (
-                    <KeyValueRow
-                      label="User:"
-                      labelWidth="w-28 sm:w-36"
-                      display={saltAddress}
-                      displayWidth="flex-1 min-w-0"
-                      link={explorerUrls['saltAddress'] || undefined}
-                      showCopy={true}
-                      blurValue={blur}
-                    />
-                  )}
-                </>
-              )}
+                )}
+              </>
+            )}
 
-              {/* Show calls for CALLS type or REVEAL type (when fetched) */}
-              {(decodeResult.messageType === IcaMessageType.CALLS ||
-                decodeResult.messageType === IcaMessageType.REVEAL) && (
-                <div className="space-y-3 pt-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    {isDelivered ? 'Calls executed:' : 'Calls to execute:'}
-                  </label>
+            {/* Show calls for CALLS type or REVEAL type (when fetched) */}
+            {(decodeResult.messageType === IcaMessageType.CALLS ||
+              decodeResult.messageType === IcaMessageType.REVEAL) && (
+              <div className="space-y-3 pt-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {isDelivered ? 'Calls executed:' : 'Calls to execute:'}
+                </label>
 
-                  {/* Loading state for reveal calls */}
-                  {decodeResult.messageType === IcaMessageType.REVEAL && isRevealFetching && (
+                {/* Loading state for reveal calls */}
+                {decodeResult.messageType === IcaMessageType.REVEAL && isRevealFetching && (
+                  <div className="py-2 text-sm italic text-gray-500">
+                    Fetching calls from destination transaction...
+                  </div>
+                )}
+
+                {/* Error state for reveal calls */}
+                {decodeResult.messageType === IcaMessageType.REVEAL &&
+                  isRevealError &&
+                  !revealCalls && (
                     <div className="py-2 text-sm italic text-gray-500">
-                      Fetching calls from destination transaction...
+                      Could not fetch calls from destination transaction.
                     </div>
                   )}
 
-                  {/* Error state for reveal calls */}
-                  {decodeResult.messageType === IcaMessageType.REVEAL &&
-                    isRevealError &&
-                    !revealCalls && (
-                      <div className="py-2 text-sm italic text-gray-500">
-                        Could not fetch calls from destination transaction.
-                      </div>
-                    )}
+                {/* No destination tx yet for reveal */}
+                {decodeResult.messageType === IcaMessageType.REVEAL &&
+                  !destination?.hash &&
+                  !isRevealFetching && (
+                    <div className="py-2 text-sm italic text-gray-500">
+                      Calls will be shown once the message is processed on the destination chain.
+                    </div>
+                  )}
 
-                  {/* No destination tx yet for reveal */}
-                  {decodeResult.messageType === IcaMessageType.REVEAL &&
-                    !destination?.hash &&
-                    !isRevealFetching && (
-                      <div className="py-2 text-sm italic text-gray-500">
-                        Calls will be shown once the message is processed on the destination chain.
-                      </div>
-                    )}
+                {/* Display calls */}
+                {displayCalls.length > 0 &&
+                  displayCalls.map((call, i) => (
+                    <IcaCallDetails
+                      key={`ica-call-${i}`}
+                      call={call}
+                      index={i}
+                      total={displayCalls.length}
+                      explorerUrl={explorerUrls[`call-${i}`]}
+                      blur={blur}
+                      failedCallIndex={failedCallIndex}
+                    />
+                  ))}
 
-                  {/* Display calls */}
-                  {displayCalls.length > 0 &&
-                    displayCalls.map((call, i) => (
-                      <IcaCallDetails
-                        key={`ica-call-${i}`}
-                        call={call}
-                        index={i}
-                        total={displayCalls.length}
-                        explorerUrl={explorerUrls[`call-${i}`]}
-                        blur={blur}
-                        failedCallIndex={failedCallIndex}
-                      />
-                    ))}
-
-                  {/* Empty calls for CALLS type */}
-                  {decodeResult.messageType === IcaMessageType.CALLS &&
-                    decodeResult.calls.length === 0 && (
-                      <div className="py-2 text-sm italic text-gray-500">
-                        No calls in this message.
-                      </div>
-                    )}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="py-4 italic text-red-500">
-              Unable to decode Interchain Account message body. The message format may be
-              unrecognized.
-            </div>
-          )}
-        </div>
-      )}
+                {/* Empty calls for CALLS type */}
+                {decodeResult.messageType === IcaMessageType.CALLS &&
+                  decodeResult.calls.length === 0 && (
+                    <div className="py-2 text-sm italic text-gray-500">
+                      No calls in this message.
+                    </div>
+                  )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="py-4 italic text-red-500">
+            Unable to decode Interchain Account message body. The message format may be
+            unrecognized.
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
