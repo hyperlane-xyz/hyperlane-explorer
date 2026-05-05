@@ -90,7 +90,7 @@ export function TransactionDetails({ txHash }: Props) {
             <Tooltip
               id="messages-info"
               content="All Hyperlane messages dispatched in this transaction."
-              tooltipClassName="z-50"
+              placement="bottom"
             />
           </div>
           {messageList.length > 1 && (
