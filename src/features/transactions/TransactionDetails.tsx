@@ -2,9 +2,12 @@ import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import { ReactNode, useEffect, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
+import { SectionCard } from '../../components/layout/SectionCard';
+import { useStore } from '../../metadataStore';
 import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
 import { MessageSummaryRow } from './MessageSummaryRow';
+import { TransactionRouteSummaryCard } from './TransactionRouteSummaryCard';
 import { useTransactionMessageCount } from './useTransactionMessageCount';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
 
@@ -14,6 +17,9 @@ interface Props {
 
 export function TransactionDetails({ txHash }: Props) {
   const [allExpanded, setAllExpanded] = useState(false);
+  const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
+  const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
+  const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
 
   const { isFetching, isError, error, hasRun, isMessagesFound, messageList, originInfo, refetch } =
     useTransactionMessagesQuery(txHash);
@@ -24,6 +30,15 @@ export function TransactionDetails({ txHash }: Props) {
     if (!error) return;
     logger.error('Error loading transaction messages', error);
   }, [error]);
+
+  useEffect(() => {
+    ensureChainMetadata().catch((e) => logger.error('Error loading chain metadata', e));
+  }, [ensureChainMetadata]);
+
+  useEffect(() => {
+    if (isWarpRouteDataLoaded) return;
+    ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
+  }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   // Loading state
   if (isFetching && !hasRun) {
@@ -68,44 +83,49 @@ export function TransactionDetails({ txHash }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Origin Transaction Card - reuse existing component */}
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       {originInfo && (
         <OriginTransactionCard
           chainName={originInfo.chainName}
           domainId={originInfo.domainId}
           transaction={originInfo.transaction}
           blur={false}
+          tooltipPlacement="bottom-end"
         />
       )}
 
-      {/* Messages Section */}
-      <Card className="mt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="text-md font-medium text-gray-700">
-              Messages ({isMessageListTruncated ? `${messageList.length} of ` : ''}
-              {isMessageListTruncated ? txMessageCount : messageList.length})
-            </h3>
-            <Tooltip
-              id="messages-info"
-              content="All Hyperlane messages dispatched in this transaction."
-            />
-          </div>
-          {messageList.length > 1 && (
-            <button
-              onClick={() => setAllExpanded((prev) => !prev)}
-              className="text-sm text-gray-500 transition-colors hover:text-gray-700"
-            >
-              {allExpanded ? 'Collapse All' : 'Expand All'}
-            </button>
-          )}
-        </div>
+      <TransactionRouteSummaryCard messages={messageList} />
 
-        {isMessageListTruncated && (
-          <p className="text-xs text-gray-500">
-            Showing first {messageList.length} of {txMessageCount} messages.
-          </p>
+      <SectionCard
+        title={`Messages (${isMessageListTruncated ? `${messageList.length} of ` : ''}${
+          isMessageListTruncated ? txMessageCount : messageList.length
+        })`}
+        icon={
+          <Tooltip
+            id="messages-info"
+            content="All Hyperlane messages dispatched in this transaction."
+          />
+        }
+      >
+        {(isMessageListTruncated || messageList.length > 1) && (
+          <div className="mb-3 flex items-center justify-between gap-3">
+            {isMessageListTruncated ? (
+              <p className="text-xs text-gray-500">
+                Showing first {messageList.length} of {txMessageCount} messages.
+              </p>
+            ) : (
+              <span />
+            )}
+            {messageList.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setAllExpanded((prev) => !prev)}
+                className="shrink-0 text-xs font-medium text-gray-500 transition-colors hover:text-gray-700"
+              >
+                {allExpanded ? 'Collapse All' : 'Expand All'}
+              </button>
+            )}
+          </div>
         )}
 
         <div className="space-y-3">
@@ -125,14 +145,14 @@ export function TransactionDetails({ txHash }: Props) {
             <span>Refreshing...</span>
           </div>
         )}
-      </Card>
+      </SectionCard>
     </div>
   );
 }
 
 function TransactionStateCard({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto w-full max-w-3xl">
       <Card className="flex min-h-[20rem] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">{children}</div>
       </Card>

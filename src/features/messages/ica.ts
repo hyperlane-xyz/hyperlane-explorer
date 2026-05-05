@@ -4,6 +4,8 @@ import {
   ProtocolType,
   addressToBytes32,
   bytes32ToAddress,
+  fromWei,
+  shortenAddress,
   isEVMLike,
   strip0x,
 } from '@hyperlane-xyz/utils';
@@ -43,6 +45,21 @@ export interface DecodedIcaMessage {
   salt: string; // bytes32 hex
   calls: IcaCall[]; // Only present for CALLS type
   commitment?: string; // Only present for COMMITMENT type
+}
+
+export interface DecodedIcaCallData {
+  functionName: string;
+  summary: string;
+  details?: Array<{ label: string; value: string }>;
+  swap?: {
+    tokenIn: string;
+    tokenOut: string;
+    tokenOutType?: 'token' | 'native';
+    outputAmount?: string;
+    outputAmountKind?: 'exact' | 'minimum';
+    wrappedNativeToken?: string;
+    outputRecipients?: string[];
+  };
 }
 
 // Build a map of chainName -> ICA router address from the registry
@@ -424,6 +441,414 @@ function isMulticallAddress(address: Address, chainName: string): boolean {
   return false;
 }
 
+function tryDecodeMulticallCalls(txData: string): IcaCall[] | null {
+  try {
+    const selector = txData.slice(0, 10);
+
+    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate3).slice(0, 10)) {
+      const decoded = utils.defaultAbiCoder.decode(
+        ['tuple(address target, bool allowFailure, bytes callData)[]'],
+        '0x' + txData.slice(10),
+      );
+      const calls = decoded[0] as Array<{
+        target: string;
+        callData: string;
+      }>;
+      return calls.map((call) => ({ to: call.target, value: '0', data: call.callData }));
+    }
+
+    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate3Value).slice(0, 10)) {
+      const decoded = utils.defaultAbiCoder.decode(
+        ['tuple(address target, bool allowFailure, uint256 value, bytes callData)[]'],
+        '0x' + txData.slice(10),
+      );
+      const calls = decoded[0] as Array<{
+        target: string;
+        value: BigNumber;
+        callData: string;
+      }>;
+      return calls.map((call) => ({
+        to: call.target,
+        value: call.value.toString(),
+        data: call.callData,
+      }));
+    }
+
+    if (selector === utils.id(MULTICALL_SIGNATURES.tryAggregate).slice(0, 10)) {
+      const decoded = utils.defaultAbiCoder.decode(
+        ['bool', 'tuple(address target, bytes callData)[]'],
+        '0x' + txData.slice(10),
+      );
+      const calls = decoded[1] as Array<{ target: string; callData: string }>;
+      return calls.map((call) => ({ to: call.target, value: '0', data: call.callData }));
+    }
+
+    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate).slice(0, 10)) {
+      const decoded = utils.defaultAbiCoder.decode(
+        ['tuple(address target, bytes callData)[]'],
+        '0x' + txData.slice(10),
+      );
+      const calls = decoded[0] as Array<{ target: string; callData: string }>;
+      return calls.map((call) => ({ to: call.target, value: '0', data: call.callData }));
+    }
+  } catch (error) {
+    logger.debug('Failed to decode multicall calls', error);
+  }
+
+  return null;
+}
+
+export function decodeMulticallIcaCalls(
+  call: IcaCall,
+  destinationChainName: string | undefined,
+): IcaCall[] | null {
+  if (!destinationChainName || !isMulticallAddress(call.to, destinationChainName)) return null;
+  return tryDecodeMulticallCalls(call.data);
+}
+
+const KNOWN_CALL_SELECTORS: Record<string, { name: string; sig: string }> = {
+  '0x095ea7b3': { name: 'approve', sig: 'approve(address,uint256)' },
+  '0xa9059cbb': { name: 'transfer', sig: 'transfer(address,uint256)' },
+  '0x23b872dd': { name: 'transferFrom', sig: 'transferFrom(address,address,uint256)' },
+  '0x81b4e8b4': { name: 'transferRemote', sig: 'transferRemote(uint32,bytes32,uint256)' },
+  '0x51debffc': {
+    name: 'transferRemote',
+    sig: 'transferRemote(uint32,bytes32,uint256,bytes,address)',
+  },
+  '0x24856bc3': { name: 'execute', sig: 'execute(bytes,bytes[])' },
+  '0x3593564c': { name: 'execute', sig: 'execute(bytes,bytes[],uint256)' },
+};
+
+function formatTokenAmount(amount: BigNumber): string {
+  const formatted18 = fromWei(amount.toString(), 18);
+  const parsed18 = Number.parseFloat(formatted18);
+
+  if (parsed18 > 0 && parsed18 < 0.000001) {
+    const formatted6 = fromWei(amount.toString(), 6);
+    return `${Number.parseFloat(formatted6).toLocaleString()} tokens`;
+  }
+  if (parsed18 === 0) return '0';
+  return `${parsed18.toLocaleString()} tokens`;
+}
+
+// Hyperlane universal-router command ids are 6 bits; the high bits are flags.
+const UNIVERSAL_ROUTER_COMMAND_TYPE_MASK = 0x3f;
+const UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN = 0x00;
+const UNIVERSAL_ROUTER_V3_SWAP_EXACT_OUT = 0x01;
+const UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN = 0x08;
+const UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT = 0x09;
+const UNIVERSAL_ROUTER_SWEEP = 0x04;
+const UNIVERSAL_ROUTER_TRANSFER = 0x05;
+const UNIVERSAL_ROUTER_PAY_PORTION = 0x06;
+const UNIVERSAL_ROUTER_UNWRAP_WETH = 0x0c;
+const UNIVERSAL_ROUTER_EXECUTE_SUB_PLAN = 0x21;
+
+function decodeUniversalRouterPackedPath(input: string): string | null {
+  for (const types of [
+    ['address', 'uint256', 'uint256', 'bytes', 'bool', 'bool'],
+    ['address', 'uint256', 'uint256', 'bytes', 'bool'],
+  ]) {
+    try {
+      const args = utils.defaultAbiCoder.decode(types, input);
+      const path = strip0x(args[3] as string);
+      if (path.length >= 40) return path;
+    } catch {
+      // Try the next router input shape.
+    }
+  }
+  return null;
+}
+
+function decodeUniversalRouterAddressPath(input: string): string[] | null {
+  for (const types of [
+    ['address', 'uint256', 'uint256', 'address[]', 'bool', 'bool'],
+    ['address', 'uint256', 'uint256', 'address[]', 'bool'],
+  ]) {
+    try {
+      const args = utils.defaultAbiCoder.decode(types, input);
+      const path = args[3] as string[];
+      if (path.length >= 2) return path;
+    } catch {
+      // Try the next router input shape.
+    }
+  }
+  return null;
+}
+
+function decodeUniversalRouterSwapArgs(input: string, isV2: boolean) {
+  for (const pathType of isV2 ? ['address[]'] : ['bytes']) {
+    for (const hasExtraBool of [true, false]) {
+      const types = [
+        'address',
+        'uint256',
+        'uint256',
+        pathType,
+        'bool',
+        ...(hasExtraBool ? ['bool'] : []),
+      ];
+      try {
+        return utils.defaultAbiCoder.decode(types, input);
+      } catch {
+        // Try the next router input shape.
+      }
+    }
+  }
+  return null;
+}
+
+function decodeUniversalRouterSwapCommand(
+  input: string,
+  isExactIn: boolean,
+  isV2: boolean,
+): {
+  tokenIn: string;
+  tokenOut: string;
+  outputAmount?: string;
+  outputAmountKind?: 'exact' | 'minimum';
+  recipient?: string;
+} | null {
+  const args = decodeUniversalRouterSwapArgs(input, isV2);
+  const outputAmount = args?.[isExactIn ? 2 : 1] as BigNumber | undefined;
+
+  if (isV2) {
+    const addressPath = decodeUniversalRouterAddressPath(input);
+    if (addressPath) {
+      return {
+        tokenIn: addressPath[0],
+        tokenOut: addressPath[addressPath.length - 1],
+        outputAmount: outputAmount && !outputAmount.isZero() ? outputAmount.toString() : undefined,
+        outputAmountKind:
+          outputAmount && !outputAmount.isZero() ? (isExactIn ? 'minimum' : 'exact') : undefined,
+        recipient: args?.[0] as string | undefined,
+      };
+    }
+  }
+
+  const path = decodeUniversalRouterPackedPath(input);
+  if (!path) return null;
+
+  const route = isExactIn
+    ? { tokenIn: '0x' + path.slice(0, 40), tokenOut: '0x' + path.slice(-40) }
+    : { tokenIn: '0x' + path.slice(-40), tokenOut: '0x' + path.slice(0, 40) };
+  return {
+    ...route,
+    outputAmount: outputAmount && !outputAmount.isZero() ? outputAmount.toString() : undefined,
+    outputAmountKind:
+      outputAmount && !outputAmount.isZero() ? (isExactIn ? 'minimum' : 'exact') : undefined,
+    recipient: args?.[0] as string | undefined,
+  };
+}
+
+type DecodedUniversalRouterSwap = {
+  tokenIn: string;
+  tokenOut: string;
+  tokenOutType?: 'token' | 'native';
+  outputAmount?: string;
+  outputAmountKind?: 'exact' | 'minimum';
+  wrappedNativeToken?: string;
+  outputRecipients?: string[];
+};
+
+function decodeUniversalRouterPlan(
+  commandsBytes: string,
+  inputs: string[],
+  depth = 0,
+): DecodedUniversalRouterSwap | null {
+  if (depth > 4) return null;
+
+  const commands = strip0x(commandsBytes);
+  let tokenIn: string | undefined;
+  let tokenOut: string | undefined;
+  let tokenOutType: 'native' | undefined;
+  let outputAmount: string | undefined;
+  let outputAmountKind: 'exact' | 'minimum' | undefined;
+  let wrappedNativeToken: string | undefined;
+  const outputRecipients = new Set<string>();
+
+  for (let i = 0; i < commands.length / 2; i++) {
+    try {
+      const command = Number.parseInt(commands.slice(i * 2, i * 2 + 2), 16);
+      const commandType = command & UNIVERSAL_ROUTER_COMMAND_TYPE_MASK;
+      const input = inputs[i];
+      if (!input) continue;
+
+      const isExactIn =
+        commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN ||
+        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN;
+      const isExactOut =
+        commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_OUT ||
+        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT;
+      const isV2 =
+        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN ||
+        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT;
+
+      if (commandType === UNIVERSAL_ROUTER_EXECUTE_SUB_PLAN) {
+        const [subCommands, subInputs] = utils.defaultAbiCoder.decode(
+          ['bytes', 'bytes[]'],
+          input,
+        ) as [string, string[]];
+        const subSwap = decodeUniversalRouterPlan(subCommands, subInputs, depth + 1);
+        if (subSwap) {
+          tokenIn ??= subSwap.tokenIn;
+          tokenOut = subSwap.tokenOut;
+          tokenOutType = subSwap.tokenOutType === 'native' ? 'native' : undefined;
+          outputAmount = subSwap.outputAmount;
+          outputAmountKind = subSwap.outputAmountKind;
+          wrappedNativeToken = subSwap.wrappedNativeToken;
+          for (const recipient of subSwap.outputRecipients ?? []) outputRecipients.add(recipient);
+        }
+      } else if (isExactIn || isExactOut) {
+        const decodedSwap = decodeUniversalRouterSwapCommand(input, isExactIn, isV2);
+        if (!decodedSwap) continue;
+        tokenIn ??= decodedSwap.tokenIn;
+        tokenOut = decodedSwap.tokenOut;
+        tokenOutType = undefined;
+        outputAmount = decodedSwap.outputAmount;
+        outputAmountKind = decodedSwap.outputAmountKind;
+        wrappedNativeToken = undefined;
+        if (decodedSwap.recipient) outputRecipients.add(decodedSwap.recipient);
+      } else if (
+        tokenIn &&
+        (commandType === UNIVERSAL_ROUTER_SWEEP ||
+          commandType === UNIVERSAL_ROUTER_TRANSFER ||
+          commandType === UNIVERSAL_ROUTER_PAY_PORTION)
+      ) {
+        const args = utils.defaultAbiCoder.decode(['address', 'address', 'uint256'], input);
+        tokenOut = args[0] as string;
+        tokenOutType = undefined;
+        wrappedNativeToken = undefined;
+        outputAmount =
+          commandType === UNIVERSAL_ROUTER_TRANSFER && !(args[2] as BigNumber).isZero()
+            ? (args[2] as BigNumber).toString()
+            : commandType === UNIVERSAL_ROUTER_SWEEP && !(args[2] as BigNumber).isZero()
+              ? (args[2] as BigNumber).toString()
+              : undefined;
+        outputAmountKind =
+          commandType === UNIVERSAL_ROUTER_TRANSFER && outputAmount
+            ? 'exact'
+            : commandType === UNIVERSAL_ROUTER_SWEEP && outputAmount
+              ? 'minimum'
+              : undefined;
+        outputRecipients.add(args[1] as string);
+      } else if (commandType === UNIVERSAL_ROUTER_UNWRAP_WETH && tokenOut) {
+        const args = utils.defaultAbiCoder.decode(['address', 'uint256'], input);
+        wrappedNativeToken = tokenOut;
+        tokenOut = 'native';
+        tokenOutType = 'native';
+        outputAmount = !(args[1] as BigNumber).isZero()
+          ? (args[1] as BigNumber).toString()
+          : undefined;
+        outputAmountKind = outputAmount ? 'minimum' : undefined;
+        outputRecipients.add(args[0] as string);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (!tokenIn || !tokenOut) return null;
+  return {
+    tokenIn,
+    tokenOut,
+    ...(tokenOutType ? { tokenOutType } : {}),
+    ...(outputAmount ? { outputAmount } : {}),
+    ...(outputAmountKind ? { outputAmountKind } : {}),
+    ...(wrappedNativeToken ? { wrappedNativeToken } : {}),
+    ...(outputRecipients.size ? { outputRecipients: Array.from(outputRecipients) } : {}),
+  };
+}
+
+function decodeUniversalRouterSwap(
+  data: string,
+  functionName: 'execute(bytes,bytes[])' | 'execute(bytes,bytes[],uint256)',
+): DecodedUniversalRouterSwap | null {
+  try {
+    const routerInterface = new utils.Interface([`function ${functionName}`]);
+    const decoded = routerInterface.decodeFunctionData('execute', data);
+    return decodeUniversalRouterPlan(decoded[0] as string, decoded[1] as string[]);
+  } catch {
+    return null;
+  }
+}
+
+export function decodeIcaCallData(
+  data: string,
+  tryGetChainName?: (domainId: number) => string | undefined,
+): DecodedIcaCallData | null {
+  if (!data || data.length < 10) return null;
+
+  const selector = data.slice(0, 10).toLowerCase();
+  const known = KNOWN_CALL_SELECTORS[selector];
+  if (!known) return null;
+
+  try {
+    const iface = new utils.Interface([`function ${known.sig}`]);
+    const decoded = iface.decodeFunctionData(known.name, data);
+
+    switch (known.sig) {
+      case 'approve(address,uint256)': {
+        const spender = shortenAddress(decoded[0] as string);
+        const amount = formatTokenAmount(decoded[1] as BigNumber);
+        return {
+          functionName: 'approve',
+          summary: `Approve ${spender} to spend ${amount}`,
+        };
+      }
+      case 'transfer(address,uint256)': {
+        const recipient = shortenAddress(decoded[0] as string);
+        const amount = formatTokenAmount(decoded[1] as BigNumber);
+        return {
+          functionName: 'transfer',
+          summary: `Transfer ${amount} to ${recipient}`,
+        };
+      }
+      case 'transferFrom(address,address,uint256)': {
+        const sender = shortenAddress(decoded[0] as string);
+        const recipient = shortenAddress(decoded[1] as string);
+        const amount = formatTokenAmount(decoded[2] as BigNumber);
+        return {
+          functionName: 'transferFrom',
+          summary: `Transfer ${amount} from ${sender} to ${recipient}`,
+        };
+      }
+      case 'transferRemote(uint32,bytes32,uint256)':
+      case 'transferRemote(uint32,bytes32,uint256,bytes,address)': {
+        const destinationDomain = BigNumber.from(decoded[0]).toNumber();
+        const recipient = shortenAddress(bytes32ToAddress(decoded[1] as string));
+        const amount = formatTokenAmount(decoded[2] as BigNumber);
+        const destination = tryGetChainName?.(destinationDomain) || `domain ${destinationDomain}`;
+        return {
+          functionName: 'transferRemote',
+          summary: `Bridge ${amount} to ${recipient} on ${destination}`,
+        };
+      }
+      case 'execute(bytes,bytes[])':
+      case 'execute(bytes,bytes[],uint256)': {
+        const swap = decodeUniversalRouterSwap(data, known.sig);
+        if (!swap) return { functionName: 'execute', summary: 'Universal Router execute' };
+        const outputDisplay =
+          swap.tokenOutType === 'native' ? 'native token' : shortenAddress(swap.tokenOut);
+        return {
+          functionName: 'swap',
+          summary: `Swap ${shortenAddress(swap.tokenIn)} -> ${outputDisplay}`,
+          swap,
+          details: [
+            { label: 'Input token (origin):', value: swap.tokenIn },
+            {
+              label: 'Output token (destination):',
+              value: swap.tokenOutType === 'native' ? 'Native token' : swap.tokenOut,
+            },
+          ],
+        };
+      }
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Try to extract process calls from a multicall transaction.
  * Supports various Multicall contract formats (Multicall3, etc.)
@@ -453,64 +878,10 @@ function tryDecodeMulticall(
   };
 
   try {
-    const selector = txData.slice(0, 10);
-
-    // Try aggregate3: (Call3[] calldata calls)
-    // Call3 = (address target, bool allowFailure, bytes callData)
-    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate3).slice(0, 10)) {
-      const decoded = utils.defaultAbiCoder.decode(
-        ['tuple(address target, bool allowFailure, bytes callData)[]'],
-        '0x' + txData.slice(10),
-      );
-      const calls = decoded[0] as Array<{
-        target: string;
-        allowFailure: boolean;
-        callData: string;
-      }>;
-      for (const call of calls) tryParseProcessCall(call.target, call.callData);
-      return results;
-    }
-
-    // Try aggregate3Value: (Call3Value[] calldata calls)
-    // Call3Value = (address target, bool allowFailure, uint256 value, bytes callData)
-    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate3Value).slice(0, 10)) {
-      const decoded = utils.defaultAbiCoder.decode(
-        ['tuple(address target, bool allowFailure, uint256 value, bytes callData)[]'],
-        '0x' + txData.slice(10),
-      );
-      const calls = decoded[0] as Array<{
-        target: string;
-        allowFailure: boolean;
-        value: BigNumber;
-        callData: string;
-      }>;
-      for (const call of calls) tryParseProcessCall(call.target, call.callData);
-      return results;
-    }
-
-    // Try tryAggregate: (bool requireSuccess, Call[] calldata calls)
-    // Call = (address target, bytes callData)
-    if (selector === utils.id(MULTICALL_SIGNATURES.tryAggregate).slice(0, 10)) {
-      const decoded = utils.defaultAbiCoder.decode(
-        ['bool', 'tuple(address target, bytes callData)[]'],
-        '0x' + txData.slice(10),
-      );
-      const calls = decoded[1] as Array<{ target: string; callData: string }>;
-      for (const call of calls) tryParseProcessCall(call.target, call.callData);
-      return results;
-    }
-
-    // Try aggregate: (Call[] calldata calls)
-    // Call = (address target, bytes callData)
-    if (selector === utils.id(MULTICALL_SIGNATURES.aggregate).slice(0, 10)) {
-      const decoded = utils.defaultAbiCoder.decode(
-        ['tuple(address target, bytes callData)[]'],
-        '0x' + txData.slice(10),
-      );
-      const calls = decoded[0] as Array<{ target: string; callData: string }>;
-      for (const call of calls) tryParseProcessCall(call.target, call.callData);
-      return results;
-    }
+    const calls = tryDecodeMulticallCalls(txData);
+    if (!calls) return results;
+    for (const call of calls) tryParseProcessCall(call.to, call.data);
+    return results;
   } catch (error) {
     logger.debug('Failed to decode multicall', error);
   }
