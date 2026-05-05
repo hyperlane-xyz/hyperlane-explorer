@@ -81,7 +81,7 @@ export function DestinationTransactionPreviewCard({
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title="Destination Transaction"
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={transactionHelpText.destination} placement="bottom" />}
+      icon={<Tooltip id={tooltipId} content={transactionHelpText.destination} />}
     >
       <div className="space-y-2">
         <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
@@ -124,7 +124,7 @@ function MessageTransactionPreviewCard({
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText} placement="bottom" />}
+      icon={<Tooltip id={tooltipId} content={helpText} />}
     >
       <div className="space-y-2">
         <TransactionDetailsRows

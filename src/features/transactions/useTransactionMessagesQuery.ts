@@ -77,7 +77,7 @@ export function useTransactionMessagesQuery(txHash: string) {
     isFetching,
     isError: !!error,
     error,
-    hasRun: !!data,
+    hasRun: !!data || !!error,
     isMessagesFound,
     messageList,
     originInfo,
