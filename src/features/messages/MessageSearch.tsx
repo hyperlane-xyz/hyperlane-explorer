@@ -2,7 +2,7 @@ import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
 import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
 import { SearchBar } from '../../components/search/SearchBar';
@@ -92,6 +92,7 @@ export function MessageSearch() {
 
   // Search text input
   const [searchInput, setSearchInput] = useState(defaultSearchQuery);
+  const hasUserEditedSearchRef = useRef(false);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const trimmedInput = debouncedSearchInput.trim();
   const hasInput = !!trimmedInput;
@@ -269,13 +270,23 @@ export function MessageSearch() {
   // Perform the redirect
   const lastPushedRedirectUrl = useRef<string | null>(null);
   useEffect(() => {
-    if (!redirectUrl || lastPushedRedirectUrl.current === redirectUrl) return;
+    if (
+      !redirectUrl ||
+      !hasUserEditedSearchRef.current ||
+      lastPushedRedirectUrl.current === redirectUrl
+    )
+      return;
     lastPushedRedirectUrl.current = redirectUrl;
     router.push(redirectUrl).catch((e) => {
       lastPushedRedirectUrl.current = null;
       logger.error('Error redirecting search result', e);
     });
   }, [redirectUrl, router]);
+
+  const onChangeSearchInput = useCallback((value: string) => {
+    hasUserEditedSearchRef.current = true;
+    setSearchInput(value);
+  }, []);
 
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
@@ -303,7 +314,7 @@ export function MessageSearch() {
     <>
       <SearchBar
         value={searchInput}
-        onChangeValue={setSearchInput}
+        onChangeValue={onChangeSearchInput}
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, message id, or warp route"
       />

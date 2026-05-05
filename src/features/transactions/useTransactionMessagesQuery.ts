@@ -21,7 +21,14 @@ export function useTransactionMessagesQuery(txHash: string) {
 
   // Build the GraphQL query for origin tx hash
   const { query, variables } = useMemo(
-    () => buildMessageQuery(MessageIdentifierType.OriginTxHash, txHash, TX_QUERY_LIMIT, false),
+    () =>
+      buildMessageQuery(
+        MessageIdentifierType.OriginTxHash,
+        txHash,
+        TX_QUERY_LIMIT,
+        false,
+        'nonce: asc',
+      ),
     [txHash],
   );
 

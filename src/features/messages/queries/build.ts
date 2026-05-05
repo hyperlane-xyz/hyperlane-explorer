@@ -28,6 +28,7 @@ export function buildMessageQuery(
   idValue: string,
   limit: number,
   useStub = false,
+  orderBy?: string,
 ) {
   let whereClause: string;
   if (idType === MessageIdentifierType.Id) {
@@ -53,6 +54,7 @@ export function buildMessageQuery(
   query ($identifier: bytea!) @cached(ttl: 5) {
     message_view(
       where: {${whereClause}},
+      ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
