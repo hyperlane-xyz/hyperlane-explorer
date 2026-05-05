@@ -86,7 +86,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   }, [forceExpanded]);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
+    <div className="rounded-lg border border-gray-200">
       {/* Summary Row (always visible) */}
       <div className="flex w-full items-center justify-between gap-3 p-3">
         <button

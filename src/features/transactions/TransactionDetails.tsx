@@ -83,7 +83,7 @@ export function TransactionDetails({ txHash }: Props) {
       <Card className="mt-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-md font-medium text-blue-500">
+            <h3 className="text-md font-medium text-gray-700">
               Messages ({isMessageListTruncated ? `${messageList.length} of ` : ''}
               {isMessageListTruncated ? txMessageCount : messageList.length})
             </h3>
