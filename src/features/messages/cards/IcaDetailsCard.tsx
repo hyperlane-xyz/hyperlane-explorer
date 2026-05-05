@@ -298,7 +298,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 {relatedMessage &&
                 relatedMessageType === IcaMessageType.REVEAL &&
                 relatedMessage.status === MessageStatus.Delivered ? (
-                  <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                  <div className="rounded border border-green-200 bg-green-100/40 p-3">
                     <div className="flex items-start gap-2">
                       <span className="text-xs font-medium text-green-600">Done</span>
                       <div className="flex-1">
@@ -328,7 +328,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <div className="rounded border border-amber-200 bg-amber-50 p-3">
                     <div className="flex items-start gap-2">
                       <span className="text-xs font-medium text-amber-600">Pending</span>
                       <div className="flex-1">
@@ -379,7 +379,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
             {decodeResult.messageType === IcaMessageType.REVEAL && decodeResult.commitment && (
               <div>
                 {isDelivered ? (
-                  <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                  <div className="rounded border border-green-200 bg-green-100/40 p-3">
                     <div className="flex items-start gap-2">
                       <span className="text-xs font-medium text-green-600">Done</span>
                       <div className="flex-1">
@@ -416,7 +416,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <div className="rounded border border-amber-200 bg-amber-50 p-3">
                     <div className="flex items-start gap-2">
                       <span className="text-xs font-medium text-amber-600">Pending</span>
                       <div className="flex-1">
@@ -458,7 +458,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 )}
                 {/* CCIP Read ISM section - only show when pending to help debug delivery issues */}
                 {!isDelivered && (
-                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
                     <label className="text-xs font-medium text-gray-600">CCIP Read Gateway</label>
                     {isCcipFetching ? (
                       <div className="mt-2 text-xs text-gray-500">Fetching gateway URLs...</div>
@@ -658,7 +658,7 @@ function IcaCallDetails({
   return (
     <div
       className={clsx(
-        'rounded-md border p-3',
+        'rounded border p-3',
         isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50',
       )}
     >
