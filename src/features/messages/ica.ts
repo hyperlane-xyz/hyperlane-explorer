@@ -1,6 +1,12 @@
 import { chainAddresses } from '@hyperlane-xyz/registry';
 import type { ChainMap } from '@hyperlane-xyz/sdk';
-import { ProtocolType, addressToBytes32, bytes32ToAddress, strip0x } from '@hyperlane-xyz/utils';
+import {
+  ProtocolType,
+  addressToBytes32,
+  bytes32ToAddress,
+  isEVMLike,
+  strip0x,
+} from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { BigNumber, Contract, providers, utils } from 'ethers';
 import { useMemo } from 'react';
@@ -698,7 +704,9 @@ export function useIcaAddress(
         !destinationChainName ||
         !owner ||
         !multiProvider ||
-        chainMetadataResolver.tryGetProtocol(destinationChainName) !== ProtocolType.Ethereum
+        !isEVMLike(
+          chainMetadataResolver.tryGetProtocol(destinationChainName) ?? ProtocolType.Unknown,
+        )
       ) {
         return null;
       }
@@ -758,7 +766,9 @@ export function useRevealCalls(
         !messageId ||
         messageType !== IcaMessageType.REVEAL ||
         !multiProvider ||
-        chainMetadataResolver.tryGetProtocol(destinationChainName) !== ProtocolType.Ethereum
+        !isEVMLike(
+          chainMetadataResolver.tryGetProtocol(destinationChainName) ?? ProtocolType.Unknown,
+        )
       ) {
         return null;
       }
@@ -794,7 +804,9 @@ export function useCcipReadIsmUrls(
         !messageBytes ||
         messageType !== IcaMessageType.REVEAL ||
         !multiProvider ||
-        chainMetadataResolver.tryGetProtocol(destinationChainName) !== ProtocolType.Ethereum
+        !isEVMLike(
+          chainMetadataResolver.tryGetProtocol(destinationChainName) ?? ProtocolType.Unknown,
+        )
       ) {
         return null;
       }
