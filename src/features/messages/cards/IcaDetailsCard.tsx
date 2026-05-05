@@ -4,7 +4,7 @@ import { BigNumber } from 'ethers';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Card } from '../../../components/layout/Card';
+import { SectionCard } from '../../../components/layout/SectionCard';
 import { MAILBOX_VERSION } from '../../../consts/mailbox';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { IcaCall, Message, MessageStatus, MessageStub } from '../../../types';
@@ -270,15 +270,17 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   }, [getExplorerUrls]);
 
   return (
-    <Card className="w-full">
-      <div className="flex items-center gap-2">
-        <h3 className="text-md font-medium text-primary-800">Interchain Account Details</h3>
+    <SectionCard
+      className="w-full"
+      title="Interchain Account Details"
+      icon={
         <Tooltip
           id="ica-info"
           content="Details about this Interchain Account message, including the owner, derived account address, and calls to be executed on the destination chain."
         />
-      </div>
-      <div className="mt-4 space-y-4">
+      }
+    >
+      <div className="space-y-4">
         {decodeResult ? (
           <>
             {/* Message type info */}
@@ -621,7 +623,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
           </div>
         )}
       </div>
-    </Card>
+    </SectionCard>
   );
 }
 
