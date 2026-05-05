@@ -124,7 +124,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-4 border-t border-gray-200 p-4 [&_section]:shadow-none">
+        <div className="space-y-4 border-t border-gray-200 p-4 [&_section]:border [&_section]:border-gray-200 [&_section]:shadow-none">
           {/* Destination Transaction Card */}
           <DestinationTransactionCard
             chainName={destinationChainName}
