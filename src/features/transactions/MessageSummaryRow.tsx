@@ -86,7 +86,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   }, [forceExpanded]);
 
   return (
-    <div className="rounded-lg border border-gray-200">
+    <div className="rounded border border-gray-200">
       {/* Summary Row (always visible) */}
       <div className="flex w-full items-center justify-between gap-3 p-3">
         <button
@@ -124,7 +124,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-4 border-t border-gray-200 p-4">
+        <div className="space-y-4 border-t border-gray-200 p-4 [&_section]:shadow-none">
           {/* Destination Transaction Card */}
           <DestinationTransactionCard
             chainName={destinationChainName}
@@ -160,27 +160,25 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 function StatusBadge({ status, duration }: { status: MessageStatus; duration?: string }) {
   if (status === MessageStatus.Delivered) {
     return (
-      <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1">
-        <CheckmarkIcon width={14} height={14} color="#22c55e" />
-        <span className="text-xs font-medium text-green-700">
-          Delivered{duration && ` (${duration})`}
-        </span>
+      <div className="flex items-center gap-1.5 rounded bg-green-100 px-2.5 py-1 text-green-700">
+        <CheckmarkIcon width={14} height={14} color="currentColor" />
+        <span className="text-xs font-medium">Delivered{duration && ` (${duration})`}</span>
       </div>
     );
   }
 
   if (status === MessageStatus.Failing) {
     return (
-      <div className="flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1">
+      <div className="flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-1">
         <span className="text-xs font-medium text-red-700">Failing</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1">
-      <SpinnerIcon width={14} height={14} color="#b45309" />
-      <span className="text-xs font-medium text-amber-700">{toTitleCase(status)}</span>
+    <div className="flex items-center gap-1.5 rounded bg-amber-100 px-2.5 py-1 text-amber-700">
+      <SpinnerIcon width={14} height={14} color="currentColor" />
+      <span className="text-xs font-medium">{toTitleCase(status)}</span>
     </div>
   );
 }
