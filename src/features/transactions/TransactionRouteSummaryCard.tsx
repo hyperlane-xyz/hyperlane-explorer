@@ -584,8 +584,8 @@ function NetSwapTokenLogos({
         <div className="absolute left-0 top-0">
           <TokenIcon token={originToken} size={42} />
         </div>
-        <div className="absolute bottom-0 right-0">
-          <TokenIcon token={outputToken} size={42} />
+        <div className="absolute bottom-0 right-0 flex h-[42px] w-[42px] items-center justify-center rounded-full bg-white">
+          <TokenIcon token={outputToken} size={34} />
         </div>
       </div>
     </div>
