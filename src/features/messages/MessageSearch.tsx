@@ -277,7 +277,7 @@ export function MessageSearch() {
   // Perform the redirect after search confirms the target page.
   useEffect(() => {
     if (!redirectUrl) return;
-    router.push(redirectUrl).catch((e) => {
+    router.replace(redirectUrl).catch((e) => {
       logger.error('Error redirecting search result', e);
     });
   }, [redirectUrl, router]);
