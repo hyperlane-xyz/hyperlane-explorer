@@ -17,6 +17,7 @@ import { useQuery as useUrqlQuery } from 'urql';
 import { useChainMetadataResolver } from '../../metadataStore';
 import { useReadyMultiProvider, useRegistry } from '../../store';
 import { IcaCall } from '../../types';
+import { formatAmountWithCommas } from '../../utils/amount';
 import { logger } from '../../utils/logger';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { isPiChain } from '../chains/utils';
@@ -525,13 +526,15 @@ function formatTokenAmount(amount: BigNumber): string {
 
   if (parsed18 > 0 && parsed18 < 0.000001) {
     const formatted6 = fromWei(amount.toString(), 6);
-    return `${Number.parseFloat(formatted6).toLocaleString()} tokens`;
+    return `${formatAmountWithCommas(formatted6)} tokens`;
   }
   if (parsed18 === 0) return '0';
-  return `${parsed18.toLocaleString()} tokens`;
+  return `${formatAmountWithCommas(formatted18)} tokens`;
 }
 
-// Hyperlane universal-router command ids are 6 bits; the high bits are flags.
+// Hyperlane universal-router Commands.sol uses a 6-bit command mask and
+// EXECUTE_SUB_PLAN = 0x21, which differs from upstream Uniswap Universal Router:
+// https://github.com/hyperlane-xyz/universal-router
 const UNIVERSAL_ROUTER_COMMAND_TYPE_MASK = 0x3f;
 const UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN = 0x00;
 const UNIVERSAL_ROUTER_V3_SWAP_EXACT_OUT = 0x01;
@@ -542,6 +545,7 @@ const UNIVERSAL_ROUTER_TRANSFER = 0x05;
 const UNIVERSAL_ROUTER_PAY_PORTION = 0x06;
 const UNIVERSAL_ROUTER_UNWRAP_WETH = 0x0c;
 const UNIVERSAL_ROUTER_EXECUTE_SUB_PLAN = 0x21;
+const NATIVE_TOKEN_SENTINEL = 'native' as const;
 
 function decodeUniversalRouterPackedPath(input: string): string | null {
   for (const types of [
@@ -600,13 +604,7 @@ function decodeUniversalRouterSwapCommand(
   input: string,
   isExactIn: boolean,
   isV2: boolean,
-): {
-  tokenIn: string;
-  tokenOut: string;
-  outputAmount?: string;
-  outputAmountKind?: 'exact' | 'minimum';
-  recipient?: string;
-} | null {
+): DecodedUniversalRouterSwapCommand | null {
   const args = decodeUniversalRouterSwapArgs(input, isV2);
   const outputAmount = args?.[isExactIn ? 2 : 1] as BigNumber | undefined;
 
@@ -649,6 +647,24 @@ type DecodedUniversalRouterSwap = {
   outputRecipients?: string[];
 };
 
+type DecodedUniversalRouterSwapCommand = {
+  tokenIn: string;
+  tokenOut: string;
+  outputAmount?: string;
+  outputAmountKind?: 'exact' | 'minimum';
+  recipient?: string;
+};
+
+type UniversalRouterPlanState = {
+  tokenIn?: string;
+  tokenOut?: string;
+  tokenOutType?: 'native';
+  outputAmount?: string;
+  outputAmountKind?: 'exact' | 'minimum';
+  wrappedNativeToken?: string;
+  outputRecipients: Set<string>;
+};
+
 function decodeUniversalRouterPlan(
   commandsBytes: string,
   inputs: string[],
@@ -657,13 +673,7 @@ function decodeUniversalRouterPlan(
   if (depth > 4) return null;
 
   const commands = strip0x(commandsBytes);
-  let tokenIn: string | undefined;
-  let tokenOut: string | undefined;
-  let tokenOutType: 'native' | undefined;
-  let outputAmount: string | undefined;
-  let outputAmountKind: 'exact' | 'minimum' | undefined;
-  let wrappedNativeToken: string | undefined;
-  const outputRecipients = new Set<string>();
+  const state = createUniversalRouterPlanState();
 
   for (let i = 0; i < commands.length / 2; i++) {
     try {
@@ -672,89 +682,162 @@ function decodeUniversalRouterPlan(
       const input = inputs[i];
       if (!input) continue;
 
-      const isExactIn =
-        commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN ||
-        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN;
-      const isExactOut =
-        commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_OUT ||
-        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT;
-      const isV2 =
-        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN ||
-        commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT;
-
       if (commandType === UNIVERSAL_ROUTER_EXECUTE_SUB_PLAN) {
-        const [subCommands, subInputs] = utils.defaultAbiCoder.decode(
-          ['bytes', 'bytes[]'],
-          input,
-        ) as [string, string[]];
-        const subSwap = decodeUniversalRouterPlan(subCommands, subInputs, depth + 1);
-        if (subSwap) {
-          tokenIn ??= subSwap.tokenIn;
-          tokenOut = subSwap.tokenOut;
-          tokenOutType = subSwap.tokenOutType === 'native' ? 'native' : undefined;
-          outputAmount = subSwap.outputAmount;
-          outputAmountKind = subSwap.outputAmountKind;
-          wrappedNativeToken = subSwap.wrappedNativeToken;
-          for (const recipient of subSwap.outputRecipients ?? []) outputRecipients.add(recipient);
-        }
-      } else if (isExactIn || isExactOut) {
-        const decodedSwap = decodeUniversalRouterSwapCommand(input, isExactIn, isV2);
-        if (!decodedSwap) continue;
-        tokenIn ??= decodedSwap.tokenIn;
-        tokenOut = decodedSwap.tokenOut;
-        tokenOutType = undefined;
-        outputAmount = decodedSwap.outputAmount;
-        outputAmountKind = decodedSwap.outputAmountKind;
-        wrappedNativeToken = undefined;
-        if (decodedSwap.recipient) outputRecipients.add(decodedSwap.recipient);
-      } else if (
-        tokenIn &&
-        (commandType === UNIVERSAL_ROUTER_SWEEP ||
-          commandType === UNIVERSAL_ROUTER_TRANSFER ||
-          commandType === UNIVERSAL_ROUTER_PAY_PORTION)
-      ) {
-        const args = utils.defaultAbiCoder.decode(['address', 'address', 'uint256'], input);
-        tokenOut = args[0] as string;
-        tokenOutType = undefined;
-        wrappedNativeToken = undefined;
-        outputAmount =
-          commandType === UNIVERSAL_ROUTER_TRANSFER && !(args[2] as BigNumber).isZero()
-            ? (args[2] as BigNumber).toString()
-            : commandType === UNIVERSAL_ROUTER_SWEEP && !(args[2] as BigNumber).isZero()
-              ? (args[2] as BigNumber).toString()
-              : undefined;
-        outputAmountKind =
-          commandType === UNIVERSAL_ROUTER_TRANSFER && outputAmount
-            ? 'exact'
-            : commandType === UNIVERSAL_ROUTER_SWEEP && outputAmount
-              ? 'minimum'
-              : undefined;
-        outputRecipients.add(args[1] as string);
-      } else if (commandType === UNIVERSAL_ROUTER_UNWRAP_WETH && tokenOut) {
-        const args = utils.defaultAbiCoder.decode(['address', 'uint256'], input);
-        wrappedNativeToken = tokenOut;
-        tokenOut = 'native';
-        tokenOutType = 'native';
-        outputAmount = !(args[1] as BigNumber).isZero()
-          ? (args[1] as BigNumber).toString()
-          : undefined;
-        outputAmountKind = outputAmount ? 'minimum' : undefined;
-        outputRecipients.add(args[0] as string);
+        applySubPlanCommand(state, input, depth);
+        continue;
+      }
+
+      const swapCommand = getUniversalRouterSwapCommand(commandType);
+      if (swapCommand) {
+        applySwapCommand(state, input, swapCommand);
+        continue;
+      }
+
+      if (isSweepLikeCommand(commandType)) {
+        applySweepLikeCommand(state, input, commandType);
+        continue;
+      }
+
+      if (commandType === UNIVERSAL_ROUTER_UNWRAP_WETH) {
+        applyUnwrapWethCommand(state, input);
       }
     } catch {
       continue;
     }
   }
 
-  if (!tokenIn || !tokenOut) return null;
+  return toDecodedUniversalRouterSwap(state);
+}
+
+function createUniversalRouterPlanState(): UniversalRouterPlanState {
+  return { outputRecipients: new Set<string>() };
+}
+
+function getUniversalRouterSwapCommand(commandType: number) {
+  if (
+    commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN ||
+    commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN
+  ) {
+    return {
+      isExactIn: true,
+      isV2: commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_IN,
+    };
+  }
+
+  if (
+    commandType === UNIVERSAL_ROUTER_V3_SWAP_EXACT_OUT ||
+    commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT
+  ) {
+    return {
+      isExactIn: false,
+      isV2: commandType === UNIVERSAL_ROUTER_V2_SWAP_EXACT_OUT,
+    };
+  }
+
+  return null;
+}
+
+function applySubPlanCommand(state: UniversalRouterPlanState, input: string, depth: number) {
+  const [subCommands, subInputs] = utils.defaultAbiCoder.decode(['bytes', 'bytes[]'], input) as [
+    string,
+    string[],
+  ];
+  const subSwap = decodeUniversalRouterPlan(subCommands, subInputs, depth + 1);
+  if (!subSwap) return;
+
+  state.tokenIn ??= subSwap.tokenIn;
+  state.tokenOut = subSwap.tokenOut;
+  state.tokenOutType = subSwap.tokenOutType === 'native' ? 'native' : undefined;
+  state.outputAmount = subSwap.outputAmount;
+  state.outputAmountKind = subSwap.outputAmountKind;
+  state.wrappedNativeToken = subSwap.wrappedNativeToken;
+  for (const recipient of subSwap.outputRecipients ?? []) state.outputRecipients.add(recipient);
+}
+
+function applySwapCommand(
+  state: UniversalRouterPlanState,
+  input: string,
+  command: { isExactIn: boolean; isV2: boolean },
+) {
+  const decodedSwap = decodeUniversalRouterSwapCommand(input, command.isExactIn, command.isV2);
+  if (!decodedSwap) return;
+
+  state.tokenIn ??= decodedSwap.tokenIn;
+  state.tokenOut = decodedSwap.tokenOut;
+  state.tokenOutType = undefined;
+  state.outputAmount = decodedSwap.outputAmount;
+  state.outputAmountKind = decodedSwap.outputAmountKind;
+  state.wrappedNativeToken = undefined;
+  if (decodedSwap.recipient) state.outputRecipients.add(decodedSwap.recipient);
+}
+
+function isSweepLikeCommand(commandType: number) {
+  return (
+    commandType === UNIVERSAL_ROUTER_SWEEP ||
+    commandType === UNIVERSAL_ROUTER_TRANSFER ||
+    commandType === UNIVERSAL_ROUTER_PAY_PORTION
+  );
+}
+
+function applySweepLikeCommand(
+  state: UniversalRouterPlanState,
+  input: string,
+  commandType: number,
+) {
+  if (!state.tokenIn) return;
+
+  const args = utils.defaultAbiCoder.decode(['address', 'address', 'uint256'], input);
+  const amount = args[2] as BigNumber;
+  const outputAmount =
+    (commandType === UNIVERSAL_ROUTER_TRANSFER || commandType === UNIVERSAL_ROUTER_SWEEP) &&
+    !amount.isZero()
+      ? amount.toString()
+      : undefined;
+
+  state.tokenOut = args[0] as string;
+  state.tokenOutType = undefined;
+  state.wrappedNativeToken = undefined;
+  state.outputAmount = outputAmount;
+  state.outputAmountKind =
+    commandType === UNIVERSAL_ROUTER_TRANSFER && outputAmount
+      ? 'exact'
+      : commandType === UNIVERSAL_ROUTER_SWEEP && outputAmount
+        ? 'minimum'
+        : undefined;
+  state.outputRecipients.add(args[1] as string);
+}
+
+function applyUnwrapWethCommand(state: UniversalRouterPlanState, input: string) {
+  if (!state.tokenOut) return;
+
+  const args = utils.defaultAbiCoder.decode(['address', 'uint256'], input);
+  const outputAmount = !(args[1] as BigNumber).isZero()
+    ? (args[1] as BigNumber).toString()
+    : undefined;
+
+  state.wrappedNativeToken = state.tokenOut;
+  state.tokenOut = NATIVE_TOKEN_SENTINEL;
+  state.tokenOutType = 'native';
+  state.outputAmount = outputAmount;
+  state.outputAmountKind = outputAmount ? 'minimum' : undefined;
+  state.outputRecipients.add(args[0] as string);
+}
+
+function toDecodedUniversalRouterSwap(
+  state: UniversalRouterPlanState,
+): DecodedUniversalRouterSwap | null {
+  if (!state.tokenIn || !state.tokenOut) return null;
+
   return {
-    tokenIn,
-    tokenOut,
-    ...(tokenOutType ? { tokenOutType } : {}),
-    ...(outputAmount ? { outputAmount } : {}),
-    ...(outputAmountKind ? { outputAmountKind } : {}),
-    ...(wrappedNativeToken ? { wrappedNativeToken } : {}),
-    ...(outputRecipients.size ? { outputRecipients: Array.from(outputRecipients) } : {}),
+    tokenIn: state.tokenIn,
+    tokenOut: state.tokenOut,
+    ...(state.tokenOutType ? { tokenOutType: state.tokenOutType } : {}),
+    ...(state.outputAmount ? { outputAmount: state.outputAmount } : {}),
+    ...(state.outputAmountKind ? { outputAmountKind: state.outputAmountKind } : {}),
+    ...(state.wrappedNativeToken ? { wrappedNativeToken: state.wrappedNativeToken } : {}),
+    ...(state.outputRecipients.size
+      ? { outputRecipients: Array.from(state.outputRecipients) }
+      : {}),
   };
 }
 

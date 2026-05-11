@@ -84,6 +84,23 @@ describe('decodeIcaCallData', () => {
     });
   });
 
+  it('formats decoded token amounts independently of browser locale', () => {
+    const originalToLocaleString = Number.prototype.toLocaleString;
+    Number.prototype.toLocaleString = function (locale?: string | string[], options?: object) {
+      if (!locale) return 'locale-dependent';
+      return originalToLocaleString.call(this, locale, options);
+    };
+
+    try {
+      const iface = new utils.Interface(['function approve(address,uint256)']);
+      const data = iface.encodeFunctionData('approve', [TARGET_A, utils.parseUnits('1.5', 18)]);
+
+      expect(decodeIcaCallData(data)?.summary).toBe('Approve 0x111...1111 to spend 1.5 tokens');
+    } finally {
+      Number.prototype.toLocaleString = originalToLocaleString;
+    }
+  });
+
   it('decodes transferRemote calls', () => {
     const iface = new utils.Interface(['function transferRemote(uint32,bytes32,uint256)']);
     const recipient = utils.hexZeroPad(TARGET_B, 32);
