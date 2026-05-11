@@ -92,6 +92,7 @@ export function MessageSearch() {
 
   // Search text input
   const [searchInput, setSearchInput] = useState(defaultSearchQuery);
+  const hasUserEditedSearchRef = useRef(false);
   const debouncedSearchInput = useDebounce(searchInput, 750);
   const trimmedInput = debouncedSearchInput.trim();
   const hasInput = !!trimmedInput;
@@ -228,10 +229,11 @@ export function MessageSearch() {
     // Wait for queries to complete
     if (!hasAllRun || isAnyFetching) return null;
 
-    // Only redirect searches entered by the user.
+    // Only redirect when there is an explicit search input.
     if (!hasInput) return null;
 
-    // Don't redirect if filters are applied
+    // Filters mean the user is running a results query. Only auto-open exact
+    // tx/message lookup searches when the search is unfiltered.
     if (
       originChainFilter ||
       destinationChainFilter ||
@@ -274,16 +276,6 @@ export function MessageSearch() {
     statusFilter,
   ]);
 
-  // Perform the redirect after search confirms the target page.
-  useEffect(() => {
-    if (!redirectUrl) return;
-    // Replace the search resolver URL so Back returns to the previous real page
-    // instead of re-running the same search and redirecting forward again.
-    router.replace(redirectUrl).catch((e) => {
-      logger.error('Error redirecting search result', e);
-    });
-  }, [redirectUrl, router]);
-
   // Show message list if there are no errors and filters are valid
   const showMessageTable =
     !isAnyError &&
@@ -297,8 +289,11 @@ export function MessageSearch() {
   // even when chain metadata hasn't loaded yet
   // For warp routes, preserve the original input with "/" instead of sanitized version
   useSyncQueryParam({
-    [MESSAGE_QUERY_PARAMS.SEARCH]:
-      detectedWarpRouteId || looksLikeWarpRoute ? trimmedInput : sanitizedInput,
+    [MESSAGE_QUERY_PARAMS.SEARCH]: redirectUrl
+      ? ''
+      : detectedWarpRouteId || looksLikeWarpRoute
+        ? trimmedInput
+        : sanitizedInput,
     [MESSAGE_QUERY_PARAMS.ORIGIN]: originChainFilter || '',
     [MESSAGE_QUERY_PARAMS.DESTINATION]: destinationChainFilter || '',
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
@@ -306,11 +301,44 @@ export function MessageSearch() {
     [MESSAGE_QUERY_PARAMS.STATUS]: statusFilter !== 'all' ? statusFilter : '',
   });
 
+  const lastRedirectUrlRef = useRef<string | null>(null);
+  // Perform the redirect after search confirms the target page.
+  useEffect(() => {
+    if (!redirectUrl || lastRedirectUrlRef.current === redirectUrl) return;
+    const targetUrl = redirectUrl;
+    lastRedirectUrlRef.current = targetUrl;
+
+    async function redirect() {
+      try {
+        if (hasUserEditedSearchRef.current) {
+          // Keep the clean home page behind typed searches; otherwise Back lands on
+          // /?search=... and immediately redirects forward again.
+          await router.replace('/', undefined, { shallow: true });
+          await router.push(targetUrl);
+        } else {
+          // URL-driven searches are resolver pages, so replace them and preserve
+          // the previous real page in history.
+          await router.replace(targetUrl);
+        }
+      } catch (e) {
+        lastRedirectUrlRef.current = null;
+        logger.error('Error redirecting search result', e);
+      }
+    }
+
+    redirect();
+  }, [redirectUrl, router]);
+
+  function onChangeSearchInput(value: string) {
+    hasUserEditedSearchRef.current = true;
+    setSearchInput(value);
+  }
+
   return (
     <>
       <SearchBar
         value={searchInput}
-        onChangeValue={setSearchInput}
+        onChangeValue={onChangeSearchInput}
         isFetching={isAnyFetching}
         placeholder="Search by address, hash, message id, or warp route"
       />
