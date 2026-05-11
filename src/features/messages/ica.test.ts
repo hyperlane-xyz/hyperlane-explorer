@@ -114,7 +114,7 @@ describe('decodeIcaCallData', () => {
       decodeIcaCallData(data, (domainId) => (domainId === 10 ? 'optimism' : undefined)),
     ).toEqual({
       functionName: 'transferRemote',
-      summary: 'Bridge 2 tokens to 0x222...2222 on optimism',
+      summary: 'Bridge 2000000 raw units to 0x222...2222 on optimism',
     });
   });
 

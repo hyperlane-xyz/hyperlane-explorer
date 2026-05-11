@@ -524,10 +524,7 @@ function formatTokenAmount(amount: BigNumber): string {
   const formatted18 = fromWei(amount.toString(), 18);
   const parsed18 = Number.parseFloat(formatted18);
 
-  if (parsed18 > 0 && parsed18 < 0.000001) {
-    const formatted6 = fromWei(amount.toString(), 6);
-    return `${formatAmountWithCommas(formatted6)} tokens`;
-  }
+  if (parsed18 > 0 && parsed18 < 0.000001) return `${amount.toString()} raw units`;
   if (parsed18 === 0) return '0';
   return `${formatAmountWithCommas(formatted18)} tokens`;
 }
@@ -662,7 +659,7 @@ type UniversalRouterPlanState = {
   outputAmount?: string;
   outputAmountKind?: 'exact' | 'minimum';
   wrappedNativeToken?: string;
-  outputRecipients: Set<string>;
+  outputRecipients: string[];
 };
 
 function decodeUniversalRouterPlan(
@@ -710,7 +707,7 @@ function decodeUniversalRouterPlan(
 }
 
 function createUniversalRouterPlanState(): UniversalRouterPlanState {
-  return { outputRecipients: new Set<string>() };
+  return { outputRecipients: [] };
 }
 
 function getUniversalRouterSwapCommand(commandType: number) {
@@ -751,7 +748,7 @@ function applySubPlanCommand(state: UniversalRouterPlanState, input: string, dep
   state.outputAmount = subSwap.outputAmount;
   state.outputAmountKind = subSwap.outputAmountKind;
   state.wrappedNativeToken = subSwap.wrappedNativeToken;
-  for (const recipient of subSwap.outputRecipients ?? []) state.outputRecipients.add(recipient);
+  state.outputRecipients = subSwap.outputRecipients ?? [];
 }
 
 function applySwapCommand(
@@ -768,7 +765,7 @@ function applySwapCommand(
   state.outputAmount = decodedSwap.outputAmount;
   state.outputAmountKind = decodedSwap.outputAmountKind;
   state.wrappedNativeToken = undefined;
-  if (decodedSwap.recipient) state.outputRecipients.add(decodedSwap.recipient);
+  state.outputRecipients = decodedSwap.recipient ? [decodedSwap.recipient] : [];
 }
 
 function isSweepLikeCommand(commandType: number) {
@@ -804,7 +801,7 @@ function applySweepLikeCommand(
       : commandType === UNIVERSAL_ROUTER_SWEEP && outputAmount
         ? 'minimum'
         : undefined;
-  state.outputRecipients.add(args[1] as string);
+  state.outputRecipients = [args[1] as string];
 }
 
 function applyUnwrapWethCommand(state: UniversalRouterPlanState, input: string) {
@@ -820,7 +817,7 @@ function applyUnwrapWethCommand(state: UniversalRouterPlanState, input: string) 
   state.tokenOutType = 'native';
   state.outputAmount = outputAmount;
   state.outputAmountKind = outputAmount ? 'minimum' : undefined;
-  state.outputRecipients.add(args[0] as string);
+  state.outputRecipients = [args[0] as string];
 }
 
 function toDecodedUniversalRouterSwap(
@@ -835,9 +832,7 @@ function toDecodedUniversalRouterSwap(
     ...(state.outputAmount ? { outputAmount: state.outputAmount } : {}),
     ...(state.outputAmountKind ? { outputAmountKind: state.outputAmountKind } : {}),
     ...(state.wrappedNativeToken ? { wrappedNativeToken: state.wrappedNativeToken } : {}),
-    ...(state.outputRecipients.size
-      ? { outputRecipients: Array.from(state.outputRecipients) }
-      : {}),
+    ...(state.outputRecipients.length ? { outputRecipients: state.outputRecipients } : {}),
   };
 }
 

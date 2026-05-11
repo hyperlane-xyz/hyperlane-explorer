@@ -265,7 +265,9 @@ async function fetchActualOutputAmount(
   if (!output.address || !output.outputRecipients?.length) return undefined;
 
   const outputTokenAddress = output.address.toLowerCase();
-  const recipients = new Set(output.outputRecipients.map((recipient) => recipient.toLowerCase()));
+  const finalRecipient = output.outputRecipients.at(-1)?.toLowerCase();
+  if (!finalRecipient) return undefined;
+
   let amount = BigNumber.from(0);
 
   for (const log of receipt.logs) {
@@ -277,7 +279,7 @@ async function fetchActualOutputAmount(
     }
 
     const recipient = topicToAddress(log.topics[2]);
-    if (!recipient || !recipients.has(recipient)) continue;
+    if (recipient !== finalRecipient) continue;
     amount = amount.add(BigNumber.from(log.data));
   }
 
