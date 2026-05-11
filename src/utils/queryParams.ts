@@ -64,7 +64,8 @@ export function useSyncQueryParam(params: Record<string, string>) {
       }
     });
     if (hasChanged) {
-      const path = `${pathname}?${newQuery.toString()}`;
+      const queryString = newQuery.toString();
+      const path = queryString ? `${pathname}?${queryString}` : pathname;
       router
         .replace(path, undefined, { shallow: true })
         .catch((e) => logger.error('Error shallow updating URL', e));

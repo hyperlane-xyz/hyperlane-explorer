@@ -1,9 +1,9 @@
-import { useInterval } from '@hyperlane-xyz/widgets';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter } from '../../../types';
+import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
@@ -107,10 +107,10 @@ export function useMessageSearchQuery(
 
   // Auto-refresh query periodically
   const refresh = useCallback(() => {
-    if (!query || !isValidInput || !isWindowVisible()) return;
+    if (!query || !isValidInput) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
-  useInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
+  useVisibleInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
@@ -151,10 +151,10 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
 
   // Setup interval to re-query
   const reExecutor = useCallback(() => {
-    if (pause || isDelivered || !isWindowVisible()) return;
+    if (pause || isDelivered) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [pause, isDelivered, reexecuteQuery]);
-  useInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
+  useVisibleInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
 
   return {
     isFetching,
@@ -163,8 +163,4 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     isMessageFound,
     message,
   };
-}
-
-function isWindowVisible() {
-  return document.visibilityState === 'visible';
 }
