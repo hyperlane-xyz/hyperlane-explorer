@@ -19,6 +19,8 @@ export interface MessageDebugResult {
   ismDetails?: {
     ismAddress: Address;
     moduleType: IsmModuleTypes;
+    metadata?: IsmMetadataDetails;
+    route?: IsmRouteModule;
   };
   calldataDetails?: {
     handleCalldata: HexString;
@@ -35,6 +37,36 @@ export interface MessageDebugResult {
 export interface GasPayment {
   gasAmount: string;
   paymentAmount: string;
+}
+
+export interface IsmMetadataDetails {
+  raw: HexString;
+  length: number;
+  format?: 'messageIdMultisig' | 'merkleRootMultisig' | 'aggregation' | 'unknown';
+  originMerkleTreeHook?: HexString;
+  root?: HexString;
+  index?: number;
+  messageIndex?: number;
+  signedMessageId?: HexString;
+  signedIndex?: number;
+  signatureCount?: number;
+  proof?: HexString[];
+  ranges?: IsmMetadataRange[];
+}
+
+export interface IsmMetadataRange {
+  start: number;
+  end: number;
+  hasMetadata: boolean;
+}
+
+export interface IsmRouteModule {
+  address: Address;
+  moduleType?: IsmModuleTypes;
+  threshold?: number;
+  validators?: Address[];
+  metadata?: IsmMetadataDetails;
+  children?: IsmRouteModule[];
 }
 
 // Must match https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/interfaces/IInterchainSecurityModule.sol#L5

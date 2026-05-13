@@ -13,13 +13,14 @@ import {
   formatMessage,
   isValidAddress,
   isEVMLike,
+  messageId as computeMessageId,
   ProtocolType,
   strip0x,
   trimToLength,
 } from '@hyperlane-xyz/utils';
 // Forked from debug script in monorepo but mostly rewritten
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
-import { BigNumber, utils as ethersUtils, providers } from 'ethers';
+import { BigNumber, Contract, utils as ethersUtils, providers } from 'ethers';
 
 import { debugIgnoredChains } from '../../consts/config';
 import { MAILBOX_VERSION } from '../../consts/mailbox';
@@ -28,12 +29,30 @@ import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { computeIcaAddress, decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
-import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
+import {
+  GasPayment,
+  IsmMetadataDetails,
+  IsmModuleTypes,
+  IsmRouteModule,
+  MessageDebugResult,
+  MessageDebugStatus,
+} from './types';
 
 type Provider = providers.Provider;
 
 const HANDLE_FUNCTION_SIG = 'handle(uint32,bytes32,bytes)';
 const IGP_PAYMENT_CHECK_DELAY = 60_000; // 60 seconds
+const SIGNATURE_LENGTH = 65;
+const MESSAGE_ID_MULTISIG_SIGNATURES_OFFSET = 68;
+const MERKLE_ROOT_MULTISIG_SIGNATURES_OFFSET = 1096;
+const AGGREGATION_RANGE_SIZE = 8;
+
+const routingIsmInterface = new ethersUtils.Interface([
+  'function route(bytes message) view returns (address)',
+]);
+const aggregationIsmInterface = new ethersUtils.Interface([
+  'function modulesAndThreshold(bytes message) view returns (address[] modules, uint8 threshold)',
+]);
 
 export async function debugMessage(
   multiProvider: MultiProtocolProvider,
@@ -102,6 +121,8 @@ export async function debugMessage(
     messageBytes,
     destMailbox,
     destProvider,
+    message.destination?.hash,
+    msgId,
   );
   if (ismCheckResult.status && ismCheckResult.description) return { ...ismCheckResult, ...details };
   else details.ismDetails = ismCheckResult.ismDetails;
@@ -241,6 +262,8 @@ async function checkMultisigIsmEmpty(
   messageBytes: string,
   destMailbox: Address,
   destProvider: Provider,
+  processTxHash?: string,
+  expectedMessageId?: string,
 ) {
   const mailbox = MailboxFactory.connect(destMailbox, destProvider);
   const ismAddress = await mailbox.recipientIsm(recipientAddr);
@@ -252,9 +275,9 @@ async function checkMultisigIsmEmpty(
   }
   const ism = InterchainSecurityModuleFactory.connect(ismAddress, destProvider);
 
-  let moduleType: number | undefined = undefined;
+  let moduleType: IsmModuleTypes | undefined = undefined;
   try {
-    moduleType = await ism.moduleType();
+    moduleType = Number(await ism.moduleType()) as IsmModuleTypes;
   } catch (error) {
     logger.error('Invalid ISM', error);
     return {
@@ -263,28 +286,326 @@ async function checkMultisigIsmEmpty(
         'Invalid ISM. Please verify that the ISM has been configured correctly or exists.',
     };
   }
-  const ismDetails = { ismAddress, moduleType };
-  if (moduleType !== IsmModuleTypes.LEGACY_MULTISIG && moduleType !== IsmModuleTypes.MULTISIG) {
-    return { ismDetails };
-  }
+  const rawMetadata = await tryFetchProcessMetadata(
+    destProvider,
+    destMailbox,
+    processTxHash,
+    expectedMessageId,
+  );
+  const metadata = rawMetadata ? decodeIsmMetadata(rawMetadata, moduleType) : undefined;
+  const route = await tryDescribeIsmRoute(
+    ismAddress,
+    moduleType,
+    messageBytes,
+    destProvider,
+    metadata,
+  );
+  const ismDetails = { ismAddress, moduleType, metadata, route };
 
-  const multisigIsm = MultisigIsmFactory.connect(ismAddress, destProvider);
-  const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
-
-  if (!validators?.length) {
+  if (routeHasEmptyMultisig(route)) {
     return {
       status: MessageDebugStatus.MultisigIsmEmpty,
-      description: 'Validator list is empty, has the ISM been configured correctly?',
-      ismDetails,
-    };
-  } else if (threshold < 1) {
-    return {
-      status: MessageDebugStatus.MultisigIsmEmpty,
-      description: 'Threshold is less than 1, has the ISM been configured correctly?',
+      description: 'Validator list or threshold is empty, has the ISM been configured correctly?',
       ismDetails,
     };
   }
+
   return { ismDetails };
+}
+
+function routeHasEmptyMultisig(route?: IsmRouteModule): boolean {
+  if (!route) return false;
+  if (
+    (route.moduleType === IsmModuleTypes.LEGACY_MULTISIG ||
+      route.moduleType === IsmModuleTypes.MULTISIG) &&
+    (!route.validators?.length || !route.threshold || route.threshold < 1)
+  ) {
+    return true;
+  }
+  return route.children?.some(routeHasEmptyMultisig) || false;
+}
+
+async function tryDescribeIsmRoute(
+  ismAddress: Address,
+  moduleType: IsmModuleTypes | undefined,
+  messageBytes: string,
+  provider: Provider,
+  metadata?: IsmMetadataDetails,
+  depth = 0,
+): Promise<IsmRouteModule> {
+  const node: IsmRouteModule = { address: ismAddress, moduleType, metadata };
+  if (depth > 6) return node;
+
+  try {
+    if (moduleType === IsmModuleTypes.ROUTING) {
+      const routedAddress = await new Contract(ismAddress, routingIsmInterface, provider).route(
+        messageBytes,
+      );
+      const routedType = await tryGetModuleType(routedAddress, provider);
+      node.children = [
+        await tryDescribeIsmRoute(
+          routedAddress,
+          routedType,
+          messageBytes,
+          provider,
+          metadata,
+          depth + 1,
+        ),
+      ];
+    } else if (moduleType === IsmModuleTypes.AGGREGATION) {
+      const [modules, threshold] = await new Contract(
+        ismAddress,
+        aggregationIsmInterface,
+        provider,
+      ).modulesAndThreshold(messageBytes);
+      node.threshold = Number(threshold);
+      node.children = await Promise.all(
+        modules.map(async (moduleAddress: Address, index: number) => {
+          const childType = await tryGetModuleType(moduleAddress, provider);
+          const childMetadata = metadata?.ranges?.[index]?.hasMetadata
+            ? decodeIsmMetadata(
+                sliceHex(metadata.raw, metadata.ranges[index].start, metadata.ranges[index].end),
+                childType,
+              )
+            : undefined;
+          return tryDescribeIsmRoute(
+            moduleAddress,
+            childType,
+            messageBytes,
+            provider,
+            childMetadata,
+            depth + 1,
+          );
+        }),
+      );
+    } else if (
+      moduleType === IsmModuleTypes.LEGACY_MULTISIG ||
+      moduleType === IsmModuleTypes.MULTISIG
+    ) {
+      const multisigIsm = MultisigIsmFactory.connect(ismAddress, provider);
+      const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
+      node.validators = validators;
+      node.threshold = Number(threshold);
+    }
+  } catch (error) {
+    logger.warn(`Error describing ISM route for ${ismAddress}`, error);
+  }
+
+  return node;
+}
+
+async function tryGetModuleType(ismAddress: Address, provider: Provider) {
+  try {
+    return Number(await InterchainSecurityModuleFactory.connect(ismAddress, provider).moduleType());
+  } catch (error) {
+    logger.warn(`Error reading ISM module type for ${ismAddress}`, error);
+    return undefined;
+  }
+}
+
+async function tryFetchProcessMetadata(
+  provider: Provider,
+  mailboxAddress: Address,
+  processTxHash?: string,
+  expectedMessageId?: string,
+) {
+  if (!processTxHash) return undefined;
+
+  try {
+    const tx = await provider.getTransaction(processTxHash);
+    if (!tx?.data) return undefined;
+
+    const mailboxInterface = MailboxFactory.createInterface();
+    const mailboxLower = mailboxAddress.toLowerCase();
+    const processCalls: Array<{ metadata: string; message: string }> = [];
+
+    const tryParseProcessCall = (target: string | undefined, callData: string) => {
+      if (target && target.toLowerCase() !== mailboxLower) return;
+      try {
+        const parsed = mailboxInterface.parseTransaction({ data: callData });
+        if (parsed.name === 'process') {
+          processCalls.push({
+            metadata: parsed.args[0] as string,
+            message: parsed.args[1] as string,
+          });
+        }
+      } catch {
+        // Not a mailbox process call.
+      }
+    };
+
+    tryParseProcessCall(tx.to, tx.data);
+    for (const processCall of tryDecodeProcessCallsFromMulticall(
+      tx.data,
+      mailboxInterface,
+      mailboxAddress,
+    )) {
+      processCalls.push(processCall);
+    }
+
+    const matchingCall = expectedMessageId
+      ? processCalls.find((processCall) => {
+          try {
+            return (
+              computeMessageId(processCall.message).toLowerCase() ===
+              expectedMessageId.toLowerCase()
+            );
+          } catch {
+            return false;
+          }
+        })
+      : processCalls[0];
+
+    return matchingCall?.metadata;
+  } catch (error) {
+    logger.warn('Error fetching ISM metadata from process transaction', error);
+    return undefined;
+  }
+}
+
+function tryDecodeProcessCallsFromMulticall(
+  txData: string,
+  mailboxInterface: ethersUtils.Interface,
+  mailboxAddress: Address,
+): Array<{ metadata: string; message: string }> {
+  const results: Array<{ metadata: string; message: string }> = [];
+  const mailboxLower = mailboxAddress.toLowerCase();
+
+  const tryParseProcessCall = (target: string, callData: string) => {
+    if (target.toLowerCase() !== mailboxLower) return;
+    try {
+      const parsed = mailboxInterface.parseTransaction({ data: callData });
+      if (parsed.name === 'process') {
+        results.push({ metadata: parsed.args[0] as string, message: parsed.args[1] as string });
+      }
+    } catch {
+      // Not a process call.
+    }
+  };
+
+  try {
+    const selector = txData.slice(0, 10);
+    const payload = `0x${txData.slice(10)}`;
+
+    if (selector === ethersUtils.id('aggregate3((address,bool,bytes)[])').slice(0, 10)) {
+      const [calls] = ethersUtils.defaultAbiCoder.decode(
+        ['tuple(address target, bool allowFailure, bytes callData)[]'],
+        payload,
+      );
+      for (const call of calls as Array<{ target: string; callData: string }>) {
+        tryParseProcessCall(call.target, call.callData);
+      }
+    } else if (
+      selector === ethersUtils.id('aggregate3Value((address,bool,uint256,bytes)[])').slice(0, 10)
+    ) {
+      const [calls] = ethersUtils.defaultAbiCoder.decode(
+        ['tuple(address target, bool allowFailure, uint256 value, bytes callData)[]'],
+        payload,
+      );
+      for (const call of calls as Array<{ target: string; callData: string }>) {
+        tryParseProcessCall(call.target, call.callData);
+      }
+    } else if (selector === ethersUtils.id('tryAggregate(bool,(address,bytes)[])').slice(0, 10)) {
+      const [, calls] = ethersUtils.defaultAbiCoder.decode(
+        ['bool', 'tuple(address target, bytes callData)[]'],
+        payload,
+      );
+      for (const call of calls as Array<{ target: string; callData: string }>) {
+        tryParseProcessCall(call.target, call.callData);
+      }
+    } else if (selector === ethersUtils.id('aggregate((address,bytes)[])').slice(0, 10)) {
+      const [calls] = ethersUtils.defaultAbiCoder.decode(
+        ['tuple(address target, bytes callData)[]'],
+        payload,
+      );
+      for (const call of calls as Array<{ target: string; callData: string }>) {
+        tryParseProcessCall(call.target, call.callData);
+      }
+    }
+  } catch (error) {
+    logger.debug('Failed to decode process multicall', error);
+  }
+
+  return results;
+}
+
+function decodeIsmMetadata(metadata: string, moduleType?: IsmModuleTypes): IsmMetadataDetails {
+  const length = byteLength(metadata);
+  const base: IsmMetadataDetails = { raw: metadata, length };
+
+  if (moduleType === IsmModuleTypes.AGGREGATION) {
+    const ranges = decodeAggregationRanges(metadata);
+    if (ranges.length) return { ...base, format: 'aggregation', ranges };
+  }
+
+  if (length >= MERKLE_ROOT_MULTISIG_SIGNATURES_OFFSET) {
+    const signatureBytes = length - MERKLE_ROOT_MULTISIG_SIGNATURES_OFFSET;
+    if (signatureBytes >= 0 && signatureBytes % SIGNATURE_LENGTH === 0) {
+      return {
+        ...base,
+        format: 'merkleRootMultisig',
+        originMerkleTreeHook: sliceHex(metadata, 0, 32),
+        messageIndex: readUint32(metadata, 32),
+        signedMessageId: sliceHex(metadata, 36, 68),
+        proof: Array.from({ length: 32 }, (_, i) => sliceHex(metadata, 68 + i * 32, 100 + i * 32)),
+        signedIndex: readUint32(metadata, 1092),
+        signatureCount: signatureBytes / SIGNATURE_LENGTH,
+      };
+    }
+  }
+
+  if (length >= MESSAGE_ID_MULTISIG_SIGNATURES_OFFSET) {
+    const signatureBytes = length - MESSAGE_ID_MULTISIG_SIGNATURES_OFFSET;
+    if (signatureBytes >= 0 && signatureBytes % SIGNATURE_LENGTH === 0) {
+      return {
+        ...base,
+        format: 'messageIdMultisig',
+        originMerkleTreeHook: sliceHex(metadata, 0, 32),
+        root: sliceHex(metadata, 32, 64),
+        index: readUint32(metadata, 64),
+        signatureCount: signatureBytes / SIGNATURE_LENGTH,
+      };
+    }
+  }
+
+  if (moduleType !== IsmModuleTypes.AGGREGATION) {
+    const ranges = decodeAggregationRanges(metadata);
+    if (ranges.length) return { ...base, format: 'aggregation', ranges };
+  }
+
+  return { ...base, format: 'unknown' };
+}
+
+function decodeAggregationRanges(metadata: string) {
+  const length = byteLength(metadata);
+  const ranges: IsmMetadataDetails['ranges'] = [];
+  for (
+    let offset = 0;
+    offset + AGGREGATION_RANGE_SIZE <= Math.min(length, 64);
+    offset += AGGREGATION_RANGE_SIZE
+  ) {
+    const start = readUint32(metadata, offset);
+    const end = readUint32(metadata, offset + 4);
+    if (start === 0 && end === 0) {
+      ranges.push({ start, end, hasMetadata: false });
+      continue;
+    }
+    if (start < AGGREGATION_RANGE_SIZE || end <= start || end > length) break;
+    ranges.push({ start, end, hasMetadata: true });
+  }
+  return ranges.length > 1 ? ranges : [];
+}
+
+function readUint32(hex: string, byteOffset: number) {
+  return Number.parseInt(sliceHex(hex, byteOffset, byteOffset + 4), 16);
+}
+
+function sliceHex(hex: string, startByte: number, endByte: number) {
+  return `0x${strip0x(hex).slice(startByte * 2, endByte * 2)}`;
+}
+
+function byteLength(hex: string) {
+  return strip0x(hex).length / 2;
 }
 
 async function tryCheckIgpGasFunded(
