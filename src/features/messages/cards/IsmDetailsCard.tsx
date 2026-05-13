@@ -1,5 +1,6 @@
 import { isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
@@ -154,7 +155,10 @@ function IsmRouteNode({
   const labelWidth = depth ? 'w-24' : 'w-28';
   return (
     <div
-      className={`${depth ? 'ml-4 border-l border-gray-200 pl-3 dark:border-gray-700' : ''} space-y-2`}
+      className={clsx(
+        'space-y-2',
+        depth && 'ml-4 border-l border-gray-200 pl-3 dark:border-gray-700',
+      )}
     >
       <KeyValueRow
         label={depth ? 'Module:' : 'Root:'}

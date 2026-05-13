@@ -65,6 +65,7 @@ export interface IsmRouteModule {
   moduleType?: IsmModuleTypes;
   threshold?: number;
   validators?: Address[];
+  multisigResolved?: boolean;
   metadata?: IsmMetadataDetails;
   children?: IsmRouteModule[];
 }

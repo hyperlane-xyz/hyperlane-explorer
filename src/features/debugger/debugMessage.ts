@@ -318,6 +318,7 @@ function routeHasEmptyMultisig(route?: IsmRouteModule): boolean {
   if (
     (route.moduleType === IsmModuleTypes.LEGACY_MULTISIG ||
       route.moduleType === IsmModuleTypes.MULTISIG) &&
+    route.multisigResolved &&
     (!route.validators?.length || !route.threshold || route.threshold < 1)
   ) {
     return true;
@@ -386,6 +387,7 @@ async function tryDescribeIsmRoute(
       const [validators, threshold] = await multisigIsm.validatorsAndThreshold(messageBytes);
       node.validators = validators;
       node.threshold = Number(threshold);
+      node.multisigResolved = true;
     }
   } catch (error) {
     logger.warn(`Error describing ISM route for ${ismAddress}`, error);
@@ -593,7 +595,7 @@ function decodeAggregationRanges(metadata: string) {
     if (start < AGGREGATION_RANGE_SIZE || end <= start || end > length) break;
     ranges.push({ start, end, hasMetadata: true });
   }
-  return ranges.length > 1 ? ranges : [];
+  return ranges.length > 0 ? ranges : [];
 }
 
 function readUint32(hex: string, byteOffset: number) {
