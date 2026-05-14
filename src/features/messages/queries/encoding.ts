@@ -40,6 +40,11 @@ export function postgresByteaToAddress(
   const hexString = postgresByteaToString(byteString);
   if (!chainMetadata) return hexString;
   const addressBytes = Buffer.from(strip0x(hexString), 'hex');
+  // Scraper occasionally records all-zero bytes for tx senders/recipients on
+  // some non-EVM chains (observed on paradex mainnet). bytesToProtocolAddress
+  // asserts on empty/all-zero input, which would otherwise fail the entire
+  // message parse and surface "Message not found".
+  if (!addressBytes.length || addressBytes.every((b) => b === 0)) return hexString;
   return bytesToProtocolAddress(addressBytes, chainMetadata.protocol, chainMetadata.bech32Prefix);
 }
 
