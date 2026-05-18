@@ -5,7 +5,18 @@ import { useMemo } from 'react';
 import { useStore } from '../../../store';
 import { WarpRouteDetails } from '../../../types';
 import { normalizeAddressToHex } from '../../../utils/yamlParsing';
-import { WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
+import { TokenConnectionRef, WarpRouteTokenVisualization, WarpRouteVisualization } from './types';
+
+// Token connection refs are formatted `protocol|chainName|addressOrDenom`.
+// Same regex as the SDK's TokenConnectionRegex but we only need a parser here.
+const TOKEN_CONNECTION_REGEX = /^([^|]+)\|([^|]+)\|(.+)$/;
+
+function parseTokenConnection(raw: string): TokenConnectionRef | undefined {
+  const match = TOKEN_CONNECTION_REGEX.exec(raw);
+  if (!match) return undefined;
+  const [, protocol, chainName, addressOrDenom] = match;
+  return { raw, protocol, chainName, addressOrDenom };
+}
 
 /**
  * Find the warp route config that contains the given token address on the given chain
@@ -57,6 +68,10 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
       decimals: token.decimals ?? 18,
       standard: token.standard,
       logoURI: token.logoURI,
+      collateralAddressOrDenom: token.collateralAddressOrDenom,
+      enrollments: token.connections
+        ?.map((c) => parseTokenConnection(c.token))
+        .filter((c): c is TokenConnectionRef => c !== undefined),
     }));
 
     return {

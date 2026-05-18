@@ -9,9 +9,24 @@ export interface WarpRouteTokenVisualization {
   decimals: number;
   standard?: TokenStandard;
   logoURI?: string;
+  collateralAddressOrDenom?: string;
+  // Cross-collateral sub-route enrollments. Each entry is the
+  // `protocol|chainName|addressOrDenom` token reference parsed from
+  // the WarpCoreConfig token's `connections` field. Named distinctly
+  // from `connections` so this shape stays compatible with the SDK's
+  // HypTokenAdapterInput when passed to adapter factories.
+  enrollments?: TokenConnectionRef[];
   // Balance data (fetched via adapters when expanded)
   collateralBalance?: bigint;
   isCollateralInsufficient?: boolean;
+}
+
+// Parsed `protocol|chainName|address` connection reference.
+export interface TokenConnectionRef {
+  raw: string;
+  protocol: string;
+  chainName: string;
+  addressOrDenom: string;
 }
 
 export interface WarpRouteVisualization {

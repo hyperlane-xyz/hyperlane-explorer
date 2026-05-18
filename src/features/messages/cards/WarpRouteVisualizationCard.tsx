@@ -8,6 +8,10 @@ import { Card } from '../../../components/layout/Card';
 import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
+import {
+  CrossCollateralEnrollments,
+  hasCrossCollateralTokens,
+} from '../warpVisualization/CrossCollateralEnrollments';
 import { useWarpRouteBalances } from '../warpVisualization/useWarpRouteBalances';
 import { useWarpRouteVisualization } from '../warpVisualization/useWarpRouteVisualization';
 import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
@@ -110,6 +114,11 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
               tokenSymbol={warpRouteDetails.originToken.symbol}
             />
           </div>
+
+          {/* Cross-collateral sub-route enrollments */}
+          {hasCrossCollateralTokens(visualization) && (
+            <CrossCollateralEnrollments visualization={visualization} />
+          )}
 
           {/* Refresh Balances Button */}
           <div className="flex justify-center">
