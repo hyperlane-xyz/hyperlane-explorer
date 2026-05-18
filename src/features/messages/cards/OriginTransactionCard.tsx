@@ -1,6 +1,7 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import { useId } from 'react';
+import type { PlacesType } from 'react-tooltip';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
@@ -16,11 +17,13 @@ export function OriginTransactionCard({
   domainId,
   transaction,
   blur,
+  tooltipPlacement,
 }: {
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
+  tooltipPlacement?: PlacesType;
 }) {
   return (
     <MessageTransactionPreviewCard
@@ -30,6 +33,7 @@ export function OriginTransactionCard({
       blur={blur}
       title="Origin Transaction"
       helpText={transactionHelpText.origin}
+      tooltipPlacement={tooltipPlacement}
     />
   );
 }
@@ -108,6 +112,7 @@ function MessageTransactionPreviewCard({
   blur,
   title,
   helpText,
+  tooltipPlacement,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -115,6 +120,7 @@ function MessageTransactionPreviewCard({
   blur: boolean;
   title: string;
   helpText: string;
+  tooltipPlacement?: PlacesType;
 }) {
   const chainMetadataResolver = useChainMetadataResolver();
   const tooltipId = `${useId()}-transaction-info`;
@@ -124,7 +130,7 @@ function MessageTransactionPreviewCard({
       className="flex min-w-[340px] flex-1 basis-0 flex-col"
       title={title}
       leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText} />}
+      icon={<Tooltip id={tooltipId} content={helpText} placement={tooltipPlacement} />}
     >
       <div className="space-y-2">
         <TransactionDetailsRows

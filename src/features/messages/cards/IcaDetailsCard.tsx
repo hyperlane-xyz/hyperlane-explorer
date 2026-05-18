@@ -14,13 +14,20 @@ import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
 import { MessageDebugResult } from '../../debugger/types';
 import {
   decodeIcaBody,
+  decodeIcaCallData,
+  decodeMulticallIcaCalls,
   IcaMessageType,
   useCcipReadIsmUrls,
   useIcaAddress,
   useRelatedIcaMessage,
   useRevealCalls,
 } from '../ica';
+import { CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { KeyValueRow } from './KeyValueRow';
+
+interface DisplayIcaCall extends IcaCall {
+  nestedCalls?: IcaCall[];
+}
 
 /**
  * Check if a bytes32 salt contains an address (first 12 bytes are zeros, last 20 bytes are non-zero).
@@ -151,6 +158,10 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || undefined;
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || undefined;
+  const tryGetChainName = useCallback(
+    (domainId: number) => chainMetadataResolver.tryGetChainName(domainId) || undefined,
+    [chainMetadataResolver],
+  );
   const destinationNativeDecimals =
     chainMetadataResolver.tryGetChainMetadata(destinationDomainId)?.nativeToken?.decimals ?? 18;
 
@@ -220,14 +231,20 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
 
   // Combine calls from message body (CALLS type) or from reveal metadata (REVEAL type)
   const displayCalls = useMemo(() => {
+    const attachNestedCalls = (calls: IcaCall[]): DisplayIcaCall[] =>
+      calls.map((call) => ({
+        ...call,
+        nestedCalls: decodeMulticallIcaCalls(call, destinationChainName) ?? undefined,
+      }));
+
     if (decodeResult?.messageType === IcaMessageType.CALLS) {
-      return decodeResult.calls;
+      return attachNestedCalls(decodeResult.calls);
     }
     if (decodeResult?.messageType === IcaMessageType.REVEAL && revealCalls) {
-      return revealCalls;
+      return attachNestedCalls(revealCalls);
     }
     return [];
-  }, [decodeResult, revealCalls]);
+  }, [decodeResult, revealCalls, destinationChainName]);
 
   // Get the failed call index from debug result (-1 if no failure or not available)
   const failedCallIndex = debugResult?.icaDetails?.failedCallIndex ?? -1;
@@ -249,6 +266,19 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
               call.to,
             ),
           ] as const,
+      ),
+      ...displayCalls.flatMap((call, i) =>
+        (call.nestedCalls ?? []).map(
+          async (nestedCall, nestedIndex) =>
+            [
+              `call-${i}-${nestedIndex}`,
+              await tryGetBlockExplorerAddressUrl(
+                chainMetadataResolver,
+                destinationDomainId,
+                nestedCall.to,
+              ),
+            ] as const,
+        ),
       ),
       displayOwner
         ? ([
@@ -484,7 +514,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 )}
                 {/* CCIP Read ISM section - only show when pending to help debug delivery issues */}
                 {!isDelivered && (
-                  <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
+                  <div className="mt-3 rounded border border-gray-200 p-3">
                     <label className="text-xs font-medium text-gray-600">CCIP Read Gateway</label>
                     {isCcipFetching ? (
                       <div className="mt-2 text-xs text-gray-500">Fetching gateway URLs...</div>
@@ -630,8 +660,10 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                       index={i}
                       total={displayCalls.length}
                       explorerUrl={explorerUrls[`call-${i}`]}
+                      nestedExplorerUrls={explorerUrls}
                       blur={blur}
                       failedCallIndex={failedCallIndex}
+                      tryGetChainName={tryGetChainName}
                       nativeDecimals={destinationNativeDecimals}
                     />
                   ))}
@@ -662,18 +694,26 @@ function IcaCallDetails({
   index,
   total,
   explorerUrl,
+  nestedExplorerUrls,
   blur,
   failedCallIndex,
+  tryGetChainName,
   nativeDecimals,
 }: {
-  call: IcaCall;
+  call: DisplayIcaCall;
   index: number;
   total: number;
   explorerUrl: string | null | undefined;
+  nestedExplorerUrls: Record<string, string | null>;
   blur: boolean;
   failedCallIndex: number;
+  tryGetChainName: (domainId: number) => string | undefined;
   nativeDecimals: number;
 }) {
+  const decodedCallData = useMemo(
+    () => decodeIcaCallData(call.data, tryGetChainName),
+    [call.data, tryGetChainName],
+  );
   const { hasValue, formattedValue } = useMemo(
     () => getFormattedCallValue(call.value, nativeDecimals),
     [call.value, nativeDecimals],
@@ -683,15 +723,15 @@ function IcaCallDetails({
 
   return (
     <div
-      className={clsx(
-        'rounded border p-3',
-        isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50',
-      )}
+      className={clsx('rounded border border-gray-200 p-3', isFailed && 'border-red-200 bg-red-50')}
     >
-      <label className={clsx('text-xs font-medium', isFailed ? 'text-red-600' : 'text-gray-600')}>
-        {`Call ${index + 1} of ${total}${isFailed ? ' - Failed' : ''}`}
-      </label>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <label className={clsx('text-xs font-medium', isFailed ? 'text-red-600' : 'text-gray-700')}>
+          {`Call ${index + 1} of ${total}${isFailed ? ' - Failed' : ''}`}
+        </label>
+      </div>
       <div className="mt-2 space-y-2">
+        {decodedCallData && <DecodedCallBanner decodedCallData={decodedCallData} blur={blur} />}
         <KeyValueRow
           label="Target:"
           labelWidth="w-16 sm:w-20"
@@ -711,15 +751,139 @@ function IcaCallDetails({
             blurValue={blur}
           />
         )}
+        {decodedCallData ? (
+          <CollapsibleLabelAndCodeBlock label="Raw data:" value={call.data} />
+        ) : (
+          <KeyValueRow
+            label="Data:"
+            labelWidth="w-16 sm:w-20"
+            display={call.data}
+            displayWidth="w-52 sm:w-80 lg:w-96"
+            showCopy={true}
+            blurValue={blur}
+          />
+        )}
+        {!!call.nestedCalls?.length && (
+          <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+            <div className="text-xs font-medium text-gray-600">Decoded multicall:</div>
+            {call.nestedCalls.map((nestedCall, nestedIndex) => (
+              <NestedIcaCallDetails
+                key={`nested-ica-call-${index}-${nestedIndex}`}
+                call={nestedCall}
+                index={nestedIndex}
+                total={call.nestedCalls?.length ?? 0}
+                explorerUrl={nestedExplorerUrls[`call-${index}-${nestedIndex}`]}
+                blur={blur}
+                tryGetChainName={tryGetChainName}
+                nativeDecimals={nativeDecimals}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NestedIcaCallDetails({
+  call,
+  index,
+  total,
+  explorerUrl,
+  blur,
+  tryGetChainName,
+  nativeDecimals,
+}: {
+  call: IcaCall;
+  index: number;
+  total: number;
+  explorerUrl: string | null | undefined;
+  blur: boolean;
+  tryGetChainName: (domainId: number) => string | undefined;
+  nativeDecimals: number;
+}) {
+  const decodedCallData = useMemo(
+    () => decodeIcaCallData(call.data, tryGetChainName),
+    [call.data, tryGetChainName],
+  );
+  const { hasValue, formattedValue } = useMemo(
+    () => getFormattedCallValue(call.value, nativeDecimals),
+    [call.value, nativeDecimals],
+  );
+
+  return (
+    <div className="rounded border border-gray-200 p-3">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <label className="text-xs font-medium text-gray-600">
+          {`Nested call ${index + 1} of ${total}`}
+        </label>
+      </div>
+      <div className="mt-2 space-y-2">
+        {decodedCallData && <DecodedCallBanner decodedCallData={decodedCallData} blur={blur} />}
         <KeyValueRow
-          label="Data:"
+          label="Target:"
           labelWidth="w-16 sm:w-20"
-          display={call.data}
-          displayWidth="w-52 sm:w-80 lg:w-96"
+          display={call.to}
+          displayWidth="w-52 sm:w-72"
+          link={explorerUrl || undefined}
           showCopy={true}
           blurValue={blur}
         />
+        {hasValue && (
+          <KeyValueRow
+            label="Value:"
+            labelWidth="w-16 sm:w-20"
+            display={`${formattedValue} (native)`}
+            displayWidth="w-52 sm:w-72"
+            showCopy={false}
+            blurValue={blur}
+          />
+        )}
+        {decodedCallData ? (
+          <CollapsibleLabelAndCodeBlock label="Raw data:" value={call.data} />
+        ) : (
+          <KeyValueRow
+            label="Data:"
+            labelWidth="w-16 sm:w-20"
+            display={call.data}
+            displayWidth="w-52 sm:w-80 lg:w-96"
+            showCopy={true}
+            blurValue={blur}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+function DecodedCallBanner({
+  decodedCallData,
+  blur,
+}: {
+  decodedCallData: NonNullable<ReturnType<typeof decodeIcaCallData>>;
+  blur: boolean;
+}) {
+  return (
+    <div className="rounded border border-green-200 bg-green-100/20 px-3 py-2 text-xs text-green-800">
+      <div>
+        <span className="font-medium">{decodedCallData.functionName}():</span>{' '}
+        {decodedCallData.summary}
+      </div>
+      {!!decodedCallData.details?.length && (
+        <div className="mt-1.5 grid grid-cols-1 gap-y-1 sm:grid-cols-2 sm:gap-x-3">
+          {decodedCallData.details.map((detail) => (
+            <KeyValueRow
+              key={`${detail.label}-${detail.value}`}
+              label={detail.label}
+              labelWidth="w-24 sm:w-28"
+              display={detail.value}
+              displayWidth="w-52 sm:w-72"
+              showCopy={detail.value.startsWith('0x')}
+              blurValue={blur}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

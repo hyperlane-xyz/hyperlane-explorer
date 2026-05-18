@@ -13,7 +13,7 @@ import { ContentDetailsCard } from '../messages/cards/ContentDetailsCard';
 import { IcaDetailsCard } from '../messages/cards/IcaDetailsCard';
 import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
 import { WarpTransferDetailsCard } from '../messages/cards/WarpTransferDetailsCard';
-import { isIcaMessage } from '../messages/ica';
+import { decodeIcaBody, decodeIcaCallData, IcaMessageType, isIcaMessage } from '../messages/ica';
 import { parseWarpRouteMessageDetails } from '../messages/utils';
 
 interface Props {
@@ -59,6 +59,46 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     }
 
     if (isIcaMessage({ sender: message.sender, recipient: message.recipient })) {
+      const decodedIca = decodeIcaBody(message.body);
+      if (decodedIca?.messageType === IcaMessageType.CALLS) {
+        const firstCall = decodedIca.calls[0];
+        const decodedCall = firstCall
+          ? decodeIcaCallData(
+              firstCall.data,
+              (domainId) => chainMetadataResolver.tryGetChainName(domainId) || undefined,
+            )
+          : null;
+        const callSummary = decodedCall
+          ? `${decodedCall.functionName}() - ${decodedCall.summary}`
+          : `${decodedIca.calls.length} call${decodedIca.calls.length === 1 ? '' : 's'}`;
+        const extraCalls =
+          decodedCall && decodedIca.calls.length > 1
+            ? ` + ${decodedIca.calls.length - 1} more`
+            : '';
+
+        return {
+          messageType: 'ica' as MessageType,
+          title: 'ICA Calls',
+          summaryLine: `${callSummary}${extraCalls} - ${route}`,
+        };
+      }
+
+      if (decodedIca?.messageType === IcaMessageType.COMMITMENT) {
+        return {
+          messageType: 'ica' as MessageType,
+          title: 'ICA Commitment',
+          summaryLine: `${trimToLength(decodedIca.commitment || message.msgId, 12)} - ${route}`,
+        };
+      }
+
+      if (decodedIca?.messageType === IcaMessageType.REVEAL) {
+        return {
+          messageType: 'ica' as MessageType,
+          title: 'ICA Reveal',
+          summaryLine: `${trimToLength(decodedIca.commitment || message.msgId, 12)} - ${route}`,
+        };
+      }
+
       return {
         messageType: 'ica' as MessageType,
         title: 'Interchain Account Message',
@@ -118,7 +158,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-4 border-t border-gray-200 p-4 [&_section]:border [&_section]:border-gray-200 [&_section]:shadow-none">
+        <div className="space-y-4 border-t border-gray-200 p-4 [&_section]:border [&_section]:border-gray-200 [&_section]:bg-transparent [&_section]:bg-none [&_section]:shadow-none">
           {/* Destination Transaction Card */}
           <DestinationTransactionCard
             chainName={destinationChainName}

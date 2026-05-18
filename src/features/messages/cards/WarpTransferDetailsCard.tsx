@@ -184,7 +184,7 @@ function TokenLogos({
         <div className="absolute left-0 top-0">
           <TokenIcon token={originToken} size={48} />
         </div>
-        <div className="absolute bottom-0 right-0 rounded-full ring-2 ring-white">
+        <div className="absolute bottom-0 right-0">
           <TokenIcon token={destinationToken} size={48} />
         </div>
       </div>

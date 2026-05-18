@@ -100,7 +100,7 @@ function RebalanceList({ rebalances }: { rebalances: RebalanceInfo[] }) {
       <ul className="space-y-2">
         {pendingRebalances.slice(0, 3).map((rebalance, idx) => (
           <li key={idx} className="flex items-center space-x-2 text-xs">
-            <span className="rounded bg-white font-mono">{rebalance.txHash.slice(0, 12)}...</span>
+            <span className="rounded font-mono">{rebalance.txHash.slice(0, 12)}...</span>
             {rebalance.messageId && (
               <Link
                 href={`/message/${rebalance.messageId}`}
