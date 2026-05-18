@@ -75,10 +75,12 @@ const COLLATERAL_TOKEN_STANDARDS = [
   'EvmHypCollateralFiat',
   'EvmHypNative',
   'EvmHypNativeScaled',
+  'EvmHypCrossCollateralRouter',
   'EvmHypXERC20Lockbox',
   'EvmHypVSXERC20Lockbox',
   'SealevelHypCollateral',
   'SealevelHypNative',
+  'SealevelHypCrossCollateral',
   'CwHypCollateral',
   'CwHypNative',
   'CosmosIbc', // IBC tokens often represent collateral

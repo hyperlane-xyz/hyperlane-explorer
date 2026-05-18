@@ -13,15 +13,21 @@ import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyper
 import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
-// Token standards that support balance fetching
-// NOTE: Only EVM chains are supported for balance fetching.
-// Sealevel/StarkNet adapters require native dependencies (e.g., @solana/web3.js)
-// that cause build errors when imported in the browser bundle.
+// Token standards that support balance fetching via the EVM adapter path.
+// Sealevel collateral routes go through the /api/sealevel-balance route
+// because the SDK's Sealevel adapter depends on @solana/web3.js, which
+// breaks the browser bundle when imported directly.
 const SUPPORTED_COLLATERAL_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypCollateral,
   TokenStandard.EvmHypNative,
+  TokenStandard.EvmHypCrossCollateralRouter,
   TokenStandard.EvmHypXERC20Lockbox,
   TokenStandard.EvmHypVSXERC20Lockbox,
+];
+
+const SUPPORTED_SEALEVEL_COLLATERAL_STANDARDS: TokenStandard[] = [
+  TokenStandard.SealevelHypCollateral,
+  TokenStandard.SealevelHypCrossCollateral,
 ];
 
 const SUPPORTED_XERC20_STANDARDS: TokenStandard[] = [
@@ -54,6 +60,41 @@ function isSupportedXERC20Standard(standard: TokenStandard | string | undefined)
   return SUPPORTED_XERC20_STANDARDS.includes(standard as TokenStandard);
 }
 
+function isSupportedSealevelCollateralStandard(
+  standard: TokenStandard | string | undefined,
+): boolean {
+  if (!standard) return false;
+  return SUPPORTED_SEALEVEL_COLLATERAL_STANDARDS.includes(standard as TokenStandard);
+}
+
+/**
+ * Fetch a Sealevel collateral balance via the server-side /api/sealevel-balance
+ * endpoint. This avoids pulling @solana/web3.js into the browser bundle.
+ */
+async function fetchSealevelTokenBalance(
+  token: WarpRouteTokenVisualization,
+): Promise<ChainBalance | undefined> {
+  const params = new URLSearchParams({
+    chain: token.chainName,
+    warpRouter: token.addressOrDenom,
+  });
+  try {
+    const response = await fetch(`/api/sealevel-balance?${params.toString()}`);
+    if (!response.ok) {
+      logger.debug(
+        `Sealevel balance endpoint returned ${response.status} for ${token.chainName}:${token.symbol}`,
+      );
+      return undefined;
+    }
+    const data = (await response.json()) as { balance?: string };
+    if (typeof data.balance !== 'string') return undefined;
+    return { balance: BigInt(data.balance) };
+  } catch (error) {
+    logger.debug(`Failed to fetch Sealevel balance for ${token.chainName}:${token.symbol}`, error);
+    return undefined;
+  }
+}
+
 /**
  * Fetch the balance data for a single token
  */
@@ -61,6 +102,9 @@ async function fetchTokenBalance(
   multiProvider: MultiProtocolProvider,
   token: WarpRouteTokenVisualization,
 ): Promise<ChainBalance | undefined> {
+  if (isSupportedSealevelCollateralStandard(token.standard)) {
+    return fetchSealevelTokenBalance(token);
+  }
   try {
     const adapter = createEvmHypAdapter(multiProvider, token);
     if (!adapter) {
@@ -117,7 +161,8 @@ function shouldFetchSupply(token: WarpRouteTokenVisualization): boolean {
     isCollateralTokenStandard(token.standard) ||
     isSupportedCollateralStandard(token.standard) ||
     isSupportedXERC20Standard(token.standard) ||
-    isSupportedSyntheticStandard(token.standard)
+    isSupportedSyntheticStandard(token.standard) ||
+    isSupportedSealevelCollateralStandard(token.standard)
   );
 }
 
