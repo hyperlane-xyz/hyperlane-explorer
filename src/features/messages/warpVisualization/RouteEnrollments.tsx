@@ -3,26 +3,22 @@ import { CopyButton } from '@hyperlane-xyz/widgets';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
-import { isCrossCollateralTokenStandard } from './tokenStandards';
 import {
   getWarpRouteTokenKey,
+  hasRouteEnrollments,
   type WarpRouteEnrollment,
   type WarpRouteTokenVisualization,
   type WarpRouteVisualization,
 } from './types';
 
-export function hasCrossCollateralTokens(visualization: WarpRouteVisualization): boolean {
-  return visualization.tokens.some((token) => isCrossCollateralTokenStandard(token.standard));
-}
-
 interface Props {
   visualization: WarpRouteVisualization;
 }
 
-export function CrossCollateralEnrollments({ visualization }: Props) {
+export function RouteEnrollments({ visualization }: Props) {
   const multiProvider = useMultiProvider();
 
-  if (!hasCrossCollateralTokens(visualization)) return null;
+  if (!hasRouteEnrollments(visualization)) return null;
 
   return (
     <div className="space-y-2">

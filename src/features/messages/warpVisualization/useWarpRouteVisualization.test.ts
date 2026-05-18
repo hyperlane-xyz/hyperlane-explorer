@@ -3,7 +3,7 @@ import type { WarpRouteConfigs } from '@hyperlane-xyz/sdk/warp/read';
 import type { WarpCoreConfig } from '@hyperlane-xyz/sdk/warp/types';
 
 import { isCrossCollateralTokenStandard } from './tokenStandards';
-import { getWarpRouteTokenKey } from './types';
+import { getWarpRouteTokenKey, hasRouteEnrollments } from './types';
 import { findWarpRouteConfig, isCollateralTokenStandard } from './useWarpRouteVisualization';
 
 const ETH_USDC = '0xA9C9a8FB36Ce3e5ffBAC3757dA7141262723541F';
@@ -181,5 +181,32 @@ describe('isCrossCollateralTokenStandard', () => {
   it('detects cross-collateral standards without importing UI components', () => {
     expect(isCrossCollateralTokenStandard(TokenStandard.EvmHypCrossCollateralRouter)).toBe(true);
     expect(isCrossCollateralTokenStandard(TokenStandard.EvmHypCollateral)).toBe(false);
+  });
+});
+
+describe('hasRouteEnrollments', () => {
+  it('detects enrollments on non-cross-collateral routes', () => {
+    expect(
+      hasRouteEnrollments({
+        routeId: 'normal-route',
+        config: route([]),
+        tokens: [
+          {
+            chainName: 'ethereum',
+            addressOrDenom: ETH_USDC,
+            standard: TokenStandard.EvmHypCollateral,
+            symbol: 'USDC',
+            decimals: 6,
+            enrollments: [
+              {
+                chainName: 'solanamainnet',
+                addressOrDenom: SOL_XO,
+                symbol: 'XO',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true);
   });
 });

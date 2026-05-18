@@ -35,6 +35,10 @@ export interface WarpRouteVisualization {
   tokens: WarpRouteTokenVisualization[];
 }
 
+export function hasRouteEnrollments(visualization: WarpRouteVisualization): boolean {
+  return visualization.tokens.some((token) => token.enrollments.length > 0);
+}
+
 export interface ChainBalance {
   balance: bigint;
   xerc20Supply?: bigint; // total supply of xERC20 token

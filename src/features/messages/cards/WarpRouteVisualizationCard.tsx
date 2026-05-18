@@ -8,7 +8,7 @@ import { Card } from '../../../components/layout/Card';
 import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
-import { CrossCollateralEnrollments } from '../warpVisualization/CrossCollateralEnrollments';
+import { RouteEnrollments } from '../warpVisualization/RouteEnrollments';
 import { useWarpRouteBalances } from '../warpVisualization/useWarpRouteBalances';
 import { useWarpRouteVisualization } from '../warpVisualization/useWarpRouteVisualization';
 import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
@@ -114,7 +114,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
             />
           </div>
 
-          <CrossCollateralEnrollments visualization={visualization} />
+          <RouteEnrollments visualization={visualization} />
 
           {/* Refresh Balances Button */}
           <div className="flex justify-center">
