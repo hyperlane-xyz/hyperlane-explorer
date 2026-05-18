@@ -10,8 +10,16 @@ import { useMemo } from 'react';
 import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
-import { ChainBalance, WarpRouteBalances, WarpRouteTokenVisualization } from './types';
+import { SUPPORTED_SEALEVEL_BALANCE_STANDARDS } from './tokenStandards';
+import {
+  ChainBalance,
+  getWarpRouteTokenKey,
+  WarpRouteBalances,
+  WarpRouteTokenVisualization,
+} from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
+
+const BALANCE_STALE_TIME_MS = 15_000;
 
 // Token standards that support balance fetching
 // NOTE: Only EVM chains are supported for balance fetching.
@@ -19,6 +27,7 @@ import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 // that cause build errors when imported in the browser bundle.
 const SUPPORTED_COLLATERAL_STANDARDS: TokenStandard[] = [
   TokenStandard.EvmHypCollateral,
+  TokenStandard.EvmHypCrossCollateralRouter,
   TokenStandard.EvmHypNative,
   TokenStandard.EvmHypXERC20Lockbox,
   TokenStandard.EvmHypVSXERC20Lockbox,
@@ -54,6 +63,40 @@ function isSupportedXERC20Standard(standard: TokenStandard | string | undefined)
   return SUPPORTED_XERC20_STANDARDS.includes(standard as TokenStandard);
 }
 
+function isSupportedSealevelStandard(standard: TokenStandard | string | undefined): boolean {
+  if (!standard) return false;
+  return SUPPORTED_SEALEVEL_BALANCE_STANDARDS.includes(standard as TokenStandard);
+}
+
+function getApiBalance(data: unknown): bigint | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+  const { balance } = data as Record<string, unknown>;
+  if (typeof balance !== 'string') return undefined;
+  return BigInt(balance);
+}
+
+async function fetchSealevelTokenBalance(
+  token: WarpRouteTokenVisualization,
+): Promise<ChainBalance | undefined> {
+  const params = new URLSearchParams({
+    chainName: token.chainName,
+    addressOrDenom: token.addressOrDenom,
+    standard: token.standard || '',
+  });
+  if (token.collateralAddressOrDenom) {
+    params.set('collateralAddressOrDenom', token.collateralAddressOrDenom);
+  }
+
+  const response = await fetch(`/api/sealevel-warp-route-balance?${params.toString()}`);
+  if (!response.ok) {
+    logger.debug(`Sealevel balance API ${response.status} for ${token.chainName}:${token.symbol}`);
+    return undefined;
+  }
+
+  const balance = getApiBalance(await response.json());
+  return balance === undefined ? undefined : { balance };
+}
+
 /**
  * Fetch the balance data for a single token
  */
@@ -62,6 +105,10 @@ async function fetchTokenBalance(
   token: WarpRouteTokenVisualization,
 ): Promise<ChainBalance | undefined> {
   try {
+    if (isSupportedSealevelStandard(token.standard)) {
+      return await fetchSealevelTokenBalance(token);
+    }
+
     const adapter = createEvmHypAdapter(multiProvider, token);
     if (!adapter) {
       return undefined;
@@ -116,6 +163,7 @@ function shouldFetchSupply(token: WarpRouteTokenVisualization): boolean {
   return (
     isCollateralTokenStandard(token.standard) ||
     isSupportedCollateralStandard(token.standard) ||
+    isSupportedSealevelStandard(token.standard) ||
     isSupportedXERC20Standard(token.standard) ||
     isSupportedSyntheticStandard(token.standard)
   );
@@ -133,7 +181,7 @@ async function fetchAllBalances(
   const promises = tokens.map(async (token) => {
     const balance = await fetchTokenBalance(multiProvider, token);
     if (balance !== undefined) {
-      balances[token.chainName] = balance;
+      balances[getWarpRouteTokenKey(token)] = balance;
     }
   });
 
@@ -162,7 +210,15 @@ export function useWarpRouteBalances(
   // Create a stable string key from tokens - this prevents queryKey from changing
   // when tokensToFetch array reference changes but content is the same
   const tokensKey = useMemo(
-    () => tokensToFetch.map((t) => `${t.chainName}:${t.addressOrDenom}`).join(','),
+    () =>
+      tokensToFetch
+        .map(
+          (t) =>
+            `${t.chainName}:${t.addressOrDenom}:${t.standard || ''}:${
+              t.collateralAddressOrDenom || ''
+            }`,
+        )
+        .join(','),
     [tokensToFetch],
   );
 
@@ -174,6 +230,7 @@ export function useWarpRouteBalances(
   const {
     data: balances,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -184,15 +241,16 @@ export function useWarpRouteBalances(
       return fetchAllBalances(multiProvider, tokensToFetch);
     },
     enabled: enabled && !!multiProvider && tokensToFetch.length > 0 && !!routeId,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    staleTime: BALANCE_STALE_TIME_MS,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   return {
     balances: balances || {},
     isLoading,
+    isFetching,
     error: error ? String(error) : undefined,
     refetch,
   };

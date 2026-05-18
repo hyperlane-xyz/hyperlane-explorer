@@ -8,6 +8,7 @@ import { Card } from '../../../components/layout/Card';
 import HubIcon from '../../../images/icons/hub.svg';
 import { useMultiProvider } from '../../../store';
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
+import { CrossCollateralEnrollments } from '../warpVisualization/CrossCollateralEnrollments';
 import { useWarpRouteBalances } from '../warpVisualization/useWarpRouteBalances';
 import { useWarpRouteVisualization } from '../warpVisualization/useWarpRouteVisualization';
 import { WarpRouteGraph } from '../warpVisualization/WarpRouteGraph';
@@ -28,7 +29,7 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
   // Get balances with manual refetch - only fetch when expanded
   const {
     balances,
-    isLoading: isBalancesLoading,
+    isFetching: isBalancesFetching,
     refetch: refetchBalances,
   } = useWarpRouteBalances(
     visualization?.tokens,
@@ -104,12 +105,16 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
               tokens={visualization.tokens}
               originChain={originChainName}
               destinationChain={destinationChainName}
+              originAddressOrDenom={warpRouteDetails.originToken.addressOrDenom}
+              destinationAddressOrDenom={warpRouteDetails.destinationToken.addressOrDenom}
               balances={balances}
               transferAmount={transferAmount}
               transferAmountDisplay={warpRouteDetails.amount}
               tokenSymbol={warpRouteDetails.originToken.symbol}
             />
           </div>
+
+          <CrossCollateralEnrollments visualization={visualization} />
 
           {/* Refresh Balances Button */}
           <div className="flex justify-center">
@@ -118,10 +123,10 @@ export function WarpRouteVisualizationCard({ message, warpRouteDetails, blur }: 
                 e.stopPropagation();
                 refetchBalances();
               }}
-              disabled={isBalancesLoading}
+              disabled={isBalancesFetching}
               className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isBalancesLoading ? (
+              {isBalancesFetching ? (
                 <SpinnerIcon width={16} height={16} />
               ) : (
                 <RefreshIcon width={16} height={16} />
