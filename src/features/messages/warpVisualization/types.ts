@@ -1,4 +1,11 @@
-import { TokenStandard, WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import type { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
+import type { WarpCoreConfig } from '@hyperlane-xyz/sdk/warp/types';
+
+export interface WarpRouteEnrollment {
+  chainName: string;
+  addressOrDenom: string;
+  symbol: string;
+}
 
 // Token info from registry for visualization
 export interface WarpRouteTokenVisualization {
@@ -8,16 +15,28 @@ export interface WarpRouteTokenVisualization {
   symbol: string;
   decimals: number;
   standard?: TokenStandard;
+  collateralAddressOrDenom?: string;
+  enrollments: WarpRouteEnrollment[];
   logoURI?: string;
   // Balance data (fetched via adapters when expanded)
   collateralBalance?: bigint;
   isCollateralInsufficient?: boolean;
 }
 
+export function getWarpRouteTokenKey(
+  token: Pick<WarpRouteTokenVisualization, 'chainName' | 'addressOrDenom'>,
+): string {
+  return `${token.chainName}:${token.addressOrDenom}`;
+}
+
 export interface WarpRouteVisualization {
   routeId: string;
   config: WarpCoreConfig;
   tokens: WarpRouteTokenVisualization[];
+}
+
+export function hasRouteEnrollments(visualization: WarpRouteVisualization): boolean {
+  return visualization.tokens.some((token) => token.enrollments.length > 0);
 }
 
 export interface ChainBalance {
@@ -27,9 +46,10 @@ export interface ChainBalance {
 }
 
 export interface WarpRouteBalances {
-  // Map of chainName -> balance data
+  // Map of token key -> balance data
   balances: Record<string, ChainBalance>;
   isLoading: boolean;
+  isFetching: boolean;
   error?: string;
   refetch: () => void;
 }
