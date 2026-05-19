@@ -7,13 +7,16 @@ import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { useMultiProvider } from '../../../store';
 import { formatAmountCompact } from '../../../utils/amount';
 import { tryGetBlockExplorerAddressUrl } from '../../../utils/url';
-import { ChainBalance, WarpRouteTokenVisualization } from './types';
+import { normalizeAddressToHex } from '../../../utils/yamlParsing';
+import { ChainBalance, getWarpRouteTokenKey, WarpRouteTokenVisualization } from './types';
 import { isCollateralTokenStandard } from './useWarpRouteVisualization';
 
 interface WarpRouteGraphProps {
   tokens: WarpRouteTokenVisualization[];
   originChain: string;
   destinationChain: string;
+  originAddressOrDenom?: string;
+  destinationAddressOrDenom?: string;
   balances: Record<string, ChainBalance>;
   transferAmount?: bigint;
   transferAmountDisplay?: string;
@@ -56,6 +59,16 @@ function isSyntheticToken(token: WarpRouteTokenVisualization): boolean {
 
 function isXERC20Token(token: WarpRouteTokenVisualization): boolean {
   return token.standard ? token.standard.includes('XERC20') : false;
+}
+
+function tokenMatchesEndpoint(
+  token: WarpRouteTokenVisualization,
+  chainName: string,
+  addressOrDenom: string | undefined,
+): boolean {
+  if (token.chainName !== chainName) return false;
+  if (!addressOrDenom) return true;
+  return normalizeAddressToHex(token.addressOrDenom) === normalizeAddressToHex(addressOrDenom);
 }
 
 /**
@@ -101,7 +114,7 @@ function CompactChainNode({
     transferAmount !== undefined &&
     balance < transferAmount;
 
-  const explorerUrl = explorerUrls[`${token.chainName}:${token.addressOrDenom}`];
+  const explorerUrl = explorerUrls[getWarpRouteTokenKey(token)];
 
   const chainMetadata = multiProvider.tryGetChainMetadata(token.chainName);
   const displayName = chainMetadata?.displayName || token.chainName;
@@ -213,7 +226,6 @@ function MinimalChainNode({
       >
         {getTokenTypeLabel(token.standard)}
       </span>
-
       {/* Balance for collateral/synthetic (non-xERC20) */}
       {balance !== undefined && (isCollateral || isSynthetic) && !isXERC20 && (
         <div
@@ -249,6 +261,8 @@ export function WarpRouteGraph({
   tokens,
   originChain,
   destinationChain,
+  originAddressOrDenom,
+  destinationAddressOrDenom,
   balances,
   transferAmount,
   transferAmountDisplay,
@@ -264,7 +278,7 @@ export function WarpRouteGraph({
       const fetchTasks: { key: string; promise: Promise<string | null> }[] = [];
 
       for (const token of tokens) {
-        const tokenKey = `${token.chainName}:${token.addressOrDenom}`;
+        const tokenKey = getWarpRouteTokenKey(token);
         fetchTasks.push({
           key: tokenKey,
           promise: tryGetBlockExplorerAddressUrl(
@@ -290,10 +304,16 @@ export function WarpRouteGraph({
   }, [tokens, multiProvider]);
 
   // Get origin and destination tokens
-  const originToken = tokens.find((t) => t.chainName === originChain);
-  const destToken = tokens.find((t) => t.chainName === destinationChain);
+  const originToken = tokens.find((t) =>
+    tokenMatchesEndpoint(t, originChain, originAddressOrDenom),
+  );
+  const destToken = tokens.find((t) =>
+    tokenMatchesEndpoint(t, destinationChain, destinationAddressOrDenom),
+  );
+  const originTokenKey = originToken ? getWarpRouteTokenKey(originToken) : undefined;
+  const destTokenKey = destToken ? getWarpRouteTokenKey(destToken) : undefined;
   const otherTokens = tokens.filter(
-    (t) => t.chainName !== originChain && t.chainName !== destinationChain,
+    (t) => getWarpRouteTokenKey(t) !== originTokenKey && getWarpRouteTokenKey(t) !== destTokenKey,
   );
 
   if (tokens.length === 0) {
@@ -304,49 +324,51 @@ export function WarpRouteGraph({
     );
   }
 
-  const originBalance = originToken ? balances[originToken.chainName] : undefined;
-  const destBalance = destToken ? balances[destToken.chainName] : undefined;
+  const originBalance = originTokenKey ? balances[originTokenKey] : undefined;
+  const destBalance = destTokenKey ? balances[destTokenKey] : undefined;
 
   return (
     <div className="relative flex flex-col items-center gap-4 py-4">
       {/* Main transfer visualization - origin and destination */}
-      <div className="flex items-center gap-4">
-        {/* Origin */}
-        <CompactChainNode
-          token={originToken}
-          chainBalance={originBalance}
-          transferAmount={transferAmount}
-          borderColor="border-primary-500"
-          multiProvider={multiProvider}
-          explorerUrls={explorerUrls}
-        />
+      <div className="w-full overflow-x-auto pb-2">
+        <div className="flex min-w-max items-center justify-center gap-4 px-1">
+          {/* Origin */}
+          <CompactChainNode
+            token={originToken}
+            chainBalance={originBalance}
+            transferAmount={transferAmount}
+            borderColor="border-primary-500"
+            multiProvider={multiProvider}
+            explorerUrls={explorerUrls}
+          />
 
-        {/* Arrow with transfer amount */}
-        <div className="flex flex-col items-center">
-          <div className="flex items-center">
-            <div className="h-0.5 w-8 bg-primary-500" />
-            {transferAmountDisplay && tokenSymbol && (
-              <div className="rounded border border-primary-500 bg-white px-2 py-1">
-                <span className="text-xs font-medium text-primary-700">
-                  {transferAmountDisplay} {tokenSymbol}
-                </span>
-              </div>
-            )}
-            <div className="h-0.5 w-8 bg-primary-500" />
-            <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-primary-500 border-t-transparent" />
+          {/* Arrow with transfer amount */}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center">
+              <div className="h-0.5 w-8 bg-primary-500" />
+              {transferAmountDisplay && tokenSymbol && (
+                <div className="rounded border border-primary-500 bg-white px-2 py-1">
+                  <span className="block max-w-[112px] truncate text-xs font-medium text-primary-700">
+                    {transferAmountDisplay} {tokenSymbol}
+                  </span>
+                </div>
+              )}
+              <div className="h-0.5 w-8 bg-primary-500" />
+              <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-primary-500 border-t-transparent" />
+            </div>
           </div>
-        </div>
 
-        {/* Destination */}
-        <CompactChainNode
-          token={destToken}
-          chainBalance={destBalance}
-          transferAmount={transferAmount}
-          borderColor="border-primary-500"
-          multiProvider={multiProvider}
-          explorerUrls={explorerUrls}
-          isDestination={true}
-        />
+          {/* Destination */}
+          <CompactChainNode
+            token={destToken}
+            chainBalance={destBalance}
+            transferAmount={transferAmount}
+            borderColor="border-primary-500"
+            multiProvider={multiProvider}
+            explorerUrls={explorerUrls}
+            isDestination={true}
+          />
+        </div>
       </div>
 
       {/* Other chains in a compact grid */}
@@ -356,9 +378,9 @@ export function WarpRouteGraph({
           <div className="flex flex-wrap justify-center gap-2">
             {otherTokens.map((token) => (
               <MinimalChainNode
-                key={token.chainName}
+                key={getWarpRouteTokenKey(token)}
                 token={token}
-                chainBalance={balances[token.chainName]}
+                chainBalance={balances[getWarpRouteTokenKey(token)]}
                 multiProvider={multiProvider}
               />
             ))}
