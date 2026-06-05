@@ -33,14 +33,21 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const warpRouteIdToAddressesMap = useStore((s) => s.warpRouteIdToAddressesMap);
 
   // Use message data directly from GraphQL - no additional RPC calls for performance
   const { status, originDomainId, destinationDomainId, destination } = message;
 
   // Parse warp route details
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [message, warpRouteChainAddressMap, chainMetadataResolver],
+    () =>
+      parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        warpRouteIdToAddressesMap,
+        chainMetadataResolver,
+      ),
+    [message, warpRouteChainAddressMap, warpRouteIdToAddressesMap, chainMetadataResolver],
   );
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';

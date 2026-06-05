@@ -76,6 +76,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const warpRouteIdToAddressesMap = useStore((s) => s.warpRouteIdToAddressesMap);
   const [runtimeState, setRuntimeState] = useState<{
     messageId: string;
     value: MessageDetailsRuntimeState;
@@ -123,8 +124,14 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [chainMetadataResolver, message, warpRouteChainAddressMap],
+    () =>
+      parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        warpRouteIdToAddressesMap,
+        chainMetadataResolver,
+      ),
+    [chainMetadataResolver, message, warpRouteChainAddressMap, warpRouteIdToAddressesMap],
   );
   const txMessageCount = useTransactionMessageCount(isMessageFound ? origin.hash : undefined);
   const showTxLink = txMessageCount > 1;

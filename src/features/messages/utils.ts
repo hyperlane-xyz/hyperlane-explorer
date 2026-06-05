@@ -1,6 +1,9 @@
 import { scalesEqual } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
+import type {
+  WarpRouteChainAddressMap,
+  WarpRouteIdToAddressesMap,
+} from '@hyperlane-xyz/sdk/warp/read';
 import {
   bytesToProtocolAddress,
   fromBase64,
@@ -13,7 +16,10 @@ import {
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
-import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
+import {
+  getCounterpartTokenFromWarpRoute,
+  getTokenFromWarpRouteChainAddressMap,
+} from '../../utils/token';
 import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
 
 export function serializeMessage(msg: MessageStub | Message): string | undefined {
@@ -27,6 +33,7 @@ export function deserializeMessage<M extends MessageStub>(data: string | string[
 export function parseWarpRouteMessageDetails(
   message: Message | MessageStub,
   warpRouteChainAddressMap: WarpRouteChainAddressMap,
+  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap,
   chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainMetadata'>,
 ): WarpRouteDetails | undefined {
   try {
@@ -40,16 +47,38 @@ export function parseWarpRouteMessageDetails(
     const parsedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
     const parsedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
 
-    const originToken = getTokenFromWarpRouteChainAddressMap(
+    let originToken = getTokenFromWarpRouteChainAddressMap(
       originMetadata,
       parsedSender,
       warpRouteChainAddressMap,
     );
-    const destinationToken = getTokenFromWarpRouteChainAddressMap(
+    let destinationToken = getTokenFromWarpRouteChainAddressMap(
       destinationMetadata,
       parsedRecipient,
       warpRouteChainAddressMap,
     );
+
+    // Some legs cannot be matched by their on-chain address (e.g. CosmosIbc /
+    // ibc-hyperlane routes, whose on-chain party is the router app rather than
+    // the registry denom key). When exactly one leg matches by address, derive
+    // its counterpart via the shared warp route so the transfer still resolves.
+    if (originToken && !destinationToken) {
+      destinationToken = getCounterpartTokenFromWarpRoute(
+        originMetadata.name,
+        originToken.addressOrDenom,
+        destinationMetadata.name,
+        warpRouteChainAddressMap,
+        warpRouteIdToAddressesMap,
+      );
+    } else if (!originToken && destinationToken) {
+      originToken = getCounterpartTokenFromWarpRoute(
+        destinationMetadata.name,
+        destinationToken.addressOrDenom,
+        originMetadata.name,
+        warpRouteChainAddressMap,
+        warpRouteIdToAddressesMap,
+      );
+    }
 
     // If tokens are not found with the addresses, it means the message
     // is not a warp transfer between tokens known to the registry

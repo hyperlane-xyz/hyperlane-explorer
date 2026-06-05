@@ -1,5 +1,8 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
+import type {
+  WarpRouteChainAddressMap,
+  WarpRouteIdToAddressesMap,
+} from '@hyperlane-xyz/sdk/warp/read';
 import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -35,6 +38,7 @@ export function MessageTable({
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const warpRouteIdToAddressesMap = useStore((s) => s.warpRouteIdToAddressesMap);
   const { scrapedDomains } = useScrapedDomains();
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
@@ -100,6 +104,7 @@ export function MessageTable({
               router={router}
               scrapedChains={scrapedDomains}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
+              warpRouteIdToAddressesMap={warpRouteIdToAddressesMap}
             />
           </tr>
         ))}
@@ -114,12 +119,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   router,
   scrapedChains,
   warpRouteChainAddressMap,
+  warpRouteIdToAddressesMap,
 }: {
   message: MessageStub;
   chainMetadataResolver: ChainMetadataResolver;
   router: NextRouter;
   scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  warpRouteIdToAddressesMap: WarpRouteIdToAddressesMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
@@ -165,8 +172,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [message, warpRouteChainAddressMap, chainMetadataResolver],
+    () =>
+      parseWarpRouteMessageDetails(
+        message,
+        warpRouteChainAddressMap,
+        warpRouteIdToAddressesMap,
+        chainMetadataResolver,
+      ),
+    [message, warpRouteChainAddressMap, warpRouteIdToAddressesMap, chainMetadataResolver],
   );
   const isDifferentWarpToken = warpRouteDetails
     ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
