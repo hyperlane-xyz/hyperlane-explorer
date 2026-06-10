@@ -1,91 +1,19 @@
-import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-
-import { config } from '../../../consts/config';
-import { Message, MessageStub } from '../../../types';
-import { logger } from '../../../utils/logger';
-import { DomainsEntry } from '../../chains/queries/fragments';
-import { MessageIdentifierType, buildMessageQuery } from './build';
-import { MessagesQueryResult } from './fragments';
-import { parseMessageQueryResult } from './parse';
+import { MessageStub } from '../../../types';
 
 const MAX_PREFETCHED_MESSAGES = 25;
 
 const prefetchedMessageStubs = new Map<string, MessageStub>();
-const prefetchedMessageDetails = new Map<string, Message>();
-const prefetchedMessageDetailPromises = new Map<string, Promise<Message | null>>();
-let prefetchedMessageVersion = 0;
 
 export function clearPrefetchedMessages() {
-  prefetchedMessageVersion += 1;
   prefetchedMessageStubs.clear();
-  prefetchedMessageDetails.clear();
-  prefetchedMessageDetailPromises.clear();
 }
 
 export function getPrefetchedMessageStub(messageId: string) {
   return prefetchedMessageStubs.get(normalizeMessageCacheKey(messageId));
 }
 
-export function getPrefetchedMessageDetails(messageId: string) {
-  return prefetchedMessageDetails.get(normalizeMessageCacheKey(messageId));
-}
-
 export function prefetchMessageStub(message: MessageStub) {
   setPrefetchedValue(prefetchedMessageStubs, normalizeMessageCacheKey(message.msgId), message);
-}
-
-export function prefetchMessageDetails(
-  messageId: string,
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: DomainsEntry[],
-) {
-  const cacheKey = normalizeMessageCacheKey(messageId);
-  const existing = prefetchedMessageDetails.get(cacheKey);
-  if (existing) return Promise.resolve(existing);
-
-  const inFlight = prefetchedMessageDetailPromises.get(cacheKey);
-  if (inFlight) return inFlight;
-
-  const version = prefetchedMessageVersion;
-  const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
-  const promise = fetch(config.apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  })
-    .then(async (response) => {
-      if (!response.ok) throw new Error(`Prefetch failed with ${response.status}`);
-      const body = (await response.json()) as {
-        data?: MessagesQueryResult;
-        errors?: Array<{ message?: string }>;
-      };
-      if (body.errors?.length) {
-        throw new Error(body.errors[0]?.message || 'GraphQL prefetch failed');
-      }
-      const message =
-        parseMessageQueryResult(chainMetadataResolver, scrapedChains, body.data)[0] || null;
-      if (message && prefetchedMessageVersion === version) {
-        setPrefetchedMessageDetails(message);
-        return message;
-      }
-      return null;
-    })
-    .catch((error) => {
-      logger.debug('Error prefetching message details', messageId, error);
-      return null;
-    })
-    .finally(() => {
-      if (prefetchedMessageDetailPromises.get(cacheKey) === promise) {
-        prefetchedMessageDetailPromises.delete(cacheKey);
-      }
-    });
-
-  prefetchedMessageDetailPromises.set(cacheKey, promise);
-  return promise;
-}
-
-function setPrefetchedMessageDetails(message: Message) {
-  setPrefetchedValue(prefetchedMessageDetails, normalizeMessageCacheKey(message.msgId), message);
 }
 
 function normalizeMessageCacheKey(messageId: string) {

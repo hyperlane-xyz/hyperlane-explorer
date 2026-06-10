@@ -50,12 +50,10 @@ export function MessageTable({
 
     const prefetchTopRows = async () => {
       await prefetchMessageDetailShell();
-      await Promise.all(
-        messagesToPrefetch.map((message) => {
-          if (cancelled) return Promise.resolve();
-          return prefetchMessageNavigation(router, message);
-        }),
-      );
+      for (const message of messagesToPrefetch) {
+        if (cancelled) return;
+        prefetchMessageNavigation(router, message);
+      }
     };
 
     const cancelIdleSchedule = scheduleWhenIdle(
@@ -153,7 +151,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
     hasPrimedDetailPage.current = true;
-    void prefetchMessageNavigation(router, message);
+    prefetchMessageNavigation(router, message);
   };
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
@@ -303,6 +301,7 @@ function LinkCell({
         className={`block h-full w-full ${aClasses || ''}`}
         onMouseEnter={onNavigateIntent}
         onFocus={onNavigateIntent}
+        onTouchStart={onNavigateIntent}
         onClick={onNavigateIntent}
       >
         {children}
@@ -318,7 +317,7 @@ const styles = {
   iconText: 'text-sm font-light ml-2',
 };
 
-async function prefetchMessageNavigation(router: NextRouter, message: MessageStub) {
+function prefetchMessageNavigation(router: NextRouter, message: MessageStub) {
   const detailPath = `/message/${message.msgId}`;
   void router.prefetch(detailPath);
   void prefetchMessageDetailShell();
