@@ -17,10 +17,9 @@ import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString } from '../../utils/time';
-import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
-import { prefetchMessageDetails, prefetchMessageStub } from './queries/prefetch';
+import { prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
@@ -35,14 +34,13 @@ export function MessageTable({
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
-  const { scrapedDomains } = useScrapedDomains();
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
-    return `${scrapedDomains.length}:${messageList
+    return messageList
       .slice(0, BACKGROUND_PREFETCH_COUNT)
       .map((message) => message.msgId.toLowerCase())
-      .join(',')}`;
-  }, [isFetching, messageList, scrapedDomains.length]);
+      .join(',');
+  }, [isFetching, messageList]);
 
   useEffect(() => {
     if (!backgroundPrefetchKey) return;
@@ -55,7 +53,7 @@ export function MessageTable({
       await Promise.all(
         messagesToPrefetch.map((message) => {
           if (cancelled) return Promise.resolve();
-          return prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedDomains);
+          return prefetchMessageNavigation(router, message);
         }),
       );
     };
@@ -71,7 +69,7 @@ export function MessageTable({
       cancelled = true;
       cancelIdleSchedule();
     };
-  }, [backgroundPrefetchKey, chainMetadataResolver, messageList, router, scrapedDomains]);
+  }, [backgroundPrefetchKey, messageList, router]);
 
   return (
     <table className="mb-1 w-full">
@@ -98,7 +96,6 @@ export function MessageTable({
               message={m}
               chainMetadataResolver={chainMetadataResolver}
               router={router}
-              scrapedChains={scrapedDomains}
               warpRouteChainAddressMap={warpRouteChainAddressMap}
             />
           </tr>
@@ -112,13 +109,11 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
   chainMetadataResolver,
   router,
-  scrapedChains,
   warpRouteChainAddressMap,
 }: {
   message: MessageStub;
   chainMetadataResolver: ChainMetadataResolver;
   router: NextRouter;
-  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'];
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
   const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
@@ -158,7 +153,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
     hasPrimedDetailPage.current = true;
-    void prefetchMessageNavigation(router, message, chainMetadataResolver, scrapedChains);
+    void prefetchMessageNavigation(router, message);
   };
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
@@ -308,7 +303,6 @@ function LinkCell({
         className={`block h-full w-full ${aClasses || ''}`}
         onMouseEnter={onNavigateIntent}
         onFocus={onNavigateIntent}
-        onTouchStart={onNavigateIntent}
         onClick={onNavigateIntent}
       >
         {children}
@@ -324,18 +318,9 @@ const styles = {
   iconText: 'text-sm font-light ml-2',
 };
 
-async function prefetchMessageNavigation(
-  router: NextRouter,
-  message: MessageStub,
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: ReturnType<typeof useScrapedDomains>['scrapedDomains'],
-) {
+async function prefetchMessageNavigation(router: NextRouter, message: MessageStub) {
   const detailPath = `/message/${message.msgId}`;
   void router.prefetch(detailPath);
   void prefetchMessageDetailShell();
   prefetchMessageStub(message);
-
-  if (message.isPiMsg || !scrapedChains.length) return;
-
-  await prefetchMessageDetails(message.msgId, chainMetadataResolver, scrapedChains);
 }
