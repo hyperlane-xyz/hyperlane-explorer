@@ -1,8 +1,9 @@
+import { eqAddress } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
-import { MessageStatus, MessageStatusFilter } from '../../../types';
+import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
 import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
@@ -22,6 +23,20 @@ const PENDING_FILTER_BATCH_SIZE = 500;
 export function isValidSearchQuery(input: string) {
   if (!input) return false;
   return !!searchValueToPostgresBytea(input);
+}
+
+// A message belongs to the warp route if it was sent from the route's token on
+// the origin chain or received by it on the destination chain. eqAddress is
+// protocol-aware so this stays correct across EVM/Sealevel/Cosmos/etc.
+function messageMatchesWarpRoute(
+  message: MessageStub,
+  warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
+): boolean {
+  return warpRouteDomainAddresses.some(
+    ({ domainId, address }) =>
+      (message.originDomainId === domainId && eqAddress(message.sender, address)) ||
+      (message.destinationDomainId === domainId && eqAddress(message.recipient, address)),
+  );
 }
 
 export function useMessageSearchQuery(
@@ -56,6 +71,23 @@ export function useMessageSearchQuery(
   const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
 
   const warpAddresses = warpRouteAddresses.map((a) => a.address);
+
+  // Resolve each warp route token to its domain for client-side filtering.
+  // The DB filter matches on address bytes alone (sender OR recipient), so a
+  // route whose address coincides with another route's address on a different
+  // chain leaks in (e.g. BLEND messages showing up under CROSS/moonpay).
+  // Addresses are not guaranteed unique across chains, so we additionally
+  // require the matched address to be on its expected chain.
+  const warpRouteDomainAddresses = useMemo(
+    () =>
+      warpRouteAddresses
+        .map(({ chainName, address }) => ({
+          domainId: chainMetadataResolver.tryGetDomainId(chainName),
+          address,
+        }))
+        .filter((entry): entry is { domainId: number; address: string } => entry.domainId !== null),
+    [warpRouteAddresses, chainMetadataResolver],
+  );
 
   // For pending filter, we use client-side filtering because the DB query for
   // is_delivered=false is slow (no index on absence of delivered_message record).
@@ -95,13 +127,20 @@ export function useMessageSearchQuery(
     [chainMetadataResolver, scrapedChains, data],
   );
 
-  // Apply client-side pending filter if needed
+  // Apply client-side filters. Note: these run after the DB LIMIT, so they
+  // can shrink a page below the requested size — acceptable here since the
+  // alternative (per-chain DB clauses) bloats the query and the pending
+  // filter already relies on client-side narrowing.
   const messageList = useMemo(() => {
+    let list = unfilteredMessageList;
     if (isPendingFilter) {
-      return unfilteredMessageList.filter((m) => m.status === MessageStatus.Pending);
+      list = list.filter((m) => m.status === MessageStatus.Pending);
     }
-    return unfilteredMessageList;
-  }, [unfilteredMessageList, isPendingFilter]);
+    if (warpRouteDomainAddresses.length > 0) {
+      list = list.filter((m) => messageMatchesWarpRoute(m, warpRouteDomainAddresses));
+    }
+    return list;
+  }, [unfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
 
   const isMessagesFound = messageList.length > 0;
 

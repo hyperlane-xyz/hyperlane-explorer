@@ -1,8 +1,12 @@
 import { BigNumber, utils } from 'ethers';
 
+import type { MessageStub } from '../../../types';
 import {
+  countReceivedTransferRemotes,
+  isSyntheticSameChainCcrMessage,
   parseIgpPaymentForMessage,
   parseSentTransferRemoteAmount,
+  parseSwapAmountFromBody,
   parseTotalTokenPulledFromUser,
   sliceLogsForMessage,
 } from './fetchWarpFees';
@@ -14,6 +18,9 @@ const routerIface = new utils.Interface([
   'event SentTransferRemote(uint32 indexed destination, bytes32 indexed recipient, uint256 amountOrId)',
 ]);
 const mailboxIface = new utils.Interface(['event DispatchId(bytes32 indexed messageId)']);
+const receivedIface = new utils.Interface([
+  'event ReceivedTransferRemote(uint32 indexed origin, bytes32 indexed recipient, uint256 amount)',
+]);
 const igpIface = new utils.Interface([
   'event GasPayment(bytes32 indexed messageId, uint32 indexed destinationDomain, uint256 gasAmount, uint256 payment)',
 ]);
@@ -40,6 +47,20 @@ function makeSentTransferRemoteLog(
 function makeDispatchIdLog(messageId: string, mailboxAddress: string) {
   const log = mailboxIface.encodeEventLog(mailboxIface.getEvent('DispatchId'), [messageId]);
   return { ...log, address: mailboxAddress };
+}
+
+function makeReceivedTransferRemoteLog(
+  origin: number,
+  recipient: string,
+  amount: BigNumber,
+  address: string,
+) {
+  const log = receivedIface.encodeEventLog(receivedIface.getEvent('ReceivedTransferRemote'), [
+    origin,
+    recipient,
+    amount,
+  ]);
+  return { ...log, address };
 }
 
 function makeGasPaymentLog(
@@ -268,5 +289,67 @@ describe('parseIgpPaymentForMessage', () => {
     ];
     const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
     expect(result?.eq(BigNumber.from(150))).toBe(true);
+  });
+});
+
+// Synthetic msgId: 4-byte zero prefix + 28 bytes, per syntheticCcrSwapMessageId.
+const SYNTHETIC_MSG_ID = '0x00000000' + 'ab'.repeat(28);
+
+function makeStub(overrides: Partial<MessageStub>): MessageStub {
+  return {
+    msgId: MSG_ID_1,
+    originDomainId: 1,
+    destinationDomainId: 2,
+    sender: SENDER,
+    recipient: RECIPIENT,
+    body: '0x',
+    ...overrides,
+  } as MessageStub;
+}
+
+describe('isSyntheticSameChainCcrMessage', () => {
+  it('is true for same-domain message with zero-prefixed msgId', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 1, msgId: SYNTHETIC_MSG_ID });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(true);
+  });
+
+  it('is false for a real (non-prefixed) same-domain msgId', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 1, msgId: MSG_ID_1 });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(false);
+  });
+
+  it('is false when origin and destination domains differ', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 2, msgId: SYNTHETIC_MSG_ID });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(false);
+  });
+});
+
+describe('parseSwapAmountFromBody', () => {
+  it('reads the wire amount from a TokenMessage body', () => {
+    const amount = BigNumber.from('995000');
+    // TokenMessage = recipient (32 bytes) || amount (32 bytes)
+    const body = '0x' + RECIPIENT.slice(2) + utils.hexZeroPad(amount.toHexString(), 32).slice(2);
+    const result = parseSwapAmountFromBody(body);
+    expect(result?.eq(amount)).toBe(true);
+  });
+
+  it('returns null for an unparseable body', () => {
+    expect(parseSwapAmountFromBody('0x')).toBeNull();
+  });
+});
+
+describe('countReceivedTransferRemotes', () => {
+  it('counts ReceivedTransferRemote events', () => {
+    const logs = [
+      makeReceivedTransferRemoteLog(1, RECIPIENT, BigNumber.from(100), ROUTER),
+      makeTransferLog(SENDER, ROUTER, BigNumber.from(100), TOKEN),
+      makeReceivedTransferRemoteLog(1, RECIPIENT, BigNumber.from(200), ROUTER),
+    ];
+    expect(countReceivedTransferRemotes(logs)).toBe(2);
+  });
+
+  it('returns 0 when there are none', () => {
+    const logs = [makeTransferLog(SENDER, ROUTER, BigNumber.from(100), TOKEN)];
+    expect(countReceivedTransferRemotes(logs)).toBe(0);
   });
 });
