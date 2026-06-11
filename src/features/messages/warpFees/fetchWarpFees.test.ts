@@ -2,6 +2,7 @@ import { BigNumber, utils } from 'ethers';
 
 import type { MessageStub } from '../../../types';
 import {
+  computeFeeBps,
   countReceivedTransferRemotes,
   isSyntheticSameChainCcrMessage,
   parseIgpPaymentForMessage,
@@ -351,5 +352,29 @@ describe('countReceivedTransferRemotes', () => {
   it('returns 0 when there are none', () => {
     const logs = [makeTransferLog(SENDER, ROUTER, BigNumber.from(100), TOKEN)];
     expect(countReceivedTransferRemotes(logs)).toBe(0);
+  });
+});
+
+describe('computeFeeBps', () => {
+  it('computes whole bps (fee 300000 on 1e9 = 3 bps)', () => {
+    expect(computeFeeBps(BigNumber.from(300000), BigNumber.from('1000000000'))).toBe('3');
+  });
+
+  it('computes 2 bps', () => {
+    expect(computeFeeBps(BigNumber.from(200000), BigNumber.from('1000000000'))).toBe('2');
+  });
+
+  it('keeps 2 decimal places for near-bps amounts', () => {
+    // 1999999 / 1e9 = 19.99999 bps -> truncated to 19.99
+    expect(computeFeeBps(BigNumber.from(1999999), BigNumber.from('1000000000'))).toBe('19.99');
+  });
+
+  it('returns undefined when sent amount is zero', () => {
+    expect(computeFeeBps(BigNumber.from(100), BigNumber.from(0))).toBeUndefined();
+  });
+
+  it('returns undefined when the rate rounds below 0.01 bps', () => {
+    // 1 wei fee on 1e9 -> 0.00001 bps -> rounds to 0
+    expect(computeFeeBps(BigNumber.from(1), BigNumber.from('1000000000'))).toBeUndefined();
   });
 });

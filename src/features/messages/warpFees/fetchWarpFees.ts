@@ -15,6 +15,9 @@ import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 
 export interface WarpFeeBreakdown {
   bridgeFee: string;
+  // Fee as a rate of the sent amount, in basis points (e.g. "2"). Omitted when
+  // the sent amount is zero or the fee rounds below 0.01 bps.
+  bridgeFeeBps?: string;
   tokenSymbol: string;
   totalSent: string;
 }
@@ -139,9 +142,25 @@ export async function fetchWarpFees(
     // (e.g. 0.0000015 USDT), so `formatAmountWithCommas`' 6-digit cap would
     // misrepresent the value users are trying to verify against the tx logs.
     bridgeFee: fromWei(feeRaw.toString(), decimals),
+    bridgeFeeBps: computeFeeBps(feeRaw, sentAmount),
     tokenSymbol: symbol ?? 'tokens',
     totalSent: fromWei(totalTransferred.toString(), decimals),
   };
+}
+
+/**
+ * Fee as a rate of the sent amount, in basis points. Matches the on-chain
+ * convention (`fee = amount * maxFee / (2 * halfAmount)`), so the denominator
+ * is the amount the user sent, not the gross amount they paid. Kept to 2
+ * decimal places; returns `undefined` when the amount is zero or the rate
+ * rounds below 0.01 bps.
+ */
+export function computeFeeBps(fee: BigNumber, sentAmount: BigNumber): string | undefined {
+  if (sentAmount.isZero()) return undefined;
+  // bps × 100 = fee / amount * 10_000 * 100, using integer math for precision.
+  const bpsHundredths = fee.mul(1_000_000).div(sentAmount).toNumber();
+  if (bpsHundredths === 0) return undefined;
+  return (bpsHundredths / 100).toString();
 }
 
 /**

@@ -140,7 +140,9 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
                 <KeyValueRow
                   label="Warp fee:"
                   labelWidth={styles.labelWidthMd}
-                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}`}
+                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}${
+                    warpFees.bridgeFeeBps ? ` (${warpFees.bridgeFeeBps} bps)` : ''
+                  }`}
                   blurValue={blur}
                 />
               </>
