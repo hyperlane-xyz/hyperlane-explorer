@@ -6,6 +6,9 @@ const DEST_DOMAIN = 10;
 const ROUTER_A = '0x' + '11'.repeat(20);
 const ROUTER_B = '0x' + '22'.repeat(20);
 const OTHER = '0x' + '33'.repeat(20);
+// Alpha hex digits so upper/lower casing actually differ — needed to exercise
+// case-insensitive address comparison.
+const ROUTER_MIXED = '0x' + 'ab'.repeat(20);
 
 function makeStub(overrides: Partial<MessageStub> = {}): MessageStub {
   return {
@@ -40,11 +43,11 @@ describe('messageMatchesWarpRoute', () => {
     );
   });
 
-  it('matches case-insensitively (checksummed vs lowercase)', () => {
-    const message = makeStub({ sender: ROUTER_A.toUpperCase().replace('0X', '0x') });
-    expect(messageMatchesWarpRoute(message, [{ domainId: ORIGIN_DOMAIN, address: ROUTER_A }])).toBe(
-      true,
-    );
+  it('matches case-insensitively (uppercase sender vs lowercase route address)', () => {
+    const message = makeStub({ sender: '0x' + 'AB'.repeat(20) });
+    expect(
+      messageMatchesWarpRoute(message, [{ domainId: ORIGIN_DOMAIN, address: ROUTER_MIXED }]),
+    ).toBe(true);
   });
 
   it('excludes a route whose address matches but on the wrong chain', () => {
