@@ -157,10 +157,14 @@ export async function fetchWarpFees(
  */
 export function computeFeeBps(fee: BigNumber, sentAmount: BigNumber): string | undefined {
   if (sentAmount.isZero()) return undefined;
-  // bps × 100 = fee / amount * 10_000 * 100, using integer math for precision.
-  const bpsHundredths = fee.mul(1_000_000).div(sentAmount).toNumber();
-  if (bpsHundredths === 0) return undefined;
-  return (bpsHundredths / 100).toString();
+  // bps × 100 = fee / amount * 10_000 * 100. Stay in BigNumber land: fee and
+  // sentAmount can both exceed Number.MAX_SAFE_INTEGER, so `.toNumber()` would
+  // throw an ethers NUMERIC_FAULT. Format the fixed-point string by hand.
+  const bpsHundredths = fee.mul(1_000_000).div(sentAmount);
+  if (bpsHundredths.isZero()) return undefined;
+  const whole = bpsHundredths.div(100).toString();
+  const fractional = bpsHundredths.mod(100).toString().padStart(2, '0').replace(/0+$/, '');
+  return fractional ? `${whole}.${fractional}` : whole;
 }
 
 /**

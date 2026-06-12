@@ -377,4 +377,16 @@ describe('computeFeeBps', () => {
     // 1 wei fee on 1e9 -> 0.00001 bps -> rounds to 0
     expect(computeFeeBps(BigNumber.from(1), BigNumber.from('1000000000'))).toBeUndefined();
   });
+
+  it('does not throw when fee*1e6 exceeds Number.MAX_SAFE_INTEGER', () => {
+    // 1e18 fee on 1e21 -> fee*1e6 = 1e24, far past 2^53. Must stay in BigNumber
+    // land; a `.toNumber()` here would throw an ethers NUMERIC_FAULT.
+    const fee = BigNumber.from('1000000000000000000'); // 1e18
+    const sent = BigNumber.from('1000000000000000000000'); // 1e21
+    expect(computeFeeBps(fee, sent)).toBe('10');
+  });
+
+  it('trims trailing zero in the fractional part (fee 250000 on 1e9 = 2.5 bps)', () => {
+    expect(computeFeeBps(BigNumber.from(250000), BigNumber.from('1000000000'))).toBe('2.5');
+  });
 });

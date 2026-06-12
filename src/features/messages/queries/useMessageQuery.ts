@@ -4,6 +4,7 @@ import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
+import { logger } from '../../../utils/logger';
 import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
@@ -28,7 +29,7 @@ export function isValidSearchQuery(input: string) {
 // A message belongs to the warp route if it was sent from the route's token on
 // the origin chain or received by it on the destination chain. eqAddress is
 // protocol-aware so this stays correct across EVM/Sealevel/Cosmos/etc.
-function messageMatchesWarpRoute(
+export function messageMatchesWarpRoute(
   message: MessageStub,
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
 ): boolean {
@@ -85,7 +86,18 @@ export function useMessageSearchQuery(
           domainId: chainMetadataResolver.tryGetDomainId(chainName),
           address,
         }))
-        .filter((entry): entry is { domainId: number; address: string } => entry.domainId !== null),
+        .filter((entry): entry is { domainId: number; address: string } => {
+          if (entry.domainId === null) {
+            // Drop unresolved chains loudly rather than silently widening the
+            // filter — an empty domain list would skip filtering entirely and
+            // leak unrelated messages (the very bug client-side filtering fixes).
+            logger.warn('Could not resolve domainId for warp route chain, dropping from filter', {
+              address: entry.address,
+            });
+            return false;
+          }
+          return true;
+        }),
     [warpRouteAddresses, chainMetadataResolver],
   );
 
