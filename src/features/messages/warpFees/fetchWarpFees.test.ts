@@ -1,8 +1,13 @@
 import { BigNumber, utils } from 'ethers';
 
+import type { MessageStub } from '../../../types';
 import {
+  computeFeeBps,
+  countReceivedTransferRemotes,
+  isSyntheticSameChainCcrMessage,
   parseIgpPaymentForMessage,
   parseSentTransferRemoteAmount,
+  parseSwapAmountFromBody,
   parseTotalTokenPulledFromUser,
   sliceLogsForMessage,
 } from './fetchWarpFees';
@@ -14,6 +19,9 @@ const routerIface = new utils.Interface([
   'event SentTransferRemote(uint32 indexed destination, bytes32 indexed recipient, uint256 amountOrId)',
 ]);
 const mailboxIface = new utils.Interface(['event DispatchId(bytes32 indexed messageId)']);
+const receivedIface = new utils.Interface([
+  'event ReceivedTransferRemote(uint32 indexed origin, bytes32 indexed recipient, uint256 amount)',
+]);
 const igpIface = new utils.Interface([
   'event GasPayment(bytes32 indexed messageId, uint32 indexed destinationDomain, uint256 gasAmount, uint256 payment)',
 ]);
@@ -40,6 +48,20 @@ function makeSentTransferRemoteLog(
 function makeDispatchIdLog(messageId: string, mailboxAddress: string) {
   const log = mailboxIface.encodeEventLog(mailboxIface.getEvent('DispatchId'), [messageId]);
   return { ...log, address: mailboxAddress };
+}
+
+function makeReceivedTransferRemoteLog(
+  origin: number,
+  recipient: string,
+  amount: BigNumber,
+  address: string,
+) {
+  const log = receivedIface.encodeEventLog(receivedIface.getEvent('ReceivedTransferRemote'), [
+    origin,
+    recipient,
+    amount,
+  ]);
+  return { ...log, address };
 }
 
 function makeGasPaymentLog(
@@ -268,5 +290,103 @@ describe('parseIgpPaymentForMessage', () => {
     ];
     const result = parseIgpPaymentForMessage(logs, MSG_ID_1);
     expect(result?.eq(BigNumber.from(150))).toBe(true);
+  });
+});
+
+// Synthetic msgId: 4-byte zero prefix + 28 bytes, per syntheticCcrSwapMessageId.
+const SYNTHETIC_MSG_ID = '0x00000000' + 'ab'.repeat(28);
+
+function makeStub(overrides: Partial<MessageStub>): MessageStub {
+  return {
+    msgId: MSG_ID_1,
+    originDomainId: 1,
+    destinationDomainId: 2,
+    sender: SENDER,
+    recipient: RECIPIENT,
+    body: '0x',
+    ...overrides,
+  } as MessageStub;
+}
+
+describe('isSyntheticSameChainCcrMessage', () => {
+  it('is true for same-domain message with zero-prefixed msgId', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 1, msgId: SYNTHETIC_MSG_ID });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(true);
+  });
+
+  it('is false for a real (non-prefixed) same-domain msgId', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 1, msgId: MSG_ID_1 });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(false);
+  });
+
+  it('is false when origin and destination domains differ', () => {
+    const m = makeStub({ originDomainId: 1, destinationDomainId: 2, msgId: SYNTHETIC_MSG_ID });
+    expect(isSyntheticSameChainCcrMessage(m)).toBe(false);
+  });
+});
+
+describe('parseSwapAmountFromBody', () => {
+  it('reads the wire amount from a TokenMessage body', () => {
+    const amount = BigNumber.from('995000');
+    // TokenMessage = recipient (32 bytes) || amount (32 bytes)
+    const body = '0x' + RECIPIENT.slice(2) + utils.hexZeroPad(amount.toHexString(), 32).slice(2);
+    const result = parseSwapAmountFromBody(body);
+    expect(result?.eq(amount)).toBe(true);
+  });
+
+  it('returns null for an unparseable body', () => {
+    expect(parseSwapAmountFromBody('0x')).toBeNull();
+  });
+});
+
+describe('countReceivedTransferRemotes', () => {
+  it('counts ReceivedTransferRemote events', () => {
+    const logs = [
+      makeReceivedTransferRemoteLog(1, RECIPIENT, BigNumber.from(100), ROUTER),
+      makeTransferLog(SENDER, ROUTER, BigNumber.from(100), TOKEN),
+      makeReceivedTransferRemoteLog(1, RECIPIENT, BigNumber.from(200), ROUTER),
+    ];
+    expect(countReceivedTransferRemotes(logs)).toBe(2);
+  });
+
+  it('returns 0 when there are none', () => {
+    const logs = [makeTransferLog(SENDER, ROUTER, BigNumber.from(100), TOKEN)];
+    expect(countReceivedTransferRemotes(logs)).toBe(0);
+  });
+});
+
+describe('computeFeeBps', () => {
+  it('computes whole bps (fee 300000 on 1e9 = 3 bps)', () => {
+    expect(computeFeeBps(BigNumber.from(300000), BigNumber.from('1000000000'))).toBe('3');
+  });
+
+  it('computes 2 bps', () => {
+    expect(computeFeeBps(BigNumber.from(200000), BigNumber.from('1000000000'))).toBe('2');
+  });
+
+  it('keeps 2 decimal places for near-bps amounts', () => {
+    // 1999999 / 1e9 = 19.99999 bps -> truncated to 19.99
+    expect(computeFeeBps(BigNumber.from(1999999), BigNumber.from('1000000000'))).toBe('19.99');
+  });
+
+  it('returns undefined when sent amount is zero', () => {
+    expect(computeFeeBps(BigNumber.from(100), BigNumber.from(0))).toBeUndefined();
+  });
+
+  it('returns undefined when the rate rounds below 0.01 bps', () => {
+    // 1 wei fee on 1e9 -> 0.00001 bps -> rounds to 0
+    expect(computeFeeBps(BigNumber.from(1), BigNumber.from('1000000000'))).toBeUndefined();
+  });
+
+  it('does not throw when fee*1e6 exceeds Number.MAX_SAFE_INTEGER', () => {
+    // 1e18 fee on 1e21 -> fee*1e6 = 1e24, far past 2^53. Must stay in BigNumber
+    // land; a `.toNumber()` here would throw an ethers NUMERIC_FAULT.
+    const fee = BigNumber.from('1000000000000000000'); // 1e18
+    const sent = BigNumber.from('1000000000000000000000'); // 1e21
+    expect(computeFeeBps(fee, sent)).toBe('10');
+  });
+
+  it('trims trailing zero in the fractional part (fee 250000 on 1e9 = 2.5 bps)', () => {
+    expect(computeFeeBps(BigNumber.from(250000), BigNumber.from('1000000000'))).toBe('2.5');
   });
 });

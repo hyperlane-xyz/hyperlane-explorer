@@ -5,7 +5,7 @@ import {
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
 import { PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
-import { ProtocolType, fromWei, isEVMLike } from '@hyperlane-xyz/utils';
+import { ProtocolType, fromWei, isEVMLike, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
 import { BigNumber, constants } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
@@ -15,6 +15,9 @@ import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 
 export interface WarpFeeBreakdown {
   bridgeFee: string;
+  // Fee as a rate of the sent amount, in basis points (e.g. "2"). Omitted when
+  // the sent amount is zero or the fee rounds below 0.01 bps.
+  bridgeFeeBps?: string;
   tokenSymbol: string;
   totalSent: string;
 }
@@ -50,6 +53,14 @@ const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIV
  * message's `Mailbox.DispatchId`, so multi-send ERC20 txs are attributed
  * correctly. IGP `GasPayment` is correlated by `messageId` directly.
  *
+ * **Same-chain CCR swaps** are a special case: the scraper synthesizes a
+ * message row (origin == destination, `0x00000000…` msgId prefix) for these
+ * because they call `handle()` directly with no Mailbox dispatch — so there's
+ * no `DispatchId` to slice on and no `SentTransferRemote` to read. For these
+ * we read the swap amount from the message body (the on-chain `TokenMessage`)
+ * and scan the full receipt, but only when the tx holds exactly one same-chain
+ * swap and no cross-chain dispatch, so the user-pull sum stays unambiguous.
+ *
  * Supports EVM-like chains (Ethereum + Tron). Non-EVM chains, txs without a
  * matching `DispatchId`, and zero-fee routes return `null`.
  *
@@ -80,10 +91,27 @@ export async function fetchWarpFees(
   if (!receipt) throw new Error(`No receipt for tx ${message.origin.hash}`);
 
   const routerAddress = warpRouteDetails.originToken.addressOrDenom;
-  const messageLogs = sliceLogsForMessage(receipt.logs, message.msgId);
-  if (!messageLogs) return null;
 
-  const sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
+  let messageLogs: RawLog[] | null;
+  let sentAmountWire: BigNumber | null;
+  if (isSyntheticSameChainCcrMessage(message)) {
+    // Same-chain CCR: no DispatchId to slice on and no SentTransferRemote.
+    // Only attribute when the tx holds exactly one same-chain swap (one
+    // ReceivedTransferRemote) and no cross-chain dispatch, so summing the
+    // user's token pull across the full receipt stays unambiguous.
+    if (
+      countReceivedTransferRemotes(receipt.logs) !== 1 ||
+      countSentTransferRemotes(receipt.logs) !== 0
+    ) {
+      return null;
+    }
+    messageLogs = receipt.logs;
+    sentAmountWire = parseSwapAmountFromBody(message.body);
+  } else {
+    messageLogs = sliceLogsForMessage(receipt.logs, message.msgId);
+    if (!messageLogs) return null;
+    sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
+  }
   if (!sentAmountWire) return null;
 
   const sentAmount = sentAmountToLocal(sentAmountWire, warpRouteDetails.originToken);
@@ -114,9 +142,29 @@ export async function fetchWarpFees(
     // (e.g. 0.0000015 USDT), so `formatAmountWithCommas`' 6-digit cap would
     // misrepresent the value users are trying to verify against the tx logs.
     bridgeFee: fromWei(feeRaw.toString(), decimals),
+    bridgeFeeBps: computeFeeBps(feeRaw, sentAmount),
     tokenSymbol: symbol ?? 'tokens',
     totalSent: fromWei(totalTransferred.toString(), decimals),
   };
+}
+
+/**
+ * Fee as a rate of the sent amount, in basis points. Matches the on-chain
+ * convention (`fee = amount * maxFee / (2 * halfAmount)`), so the denominator
+ * is the amount the user sent, not the gross amount they paid. Kept to 2
+ * decimal places; returns `undefined` when the amount is zero or the rate
+ * rounds below 0.01 bps.
+ */
+export function computeFeeBps(fee: BigNumber, sentAmount: BigNumber): string | undefined {
+  if (sentAmount.isZero()) return undefined;
+  // bps × 100 = fee / amount * 10_000 * 100. Stay in BigNumber land: fee and
+  // sentAmount can both exceed Number.MAX_SAFE_INTEGER, so `.toNumber()` would
+  // throw an ethers NUMERIC_FAULT. Format the fixed-point string by hand.
+  const bpsHundredths = fee.mul(1_000_000).div(sentAmount);
+  if (bpsHundredths.isZero()) return undefined;
+  const whole = bpsHundredths.div(100).toString();
+  const fractional = bpsHundredths.mod(100).toString().padStart(2, '0').replace(/0+$/, '');
+  return fractional ? `${whole}.${fractional}` : whole;
 }
 
 /**
@@ -154,6 +202,45 @@ function parseDispatchIdLog(log: RawLog): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * True for the synthetic message rows the scraper stores for same-chain CCR
+ * swaps. These have origin == destination and a 4-byte-zero msgId prefix (see
+ * `syntheticCcrSwapMessageId` in @hyperlane-xyz/utils). Real Hyperlane message
+ * IDs are uniform keccak256 outputs, so the zero prefix is unambiguous.
+ */
+export function isSyntheticSameChainCcrMessage(message: Message | MessageStub): boolean {
+  return (
+    message.originDomainId === message.destinationDomainId &&
+    message.msgId.toLowerCase().startsWith('0x00000000')
+  );
+}
+
+/**
+ * Read the wire (scaled) swap amount from the synthetic message body, which is
+ * the on-chain `TokenMessage` the router formatted for the same-chain swap.
+ * The caller reverses the token scale to get the local amount.
+ */
+export function parseSwapAmountFromBody(body: string): BigNumber | null {
+  try {
+    const { amount } = parseWarpRouteMessage(body);
+    return BigNumber.from(amount.toString());
+  } catch {
+    return null;
+  }
+}
+
+export function countReceivedTransferRemotes(logs: Array<RawLog>): number {
+  let count = 0;
+  for (const log of logs) {
+    try {
+      if (routerIface.parseLog(log).name === 'ReceivedTransferRemote') count++;
+    } catch {
+      // not a TokenRouter event
+    }
+  }
+  return count;
 }
 
 /**
