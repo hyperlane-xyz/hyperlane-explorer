@@ -1,17 +1,15 @@
-import { BigNumberMax, fromWei, toTitleCase } from '@hyperlane-xyz/utils';
+import { BigNumberMax, fromWei, isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
-import { utils } from 'ethers';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { RadioButtons } from '../../../components/buttons/RadioButtons';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { docLinks } from '../../../consts/links';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub } from '../../../types';
-import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
 import { KeyValueRow } from './KeyValueRow';
+import { useNativeTokenUsdPrice } from './useNativeTokenUsdPrice';
 
 interface Props {
   message: Message | MessageStub;
@@ -19,34 +17,32 @@ interface Props {
   blur: boolean;
 }
 
-const DEFAULT_GAS_UNIT_DECIMALS = 9;
-
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const nativeUsdPrice = useNativeTokenUsdPrice(message.originDomainId, message.origin?.timestamp);
+  const deliveryTx = message.destination;
+  const deliveryGasUsed = deliveryTx && 'gasUsed' in deliveryTx ? deliveryTx.gasUsed : undefined;
+  const deliveryEffectiveGasPrice =
+    deliveryTx && 'effectiveGasPrice' in deliveryTx ? deliveryTx.effectiveGasPrice : undefined;
+  const destUsdPrice = useNativeTokenUsdPrice(message.destinationDomainId, deliveryTx?.timestamp);
   const totalGasAmountFromMessage =
     'totalGasAmount' in message ? message.totalGasAmount : undefined;
   const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
   const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
-  const unitOptions = useMemo(() => {
-    const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
-    const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
-    const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
-    return [
-      { value: nativeDecimals, display: toTitleCase(nativeCurrencyName) },
-      { value: 9, display: 'Gwei' },
-      { value: 0, display: 'Wei' },
-    ];
-  }, [chainMetadataResolver, message.originDomainId]);
+  const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
+  const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
+  const nativeSymbol = originMetadata?.nativeToken?.symbol || 'ETH';
+  const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
+  const destDecimals = destMetadata?.nativeToken?.decimals || 18;
+  const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
 
-  const [decimals, setDecimals] = useState<number>(DEFAULT_GAS_UNIT_DECIMALS);
-
-  const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
+  const { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr } =
     useMemo(() => {
       const paymentsWithAddr = Object.keys(igpPayments)
         .map((contract) =>
           igpPayments[contract].map((p) => ({
             gasAmount: p.gasAmount,
-            paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
+            paymentAmount: fromWei(p.paymentAmount, nativeDecimals).toString(),
             paymentAmountWei: p.paymentAmount,
             contract,
           })),
@@ -71,16 +67,35 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       );
       numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
 
-      const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
-      const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
-      return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
+      const paymentFormatted = fromWei(totalPaymentWei.toString(), nativeDecimals).toString();
+      return { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr };
     }, [
-      decimals,
+      nativeDecimals,
       igpPayments,
       numPaymentsFromMessage,
       totalGasAmountFromMessage,
       totalPaymentFromMessage,
     ]);
+
+  const paymentUsdFormatted = !isNullish(nativeUsdPrice)
+    ? formatUsd(
+        new BigNumber(fromWei(totalPaymentWei.toString(), nativeDecimals)).times(nativeUsdPrice),
+      )
+    : null;
+
+  const deliveryCostWei =
+    !isNullish(deliveryGasUsed) && !isNullish(deliveryEffectiveGasPrice)
+      ? new BigNumber(deliveryGasUsed).times(deliveryEffectiveGasPrice)
+      : null;
+  const deliveryCostFormatted = !isNullish(deliveryCostWei)
+    ? fromWei(deliveryCostWei.toString(), destDecimals).toString()
+    : null;
+  const deliveryCostUsdFormatted =
+    !isNullish(deliveryCostWei) && !isNullish(destUsdPrice)
+      ? formatUsd(
+          new BigNumber(fromWei(deliveryCostWei.toString(), destDecimals)).times(destUsdPrice),
+        )
+      : null;
 
   return (
     <SectionCard
@@ -93,7 +108,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         />
       }
     >
-      <div className="relative space-y-3">
+      <div className="space-y-3">
         <p className="text-xs font-light">
           Interchain gas payments are required to fund message delivery on the destination chain.{' '}
           <a
@@ -105,66 +120,99 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             Learn more about gas on Hyperlane.
           </a>
         </p>
-        <div className="mr-28 flex flex-wrap gap-x-4 gap-y-2">
-          <KeyValueRow
-            label="Payment count:"
-            labelWidth="w-28"
-            display={numPayments.toString()}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
-          <KeyValueRow
-            label="Total gas amount:"
-            labelWidth="w-28"
-            display={totalGasAmount.toString()}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
-          <KeyValueRow
-            label="Total paid:"
-            labelWidth="w-28"
-            display={paymentFormatted}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
-          <KeyValueRow
-            label="Average price:"
-            labelWidth="w-28"
-            display={avgPrice ? avgPrice.formatted : '-'}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
+        <div className="flex flex-col gap-y-2 sm:flex-row sm:gap-x-6 sm:gap-y-0">
+          <div className="flex flex-1 flex-col gap-y-2">
+            <KeyValueRow
+              label="Payment count:"
+              labelWidth="w-36"
+              display={numPayments.toString()}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+            <KeyValueRow
+              label="Total gas amount:"
+              labelWidth="w-36"
+              display={totalGasAmount.toString()}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-y-2">
+            <KeyValueRow
+              label="Total paid:"
+              labelWidth="w-24"
+              display={`${paymentFormatted} ${nativeSymbol}`}
+              subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+          </div>
         </div>
-        {!!paymentsWithAddr.length && (
-          <div className="pb-8 md:pb-6 md:pt-2">
-            <IgpPaymentsTable payments={paymentsWithAddr} />
+        {!isNullish(deliveryGasUsed) && (
+          <div className="border-t border-gray-100 pt-3">
+            <h4 className="mb-2 text-sm text-gray-500">Destination delivery</h4>
+            <div className="flex flex-col gap-y-2 sm:flex-row sm:gap-x-6 sm:gap-y-0">
+              <div className="flex flex-1 flex-col gap-y-2">
+                <KeyValueRow
+                  label="Gas used:"
+                  labelWidth="w-36"
+                  display={deliveryGasUsed.toString()}
+                  allowZeroish={true}
+                  blurValue={blur}
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-y-2">
+                {!isNullish(deliveryCostFormatted) && (
+                  <KeyValueRow
+                    label="Gas cost:"
+                    labelWidth="w-24"
+                    display={`${deliveryCostFormatted} ${destSymbol}`}
+                    subDisplay={
+                      deliveryCostUsdFormatted ? `(${deliveryCostUsdFormatted})` : undefined
+                    }
+                    allowZeroish={true}
+                    blurValue={blur}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         )}
-        <div className="absolute bottom-0 right-0">
-          <RadioButtons
-            options={unitOptions}
-            selected={decimals}
-            onChange={(value) => setDecimals(parseInt(value.toString(), 10))}
-            label="Gas unit"
-          />
-        </div>
+        {!!paymentsWithAddr.length && (
+          <div className="md:pt-2">
+            <IgpPaymentsTable
+              payments={paymentsWithAddr}
+              nativeUsdPrice={nativeUsdPrice}
+              nativeDecimals={nativeDecimals}
+              nativeSymbol={nativeSymbol}
+            />
+          </div>
+        )}
       </div>
     </SectionCard>
   );
 }
 
-function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contract: Address }> }) {
+function IgpPaymentsTable({
+  payments,
+  nativeUsdPrice,
+  nativeDecimals,
+  nativeSymbol,
+}: {
+  payments: Array<GasPayment & { contract: Address; paymentAmountWei: string }>;
+  nativeUsdPrice: number | null;
+  nativeDecimals: number;
+  nativeSymbol: string;
+}) {
+  const showUsd = !isNullish(nativeUsdPrice);
   return (
     <table className="border-collapse overflow-hidden rounded">
       <thead>
         <tr>
           <th className={style.th}>IGP Address</th>
           <th className={style.th}>Gas amount</th>
-          <th className={style.th}>Payment</th>
+          <th className={style.th}>Payment ({nativeSymbol})</th>
+          {showUsd && <th className={style.th}>Payment (USD)</th>}
         </tr>
       </thead>
       <tbody>
@@ -173,6 +221,13 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
             <td className={style.td}>{p.contract}</td>
             <td className={style.td}>{p.gasAmount}</td>
             <td className={style.td}>{p.paymentAmount}</td>
+            {showUsd && (
+              <td className={style.td}>
+                {formatUsd(
+                  new BigNumber(fromWei(p.paymentAmountWei, nativeDecimals)).times(nativeUsdPrice),
+                )}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
@@ -180,23 +235,15 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
   );
 }
 
-function computeAvgGasPrice(
-  decimals: number,
-  gasAmount?: BigNumber.Value,
-  payment?: BigNumber.Value,
-) {
-  try {
-    if (!gasAmount || !payment) return null;
-    const gasBN = new BigNumber(gasAmount);
-    const paymentBN = new BigNumber(payment);
-    if (gasBN.isZero() || paymentBN.isZero()) return null;
-    const wei = paymentBN.div(gasBN).toFixed(0);
-    const formatted = utils.formatUnits(wei, decimals).toString();
-    return { wei, formatted };
-  } catch (error) {
-    logger.debug('Error computing avg gas price', error);
-    return null;
-  }
+function formatUsd(value: BigNumber): string {
+  const num = value.toNumber();
+  const fractionDigits = num !== 0 && Math.abs(num) < 0.01 ? 6 : 2;
+  return num.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: fractionDigits,
+  });
 }
 
 const style = {
