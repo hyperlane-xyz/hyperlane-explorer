@@ -24,7 +24,7 @@ const DEFAULT_GAS_UNIT_DECIMALS = 9;
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
-  const nativeUsdPrice = useNativeTokenUsdPrice(message.originDomainId);
+  const nativeUsdPrice = useNativeTokenUsdPrice(message.originDomainId, message.origin?.timestamp);
   const totalGasAmountFromMessage =
     'totalGasAmount' in message ? message.totalGasAmount : undefined;
   const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
