@@ -1,4 +1,4 @@
-import { BigNumberMax, fromWei } from '@hyperlane-xyz/utils';
+import { BigNumberMax, fromWei, isNullish } from '@hyperlane-xyz/utils';
 import { Tooltip } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import { useMemo } from 'react';
@@ -77,21 +77,21 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       totalPaymentFromMessage,
     ]);
 
-  const paymentUsdFormatted =
-    nativeUsdPrice != null
-      ? formatUsd(
-          new BigNumber(fromWei(totalPaymentWei.toString(), nativeDecimals)).times(nativeUsdPrice),
-        )
-      : null;
+  const paymentUsdFormatted = !isNullish(nativeUsdPrice)
+    ? formatUsd(
+        new BigNumber(fromWei(totalPaymentWei.toString(), nativeDecimals)).times(nativeUsdPrice),
+      )
+    : null;
 
   const deliveryCostWei =
-    deliveryGasUsed != null && deliveryEffectiveGasPrice != null
+    !isNullish(deliveryGasUsed) && !isNullish(deliveryEffectiveGasPrice)
       ? new BigNumber(deliveryGasUsed).times(deliveryEffectiveGasPrice)
       : null;
-  const deliveryCostFormatted =
-    deliveryCostWei != null ? fromWei(deliveryCostWei.toString(), destDecimals).toString() : null;
+  const deliveryCostFormatted = !isNullish(deliveryCostWei)
+    ? fromWei(deliveryCostWei.toString(), destDecimals).toString()
+    : null;
   const deliveryCostUsdFormatted =
-    deliveryCostWei != null && destUsdPrice != null
+    !isNullish(deliveryCostWei) && !isNullish(destUsdPrice)
       ? formatUsd(
           new BigNumber(fromWei(deliveryCostWei.toString(), destDecimals)).times(destUsdPrice),
         )
@@ -120,18 +120,18 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             Learn more about gas on Hyperlane.
           </a>
         </p>
-        <div className="flex gap-x-6">
+        <div className="flex flex-col gap-y-2 sm:flex-row sm:gap-x-6 sm:gap-y-0">
           <div className="flex flex-1 flex-col gap-y-2">
             <KeyValueRow
               label="Payment count:"
-              labelWidth="w-28"
+              labelWidth="w-36"
               display={numPayments.toString()}
               allowZeroish={true}
               blurValue={blur}
             />
             <KeyValueRow
               label="Total gas amount:"
-              labelWidth="w-28"
+              labelWidth="w-36"
               display={totalGasAmount.toString()}
               allowZeroish={true}
               blurValue={blur}
@@ -140,7 +140,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
           <div className="flex flex-1 flex-col gap-y-2">
             <KeyValueRow
               label="Total paid:"
-              labelWidth="w-20"
+              labelWidth="w-24"
               display={`${paymentFormatted} ${nativeSymbol}`}
               subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
               allowZeroish={true}
@@ -148,24 +148,24 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             />
           </div>
         </div>
-        {deliveryGasUsed != null && (
+        {!isNullish(deliveryGasUsed) && (
           <div className="border-t border-gray-100 pt-3">
             <h4 className="mb-2 text-sm text-gray-500">Destination delivery</h4>
-            <div className="flex gap-x-6">
+            <div className="flex flex-col gap-y-2 sm:flex-row sm:gap-x-6 sm:gap-y-0">
               <div className="flex flex-1 flex-col gap-y-2">
                 <KeyValueRow
                   label="Gas used:"
-                  labelWidth="w-28"
+                  labelWidth="w-36"
                   display={deliveryGasUsed.toString()}
                   allowZeroish={true}
                   blurValue={blur}
                 />
               </div>
               <div className="flex flex-1 flex-col gap-y-2">
-                {deliveryCostFormatted != null && (
+                {!isNullish(deliveryCostFormatted) && (
                   <KeyValueRow
                     label="Gas cost:"
-                    labelWidth="w-20"
+                    labelWidth="w-24"
                     display={`${deliveryCostFormatted} ${destSymbol}`}
                     subDisplay={
                       deliveryCostUsdFormatted ? `(${deliveryCostUsdFormatted})` : undefined
@@ -204,7 +204,7 @@ function IgpPaymentsTable({
   nativeDecimals: number;
   nativeSymbol: string;
 }) {
-  const showUsd = nativeUsdPrice != null;
+  const showUsd = !isNullish(nativeUsdPrice);
   return (
     <table className="border-collapse overflow-hidden rounded">
       <thead>
