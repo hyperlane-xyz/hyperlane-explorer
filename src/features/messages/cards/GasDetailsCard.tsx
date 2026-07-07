@@ -25,12 +25,20 @@ const DEFAULT_GAS_UNIT_DECIMALS = 9;
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
   const nativeUsdPrice = useNativeTokenUsdPrice(message.originDomainId, message.origin?.timestamp);
+  const deliveryTx = message.destination;
+  const deliveryGasUsed = deliveryTx && 'gasUsed' in deliveryTx ? deliveryTx.gasUsed : undefined;
+  const deliveryEffectiveGasPrice =
+    deliveryTx && 'effectiveGasPrice' in deliveryTx ? deliveryTx.effectiveGasPrice : undefined;
+  const destUsdPrice = useNativeTokenUsdPrice(message.destinationDomainId, deliveryTx?.timestamp);
   const totalGasAmountFromMessage =
     'totalGasAmount' in message ? message.totalGasAmount : undefined;
   const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
   const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
   const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
   const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
+  const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
+  const destDecimals = destMetadata?.nativeToken?.decimals || 18;
+  const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
   const unitOptions = useMemo(() => {
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
     return [
@@ -104,6 +112,19 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         )
       : null;
 
+  const deliveryCostWei =
+    deliveryGasUsed != null && deliveryEffectiveGasPrice != null
+      ? new BigNumber(deliveryGasUsed).times(deliveryEffectiveGasPrice)
+      : null;
+  const deliveryCostFormatted =
+    deliveryCostWei != null ? fromWei(deliveryCostWei.toString(), destDecimals).toString() : null;
+  const deliveryCostUsdFormatted =
+    deliveryCostWei != null && destUsdPrice != null
+      ? formatUsd(
+          new BigNumber(fromWei(deliveryCostWei.toString(), destDecimals)).times(destUsdPrice),
+        )
+      : null;
+
   return (
     <SectionCard
       className="w-full"
@@ -162,6 +183,34 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             classes="basis-5/12"
           />
         </div>
+        {deliveryGasUsed != null && (
+          <div className="border-t border-gray-100 pt-3">
+            <h4 className="mb-2 text-sm text-gray-500">Destination delivery</h4>
+            <div className="mr-28 flex flex-wrap gap-x-4 gap-y-2">
+              <KeyValueRow
+                label="Gas used:"
+                labelWidth="w-28"
+                display={deliveryGasUsed.toString()}
+                allowZeroish={true}
+                blurValue={blur}
+                classes="basis-5/12"
+              />
+              {deliveryCostFormatted != null && (
+                <KeyValueRow
+                  label="Gas cost:"
+                  labelWidth="w-28"
+                  display={`${deliveryCostFormatted} ${destSymbol}`}
+                  subDisplay={
+                    deliveryCostUsdFormatted ? `(${deliveryCostUsdFormatted})` : undefined
+                  }
+                  allowZeroish={true}
+                  blurValue={blur}
+                  classes="basis-5/12"
+                />
+              )}
+            </div>
+          </div>
+        )}
         {!!paymentsWithAddr.length && (
           <div className="pb-8 md:pb-6 md:pt-2">
             <IgpPaymentsTable
