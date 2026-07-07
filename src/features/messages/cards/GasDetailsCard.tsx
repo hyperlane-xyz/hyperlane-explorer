@@ -120,58 +120,61 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             Learn more about gas on Hyperlane.
           </a>
         </p>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          <KeyValueRow
-            label="Payment count:"
-            labelWidth="w-28"
-            display={numPayments.toString()}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
-          <KeyValueRow
-            label="Total gas amount:"
-            labelWidth="w-28"
-            display={totalGasAmount.toString()}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
-          <KeyValueRow
-            label="Total paid:"
-            labelWidth="w-28"
-            display={`${paymentFormatted} ${nativeSymbol}`}
-            subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
-            allowZeroish={true}
-            blurValue={blur}
-            classes="basis-5/12"
-          />
+        <div className="flex gap-x-6">
+          <div className="flex flex-1 flex-col gap-y-2">
+            <KeyValueRow
+              label="Payment count:"
+              labelWidth="w-28"
+              display={numPayments.toString()}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+            <KeyValueRow
+              label="Total gas amount:"
+              labelWidth="w-28"
+              display={totalGasAmount.toString()}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-y-2">
+            <KeyValueRow
+              label="Total paid:"
+              labelWidth="w-20"
+              display={`${paymentFormatted} ${nativeSymbol}`}
+              subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
+              allowZeroish={true}
+              blurValue={blur}
+            />
+          </div>
         </div>
         {deliveryGasUsed != null && (
           <div className="border-t border-gray-100 pt-3">
             <h4 className="mb-2 text-sm text-gray-500">Destination delivery</h4>
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-              <KeyValueRow
-                label="Gas used:"
-                labelWidth="w-28"
-                display={deliveryGasUsed.toString()}
-                allowZeroish={true}
-                blurValue={blur}
-                classes="basis-5/12"
-              />
-              {deliveryCostFormatted != null && (
+            <div className="flex gap-x-6">
+              <div className="flex flex-1 flex-col gap-y-2">
                 <KeyValueRow
-                  label="Gas cost:"
+                  label="Gas used:"
                   labelWidth="w-28"
-                  display={`${deliveryCostFormatted} ${destSymbol}`}
-                  subDisplay={
-                    deliveryCostUsdFormatted ? `(${deliveryCostUsdFormatted})` : undefined
-                  }
+                  display={deliveryGasUsed.toString()}
                   allowZeroish={true}
                   blurValue={blur}
-                  classes="basis-5/12"
                 />
-              )}
+              </div>
+              <div className="flex flex-1 flex-col gap-y-2">
+                {deliveryCostFormatted != null && (
+                  <KeyValueRow
+                    label="Gas cost:"
+                    labelWidth="w-20"
+                    display={`${deliveryCostFormatted} ${destSymbol}`}
+                    subDisplay={
+                      deliveryCostUsdFormatted ? `(${deliveryCostUsdFormatted})` : undefined
+                    }
+                    allowZeroish={true}
+                    blurValue={blur}
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
