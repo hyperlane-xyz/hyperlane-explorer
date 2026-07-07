@@ -12,6 +12,7 @@ import { Message, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { GasPayment } from '../../debugger/types';
 import { KeyValueRow } from './KeyValueRow';
+import { useNativeTokenUsdPrice } from './useNativeTokenUsdPrice';
 
 interface Props {
   message: Message | MessageStub;
@@ -23,64 +24,85 @@ const DEFAULT_GAS_UNIT_DECIMALS = 9;
 
 export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const nativeUsdPrice = useNativeTokenUsdPrice(message.originDomainId);
   const totalGasAmountFromMessage =
     'totalGasAmount' in message ? message.totalGasAmount : undefined;
   const totalPaymentFromMessage = 'totalPayment' in message ? message.totalPayment : undefined;
   const numPaymentsFromMessage = 'numPayments' in message ? message.numPayments : undefined;
+  const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
+  const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
   const unitOptions = useMemo(() => {
-    const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
     const nativeCurrencyName = originMetadata?.nativeToken?.symbol || 'Eth';
-    const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
     return [
       { value: nativeDecimals, display: toTitleCase(nativeCurrencyName) },
       { value: 9, display: 'Gwei' },
       { value: 0, display: 'Wei' },
     ];
-  }, [chainMetadataResolver, message.originDomainId]);
+  }, [originMetadata, nativeDecimals]);
 
   const [decimals, setDecimals] = useState<number>(DEFAULT_GAS_UNIT_DECIMALS);
 
-  const { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr } =
-    useMemo(() => {
-      const paymentsWithAddr = Object.keys(igpPayments)
-        .map((contract) =>
-          igpPayments[contract].map((p) => ({
-            gasAmount: p.gasAmount,
-            paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
-            paymentAmountWei: p.paymentAmount,
-            contract,
-          })),
+  const {
+    totalGasAmount,
+    paymentFormatted,
+    totalPaymentWei,
+    numPayments,
+    avgPrice,
+    paymentsWithAddr,
+  } = useMemo(() => {
+    const paymentsWithAddr = Object.keys(igpPayments)
+      .map((contract) =>
+        igpPayments[contract].map((p) => ({
+          gasAmount: p.gasAmount,
+          paymentAmount: fromWei(p.paymentAmount, decimals).toString(),
+          paymentAmountWei: p.paymentAmount,
+          contract,
+        })),
+      )
+      .flat();
+
+    let totalGasAmount = paymentsWithAddr.reduce(
+      (sum, val) => sum.plus(val.gasAmount),
+      new BigNumber(0),
+    );
+    let totalPaymentWei = paymentsWithAddr.reduce(
+      (sum, val) => sum.plus(val.paymentAmountWei),
+      new BigNumber(0),
+    );
+    let numPayments = paymentsWithAddr.length;
+
+    totalGasAmount = new BigNumber(
+      BigNumberMax(totalGasAmount, new BigNumber(totalGasAmountFromMessage || 0)),
+    );
+    totalPaymentWei = new BigNumber(
+      BigNumberMax(totalPaymentWei, new BigNumber(totalPaymentFromMessage || 0)),
+    );
+    numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
+
+    const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
+    const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
+    return {
+      totalGasAmount,
+      paymentFormatted,
+      totalPaymentWei,
+      numPayments,
+      avgPrice,
+      paymentsWithAddr,
+    };
+  }, [
+    decimals,
+    igpPayments,
+    numPaymentsFromMessage,
+    totalGasAmountFromMessage,
+    totalPaymentFromMessage,
+  ]);
+
+  const paymentUsdFormatted =
+    nativeUsdPrice != null
+      ? formatUsd(
+          new BigNumber(fromWei(totalPaymentWei.toString(), nativeDecimals)).times(nativeUsdPrice),
         )
-        .flat();
-
-      let totalGasAmount = paymentsWithAddr.reduce(
-        (sum, val) => sum.plus(val.gasAmount),
-        new BigNumber(0),
-      );
-      let totalPaymentWei = paymentsWithAddr.reduce(
-        (sum, val) => sum.plus(val.paymentAmountWei),
-        new BigNumber(0),
-      );
-      let numPayments = paymentsWithAddr.length;
-
-      totalGasAmount = new BigNumber(
-        BigNumberMax(totalGasAmount, new BigNumber(totalGasAmountFromMessage || 0)),
-      );
-      totalPaymentWei = new BigNumber(
-        BigNumberMax(totalPaymentWei, new BigNumber(totalPaymentFromMessage || 0)),
-      );
-      numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
-
-      const paymentFormatted = fromWei(totalPaymentWei.toString(), decimals).toString();
-      const avgPrice = computeAvgGasPrice(decimals, totalGasAmount, totalPaymentWei);
-      return { totalGasAmount, paymentFormatted, numPayments, avgPrice, paymentsWithAddr };
-    }, [
-      decimals,
-      igpPayments,
-      numPaymentsFromMessage,
-      totalGasAmountFromMessage,
-      totalPaymentFromMessage,
-    ]);
+      : null;
 
   return (
     <SectionCard
@@ -126,6 +148,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             label="Total paid:"
             labelWidth="w-28"
             display={paymentFormatted}
+            subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
             allowZeroish={true}
             blurValue={blur}
             classes="basis-5/12"
@@ -141,7 +164,11 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         </div>
         {!!paymentsWithAddr.length && (
           <div className="pb-8 md:pb-6 md:pt-2">
-            <IgpPaymentsTable payments={paymentsWithAddr} />
+            <IgpPaymentsTable
+              payments={paymentsWithAddr}
+              nativeUsdPrice={nativeUsdPrice}
+              nativeDecimals={nativeDecimals}
+            />
           </div>
         )}
         <div className="absolute bottom-0 right-0">
@@ -157,7 +184,16 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   );
 }
 
-function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contract: Address }> }) {
+function IgpPaymentsTable({
+  payments,
+  nativeUsdPrice,
+  nativeDecimals,
+}: {
+  payments: Array<GasPayment & { contract: Address; paymentAmountWei: string }>;
+  nativeUsdPrice: number | null;
+  nativeDecimals: number;
+}) {
+  const showUsd = nativeUsdPrice != null;
   return (
     <table className="border-collapse overflow-hidden rounded">
       <thead>
@@ -165,6 +201,7 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
           <th className={style.th}>IGP Address</th>
           <th className={style.th}>Gas amount</th>
           <th className={style.th}>Payment</th>
+          {showUsd && <th className={style.th}>Payment (USD)</th>}
         </tr>
       </thead>
       <tbody>
@@ -173,11 +210,29 @@ function IgpPaymentsTable({ payments }: { payments: Array<GasPayment & { contrac
             <td className={style.td}>{p.contract}</td>
             <td className={style.td}>{p.gasAmount}</td>
             <td className={style.td}>{p.paymentAmount}</td>
+            {showUsd && (
+              <td className={style.td}>
+                {formatUsd(
+                  new BigNumber(fromWei(p.paymentAmountWei, nativeDecimals)).times(nativeUsdPrice),
+                )}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
     </table>
   );
+}
+
+function formatUsd(value: BigNumber): string {
+  const num = value.toNumber();
+  const fractionDigits = num !== 0 && Math.abs(num) < 0.01 ? 6 : 2;
+  return num.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: fractionDigits,
+  });
 }
 
 function computeAvgGasPrice(
