@@ -3,6 +3,19 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@hyperlane-xyz/*'
 overrides:
+  # TEMPORARY: Cardano support (ProtocolType.Cardano and its address utilities)
+  # is not in a published @hyperlane-xyz release yet, so these resolve to
+  # tarballs built from a local monorepo checkout. Run
+  # `./scripts/link-local-hyperlane.sh` to produce them. Delete this block and
+  # bump the versions in package.json once the release lands.
+  '@hyperlane-xyz/utils': file:./local-packages/hyperlane-xyz-utils.tgz
+  '@hyperlane-xyz/provider-sdk': file:./local-packages/hyperlane-xyz-provider-sdk.tgz
+  '@hyperlane-xyz/sdk': file:./local-packages/hyperlane-xyz-sdk.tgz
+  '@hyperlane-xyz/widgets': file:./local-packages/hyperlane-xyz-widgets.tgz
+  # Re-resolving the @hyperlane-xyz subtree above otherwise pulls the ESM-only
+  # uuid v14 into rpc-websockets, which Jest cannot parse. Pin it to what the
+  # lockfile resolved before. Goes away with the overrides above.
+  'rpc-websockets>uuid': 8.3.2
   tronweb>ethers: ^6.13.5
   ethers: ^5.7
   sha.js: 2.4.12

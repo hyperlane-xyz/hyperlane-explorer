@@ -39,3 +39,6 @@ public/fonts/
 
 .opencode
 .sisyphus
+
+# Tarballs built by scripts/link-local-hyperlane.sh
+local-packages/
