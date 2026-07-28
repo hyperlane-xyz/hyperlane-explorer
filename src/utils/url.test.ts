@@ -45,6 +45,25 @@ const tronMetadata: ChainMetadata = {
   ],
 };
 
+const cardanoMetadata: ChainMetadata = {
+  ...validMetadata,
+  name: 'cardanopreview',
+  domainId: 2003,
+  chainId: 2003,
+  protocol: ProtocolType.Cardano,
+  bech32Prefix: 'addr_test',
+  blockExplorers: [
+    {
+      name: 'Cardanoscan',
+      url: 'https://preview.cardanoscan.io',
+      apiUrl: 'https://preview.cardanoscan.io',
+      family: 'other' as NonNullable<
+        NonNullable<ChainMetadata['blockExplorers']>[number]['family']
+      >,
+    },
+  ],
+};
+
 const malformedExplorerMetadata: ChainMetadata = {
   ...validMetadata,
   name: 'broken',
@@ -103,6 +122,20 @@ describe('url utils', () => {
     expect(
       getBlockExplorerAddressUrl(resolver, 'tron', '0xbf8078818627110fD05827Ca0aa9E4518d3421ec'),
     ).toMatch(/^https:\/\/tronscan\.org\/#\/address\/T[1-9A-HJ-NP-Za-km-z]{33}$/);
+  });
+
+  it('links Cardano hashes to Cardanoscan', () => {
+    const resolver = createResolver(cardanoMetadata);
+    const txHash = 'aa'.repeat(32);
+    const address = 'addr_test1wqfpyysjzgfpyysjzgfpyysjzgfpyysjzgfpyysjzgfpyysu9csdk';
+
+    // Cardanoscan uses /transaction/, not /tx/
+    expect(getBlockExplorerTxUrl(resolver, 'cardanopreview', txHash)).toBe(
+      `https://preview.cardanoscan.io/transaction/${txHash}`,
+    );
+    expect(getBlockExplorerAddressUrl(resolver, 'cardanopreview', address)).toBe(
+      `https://preview.cardanoscan.io/address/${address}`,
+    );
   });
 
   it('returns null instead of throwing for malformed explorer metadata', async () => {

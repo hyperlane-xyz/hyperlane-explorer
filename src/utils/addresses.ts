@@ -42,6 +42,8 @@ export function formatTxHash(
       return strip0x(hash);
     case ProtocolType.Tron:
       return strip0x(hash);
+    case ProtocolType.Cardano:
+      return strip0x(hash);
     case ProtocolType.Aleo:
       return hexToBech32mPrefix(hash, 'at');
     default:

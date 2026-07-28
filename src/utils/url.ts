@@ -103,6 +103,7 @@ function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
 
 function isLegacyTransactionPath(metadata: ChainMetadata) {
   if (metadata.blockExplorers?.[0]?.family === 'tronscan') return true;
+  if (metadata.protocol === ProtocolType.Cardano) return true;
   return ['nautilus', 'proteustestnet', 'radix', 'radixtestnet', 'aleo', 'aleotestnet'].includes(
     metadata.name,
   );

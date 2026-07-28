@@ -53,6 +53,8 @@ export function postgresByteaToTxHash(
   chainMetadata: ChainMetadata | null | undefined,
 ): string {
   const hexString = postgresByteaToString(byteString);
+  // Cardano transaction hashes are bare hex everywhere they are shown or looked up
+  if (chainMetadata?.protocol === ProtocolType.Cardano) return strip0x(hexString);
   // Return hex string for protocols other than Sealevel
   if (chainMetadata?.protocol !== ProtocolType.Sealevel) return hexString;
   const bytes = Buffer.from(strip0x(hexString), 'hex');

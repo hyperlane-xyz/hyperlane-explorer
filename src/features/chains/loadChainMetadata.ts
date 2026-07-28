@@ -7,6 +7,7 @@ import {
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
+import { builtinChainMetadata } from '../../consts/chains';
 import { links } from '../../consts/links';
 import { logger } from '../../utils/logger';
 
@@ -33,14 +34,16 @@ export async function loadChainMetadata(
     ),
   );
 
-  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
+  // Builtins sit underneath the registry, which sits underneath user overrides.
+  const withBuiltins = mergeChainMetadataMap(builtinChainMetadata, metadataWithLogos);
+  const mergedMetadata = mergeChainMetadataMap(withBuiltins, overrideChainMetadata);
 
   return objFilter(
     objMap(mergedMetadata, (chain, metadata) => {
       const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
       if (parsedMetadata.success) return parsedMetadata.data;
 
-      const fallbackMetadata = metadataWithLogos[chain];
+      const fallbackMetadata = withBuiltins[chain];
       const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
       logger.error(
         `Failed to parse metadata for ${chain}, ${
