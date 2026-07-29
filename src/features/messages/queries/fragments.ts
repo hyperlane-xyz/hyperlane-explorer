@@ -81,13 +81,13 @@ export interface MessageStubEntry {
   origin_tx_id: number; // database id
   origin_tx_hash: string; // binary e.g. \\x123
   origin_tx_sender: string; // binary e.g. \\x123
-  origin_tx_recipient: string; // binary e.g. \\x123
+  origin_tx_recipient: string | null; // binary e.g. \\x123, null when the tx has no single recipient
   destination_chain_id: number;
   destination_domain_id: number;
   destination_tx_id: number | null; // database id
   destination_tx_hash: string | null; // binary e.g. \\x123
   destination_tx_sender: string | null; // binary e.g. \\x123
-  destination_tx_recipient: string; // binary e.g. \\x123
+  destination_tx_recipient: string | null; // binary e.g. \\x123, null when the tx has no single recipient
   message_body: string | null; // binary e.g. \\x123
 }
 

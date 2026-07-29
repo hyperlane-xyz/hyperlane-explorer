@@ -1,3 +1,4 @@
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 
 import { Message, MessageStatus, MessageStub } from '../../../types';
@@ -56,6 +57,19 @@ function queryResult<D, M extends MessageStub>(
   );
 }
 
+/**
+ * `transaction.recipient` is nullable in the scraper schema, and is always null
+ * for chains whose transactions have no single recipient — every Cardano
+ * transaction pays out to many UTXOs, and Midnight's are shielded.
+ */
+function nullableByteaToAddress(
+  byteString: string | null | undefined,
+  chainMetadata: ChainMetadata | null | undefined,
+): Address {
+  if (!byteString) return '';
+  return postgresByteaToAddress(byteString, chainMetadata);
+}
+
 function parseMessageStub(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
@@ -64,7 +78,7 @@ function parseMessageStub(
   try {
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
-    const body = postgresByteaToString(m.message_body ?? '');
+    const body = m.message_body ? postgresByteaToString(m.message_body) : '';
 
     const isPiMsg =
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
@@ -86,14 +100,14 @@ function parseMessageStub(
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
-        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
+        to: nullableByteaToAddress(m.origin_tx_recipient, originMetadata),
       },
       destination: m.is_delivered
         ? {
             timestamp: parseTimestampString(m.delivery_occurred_at!),
             hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
             from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
-            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
+            to: nullableByteaToAddress(m.destination_tx_recipient, destinationMetadata),
           }
         : undefined,
       isPiMsg,
