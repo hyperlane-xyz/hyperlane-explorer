@@ -3,18 +3,18 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@hyperlane-xyz/*'
 overrides:
-  # TEMPORARY: Cardano support (ProtocolType.Cardano and its address utilities)
-  # is not in a published @hyperlane-xyz release yet, so these resolve to
-  # tarballs built from a local monorepo checkout. Run
-  # `./scripts/link-local-hyperlane.sh` to produce them. Delete this block and
-  # bump the versions in package.json once the release lands.
-  '@hyperlane-xyz/utils': file:./local-packages/hyperlane-xyz-utils.tgz
-  '@hyperlane-xyz/provider-sdk': file:./local-packages/hyperlane-xyz-provider-sdk.tgz
-  '@hyperlane-xyz/sdk': file:./local-packages/hyperlane-xyz-sdk.tgz
-  '@hyperlane-xyz/widgets': file:./local-packages/hyperlane-xyz-widgets.tgz
-  # Re-resolving the @hyperlane-xyz subtree above otherwise pulls the ESM-only
-  # uuid v14 into rpc-websockets, which Jest cannot parse. Pin it to what the
-  # lockfile resolved before. Goes away with the overrides above.
+  # Cardano: @hyperlane-xyz/utils 33.0.2 + ProtocolType.Cardano and its address
+  # codecs. utils resolves exactly once in this dependency graph, so the
+  # override propagates into sdk/widgets, and the SDK's forwardCompatibleEnum
+  # reads the enum at runtime - `protocol: 'cardano'` survives metadata
+  # validation without an sdk override. The vendored tarball is built from
+  # equilibriumco/hyperlane-monorepo branch cardano-explorer, whose utils
+  # differs from the upstream 33.0.2 release (4815a47cc) by exactly the
+  # cardano protocol commit. All of this disappears once upstream ships it.
+  '@hyperlane-xyz/utils': file:vendor/hyperlane-xyz-utils-33.0.2-cardano.tgz
+  # Overriding utils re-resolves its subtree (@solana/web3.js -> rpc-websockets
+  # -> uuid), which pulls the ESM-only uuid v14 that Jest cannot parse. Pin it
+  # to what the lockfile resolved before. Goes away with the override above.
   'rpc-websockets>uuid': 8.3.2
   tronweb>ethers: ^6.13.5
   ethers: ^5.7

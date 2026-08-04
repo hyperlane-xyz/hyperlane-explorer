@@ -11,7 +11,7 @@ import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getHumanReadableDuration } from '../../utils/time';
-import { getChainDisplayName, isEvmChain } from '../chains/utils';
+import { getChainDisplayName, isTimelineChain } from '../chains/utils';
 import { useTransactionMessageCount } from '../transactions/useTransactionMessageCount';
 import {
   DestinationTransactionPreviewCard,
@@ -117,8 +117,8 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const showTimeline =
     !isPiMsg &&
     'blockNumber' in origin &&
-    isEvmChain(chainMetadataResolver, originDomainId) &&
-    isEvmChain(chainMetadataResolver, destinationDomainId);
+    isTimelineChain(chainMetadataResolver, originDomainId) &&
+    isTimelineChain(chainMetadataResolver, destinationDomainId);
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';

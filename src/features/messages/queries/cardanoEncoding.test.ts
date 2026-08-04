@@ -1,7 +1,6 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 
-import { builtinChainMetadata } from '../../../consts/chains';
 import {
   addressToPostgresBytea,
   postgresByteaToAddress,
@@ -11,7 +10,17 @@ import {
 import type { MessageEntry } from './fragments';
 import { parseMessageQueryResult } from './parse';
 
-const cardanoPreview = builtinChainMetadata.cardanopreview as ChainMetadata;
+// Chain data now comes from the registry (NEXT_PUBLIC_REGISTRY_URL), so the
+// fixture mirrors the cardanopreview entry rather than importing repo consts.
+const cardanoPreview = {
+  name: 'cardanopreview',
+  domainId: 2003,
+  chainId: 2003,
+  protocol: ProtocolType.Cardano,
+  bech32Prefix: 'addr_test',
+  isTestnet: true,
+  rpcUrls: [{ http: 'https://cardano-preview.blockfrost.io/api/v0' }],
+} as ChainMetadata;
 const sepoliaMetadata = {
   name: 'sepolia',
   domainId: 11155111,
@@ -49,15 +58,6 @@ describe('Cardano message encoding', () => {
 
   it('finds messages by searching for a Cardano address', () => {
     expect(searchValueToPostgresBytea(SCRIPT_SENDER_ADDRESS)).toEqual(SCRIPT_SENDER_BYTEA);
-  });
-
-  it('describes the Cardano test networks as Cardano chains', () => {
-    for (const name of ['cardano', 'cardanopreprod', 'cardanopreview']) {
-      expect(builtinChainMetadata[name].protocol).toEqual(ProtocolType.Cardano);
-    }
-    expect(builtinChainMetadata.cardanopreview.domainId).toEqual(2003);
-    expect(builtinChainMetadata.cardano.bech32Prefix).toEqual('addr');
-    expect(builtinChainMetadata.cardanopreview.bech32Prefix).toEqual('addr_test');
   });
 });
 

@@ -7,7 +7,7 @@ import {
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
-import { builtinChainMetadata } from '../../consts/chains';
+import { config } from '../../consts/config';
 import { links } from '../../consts/links';
 import { logger } from '../../utils/logger';
 
@@ -29,21 +29,25 @@ export async function loadChainMetadata(
       registryChainMetadata,
       async (chainName, metadata): Promise<ChainMetadata> => ({
         ...metadata,
-        logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
+        // The CDN path only serves the canonical registry; when a custom
+        // registry is configured, resolve logos through it so its chains are
+        // not iconless.
+        logoURI: config.registryUrl
+          ? ((await registry.getChainLogoUri(chainName)) ??
+            `${links.imgPath}/chains/${chainName}/logo.svg`)
+          : `${links.imgPath}/chains/${chainName}/logo.svg`,
       }),
     ),
   );
 
-  // Builtins sit underneath the registry, which sits underneath user overrides.
-  const withBuiltins = mergeChainMetadataMap(builtinChainMetadata, metadataWithLogos);
-  const mergedMetadata = mergeChainMetadataMap(withBuiltins, overrideChainMetadata);
+  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
 
   return objFilter(
     objMap(mergedMetadata, (chain, metadata) => {
       const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
       if (parsedMetadata.success) return parsedMetadata.data;
 
-      const fallbackMetadata = withBuiltins[chain];
+      const fallbackMetadata = metadataWithLogos[chain];
       const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
       logger.error(
         `Failed to parse metadata for ${chain}, ${

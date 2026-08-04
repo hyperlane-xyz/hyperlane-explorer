@@ -15,6 +15,12 @@ export const COLLATERAL_TOKEN_STANDARDS: TokenStandard[] = [
   ...TOKEN_COLLATERALIZED_STANDARDS,
   TokenStandard.EvmHypCollateralFiat,
   TokenStandard.CosmosIbc,
+  // Cardano standards ship with the cardano protocol changeset
+  // (TokenStandard.CardanoHyp*); until this app's SDK version carries them,
+  // recognize the strings directly (same pattern as the Starknet workaround
+  // in features/messages/collateral/utils.ts).
+  'CardanoHypNative' as TokenStandard,
+  'CardanoHypCollateral' as TokenStandard,
 ];
 
 export const CROSS_COLLATERAL_TOKEN_STANDARDS: TokenStandard[] = Array.from(
