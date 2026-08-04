@@ -90,7 +90,7 @@ function ChainSelector({
       <button
         type="button"
         className={clsx(
-          'border-accent-600 flex items-center justify-center rounded border px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
+          'flex items-center justify-center rounded border border-accent-600 px-1.5 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:min-w-[5.8rem] sm:px-2.5',
           value ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         onClick={open}
@@ -164,7 +164,7 @@ function DatetimeSelector({
           </>
         }
         buttonClassname={clsx(
-          'border-accent-600 flex items-center justify-center rounded border px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
           hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-60"
@@ -172,7 +172,7 @@ function DatetimeSelector({
         {({ close }) => (
           <div className="p-4" key="date-time-selector">
             <div className="flex items-center justify-between">
-              <h3 className="text-primary-800 font-medium">Time Range</h3>
+              <h3 className="font-medium text-primary-800">Time Range</h3>
               <div className="flex pt-1">
                 <TextButton classes="text-sm font-medium text-accent-600" onClick={onClickClear}>
                   Clear
@@ -180,9 +180,9 @@ function DatetimeSelector({
               </div>
             </div>
             <div className="flex flex-col">
-              <h4 className="mt-3 mb-1 text-sm font-medium text-gray-500">Start Time</h4>
+              <h4 className="mb-1 mt-3 text-sm font-medium text-gray-500">Start Time</h4>
               <DatetimeField timestamp={startTime} onChange={setStartTime} />
-              <h4 className="mt-3 mb-1 text-sm font-medium text-gray-500">End Time</h4>
+              <h4 className="mb-1 mt-3 text-sm font-medium text-gray-500">End Time</h4>
               <DatetimeField timestamp={endTime} onChange={setEndTime} />
             </div>
             <SolidButton
@@ -204,7 +204,7 @@ function ClearButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="bg-primary-300/80 absolute top-1/2 right-1.5 -translate-y-1/2 rounded-full p-1 hover:opacity-80"
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-primary-300/80 p-1 hover:opacity-80"
     >
       <XIcon color="white" height={10} width={10} />
     </button>
@@ -245,7 +245,7 @@ function StatusSelector({
           </>
         }
         buttonClassname={clsx(
-          'border-accent-600 flex items-center justify-center rounded border px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
+          'flex items-center justify-center rounded border border-accent-600 px-2 py-1 text-sm font-medium transition-all hover:opacity-80 active:opacity-70 sm:px-3',
           hasValue ? 'bg-accent-600 pr-7 text-white sm:pr-8' : 'text-accent-600',
         )}
         panelClassname="w-36"
@@ -258,7 +258,7 @@ function StatusSelector({
                 type="button"
                 className={clsx(
                   'w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100',
-                  value === option.value && 'bg-accent-50 text-accent-600 font-medium',
+                  value === option.value && 'bg-accent-50 font-medium text-accent-600',
                 )}
                 onClick={() => {
                   onChangeValue(option.value);

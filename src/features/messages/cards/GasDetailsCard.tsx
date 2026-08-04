@@ -115,7 +115,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             href={docLinks.gas}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary-800 hover:text-primary-700 active:text-primary-600 cursor-pointer transition-all"
+            className="cursor-pointer text-primary-800 transition-all hover:text-primary-700 active:text-primary-600"
           >
             Learn more about gas on Hyperlane.
           </a>

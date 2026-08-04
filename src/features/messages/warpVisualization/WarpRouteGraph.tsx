@@ -345,16 +345,16 @@ export function WarpRouteGraph({
           {/* Arrow with transfer amount */}
           <div className="flex flex-col items-center">
             <div className="flex items-center">
-              <div className="bg-primary-500 h-0.5 w-8" />
+              <div className="h-0.5 w-8 bg-primary-500" />
               {transferAmountDisplay && tokenSymbol && (
-                <div className="border-primary-500 rounded border bg-white px-2 py-1">
-                  <span className="text-primary-700 block max-w-[112px] truncate text-xs font-medium">
+                <div className="rounded border border-primary-500 bg-white px-2 py-1">
+                  <span className="block max-w-[112px] truncate text-xs font-medium text-primary-700">
                     {transferAmountDisplay} {tokenSymbol}
                   </span>
                 </div>
               )}
-              <div className="bg-primary-500 h-0.5 w-8" />
-              <div className="border-l-primary-500 h-0 w-0 border-t-[6px] border-b-[6px] border-l-[8px] border-t-transparent border-b-transparent" />
+              <div className="h-0.5 w-8 bg-primary-500" />
+              <div className="h-0 w-0 border-b-[6px] border-l-[8px] border-t-[6px] border-b-transparent border-l-primary-500 border-t-transparent" />
             </div>
           </div>
 

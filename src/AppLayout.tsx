@@ -22,7 +22,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{`Hyperlane Explorer | ${getHeadTitle(pathName)}`}</title>
       </Head>
-      <div className="bg-brand-gradient relative flex h-full min-h-screen w-full min-w-screen flex-col justify-between">
+      <div className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between bg-brand-gradient">
         <div
           className="pointer-events-none absolute inset-0 z-0"
           style={appShellGridOverlayStyle}

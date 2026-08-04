@@ -46,7 +46,7 @@ export function TransactionDetails({ txHash }: Props) {
         <button
           type="button"
           onClick={refetch}
-          className="text-primary-600 hover:text-primary-500 text-sm font-medium transition-colors"
+          className="text-sm font-medium text-primary-600 transition-colors hover:text-primary-500"
         >
           Retry
         </button>

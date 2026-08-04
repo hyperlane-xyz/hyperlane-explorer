@@ -49,7 +49,7 @@
     "@urql/core": "^6.0.3",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
-    "oxfmt": "0.62.0",
+    "oxfmt": "0.42.0",
     "oxlint": "1.77.0",
     "postcss": "^8.5.24",
     "tailwindcss": "^4.3.3",

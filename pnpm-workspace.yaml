@@ -2,8 +2,6 @@
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@hyperlane-xyz/*'
-  - oxfmt
-  - '@oxfmt/*'
   - oxlint
   - '@oxlint/*'
 overrides:

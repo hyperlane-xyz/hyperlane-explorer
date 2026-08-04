@@ -48,7 +48,7 @@ export function WarpRouteIsmDetailsCard({ message, warpRouteDetails, blur }: Pro
         className="flex w-full items-center gap-2"
       >
         <LockIcon width={22} height={26} color="#3d304c" className="opacity-70" />
-        <h3 className="text-md text-primary-800 font-medium">Warp Route Security</h3>
+        <h3 className="text-md font-medium text-primary-800">Warp Route Security</h3>
         {/* Stop propagation so clicking / Enter on the help icon doesn't
             toggle the card. The tooltip itself is hover-driven so this is
             mostly cosmetic, but it preserves the click-to-not-toggle

@@ -352,8 +352,8 @@ export function MessageSearch() {
         />
       )}
       <Card className="relative mt-4 min-h-[38rem] w-full" padding="">
-        <div className="flex items-center justify-between px-2 pt-3.5 pb-3 sm:px-4 md:px-5">
-          <h2 className="text-primary-800 w-min pl-0.5 font-medium sm:w-fit">
+        <div className="flex items-center justify-between px-2 pb-3 pt-3.5 sm:px-4 md:px-5">
+          <h2 className="w-min pl-0.5 font-medium text-primary-800 sm:w-fit">
             {!hasInput ? 'Latest Messages' : 'Search Results'}
           </h2>
           <div className="flex items-center space-x-2 md:space-x-4">
@@ -390,7 +390,7 @@ export function MessageSearch() {
           allowAddress={true}
         />
         {looksLikeWarpRoute && !isWarpRouteMapLoaded && (
-          <div className="absolute top-10 right-0 left-0">
+          <div className="absolute left-0 right-0 top-10">
             <div className="my-10 flex justify-center">
               <div className="flex max-w-md flex-col items-center justify-center px-3 py-5 text-center">
                 <div className="text-gray-700">Loading warp route data...</div>
@@ -399,7 +399,7 @@ export function MessageSearch() {
           </div>
         )}
         {isUnknownWarpRoute && (
-          <div className="absolute top-10 right-0 left-0">
+          <div className="absolute left-0 right-0 top-10">
             <div className="my-10 flex justify-center">
               <div className="flex max-w-md flex-col items-center justify-center px-3 py-5 text-center">
                 <div className="text-gray-700">
@@ -421,7 +421,7 @@ function RefreshButton({ loading, onClick }: { loading: boolean; onClick: () => 
   return (
     <IconButton
       onClick={onClick}
-      className="bg-accent-600 hover:bg-accent-700 flex h-[30px] w-[30px] items-center justify-center rounded duration-500"
+      className="flex h-[30px] w-[30px] items-center justify-center rounded bg-accent-600 duration-500 hover:bg-accent-700"
       disabled={loading}
     >
       <RefreshIcon color="white" height={18} width={18} />

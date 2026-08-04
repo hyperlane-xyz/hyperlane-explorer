@@ -17,11 +17,11 @@ export function SectionCard({
   children,
 }: PropsWithChildren<Props>) {
   return (
-    <section className={`bg-card-gradient shadow-card overflow-auto rounded ${className || ''}`}>
+    <section className={`overflow-auto rounded bg-card-gradient shadow-card ${className || ''}`}>
       {/* Muted Gray Header */}
       <div className="bg-gray-150 px-3 py-2">
         <div className="flex items-center gap-2">
-          {leading || <div className="bg-primary-400 h-2 w-2 rounded-full" />}
+          {leading || <div className="h-2 w-2 rounded-full bg-primary-400" />}
           <span
             className={`font-medium text-gray-700 ${titleSize === 'md' ? 'text-base' : 'text-sm'}`}
           >

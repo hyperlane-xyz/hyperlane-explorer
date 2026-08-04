@@ -2,6 +2,7 @@
   "singleQuote": true,
   "sortImports": {},
   "sortTailwindcss": {
+    "config": "./tailwind.config.js",
     "functions": ["clsx"]
   },
   "ignorePatterns": ["test/outputs", "public"]

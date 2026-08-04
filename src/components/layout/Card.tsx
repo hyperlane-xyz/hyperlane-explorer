@@ -7,7 +7,7 @@ interface Props {
 
 export function Card({ className, padding = 'p-3 sm:p-4', children }: PropsWithChildren<Props>) {
   return (
-    <div className={`bg-card-gradient shadow-card overflow-auto rounded ${padding} ${className}`}>
+    <div className={`overflow-auto rounded bg-card-gradient shadow-card ${padding} ${className}`}>
       {children}
     </div>
   );

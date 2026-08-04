@@ -110,7 +110,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
         </button>
         <Link
           href={`/message/${message.msgId}`}
-          className="text-primary-600 hover:text-primary-500 shrink-0 text-xs transition-colors"
+          className="shrink-0 text-xs text-primary-600 transition-colors hover:text-primary-500"
         >
           Open
         </Link>
