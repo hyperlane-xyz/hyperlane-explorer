@@ -10,7 +10,10 @@ import { useMemo } from 'react';
 import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
-import { SUPPORTED_SEALEVEL_BALANCE_STANDARDS } from './tokenStandards';
+import {
+  SUPPORTED_CARDANO_BALANCE_STANDARDS,
+  SUPPORTED_SEALEVEL_BALANCE_STANDARDS,
+} from './tokenStandards';
 import {
   ChainBalance,
   getWarpRouteTokenKey,
@@ -68,6 +71,11 @@ function isSupportedSealevelStandard(standard: TokenStandard | string | undefine
   return SUPPORTED_SEALEVEL_BALANCE_STANDARDS.includes(standard as TokenStandard);
 }
 
+function isSupportedCardanoStandard(standard: TokenStandard | string | undefined): boolean {
+  if (!standard) return false;
+  return SUPPORTED_CARDANO_BALANCE_STANDARDS.includes(standard as TokenStandard);
+}
+
 function getApiBalance(data: unknown): bigint | undefined {
   if (!data || typeof data !== 'object') return undefined;
   const { balance } = data as Record<string, unknown>;
@@ -97,6 +105,27 @@ async function fetchSealevelTokenBalance(
   return balance === undefined ? undefined : { balance };
 }
 
+// Like Sealevel, Cardano balances are read server-side: the browser bundle has
+// no Cardano provider and Blockfrost needs a project id.
+async function fetchCardanoTokenBalance(
+  token: WarpRouteTokenVisualization,
+): Promise<ChainBalance | undefined> {
+  const params = new URLSearchParams({
+    chainName: token.chainName,
+    addressOrDenom: token.addressOrDenom,
+    standard: token.standard || '',
+  });
+
+  const response = await fetch(`/api/cardano-warp-route-balance?${params.toString()}`);
+  if (!response.ok) {
+    logger.debug(`Cardano balance API ${response.status} for ${token.chainName}:${token.symbol}`);
+    return undefined;
+  }
+
+  const balance = getApiBalance(await response.json());
+  return balance === undefined ? undefined : { balance };
+}
+
 /**
  * Fetch the balance data for a single token
  */
@@ -107,6 +136,10 @@ async function fetchTokenBalance(
   try {
     if (isSupportedSealevelStandard(token.standard)) {
       return await fetchSealevelTokenBalance(token);
+    }
+
+    if (isSupportedCardanoStandard(token.standard)) {
+      return await fetchCardanoTokenBalance(token);
     }
 
     const adapter = createEvmHypAdapter(multiProvider, token);

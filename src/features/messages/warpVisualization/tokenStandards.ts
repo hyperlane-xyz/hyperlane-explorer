@@ -11,6 +11,13 @@ export const SUPPORTED_SEALEVEL_BALANCE_STANDARDS: TokenStandard[] = [
   TokenStandard.SealevelHypSynthetic,
 ];
 
+// Cardano balances are read server-side (see pages/api/cardano-warp-route-balance):
+// the browser bundle has no Cardano provider and Blockfrost needs a project id.
+// Native only for now — a collateral route locks a native asset, not ADA.
+export const SUPPORTED_CARDANO_BALANCE_STANDARDS: TokenStandard[] = [
+  'CardanoHypNative' as TokenStandard,
+];
+
 export const COLLATERAL_TOKEN_STANDARDS: TokenStandard[] = [
   ...TOKEN_COLLATERALIZED_STANDARDS,
   TokenStandard.EvmHypCollateralFiat,

@@ -31,11 +31,15 @@ piece maps onto an upstream submission:
   badges the same way the existing Starknet workaround is, until this app's SDK
   version carries the cardano token standards.
 
+- The Warp Route Overview shows the Cardano leg's locked ADA, read server-side
+  via `/api/cardano-warp-route-balance` (mirroring the Sealevel route) since the
+  browser has no Cardano provider and Blockfrost needs a project id. Set
+  `BLOCKFROST_API_KEY`; without it the read returns 501 and the balance is
+  omitted. Native routes only.
+
 Known limits: the live-RPC features (Warp Route Security ISM tree,
 pending-message debugging) stay EVM-only, as they are upstream for every
-non-EVM chain, and the Warp Route Overview shows no balance for the Cardano leg
-(balance fetching has an EVM path and a server-side Sealevel path; Cardano
-falls through both).
+non-EVM chain.
 
 ## Running against a self-hosted scraper
 
