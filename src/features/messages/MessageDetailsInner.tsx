@@ -150,16 +150,16 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
 
   return (
     <>
-      <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-3 shadow-accent-glow">
+      <div className="bg-accent-gradient shadow-accent-glow flex items-center justify-between rounded px-3 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-cream-300" />
+          <div className="bg-cream-300 h-2.5 w-2.5 rounded-full" />
           <h2 className="text-lg font-medium text-white">{`${
             isIcaMsg ? 'ICA ' : ''
           }Message to ${getChainDisplayName(chainMetadataResolver, destinationChainName)}`}</h2>
           {showTxLink && (
             <Link
               href={`/tx/${origin.hash}`}
-              className="text-sm font-medium text-cream-300 transition-colors hover:text-white"
+              className="text-cream-300 text-sm font-medium transition-colors hover:text-white"
             >
               View all {txMessageCount} messages in tx
             </Link>
@@ -306,7 +306,7 @@ function StatusHeader({
   return (
     <div className="flex items-center">
       <h3 className="mr-2 text-lg font-medium text-white">{text}</h3>
-      {duration && <span className="mr-3 text-sm text-cream-300">({duration})</span>}
+      {duration && <span className="text-cream-300 mr-3 text-sm">({duration})</span>}
       {icon}
     </div>
   );

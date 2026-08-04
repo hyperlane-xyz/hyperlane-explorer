@@ -66,7 +66,10 @@ async function fetchCollateralBalance(
       return undefined;
     }
 
-    const adapter = createEvmHypAdapter(multiProvider, destinationToken);
+    const adapter = createEvmHypAdapter(multiProvider, {
+      ...destinationToken,
+      chainName: destinationToken.chainName,
+    });
     if (!adapter) {
       logger.debug('Skipping collateral check for unsupported token runtime', {
         chain: destinationToken.chainName,

@@ -4,9 +4,9 @@ import { SectionCard } from '../../components/layout/SectionCard';
 export function MessageDetailsLoading() {
   return (
     <div>
-      <div className="flex items-center justify-between rounded bg-accent-gradient px-3 py-3 shadow-accent-glow">
+      <div className="bg-accent-gradient shadow-accent-glow flex items-center justify-between rounded px-3 py-3">
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-cream-300/70" />
+          <div className="bg-cream-300/70 h-2.5 w-2.5 rounded-full" />
           <div className="h-6 w-52 animate-pulse rounded bg-white/20" />
         </div>
         <div className="h-6 w-36 animate-pulse rounded bg-white/20" />

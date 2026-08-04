@@ -67,6 +67,7 @@ const nextConfig = {
     '@hyperlane-xyz/utils',
     '@hyperlane-xyz/widgets',
     'lodash-es',
+    'uuid',
   ],
 
   turbopack: {
@@ -80,6 +81,7 @@ const nextConfig = {
   serverExternalPackages: ['@provablehq/wasm', '@provablehq/sdk'],
 
   experimental: {
+    useTypeScriptCli: true,
     turbopackFileSystemCacheForBuild: true,
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
