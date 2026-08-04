@@ -87,7 +87,7 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         {/* Details Column */}
         <div className="min-w-0 flex-1 space-y-4">
           {isCollateral && (
-            <div className="rounded bg-primary-50 px-3 py-2 text-xs text-primary-700">
+            <div className="bg-primary-50 text-primary-700 rounded px-3 py-2 text-xs">
               <span className="font-medium">Collateral-backed route:</span> This transfer uses
               locked collateral on the destination chain
             </div>
@@ -183,10 +183,10 @@ function TokenLogos({
   return (
     <div className="flex flex-shrink-0 items-center justify-center">
       <div className="relative" style={{ width: 73, height: 73 }}>
-        <div className="absolute left-0 top-0">
+        <div className="absolute top-0 left-0">
           <TokenIcon token={originToken} size={48} />
         </div>
-        <div className="absolute bottom-0 right-0 rounded-full ring-2 ring-white">
+        <div className="absolute right-0 bottom-0 rounded-full ring-2 ring-white">
           <TokenIcon token={destinationToken} size={48} />
         </div>
       </div>

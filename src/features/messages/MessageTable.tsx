@@ -73,8 +73,8 @@ export function MessageTable({
     <table className="mb-1 w-full">
       <thead>
         <tr className="border-b border-gray-100">
-          <th className={`${styles.header} pl-3 xs:text-left sm:pl-6`}>Origin</th>
-          <th className={`${styles.header} pl-1 xs:text-left sm:pl-2`}>Destination</th>
+          <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
+          <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
           <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
@@ -86,7 +86,7 @@ export function MessageTable({
         {messageList.map((m) => (
           <tr
             key={`message-${m.id}`}
-            className={`relative cursor-pointer border-b border-primary-50 last:border-0 hover:bg-accent-50 active:bg-accent-100 ${
+            className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
               isFetching && 'blur-xs'
             } transition-all duration-500`}
           >

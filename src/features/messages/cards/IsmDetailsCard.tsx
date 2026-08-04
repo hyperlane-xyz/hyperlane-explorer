@@ -30,7 +30,7 @@ export function IsmDetailsCard({ ismDetails, blur }: Props) {
             href={docLinks.ism}
             target="_blank"
             rel="noopener noreferrer"
-            className="cursor-pointer text-primary-600 transition-all hover:text-primary-500 active:text-primary-400"
+            className="text-primary-600 hover:text-primary-500 active:text-primary-400 cursor-pointer transition-all"
           >
             Learn more about ISMs.
           </a>
