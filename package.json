@@ -43,7 +43,7 @@
     "@aws-sdk/client-s3": "^3.1097.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.1.2",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@urql/core": "^6.0.3",
@@ -58,7 +58,7 @@
   },
   "homepage": "https://www.hyperlane.xyz",
   "engines": {
-    "node": "26.x"
+    "node": "24.x"
   },
   "license": "Apache-2.0",
   "main": "dist/src/index.js",
