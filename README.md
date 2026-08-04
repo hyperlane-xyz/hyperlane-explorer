@@ -17,7 +17,7 @@ piece maps onto an upstream submission:
   disappears once upstream ships the protocol.
 - Chain metadata, addresses, logos, and the wADA warp route come from the
   registry: point `NEXT_PUBLIC_REGISTRY_URL` / `NEXT_PUBLIC_REGISTRY_BRANCH` at
-  `equilibriumco/hyperlane-registry` branch `cardano-v1` (see `.env.example`) —
+  `equilibriumco/hyperlane-registry` branch `cardano` (see `.env.example`) —
   the upstream custom-registry mechanism, no chain data in this repo. Chain and
   warp-route logos follow the configured registry instead of the hardcoded
   canonical CDN path.
@@ -46,7 +46,7 @@ non-EVM chain.
 ```sh
 NEXT_PUBLIC_API_URL=http://localhost:8080/v1/graphql \
 NEXT_PUBLIC_REGISTRY_URL=https://github.com/equilibriumco/hyperlane-registry \
-NEXT_PUBLIC_REGISTRY_BRANCH=cardano-v1 \
+NEXT_PUBLIC_REGISTRY_BRANCH=cardano \
   pnpm run dev
 ```
 
