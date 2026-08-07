@@ -51,6 +51,20 @@ export function postgresByteaToAddress(
   // asserts on empty/all-zero input, which would otherwise fail the entire
   // message parse and surface "Message not found".
   if (!addressBytes.length || addressBytes.every((b) => b === 0)) return hexString;
+  // A Cardano warp route is identified by a minting policy, encoded as
+  // [0x01, 0, 0, 0, ...28-byte policy]. bech32 can only express a key (0x00) or
+  // script (0x02) credential, so rendering one as an address silently rewrites
+  // the kind byte — after which it no longer matches the registry entry it came
+  // from, and the warp route cards never resolve. Leave it as hex.
+  if (
+    chainMetadata.protocol === ProtocolType.Cardano &&
+    addressBytes[0] === 0x01 &&
+    addressBytes[1] === 0 &&
+    addressBytes[2] === 0 &&
+    addressBytes[3] === 0
+  ) {
+    return hexString;
+  }
   return bytesToProtocolAddress(addressBytes, chainMetadata.protocol, chainMetadata.bech32Prefix);
 }
 

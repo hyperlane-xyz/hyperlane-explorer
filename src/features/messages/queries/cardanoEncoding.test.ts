@@ -56,6 +56,17 @@ describe('Cardano message encoding', () => {
     expect(searchValueToPostgresBytea(TX_HASH)).toEqual(`\\x${TX_HASH}`);
   });
 
+  // A warp route is identified by a minting policy, encoded with kind byte 0x01.
+  // Rendering that as bech32 would rewrite the kind byte to key/script, and the
+  // result no longer matches the registry entry the address came from — which is
+  // what the warp route cards look it up by.
+  it('leaves a warp route policy address as hex rather than bech32', () => {
+    const route = '\\x01000000' + 'ed'.repeat(28);
+    const rendered = postgresByteaToAddress(route, cardanoPreview);
+    expect(rendered).toEqual('0x01000000' + 'ed'.repeat(28));
+    expect(rendered.startsWith('addr')).toBe(false);
+  });
+
   it('finds messages by searching for a Cardano address', () => {
     expect(searchValueToPostgresBytea(SCRIPT_SENDER_ADDRESS)).toEqual(SCRIPT_SENDER_BYTEA);
   });
