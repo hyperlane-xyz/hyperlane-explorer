@@ -38,9 +38,22 @@ export function getBlockExplorerAddressUrl(
   return appendToPath(baseUrl, `${urlPathStub}/${linkAddress}`)?.toString() || null;
 }
 
+// A Cardano warp route is a minting policy, not an address: `0x01` then three
+// zero bytes then the 28-byte policy. Cardanoscan has no page for it under
+// /address (that 404s) — the policy lives under /tokenPolicy, keyed by the bare
+// policy id.
+const CARDANO_POLICY_ADDRESS_REGEX = /^0x01000000([0-9a-fA-F]{56})$/;
+
+function cardanoPolicyId(metadata: ChainMetadata, address: string): string | null {
+  if (metadata.protocol !== ProtocolType.Cardano) return null;
+  return CARDANO_POLICY_ADDRESS_REGEX.exec(address)?.[1] ?? null;
+}
+
 // Tron warp-route entries are stored in the registry as EVM-shaped hex
 // (`0x...`); Tronscan needs the base58 form (`T...`). Convert before linking.
 function toExplorerAddress(metadata: ChainMetadata, address: string): string {
+  const policyId = cardanoPolicyId(metadata, address);
+  if (policyId) return policyId;
   if (metadata.protocol !== ProtocolType.Tron) return address;
   try {
     return convertToProtocolAddress(address, ProtocolType.Tron);
@@ -97,6 +110,11 @@ function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
   if (!family) return null;
   if (family === 'radixdashboard') {
     return address.startsWith('account') ? 'account' : 'component';
+  }
+  // toExplorerAddress has already reduced a policy to its bare id; a real
+  // Cardano address is bech32 (`addr…`), so a naked 28-byte hex is the policy.
+  if (metadata.protocol === ProtocolType.Cardano && /^[0-9a-fA-F]{56}$/.test(address)) {
+    return 'tokenPolicy';
   }
   return family === 'voyager' ? 'contract' : 'address';
 }

@@ -138,6 +138,16 @@ describe('url utils', () => {
     );
   });
 
+  it('links a Cardano warp route to its token policy, not an address', () => {
+    const resolver = createResolver(cardanoMetadata);
+    const policyId = 'ed08f892a125915b483cd7547a2f9dfbf0531b21ec7389110bedfc2f';
+
+    // The route is a minting policy in Hyperlane's 32-byte form; /address/ 404s.
+    expect(getBlockExplorerAddressUrl(resolver, 'cardanopreview', `0x01000000${policyId}`)).toBe(
+      `https://preview.cardanoscan.io/tokenPolicy/${policyId}`,
+    );
+  });
+
   it('returns null instead of throwing for malformed explorer metadata', async () => {
     const resolver = createResolver(malformedExplorerMetadata);
 
