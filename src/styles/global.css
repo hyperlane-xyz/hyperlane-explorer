@@ -1,3 +1,4 @@
+@import '@hyperlane-xyz/widgets/styles.css' layer(components);
 @import 'tailwindcss';
 @config '../../tailwind.config.js';
 

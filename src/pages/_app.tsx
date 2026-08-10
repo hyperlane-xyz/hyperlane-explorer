@@ -11,7 +11,6 @@ import {
   fetchExchange,
 } from 'urql';
 
-import '@hyperlane-xyz/widgets/styles.css';
 import { AppLayout } from '../AppLayout';
 import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
 import { AppLoadingShell } from '../components/layout/AppLoadingShell';
