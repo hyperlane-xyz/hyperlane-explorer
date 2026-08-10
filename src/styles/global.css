@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer theme, base, components, utilities;
+@import '@hyperlane-xyz/widgets/styles.css' layer(components);
+@import 'tailwindcss';
+@config '../../tailwind.config.js';
 
 /*
 Custom Fonts (falls back to system fonts if not available)
