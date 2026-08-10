@@ -24,13 +24,10 @@ export async function loadChainMetadata(
 
   const registryChainMetadata = await registry.getMetadata();
   const metadataWithLogos = await promiseObjAll(
-    objMap(
-      registryChainMetadata,
-      async (chainName, metadata): Promise<ChainMetadata> => ({
-        ...metadata,
-        logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
-      }),
-    ),
+    objMap(registryChainMetadata, async (chainName, metadata): Promise<ChainMetadata> => ({
+      ...metadata,
+      logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
+    })),
   );
 
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);

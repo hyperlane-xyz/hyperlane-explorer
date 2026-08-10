@@ -2,9 +2,13 @@
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@hyperlane-xyz/*'
+  - oxfmt
+  - '@oxfmt/*'
+  - oxlint
+  - '@oxlint/*'
 overrides:
   tronweb>ethers: ^6.13.5
-  ethers: ^5.7
+  ethers: ^5.8
   sha.js: 2.4.12
   cipher-base: 1.0.5
   elliptic: 6.6.1
@@ -22,4 +26,5 @@ allowBuilds:
   secp256k1: false
   sharp: false
   tiny-secp256k1: false
+  unrs-resolver: false
   utf-8-validate: false

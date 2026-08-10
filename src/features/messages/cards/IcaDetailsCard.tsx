@@ -116,7 +116,7 @@ function IcaStatusPanel({
             {titleAccessory}
           </div>
           <div className="mt-2 flex items-start gap-2">
-            <div className={clsx('min-w-0 flex-1 break-all font-mono text-xs', styles.body)}>
+            <div className={clsx('min-w-0 flex-1 font-mono text-xs break-all', styles.body)}>
               {commitment}
             </div>
             <CopyButton
@@ -491,7 +491,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     ) : ccipReadData?.urls && ccipReadData.urls.length > 0 ? (
                       <div className="mt-2 space-y-1">
                         {ccipReadData.urls.map((url, i) => (
-                          <div key={i} className="break-all font-mono text-xs text-gray-600">
+                          <div key={i} className="font-mono text-xs break-all text-gray-600">
                             {url}
                           </div>
                         ))}
@@ -598,7 +598,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
 
                 {/* Loading state for reveal calls */}
                 {decodeResult.messageType === IcaMessageType.REVEAL && isRevealFetching && (
-                  <div className="py-2 text-sm italic text-gray-500">
+                  <div className="py-2 text-sm text-gray-500 italic">
                     Fetching calls from destination transaction...
                   </div>
                 )}
@@ -607,7 +607,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 {decodeResult.messageType === IcaMessageType.REVEAL &&
                   isRevealError &&
                   !revealCalls && (
-                    <div className="py-2 text-sm italic text-gray-500">
+                    <div className="py-2 text-sm text-gray-500 italic">
                       Could not fetch calls from destination transaction.
                     </div>
                   )}
@@ -616,7 +616,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 {decodeResult.messageType === IcaMessageType.REVEAL &&
                   !destination?.hash &&
                   !isRevealFetching && (
-                    <div className="py-2 text-sm italic text-gray-500">
+                    <div className="py-2 text-sm text-gray-500 italic">
                       Calls will be shown once the message is processed on the destination chain.
                     </div>
                   )}
@@ -639,7 +639,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                 {/* Empty calls for CALLS type */}
                 {decodeResult.messageType === IcaMessageType.CALLS &&
                   decodeResult.calls.length === 0 && (
-                    <div className="py-2 text-sm italic text-gray-500">
+                    <div className="py-2 text-sm text-gray-500 italic">
                       No calls in this message.
                     </div>
                   )}
@@ -647,7 +647,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
             )}
           </>
         ) : (
-          <div className="py-4 italic text-red-500">
+          <div className="py-4 text-red-500 italic">
             Unable to decode Interchain Account message body. The message format may be
             unrecognized.
           </div>

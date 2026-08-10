@@ -9,14 +9,14 @@ import ShrugIcon from '../../images/icons/shrug.svg';
 export function SearchFetching({ show, isPiFetching }: { show: boolean; isPiFetching?: boolean }) {
   return (
     // Absolute position for overlaying cross-fade
-    <div className="absolute left-0 right-0 top-10">
+    <div className="absolute top-10 right-0 left-0">
       <Fade show={show}>
         <div className="my-10 flex justify-center">
           <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
             <div className="flex items-center justify-center">
               <SpinnerIcon width={40} height={40} />
             </div>
-            <div className="mt-4 text-center font-light leading-loose text-gray-700">
+            <div className="mt-4 text-center leading-loose font-light text-gray-700">
               {isPiFetching ? 'Searching override chains for messages' : 'Searching for messages'}
             </div>
           </div>
@@ -39,12 +39,12 @@ export function SearchError({
 }) {
   return (
     // Absolute position for overlaying cross-fade
-    <div className="absolute left-0 right-0 top-10">
+    <div className="absolute top-10 right-0 left-0">
       <Fade show={show}>
         <div className="my-10 flex justify-center">
           <div className="flex max-w-md flex-col items-center justify-center px-3 py-5">
             <Image src={imgSrc} width={imgWidth} className="opacity-80" alt="" />
-            <div className="mt-4 text-center font-light leading-loose text-gray-700">{text}</div>
+            <div className="mt-4 text-center leading-loose font-light text-gray-700">{text}</div>
           </div>
         </div>
       </Fade>

@@ -4,7 +4,12 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 
 import 'react-toastify/dist/ReactToastify.css';
-import { Provider as UrqlProvider, createClient as createUrqlClient } from 'urql';
+import {
+  Provider as UrqlProvider,
+  cacheExchange,
+  createClient as createUrqlClient,
+  fetchExchange,
+} from 'urql';
 
 import '@hyperlane-xyz/widgets/styles.css';
 import { AppLayout } from '../AppLayout';
@@ -23,6 +28,7 @@ const AppClientOverlays = dynamic(
 
 const urqlClient = createUrqlClient({
   url: config.apiUrl,
+  exchanges: [cacheExchange, fetchExchange],
 });
 
 const reactQueryClient = new QueryClient({

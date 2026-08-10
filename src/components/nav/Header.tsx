@@ -71,7 +71,7 @@ export function Header({ pathName }: { pathName: string }) {
             this will make the animation a little smoother, specially for Firefox*/}
           <div
             className={`flex items-center ${
-              animateHeader && 'rotate-[0.01deg] scale-90'
+              animateHeader && 'scale-90 rotate-[0.01deg]'
             } transition-all duration-500 ease-in-out`}
           >
             <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-8 w-auto sm:h-10" />
@@ -107,13 +107,13 @@ export function Header({ pathName }: { pathName: string }) {
             type="button"
             aria-expanded={isMobileMenuOpen}
             aria-label="Toggle navigation menu"
-            className="rounded border border-white bg-primary-500 px-4 py-1 transition-all hover:opacity-80 active:opacity-70"
+            className="bg-primary-500 rounded border border-white px-4 py-1 transition-all hover:opacity-80 active:opacity-70"
             onClick={() => setIsMobileMenuOpen((open) => !open)}
           >
             <DropdownButton />
           </button>
           {isMobileMenuOpen && (
-            <div className="absolute right-0 top-full mt-3 min-w-[12rem] bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
+            <div className="absolute top-full right-0 mt-3 min-w-[12rem] bg-[rgba(13,6,18,0.95)] px-8 py-7 backdrop-blur-sm">
               <MobileNavLink href="/" closeDropdown={() => setIsMobileMenuOpen(false)}>
                 HOME
               </MobileNavLink>
@@ -162,12 +162,12 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="flex cursor-pointer items-center py-4 pl-3 decoration-primary-500 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
+      className="decoration-primary-500 flex cursor-pointer items-center py-4 pl-3 decoration-4 underline-offset-[2px] transition-all hover:underline active:opacity-80"
       onClick={closeDropdown}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       target={isExternal ? '_blank' : undefined}
     >
-      <span className="text-xl font-medium uppercase text-white">{children}</span>
+      <span className="text-xl font-medium text-white uppercase">{children}</span>
     </Link>
   );
 }

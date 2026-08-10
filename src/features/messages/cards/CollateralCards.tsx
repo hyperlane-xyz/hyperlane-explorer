@@ -104,7 +104,7 @@ function RebalanceList({ rebalances }: { rebalances: RebalanceInfo[] }) {
             {rebalance.messageId && (
               <Link
                 href={`/message/${rebalance.messageId}`}
-                className="text-primary-600 underline hover:text-primary-800"
+                className="text-primary-600 hover:text-primary-800 underline"
                 target="_blank"
               >
                 View message →

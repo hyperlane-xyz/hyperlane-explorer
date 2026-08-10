@@ -100,7 +100,7 @@ export function DestinationTransactionCard({
               debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
             }`}</div>
             {!!debugResult?.description && (
-              <div className="mt-5 break-words text-center text-sm leading-relaxed text-gray-800">
+              <div className="mt-5 text-center text-sm leading-relaxed break-words text-gray-800">
                 {debugResult.description}
               </div>
             )}
@@ -118,7 +118,7 @@ export function DestinationTransactionCard({
             <div className="mt-2 max-w-xs text-sm">
               Permissionless Interoperability (PI) chains require a config.
             </div>
-            <div className="mb-6 mt-2 max-w-xs text-sm">
+            <div className="mt-2 mb-6 max-w-xs text-sm">
               Please{' '}
               <button className="underline underline-offset-2" onClick={open}>
                 add metadata

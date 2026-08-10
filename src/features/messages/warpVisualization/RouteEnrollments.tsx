@@ -22,7 +22,7 @@ export function RouteEnrollments({ visualization }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+      <div className="text-xs font-medium tracking-wide text-gray-500 uppercase">
         Route enrollments
       </div>
       <div className="space-y-2">
