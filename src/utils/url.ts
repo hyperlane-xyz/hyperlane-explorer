@@ -41,6 +41,7 @@ export function getBlockExplorerAddressUrl(
 // Tron warp-route entries are stored in the registry as EVM-shaped hex
 // (`0x...`); Tronscan needs the base58 form (`T...`). Convert before linking.
 function toExplorerAddress(metadata: ChainMetadata, address: string): string {
+  if (metadata.protocol === ProtocolType.Aleo) return address.split('/')[0];
   if (metadata.protocol !== ProtocolType.Tron) return address;
   try {
     return convertToProtocolAddress(address, ProtocolType.Tron);
@@ -95,6 +96,7 @@ function appendToPath(baseUrl: string, pathExtension: string) {
 function getExplorerAddressPathStub(metadata: ChainMetadata, address: string) {
   const family = metadata.blockExplorers?.[0]?.family;
   if (!family) return null;
+  if (metadata.protocol === ProtocolType.Aleo && address.endsWith('.aleo')) return 'program';
   if (family === 'radixdashboard') {
     return address.startsWith('account') ? 'account' : 'component';
   }
