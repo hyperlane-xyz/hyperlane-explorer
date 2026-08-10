@@ -45,6 +45,22 @@ const tronMetadata: ChainMetadata = {
   ],
 };
 
+const aleoMetadata: ChainMetadata = {
+  ...validMetadata,
+  name: 'aleo',
+  protocol: ProtocolType.Aleo,
+  blockExplorers: [
+    {
+      name: 'Provable Explorer',
+      url: 'https://explorer.provable.com',
+      apiUrl: 'https://explorer.provable.com',
+      family: 'other' as NonNullable<
+        NonNullable<ChainMetadata['blockExplorers']>[number]['family']
+      >,
+    },
+  ],
+};
+
 const malformedExplorerMetadata: ChainMetadata = {
   ...validMetadata,
   name: 'broken',
@@ -103,6 +119,18 @@ describe('url utils', () => {
     expect(
       getBlockExplorerAddressUrl(resolver, 'tron', '0xbf8078818627110fD05827Ca0aa9E4518d3421ec'),
     ).toMatch(/^https:\/\/tronscan\.org\/#\/address\/T[1-9A-HJ-NP-Za-km-z]{33}$/);
+  });
+
+  it('links Aleo program addresses to program pages', () => {
+    const resolver = createResolver(aleoMetadata);
+
+    expect(
+      getBlockExplorerAddressUrl(
+        resolver,
+        'aleo',
+        'hyp_warp_token_eth_v2.aleo/aleo1t7f29tq9qng2lfvrkpcuvu59jn24hrmzqdyqfn6p0u5p80npfvqqecmkj8',
+      ),
+    ).toBe('https://explorer.provable.com/program/hyp_warp_token_eth_v2.aleo');
   });
 
   it('returns null instead of throwing for malformed explorer metadata', async () => {
