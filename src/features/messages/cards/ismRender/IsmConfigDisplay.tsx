@@ -63,14 +63,14 @@ function IsmRow({
       {node.address ? (
         <AddressInline address={node.address} chainName={chainName} />
       ) : (
-        <span className="text-xs italic text-gray-400">no address</span>
+        <span className="text-xs text-gray-400 italic">no address</span>
       )}
       {annotation && (
         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
           {annotation}
         </span>
       )}
-      {node.error && <span className="text-xs italic text-amber-700">({node.error})</span>}
+      {node.error && <span className="text-xs text-amber-700 italic">({node.error})</span>}
     </div>
   );
 }

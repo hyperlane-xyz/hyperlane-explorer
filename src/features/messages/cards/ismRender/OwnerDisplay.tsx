@@ -34,7 +34,7 @@ function OwnerKindBadge({ kind, safeInfo }: { kind: OwnerKind; safeInfo?: SafeIn
     ? `Safe ${safeInfo.threshold}/${safeInfo.ownerCount}`
     : `Safe (threshold ${safeInfo?.threshold ?? '?'})`;
   return (
-    <span className="rounded bg-primary-50 px-1.5 py-0.5 text-xs font-medium text-primary-700">
+    <span className="bg-primary-50 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
       {label}
     </span>
   );

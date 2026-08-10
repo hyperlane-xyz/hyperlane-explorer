@@ -33,7 +33,7 @@ const footerLinks3 = [
 
 export function Footer() {
   return (
-    <footer className="relative z-10 bg-gradient-to-b from-transparent to-black/40 px-8 pb-5 pt-14 text-white">
+    <footer className="relative z-10 bg-gradient-to-b from-transparent to-black/40 px-8 pt-14 pb-5 text-white">
       <div className="flex flex-col items-center justify-between gap-10 sm:flex-row">
         <div className="flex items-center justify-center">
           <Image src={LogoLockup} alt="Hyperlane Explorer" className="h-10 w-auto sm:h-12" />

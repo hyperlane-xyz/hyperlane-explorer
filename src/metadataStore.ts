@@ -69,7 +69,9 @@ export const useStore = create<MetadataState>()(
       setChainMetadataOverrides: async (
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
       ) => {
-        const filtered = objFilter(overrides, (_, metadata) => !!metadata);
+        const filtered = objFilter(overrides, (_, metadata): metadata is Partial<ChainMetadata> =>
+          Boolean(metadata),
+        );
         clearPrefetchedMessages();
         set({
           chainMetadataOverrides: filtered,

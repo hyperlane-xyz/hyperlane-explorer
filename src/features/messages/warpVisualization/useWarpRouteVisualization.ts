@@ -166,10 +166,10 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
   const visualization = useMemo((): WarpRouteVisualization | undefined => {
     if (!warpRoute) return undefined;
 
-    const tokenByKey = new Map(
+    const tokenByKey = new Map<string, WarpCoreConfig['tokens'][number]>(
       warpRoute.config.tokens
         .filter((token) => token.addressOrDenom)
-        .map((token) => [getTokenKey(token.chainName, token.addressOrDenom!), token]),
+        .map((token) => [getTokenKey(token.chainName, token.addressOrDenom!), token] as const),
     );
 
     const tokens: WarpRouteTokenVisualization[] = warpRoute.config.tokens.map((token) => ({
