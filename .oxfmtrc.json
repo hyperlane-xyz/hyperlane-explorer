@@ -1,8 +1,5 @@
 {
   "singleQuote": true,
   "sortImports": {},
-  "sortTailwindcss": {
-    "functions": ["clsx"]
-  },
   "ignorePatterns": ["test/outputs", "public"]
 }

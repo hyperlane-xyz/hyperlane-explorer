@@ -19,10 +19,8 @@ const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
 // Look for chainMetadata in the query string and merge them into the store
 // Not to be used directly, should only require a single use in ChainConfigSyncer
 export function useQueryParamChainConfigSync() {
-  const { chainMetadataOverrides, setChainMetadataOverrides } = useStore((s) => ({
-    chainMetadataOverrides: s.chainMetadataOverrides,
-    setChainMetadataOverrides: s.setChainMetadataOverrides,
-  }));
+  const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides);
+  const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
 
   useEffect(() => {
