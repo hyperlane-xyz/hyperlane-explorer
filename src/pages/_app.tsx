@@ -29,6 +29,7 @@ const AppClientOverlays = dynamic(
 const urqlClient = createUrqlClient({
   url: config.apiUrl,
   exchanges: [cacheExchange, fetchExchange],
+  preferGetMethod: false,
 });
 
 const reactQueryClient = new QueryClient({
