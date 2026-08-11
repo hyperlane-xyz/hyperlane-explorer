@@ -28,9 +28,7 @@ export function TransactionDetailsRows({
 
   const formattedHash = formatTxHash(hash, domainId, resolver);
   const txExplorerLink =
-    hash && !isZeroish(hash)
-      ? getBlockExplorerTxUrl(resolver, chainName, formattedHash)
-      : null;
+    hash && !isZeroish(hash) ? getBlockExplorerTxUrl(resolver, chainName, formattedHash) : null;
   const fromExplorerLink = getBlockExplorerAddressUrl(resolver, chainName, from);
   const idString =
     chainName && chainName !== resolver.tryGetChainName(domainId)
