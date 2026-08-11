@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -44,6 +43,12 @@ jobs:
 
       - name: build
         run: pnpm run build
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke test
+        run: pnpm run test:smoke
 
   typecheck:
     runs-on: ubuntu-latest
