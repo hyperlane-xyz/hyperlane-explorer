@@ -1,5 +1,5 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import BigNumber from 'bignumber.js';
+import { isZeroish } from '@hyperlane-xyz/utils';
 
 import { MessageTx, MessageTxStub } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
@@ -28,7 +28,7 @@ export function TransactionDetailsRows({
 
   const formattedHash = formatTxHash(hash, domainId, resolver);
   const txExplorerLink =
-    hash && !new BigNumber(hash).isZero()
+    hash && !isZeroish(hash)
       ? getBlockExplorerTxUrl(resolver, chainName, formattedHash)
       : null;
   const fromExplorerLink = getBlockExplorerAddressUrl(resolver, chainName, from);
