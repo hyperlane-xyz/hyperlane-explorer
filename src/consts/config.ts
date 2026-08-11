@@ -1,7 +1,6 @@
 const isDevMode = process.env.NODE_ENV === 'development';
 const version = process.env.NEXT_PUBLIC_VERSION ?? null;
-const apiUrl =
-  process.env.NEXT_PUBLIC_API_URL || 'https://explorer4.hasura.app/v1/graphql';
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://explorer4.hasura.app/v1/graphql';
 const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
 const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
 const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
