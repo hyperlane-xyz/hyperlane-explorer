@@ -58,9 +58,14 @@ export function useMessageSearchQuery(
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
   const { chains } = useScrapedChains(chainMetadataResolver);
-  const mainnetDomainIds = Object.values(chains)
-    .filter((chain) => !chain.isTestnet)
-    .map((chain) => chain.domainId);
+  const mainnetDomainIds = useMemo(
+    () =>
+      Object.values(chains)
+        .filter((chain) => !chain.isTestnet)
+        .map((chain) => chain.domainId),
+    [chains],
+  );
+  const isSearchMetadataReady = scrapedChains.length > 0 && mainnetDomainIds.length > 0;
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
@@ -145,9 +150,10 @@ export function useMessageSearchQuery(
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
     query,
     variables,
-    pause: !isValidInput,
+    pause: !isValidInput || !isSearchMetadataReady,
   });
-  const { data, fetching: isFetching, error } = result;
+  const { data, fetching, error } = result;
+  const isFetching = isValidInput && (!isSearchMetadataReady || fetching);
 
   // Parse results
   const unfilteredMessageList = useMemo(
@@ -201,7 +207,7 @@ export function useMessageSearchQuery(
     isValidDestination,
     isFetching,
     isError: !!error,
-    hasRun: !!data,
+    hasRun: isSearchMetadataReady && !!data,
     isMessagesFound,
     messageList,
     refetch: refresh,

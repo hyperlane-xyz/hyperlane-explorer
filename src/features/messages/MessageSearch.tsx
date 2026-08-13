@@ -220,6 +220,7 @@ export function MessageSearch() {
   const isAnyFetching = isFetching || piSearchState.isFetching;
   const isAnyError = isError || piSearchState.isError;
   const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
+  const isReadyToShowEmptyState = hasAllRun && isChainMetadataReady;
   const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
 
@@ -376,11 +377,22 @@ export function MessageSearch() {
           <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
         </Fade>
         <SearchFetching
-          show={!isAnyError && isValidInput && !isAnyMessageFound && !hasAllRun}
+          show={
+            !isAnyError &&
+            isValidInput &&
+            !isAnyMessageFound &&
+            (!hasAllRun || !isChainMetadataReady)
+          }
           isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
-          show={!redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && hasAllRun}
+          show={
+            !redirectUrl &&
+            !isAnyError &&
+            isValidInput &&
+            !isAnyMessageFound &&
+            isReadyToShowEmptyState
+          }
           hasInput={hasInput}
           allowAddress={true}
         />

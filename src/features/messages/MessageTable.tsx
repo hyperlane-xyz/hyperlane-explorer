@@ -167,7 +167,7 @@ export function MessageTable({
                   isFetching && 'blur-xs'
                 } ${
                   isInserted ? 'bg-primary-50 live-message-insert' : ''
-                } ${isDelivered ? 'live-message-delivered' : ''} transition-all duration-500`}
+                } ${isDelivered ? 'bg-[#dcfce7]' : ''} transition-all duration-500`}
               >
                 <MessageSummaryRow
                   message={m}
@@ -203,21 +203,6 @@ export function MessageTable({
           animation: live-message-insert 900ms ease-out;
         }
 
-        @keyframes live-message-delivered {
-          0% {
-            background-color: #f0fdf4;
-          }
-          65% {
-            background-color: #f0fdf4;
-          }
-          100% {
-            background-color: transparent;
-          }
-        }
-
-        .live-message-delivered {
-          animation: live-message-delivered 900ms ease-out;
-        }
       `}</style>
     </>
   );
