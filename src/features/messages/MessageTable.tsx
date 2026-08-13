@@ -23,6 +23,7 @@ import { prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
+const TIME_SENT_REFRESH_MS = 1_000;
 
 export function MessageTable({
   messageList,
@@ -347,7 +348,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
       >
-        {getHumanReadableTimeString(origin.timestamp)}
+        <RelativeTime timestamp={origin.timestamp} />
       </LinkCell>
       <LinkCell
         path={detailPath}
@@ -397,6 +398,20 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
     </>
   );
+});
+
+const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
+  const [, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRefreshKey((key) => key + 1);
+    }, TIME_SENT_REFRESH_MS);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return <>{getHumanReadableTimeString(timestamp)}</>;
 });
 
 function LinkCell({

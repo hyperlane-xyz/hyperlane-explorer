@@ -194,12 +194,18 @@ export function useMessageSearchQuery(
 
   const isMessagesFound = messageList.length > 0;
 
-  // Auto-refresh query periodically
   const refresh = useCallback(() => {
-    if (!query || !isValidInput || liveLatestEnabled) return;
+    if (!query || !isValidInput) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [reexecuteQuery, query, isValidInput, liveLatestEnabled]);
-  useVisibleInterval(refresh, SEARCH_AUTO_REFRESH_DELAY);
+  }, [reexecuteQuery, query, isValidInput]);
+
+  // Auto-refresh query periodically, except on the live latest page where WS
+  // updates replace polling. Manual refresh still runs a full network fetch.
+  const autoRefresh = useCallback(() => {
+    if (liveLatestEnabled) return;
+    refresh();
+  }, [liveLatestEnabled, refresh]);
+  useVisibleInterval(autoRefresh, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
