@@ -53,7 +53,7 @@ export function buildMessageQuery(
   const query = `
   query ($identifier: bytea!) @cached(ttl: 5) {
     message_view(
-      where: {${whereClause}},
+      where: {send_occurred_at: {_is_null: false}, ${whereClause}},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
     ) {
@@ -137,6 +137,7 @@ export function buildMessageSearchQuery(
       `q${i}: message_view(
     where: {
       _and: [
+        {send_occurred_at: {_is_null: false}},
         ${originDomainWhereClause}
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}

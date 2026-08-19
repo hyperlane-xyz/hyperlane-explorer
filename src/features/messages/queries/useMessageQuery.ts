@@ -10,13 +10,8 @@ import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScr
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
-import {
-  parseMessageEntry,
-  parseMessageQueryResult,
-  parseMessageStubEntry,
-  parseMessageStubResult,
-} from './parse';
-import { useLatestMessageRows, useMessageRowSubscription } from './useLiveMessages';
+import { parseMessageQueryResult, parseMessageStubResult } from './parse';
+import { type LiveStream, useLiveMessageRefresh } from './useLiveMessages';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
@@ -122,6 +117,7 @@ export function useMessageSearchQuery(
   const baseLimit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : baseLimit;
   const liveLatestEnabled =
+    isSearchMetadataReady &&
     isValidInput &&
     !hasInput &&
     !originChainNameFilter &&
@@ -130,7 +126,13 @@ export function useMessageSearchQuery(
     !endTimeFilter &&
     statusFilter === 'all' &&
     warpRouteAddresses.length === 0;
-  const liveMessageRows = useLatestMessageRows(liveLatestEnabled);
+  const liveStreams = useMemo<LiveStream[]>(
+    () => [
+      { domains: mainnetDomainIds, eventType: 'dispatch' },
+      { domains: mainnetDomainIds, eventType: 'delivery' },
+    ],
+    [mainnetDomainIds],
+  );
 
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
@@ -160,29 +162,12 @@ export function useMessageSearchQuery(
     () => parseMessageStubResult(chainMetadataResolver, scrapedChains, data),
     [chainMetadataResolver, scrapedChains, data],
   );
-  const liveMessageList = useMemo(
-    () =>
-      liveMessageRows
-        .map((message) => parseMessageStubEntry(chainMetadataResolver, scrapedChains, message))
-        .filter((message): message is MessageStub => !!message)
-        .filter(
-          (message) =>
-            mainnetDomainIds.includes(message.originDomainId) &&
-            mainnetDomainIds.includes(message.destinationDomainId),
-        ),
-    [chainMetadataResolver, scrapedChains, liveMessageRows, mainnetDomainIds],
-  );
-  const mergedUnfilteredMessageList = useMemo(
-    () => mergeMessageLists(liveMessageList, unfilteredMessageList).slice(0, queryLimit),
-    [liveMessageList, unfilteredMessageList, queryLimit],
-  );
-
   // Apply client-side filters. Note: these run after the DB LIMIT, so they
   // can shrink a page below the requested size — acceptable here since the
   // alternative (per-chain DB clauses) bloats the query and the pending
   // filter already relies on client-side narrowing.
   const messageList = useMemo(() => {
-    let list = mergedUnfilteredMessageList;
+    let list = unfilteredMessageList;
     if (isPendingFilter) {
       list = list.filter((m) => m.status === MessageStatus.Pending);
     }
@@ -190,7 +175,7 @@ export function useMessageSearchQuery(
       list = list.filter((m) => messageMatchesWarpRoute(m, warpRouteDomainAddresses));
     }
     return list;
-  }, [mergedUnfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
+  }, [unfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
 
   const isMessagesFound = messageList.length > 0;
 
@@ -198,14 +183,12 @@ export function useMessageSearchQuery(
     if (!query || !isValidInput) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
+  const isLiveConnected = useLiveMessageRefresh(liveLatestEnabled, liveStreams, refresh);
 
-  // Auto-refresh query periodically, except on the live latest page where WS
-  // updates replace polling. Manual refresh still runs a full network fetch.
-  const autoRefresh = useCallback(() => {
-    if (liveLatestEnabled) return;
-    refresh();
-  }, [liveLatestEnabled, refresh]);
-  useVisibleInterval(autoRefresh, SEARCH_AUTO_REFRESH_DELAY);
+  const poll = useCallback(() => {
+    if (!isLiveConnected) refresh();
+  }, [isLiveConnected, refresh]);
+  useVisibleInterval(poll, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
     isValidInput,
@@ -239,25 +222,35 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     () => parseMessageQueryResult(chainMetadataResolver, scrapedChains, data),
     [chainMetadataResolver, scrapedChains, data],
   );
-  const liveMessageRow = useMessageRowSubscription(messageId, !pause);
-  const liveMessage = useMemo(
-    () =>
-      liveMessageRow
-        ? parseMessageEntry(chainMetadataResolver, scrapedChains, liveMessageRow)
-        : null,
-    [chainMetadataResolver, scrapedChains, liveMessageRow],
-  );
   const isMessageFound = messageList.length > 0;
-  const message = liveMessage ?? (isMessageFound ? messageList[0] : null);
+  const message = isMessageFound ? messageList[0] : null;
   const msgStatus = message?.status;
   const isDelivered = isMessageFound && msgStatus === MessageStatus.Delivered;
+  const destinationDomainId = message?.destinationDomainId;
+  const deliveryStreams = useMemo<LiveStream[]>(
+    () => [
+      {
+        domains: destinationDomainId === undefined ? undefined : [destinationDomainId],
+        eventType: 'delivery',
+      },
+    ],
+    [destinationDomainId],
+  );
 
-  // Fallback interval for environments without websocket support.
   const reExecutor = useCallback(() => {
-    if (pause || isDelivered || liveMessageRow) return;
+    if (pause || isDelivered) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [pause, isDelivered, liveMessageRow, reexecuteQuery]);
-  useVisibleInterval(reExecutor, MSG_AUTO_REFRESH_DELAY);
+  }, [pause, isDelivered, reexecuteQuery]);
+  const isLiveConnected = useLiveMessageRefresh(
+    !pause && isMessageFound && !isDelivered,
+    deliveryStreams,
+    reExecutor,
+    messageId,
+  );
+  const poll = useCallback(() => {
+    if (!isLiveConnected) reExecutor();
+  }, [isLiveConnected, reExecutor]);
+  useVisibleInterval(poll, MSG_AUTO_REFRESH_DELAY);
 
   return {
     isFetching,
@@ -266,18 +259,4 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     isMessageFound,
     message,
   };
-}
-
-function mergeMessageLists(
-  liveMessages: MessageStub[],
-  queryMessages: MessageStub[],
-): MessageStub[] {
-  const messagesById = new Map<string, MessageStub>();
-  for (const message of queryMessages) {
-    messagesById.set(message.id, message);
-  }
-  for (const message of liveMessages) {
-    messagesById.set(message.id, message);
-  }
-  return [...messagesById.values()].sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }

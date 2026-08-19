@@ -1,143 +1,109 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { config } from '../../../consts/config';
 import { logger } from '../../../utils/logger';
-import { MessageEntry, MessageStubEntry } from './fragments';
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
+const HEARTBEAT_TIMEOUT_MS = 65_000;
+const REFRESH_DELAY_MS = 1_000;
 
-type LatestMessage = {
-  message: MessageStubEntry | null;
-  msg_id: string;
-  operation?: 'INSERT' | 'UPDATE' | null;
-  type: 'latest_message';
+export type LiveStream = {
+  domains?: number[];
+  eventType: 'delivery' | 'dispatch';
 };
 
-type MessageUpdate = {
-  message: MessageEntry | null;
-  msg_id: string;
-  operation?: 'INSERT' | 'UPDATE' | null;
-  type: 'message' | 'message_snapshot';
-};
-
-type LiveMessage = LatestMessage | MessageUpdate;
-
-export function useLatestMessageRows(enabled: boolean) {
-  const [messageRows, setMessageRows] = useState<MessageStubEntry[]>([]);
+export function useLiveMessageRefresh(
+  enabled: boolean,
+  streams: LiveStream[],
+  refresh: () => void,
+  messageId?: string,
+) {
+  const [connected, setConnected] = useState(false);
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   useEffect(() => {
     if (!enabled || !config.wsUrl) return;
+    setConnected(false);
 
-    return connectLiveMessages({
-      onMessage: (message) => {
-        if (!message.message || message.type !== 'latest_message') return;
-        setMessageRows((rows) => upsertMessageRow(rows, message.message!));
-      },
-      onSubscribe: (ws) => {
-        ws.send(JSON.stringify({ type: 'subscribe_latest' }));
-      },
-      warnMessage: 'Explorer live message websocket error',
-    });
-  }, [enabled]);
+    let closed = false;
+    let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
+    let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let ws: WebSocket | undefined;
 
-  return messageRows;
-}
-
-export function useMessageRowSubscription(messageId: string, enabled: boolean) {
-  const [messageRow, setMessageRow] = useState<MessageEntry | null>(null);
-
-  useEffect(() => {
-    if (!enabled || !config.wsUrl || !messageId) return;
-
-    return connectLiveMessages({
-      onMessage: (message) => {
-        if (
-          !message.message ||
-          (message.type !== 'message' && message.type !== 'message_snapshot')
-        ) {
+    const watchHeartbeat = () => {
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
+      heartbeatTimer = setTimeout(() => {
+        if (document.visibilityState === 'hidden') {
+          watchHeartbeat();
           return;
         }
-        setMessageRow(message.message);
-      },
-      onSubscribe: (ws) => {
-        ws.send(
-          JSON.stringify({
-            msg_id: messageId,
-            type: 'subscribe_message',
-          }),
-        );
-      },
-      warnMessage: 'Explorer message websocket error',
-    });
-  }, [enabled, messageId]);
+        setConnected(false);
+        ws?.close();
+      }, HEARTBEAT_TIMEOUT_MS);
+    };
 
-  return messageRow;
+    const connect = () => {
+      if (closed || !config.wsUrl) return;
+
+      ws = new WebSocket(config.wsUrl);
+      ws.onopen = watchHeartbeat;
+      ws.onmessage = ({ data }) => {
+        watchHeartbeat();
+        const message = parseMessage(data);
+        if (message?.type === 'ready') {
+          reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+          ws?.send(JSON.stringify({ streams, type: 'subscribe' }));
+        } else if (message?.type === 'subscribed') {
+          setConnected(true);
+        } else if (
+          message?.type === 'event' &&
+          (!messageId || normalizeId(message.data?.msg_id) === normalizeId(messageId))
+        ) {
+          refreshTimer ??= setTimeout(() => {
+            refreshTimer = undefined;
+            refreshRef.current();
+          }, REFRESH_DELAY_MS);
+        }
+      };
+      ws.onerror = () => {
+        setConnected(false);
+        logger.warn('Explorer live message websocket error');
+      };
+      ws.onclose = () => {
+        if (closed) return;
+        if (heartbeatTimer) clearTimeout(heartbeatTimer);
+        setConnected(false);
+        reconnectTimer = setTimeout(connect, reconnectDelayMs);
+        reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+      };
+    };
+
+    connect();
+    return () => {
+      closed = true;
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (refreshTimer) clearTimeout(refreshTimer);
+      ws?.close();
+    };
+  }, [enabled, messageId, streams]);
+
+  return enabled && connected;
 }
 
-function connectLiveMessages({
-  onMessage,
-  onSubscribe,
-  warnMessage,
-}: {
-  onMessage: (message: LiveMessage) => void;
-  onSubscribe: (ws: WebSocket) => void;
-  warnMessage: string;
-}) {
-  let closed = false;
-  let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
-  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-  let ws: WebSocket | undefined;
-
-  const connect = () => {
-    if (closed || !config.wsUrl) return;
-
-    ws = new WebSocket(config.wsUrl);
-    ws.onopen = () => {
-      reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
-      onSubscribe(ws!);
-    };
-    ws.onmessage = (event) => {
-      const message = parseLiveMessage(event.data);
-      if (message) onMessage(message);
-    };
-    ws.onerror = () => {
-      logger.warn(warnMessage);
-    };
-    ws.onclose = () => {
-      if (closed) return;
-      reconnectTimer = setTimeout(connect, reconnectDelayMs);
-      reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
-    };
-  };
-
-  connect();
-
-  return () => {
-    closed = true;
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    ws?.close();
-  };
-}
-
-function parseLiveMessage(data: string): LiveMessage | null {
+function parseMessage(data: unknown) {
+  if (typeof data !== 'string') return null;
   try {
-    const parsed = JSON.parse(data) as { type?: unknown };
-    if (
-      parsed.type === 'latest_message' ||
-      parsed.type === 'message' ||
-      parsed.type === 'message_snapshot'
-    ) {
-      return parsed as LiveMessage;
-    }
-    return null;
+    return JSON.parse(data) as { data?: { msg_id?: unknown }; type?: unknown };
   } catch {
     return null;
   }
 }
 
-function upsertMessageRow(rows: MessageStubEntry[], message: MessageStubEntry): MessageStubEntry[] {
-  const nextRows = rows.filter((row) => row.id !== message.id);
-  nextRows.unshift(message);
-  return nextRows;
+function normalizeId(value: unknown) {
+  return typeof value === 'string' ? value.replace(/^(?:0x|\\x)/, '').toLowerCase() : null;
 }
