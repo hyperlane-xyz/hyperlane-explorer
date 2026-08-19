@@ -51,7 +51,7 @@ export function buildMessageQuery(
   const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: bytea!) @cached(ttl: 5) {
+  query ($identifier: bytea!) {
     message_view(
       where: {send_occurred_at: {_is_null: false}, ${whereClause}},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
@@ -166,7 +166,7 @@ export function buildMessageSearchQuery(
     variableDeclarations.push('$warpAddresses: [bytea!]');
   }
 
-  const query = `query (${variableDeclarations.join(', ')}) @cached(ttl: 5) {
+  const query = `query (${variableDeclarations.join(', ')}) {
     ${queries.join('\n')}
   }`;
   return { query, variables };

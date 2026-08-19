@@ -1,7 +1,7 @@
 const isDevMode = process.env.NODE_ENV === 'development';
 const version = process.env.NEXT_PUBLIC_VERSION ?? null;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://explorer4.hasura.app/v1/graphql';
-const wsUrl = process.env.NEXT_PUBLIC_WS_URL || graphqlUrlToWsUrl(apiUrl);
+const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? graphqlUrlToWsUrl(apiUrl);
 const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
 const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
 const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
@@ -38,7 +38,7 @@ function graphqlUrlToWsUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-    parsed.pathname = '/ws';
+    parsed.pathname = '/live';
     parsed.search = '';
     parsed.hash = '';
     return parsed.toString();

@@ -4,7 +4,17 @@ import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
-import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  PropsWithChildren,
+  ReactNode,
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -24,6 +34,7 @@ import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
 const TIME_SENT_REFRESH_MS = 1_000;
+const RelativeTimeContext = createContext(0);
 
 export function MessageTable({
   messageList,
@@ -41,6 +52,7 @@ export function MessageTable({
   const deliveredMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [insertedMessageIds, setInsertedMessageIds] = useState<Set<string>>(() => new Set());
   const [deliveredMessageIds, setDeliveredMessageIds] = useState<Set<string>>(() => new Set());
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
     return messageList
@@ -143,8 +155,13 @@ export function MessageTable({
     [],
   );
 
+  useEffect(() => {
+    const timer = setInterval(() => setTimeRefreshKey((key) => key + 1), TIME_SENT_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <>
+    <RelativeTimeContext.Provider value={timeRefreshKey}>
       <table className="mb-1 w-full">
         <thead>
           <tr className="border-b border-gray-100">
@@ -203,9 +220,8 @@ export function MessageTable({
         .live-message-insert {
           animation: live-message-insert 900ms ease-out;
         }
-
       `}</style>
-    </>
+    </RelativeTimeContext.Provider>
   );
 }
 
@@ -401,15 +417,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 });
 
 const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
-  const [, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRefreshKey((key) => key + 1);
-    }, TIME_SENT_REFRESH_MS);
-
-    return () => clearInterval(timer);
-  }, []);
+  useContext(RelativeTimeContext);
 
   return <>{getHumanReadableTimeString(timestamp)}</>;
 });

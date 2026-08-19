@@ -223,6 +223,14 @@ export function MessageSearch() {
   const isReadyToShowEmptyState = hasAllRun && isChainMetadataReady;
   const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
+  const messageTableKey = [
+    trimmedInput,
+    originChainFilter,
+    destinationChainFilter,
+    startTimeFilter,
+    endTimeFilter,
+    statusFilter,
+  ].join(':');
 
   // Compute redirect URL for direct message/tx lookups
   const router = useRouter();
@@ -374,7 +382,11 @@ export function MessageSearch() {
           </div>
         </div>
         <Fade show={showMessageTable && !redirectUrl}>
-          <MessageTable messageList={messageListResult} isFetching={isAnyFetching} />
+          <MessageTable
+            key={messageTableKey}
+            messageList={messageListResult}
+            isFetching={isAnyFetching}
+          />
         </Fade>
         <SearchFetching
           show={

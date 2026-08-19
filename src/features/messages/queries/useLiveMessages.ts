@@ -6,7 +6,7 @@ import { logger } from '../../../utils/logger';
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 65_000;
-const REFRESH_DELAY_MS = 1_000;
+const REFRESH_DELAYS_MS = [1_000, 5_000, 15_000];
 
 export type LiveStream = {
   domains?: number[];
@@ -31,54 +31,80 @@ export function useLiveMessageRefresh(
     let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
     let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const refreshTimers = new Map<number, ReturnType<typeof setTimeout>>();
     let ws: WebSocket | undefined;
 
-    const watchHeartbeat = () => {
+    const scheduleReconnect = () => {
+      if (closed || reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = undefined;
+        connect();
+      }, reconnectDelayMs);
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+    };
+
+    const watchHeartbeat = (socket: WebSocket) => {
       if (heartbeatTimer) clearTimeout(heartbeatTimer);
       heartbeatTimer = setTimeout(() => {
         if (document.visibilityState === 'hidden') {
-          watchHeartbeat();
+          watchHeartbeat(socket);
           return;
         }
+        if (ws !== socket) return;
         setConnected(false);
-        ws?.close();
+        socket.close();
+        scheduleReconnect();
       }, HEARTBEAT_TIMEOUT_MS);
     };
 
     const connect = () => {
       if (closed || !config.wsUrl) return;
 
-      ws = new WebSocket(config.wsUrl);
-      ws.onopen = watchHeartbeat;
-      ws.onmessage = ({ data }) => {
-        watchHeartbeat();
+      const socket = new WebSocket(config.wsUrl);
+      ws = socket;
+      watchHeartbeat(socket);
+      socket.onopen = () => watchHeartbeat(socket);
+      socket.onmessage = ({ data }) => {
+        if (ws !== socket) return;
+        watchHeartbeat(socket);
         const message = parseMessage(data);
         if (message?.type === 'ready') {
-          reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
-          ws?.send(JSON.stringify({ streams, type: 'subscribe' }));
+          socket.send(JSON.stringify({ streams, type: 'subscribe' }));
         } else if (message?.type === 'subscribed') {
+          reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
           setConnected(true);
         } else if (
           message?.type === 'event' &&
           (!messageId || normalizeId(message.data?.msg_id) === normalizeId(messageId))
         ) {
-          refreshTimer ??= setTimeout(() => {
-            refreshTimer = undefined;
-            refreshRef.current();
-          }, REFRESH_DELAY_MS);
+          REFRESH_DELAYS_MS.forEach((delay) => {
+            if (refreshTimers.has(delay)) return;
+            refreshTimers.set(
+              delay,
+              setTimeout(() => {
+                refreshTimers.delete(delay);
+                refreshRef.current();
+              }, delay),
+            );
+          });
+        } else if (message?.type === 'error') {
+          setConnected(false);
+          socket.close();
+          scheduleReconnect();
         }
       };
-      ws.onerror = () => {
+      socket.onerror = () => {
+        if (ws !== socket) return;
         setConnected(false);
         logger.warn('Explorer live message websocket error');
+        socket.close();
+        scheduleReconnect();
       };
-      ws.onclose = () => {
-        if (closed) return;
+      socket.onclose = () => {
+        if (closed || ws !== socket) return;
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
         setConnected(false);
-        reconnectTimer = setTimeout(connect, reconnectDelayMs);
-        reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+        scheduleReconnect();
       };
     };
 
@@ -87,7 +113,7 @@ export function useLiveMessageRefresh(
       closed = true;
       if (heartbeatTimer) clearTimeout(heartbeatTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimers.forEach(clearTimeout);
       ws?.close();
     };
   }, [enabled, messageId, streams]);
