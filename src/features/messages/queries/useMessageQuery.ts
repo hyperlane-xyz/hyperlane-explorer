@@ -10,8 +10,13 @@ import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScr
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
-import { parseMessageQueryResult, parseMessageStubResult } from './parse';
-import { type LiveStream, useLiveMessageRefresh } from './useLiveMessages';
+import {
+  parseMessageEntry,
+  parseMessageQueryResult,
+  parseMessageStubEntry,
+  parseMessageStubResult,
+} from './parse';
+import { useLatestMessageRows, useMessageRowSubscription } from './useLiveMessages';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
@@ -126,14 +131,6 @@ export function useMessageSearchQuery(
     !endTimeFilter &&
     statusFilter === 'all' &&
     warpRouteAddresses.length === 0;
-  const liveStreams = useMemo<LiveStream[]>(
-    () => [
-      { domains: mainnetDomainIds, eventType: 'dispatch' },
-      { domains: mainnetDomainIds, eventType: 'delivery' },
-    ],
-    [mainnetDomainIds],
-  );
-
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,
@@ -146,6 +143,7 @@ export function useMessageSearchQuery(
     dbStatusFilter,
     warpAddresses,
     isPendingFilter,
+    { cached: !liveLatestEnabled },
   );
 
   // Execute query
@@ -156,18 +154,44 @@ export function useMessageSearchQuery(
   });
   const { data, fetching, error } = result;
   const isFetching = isValidInput && (!isSearchMetadataReady || fetching);
+  const refresh = useCallback(() => {
+    if (!query || !isValidInput) return;
+    reexecuteQuery({ requestPolicy: 'network-only' });
+  }, [reexecuteQuery, query, isValidInput]);
+  const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
+    liveLatestEnabled,
+    mainnetDomainIds,
+    LATEST_QUERY_LIMIT,
+    refresh,
+  );
 
   // Parse results
   const unfilteredMessageList = useMemo(
     () => parseMessageStubResult(chainMetadataResolver, scrapedChains, data),
     [chainMetadataResolver, scrapedChains, data],
   );
+  const liveMessageList = useMemo(
+    () =>
+      liveMessageRows
+        .map((message) => parseMessageStubEntry(chainMetadataResolver, scrapedChains, message))
+        .filter((message): message is MessageStub => !!message)
+        .filter(
+          (message) =>
+            mainnetDomainIds.includes(message.originDomainId) &&
+            mainnetDomainIds.includes(message.destinationDomainId),
+        ),
+    [chainMetadataResolver, scrapedChains, liveMessageRows, mainnetDomainIds],
+  );
+  const mergedUnfilteredMessageList = useMemo(
+    () => mergeMessageLists(liveMessageList, unfilteredMessageList).slice(0, queryLimit),
+    [liveMessageList, unfilteredMessageList, queryLimit],
+  );
   // Apply client-side filters. Note: these run after the DB LIMIT, so they
   // can shrink a page below the requested size — acceptable here since the
   // alternative (per-chain DB clauses) bloats the query and the pending
   // filter already relies on client-side narrowing.
   const messageList = useMemo(() => {
-    let list = unfilteredMessageList;
+    let list = mergedUnfilteredMessageList;
     if (isPendingFilter) {
       list = list.filter((m) => m.status === MessageStatus.Pending);
     }
@@ -175,15 +199,9 @@ export function useMessageSearchQuery(
       list = list.filter((m) => messageMatchesWarpRoute(m, warpRouteDomainAddresses));
     }
     return list;
-  }, [unfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
+  }, [mergedUnfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
 
   const isMessagesFound = messageList.length > 0;
-
-  const refresh = useCallback(() => {
-    if (!query || !isValidInput) return;
-    reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [reexecuteQuery, query, isValidInput]);
-  const isLiveConnected = useLiveMessageRefresh(liveLatestEnabled, liveStreams, refresh);
 
   const poll = useCallback(() => {
     if (!isLiveConnected) refresh();
@@ -208,7 +226,14 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   const chainMetadataResolver = useChainMetadataResolver();
 
   // Assemble GraphQL Query
-  const { query, variables } = buildMessageQuery(MessageIdentifierType.Id, messageId, 1);
+  const { query, variables } = buildMessageQuery(
+    MessageIdentifierType.Id,
+    messageId,
+    1,
+    false,
+    undefined,
+    { cached: false },
+  );
 
   // Execute query
   const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
@@ -222,34 +247,28 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     () => parseMessageQueryResult(chainMetadataResolver, scrapedChains, data),
     [chainMetadataResolver, scrapedChains, data],
   );
-  const isMessageFound = messageList.length > 0;
-  const message = isMessageFound ? messageList[0] : null;
-  const msgStatus = message?.status;
-  const isDelivered = isMessageFound && msgStatus === MessageStatus.Delivered;
-  const destinationDomainId = message?.destinationDomainId;
-  const deliveryStreams = useMemo<LiveStream[]>(
-    () => [
-      {
-        domains: destinationDomainId === undefined ? undefined : [destinationDomainId],
-        eventType: 'delivery',
-      },
-    ],
-    [destinationDomainId],
-  );
-
-  const reExecutor = useCallback(() => {
-    if (pause || isDelivered) return;
+  const refresh = useCallback(() => {
+    if (pause) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [pause, isDelivered, reexecuteQuery]);
-  const isLiveConnected = useLiveMessageRefresh(
-    !pause && isMessageFound && !isDelivered,
-    deliveryStreams,
-    reExecutor,
+  }, [pause, reexecuteQuery]);
+  const { connected: isLiveConnected, messageRow: liveMessageRow } = useMessageRowSubscription(
     messageId,
+    !pause,
+    refresh,
   );
+  const liveMessage = useMemo(
+    () =>
+      liveMessageRow
+        ? parseMessageEntry(chainMetadataResolver, scrapedChains, liveMessageRow)
+        : null,
+    [chainMetadataResolver, scrapedChains, liveMessageRow],
+  );
+  const message = liveMessage ?? messageList[0] ?? null;
+  const isMessageFound = !!message;
+  const isDelivered = message?.status === MessageStatus.Delivered;
   const poll = useCallback(() => {
-    if (!isLiveConnected) reExecutor();
-  }, [isLiveConnected, reExecutor]);
+    if (!isLiveConnected && !isDelivered) refresh();
+  }, [isDelivered, isLiveConnected, refresh]);
   useVisibleInterval(poll, MSG_AUTO_REFRESH_DELAY);
 
   return {
@@ -259,4 +278,13 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     isMessageFound,
     message,
   };
+}
+
+function mergeMessageLists(
+  liveMessages: MessageStub[],
+  queryMessages: MessageStub[],
+): MessageStub[] {
+  const messagesById = new Map(queryMessages.map((message) => [message.msgId, message]));
+  liveMessages.forEach((message) => messagesById.set(message.msgId, message));
+  return [...messagesById.values()].sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }

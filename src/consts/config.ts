@@ -38,7 +38,7 @@ function graphqlUrlToWsUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-    parsed.pathname = '/live';
+    parsed.pathname = '/explorer';
     parsed.search = '';
     parsed.hash = '';
     return parsed.toString();

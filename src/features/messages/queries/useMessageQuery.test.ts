@@ -1,4 +1,5 @@
 import { MessageStatus, MessageStub } from '../../../types';
+import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { messageMatchesWarpRoute } from './useMessageQuery';
 
 const ORIGIN_DOMAIN = 1;
@@ -71,5 +72,24 @@ describe('messageMatchesWarpRoute', () => {
 
   it('returns false for an empty route list', () => {
     expect(messageMatchesWarpRoute(makeStub(), [])).toBe(false);
+  });
+});
+
+describe('message query caching', () => {
+  it('caches by default', () => {
+    expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain('@cached');
+    expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain('@cached');
+  });
+
+  it('can be disabled for live queries', () => {
+    expect(
+      buildMessageQuery(MessageIdentifierType.Id, '0x01', 1, false, undefined, { cached: false })
+        .query,
+    ).not.toContain('@cached');
+    expect(
+      buildMessageSearchQuery('', null, null, null, null, 1, false, [], 'all', [], false, {
+        cached: false,
+      }).query,
+    ).not.toContain('@cached');
   });
 });

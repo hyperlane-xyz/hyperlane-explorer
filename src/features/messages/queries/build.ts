@@ -29,6 +29,7 @@ export function buildMessageQuery(
   limit: number,
   useStub = false,
   orderBy?: string,
+  { cached = true }: { cached?: boolean } = {},
 ) {
   let whereClause: string;
   if (idType === MessageIdentifierType.Id) {
@@ -51,7 +52,7 @@ export function buildMessageQuery(
   const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: bytea!) {
+  query ($identifier: bytea!)${cached ? ' @cached(ttl: 5)' : ''} {
     message_view(
       where: {send_occurred_at: {_is_null: false}, ${whereClause}},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
@@ -76,6 +77,7 @@ export function buildMessageSearchQuery(
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
   isPendingFilter = false,
+  { cached = true }: { cached?: boolean } = {},
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
@@ -166,7 +168,7 @@ export function buildMessageSearchQuery(
     variableDeclarations.push('$warpAddresses: [bytea!]');
   }
 
-  const query = `query (${variableDeclarations.join(', ')}) {
+  const query = `query (${variableDeclarations.join(', ')})${cached ? ' @cached(ttl: 5)' : ''} {
     ${queries.join('\n')}
   }`;
   return { query, variables };

@@ -266,7 +266,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         className="pt-px"
       />
     );
-  } else {
+  } else if (status === MessageStatus.Pending) {
     statusTitle = 'Pending';
     statusIcon = (
       <span
