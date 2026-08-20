@@ -1,6 +1,7 @@
 import { MessageStatus, MessageStub } from '../../../types';
+import { adjustToUtcTime } from '../../../utils/time';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
-import { messageMatchesWarpRoute } from './useMessageQuery';
+import { messageMatchesSearchFilters, messageMatchesWarpRoute } from './useMessageQuery';
 
 const ORIGIN_DOMAIN = 1;
 const DEST_DOMAIN = 10;
@@ -72,6 +73,65 @@ describe('messageMatchesWarpRoute', () => {
 
   it('returns false for an empty route list', () => {
     expect(messageMatchesWarpRoute(makeStub(), [])).toBe(false);
+  });
+});
+
+describe('messageMatchesSearchFilters', () => {
+  const noFilters = {
+    searchInput: '',
+    originDomainId: null,
+    destinationDomainId: null,
+    startTime: null,
+    endTime: null,
+    status: 'all' as const,
+  };
+
+  it('matches origin and destination domains', () => {
+    expect(
+      messageMatchesSearchFilters(makeStub(), {
+        ...noFilters,
+        originDomainId: ORIGIN_DOMAIN,
+        destinationDomainId: DEST_DOMAIN,
+      }),
+    ).toBe(true);
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, originDomainId: 999 })).toBe(
+      false,
+    );
+  });
+
+  it('matches the inclusive adjusted time range used by GraphQL', () => {
+    const startTime = Date.now() - 60_000;
+    const endTime = Date.now() + 60_000;
+    const timestamp = Date.parse(adjustToUtcTime(Date.now()));
+    const message = makeStub({ origin: { ...makeStub().origin, timestamp } });
+
+    expect(messageMatchesSearchFilters(message, { ...noFilters, startTime, endTime })).toBe(true);
+    expect(messageMatchesSearchFilters(message, { ...noFilters, startTime: endTime })).toBe(false);
+  });
+
+  it('matches delivery status', () => {
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, status: 'delivered' })).toBe(
+      true,
+    );
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, status: 'pending' })).toBe(
+      false,
+    );
+  });
+
+  it('matches message, transaction, and address searches', () => {
+    const message = makeStub();
+    expect(messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.msgId })).toBe(
+      true,
+    );
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.origin.hash }),
+    ).toBe(true);
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.sender }),
+    ).toBe(true);
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: '0x' + 'ff'.repeat(32) }),
+    ).toBe(false);
   });
 });
 

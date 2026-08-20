@@ -1,14 +1,15 @@
-import { eqAddress } from '@hyperlane-xyz/utils';
+import { eqAddress, isAddress } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
+import { adjustToUtcTime } from '../../../utils/time';
 import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
-import { searchValueToPostgresBytea } from './encoding';
+import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
 import { MessagesQueryResult, MessagesStubQueryResult } from './fragments';
 import {
   parseMessageEntry,
@@ -44,6 +45,57 @@ export function messageMatchesWarpRoute(
       (message.originDomainId === domainId && eqAddress(message.sender, address)) ||
       (message.destinationDomainId === domainId && eqAddress(message.recipient, address)),
   );
+}
+
+interface MessageSearchFilters {
+  searchInput: string;
+  originDomainId: number | null;
+  destinationDomainId: number | null;
+  startTime: number | null;
+  endTime: number | null;
+  status: MessageStatusFilter;
+}
+
+export function messageMatchesSearchFilters(
+  message: MessageStub,
+  filters: MessageSearchFilters,
+): boolean {
+  if (filters.searchInput && !messageMatchesSearchInput(message, filters.searchInput)) return false;
+  if (filters.originDomainId && message.originDomainId !== filters.originDomainId) return false;
+  if (filters.destinationDomainId && message.destinationDomainId !== filters.destinationDomainId) {
+    return false;
+  }
+
+  const startTime = filters.startTime ? Date.parse(adjustToUtcTime(filters.startTime)) : null;
+  const endTime = filters.endTime ? Date.parse(adjustToUtcTime(filters.endTime)) : null;
+  if (startTime && message.origin.timestamp < startTime) return false;
+  if (endTime && message.origin.timestamp > endTime) return false;
+  if (filters.status === 'delivered' && message.status !== MessageStatus.Delivered) return false;
+  if (filters.status === 'pending' && message.status !== MessageStatus.Pending) return false;
+  return true;
+}
+
+function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
+  const identifier = normalizeIdentifier(searchInput);
+  if (normalizeIdentifier(message.msgId) === identifier) return true;
+  if (
+    isAddress(searchInput) &&
+    [message.sender, message.recipient, message.origin.from, message.destination?.from].some(
+      (address) => address && eqAddress(address, searchInput),
+    )
+  ) {
+    return true;
+  }
+  return (
+    isPotentiallyTransactionHash(searchInput) &&
+    [message.origin.hash, message.destination?.hash].some(
+      (hash) => hash && normalizeIdentifier(hash) === identifier,
+    )
+  );
+}
+
+function normalizeIdentifier(value: string) {
+  return /^(?:0x)?[0-9a-f]+$/i.test(value) ? value.replace(/^0x/i, '').toLowerCase() : value;
 }
 
 export function useMessageSearchQuery(
@@ -121,16 +173,20 @@ export function useMessageSearchQuery(
   // Use larger batch size for pending filter to find more pending messages
   const baseLimit = hasInput ? SEARCH_QUERY_LIMIT : LATEST_QUERY_LIMIT;
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : baseLimit;
-  const liveLatestEnabled =
-    isSearchMetadataReady &&
-    isValidInput &&
-    !hasInput &&
-    !originChainNameFilter &&
-    !destinationChainNameFilter &&
-    !startTimeFilter &&
-    !endTimeFilter &&
-    statusFilter === 'all' &&
-    warpRouteAddresses.length === 0;
+  const liveSearchEnabled = isSearchMetadataReady && isValidInput;
+  const hasFilters = !!(
+    hasInput ||
+    originChainNameFilter ||
+    destinationChainNameFilter ||
+    startTimeFilter ||
+    endTimeFilter ||
+    statusFilter !== 'all' ||
+    warpRouteAddresses.length > 0
+  );
+  const liveDomains = useMemo(
+    () => (hasFilters ? [] : mainnetDomainIds),
+    [hasFilters, mainnetDomainIds],
+  );
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,
@@ -143,7 +199,7 @@ export function useMessageSearchQuery(
     dbStatusFilter,
     warpAddresses,
     isPendingFilter,
-    { cached: !liveLatestEnabled },
+    { cached: !liveSearchEnabled },
   );
 
   // Execute query
@@ -159,9 +215,8 @@ export function useMessageSearchQuery(
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [reexecuteQuery, query, isValidInput]);
   const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
-    liveLatestEnabled,
-    mainnetDomainIds,
-    LATEST_QUERY_LIMIT,
+    liveSearchEnabled,
+    liveDomains,
     refresh,
   );
 
@@ -174,17 +229,12 @@ export function useMessageSearchQuery(
     () =>
       liveMessageRows
         .map((message) => parseMessageStubEntry(chainMetadataResolver, scrapedChains, message))
-        .filter((message): message is MessageStub => !!message)
-        .filter(
-          (message) =>
-            mainnetDomainIds.includes(message.originDomainId) &&
-            mainnetDomainIds.includes(message.destinationDomainId),
-        ),
-    [chainMetadataResolver, scrapedChains, liveMessageRows, mainnetDomainIds],
+        .filter((message): message is MessageStub => !!message),
+    [chainMetadataResolver, scrapedChains, liveMessageRows],
   );
   const mergedUnfilteredMessageList = useMemo(
-    () => mergeMessageLists(liveMessageList, unfilteredMessageList).slice(0, queryLimit),
-    [liveMessageList, unfilteredMessageList, queryLimit],
+    () => mergeMessageLists(liveMessageList, unfilteredMessageList),
+    [liveMessageList, unfilteredMessageList],
   );
   // Apply client-side filters. Note: these run after the DB LIMIT, so they
   // can shrink a page below the requested size — acceptable here since the
@@ -192,14 +242,33 @@ export function useMessageSearchQuery(
   // filter already relies on client-side narrowing.
   const messageList = useMemo(() => {
     let list = mergedUnfilteredMessageList;
-    if (isPendingFilter) {
-      list = list.filter((m) => m.status === MessageStatus.Pending);
-    }
+    list = list.filter((message) =>
+      messageMatchesSearchFilters(message, {
+        searchInput: sanitizedInput,
+        originDomainId: isValidOrigin ? originDomainId : null,
+        destinationDomainId: isValidDestination ? destDomainId : null,
+        startTime: startTimeFilter,
+        endTime: endTimeFilter,
+        status: statusFilter,
+      }),
+    );
     if (warpRouteDomainAddresses.length > 0) {
       list = list.filter((m) => messageMatchesWarpRoute(m, warpRouteDomainAddresses));
     }
-    return list;
-  }, [mergedUnfilteredMessageList, isPendingFilter, warpRouteDomainAddresses]);
+    return list.slice(0, queryLimit);
+  }, [
+    mergedUnfilteredMessageList,
+    sanitizedInput,
+    isValidOrigin,
+    originDomainId,
+    isValidDestination,
+    destDomainId,
+    startTimeFilter,
+    endTimeFilter,
+    statusFilter,
+    warpRouteDomainAddresses,
+    queryLimit,
+  ]);
 
   const isMessagesFound = messageList.length > 0;
 
@@ -284,7 +353,9 @@ function mergeMessageLists(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
 ): MessageStub[] {
-  const messagesById = new Map(queryMessages.map((message) => [message.msgId, message]));
-  liveMessages.forEach((message) => messagesById.set(message.msgId, message));
+  const messagesById = new Map(
+    queryMessages.map((message) => [message.msgId.toLowerCase(), message]),
+  );
+  liveMessages.forEach((message) => messagesById.set(message.msgId.toLowerCase(), message));
   return [...messagesById.values()].sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }

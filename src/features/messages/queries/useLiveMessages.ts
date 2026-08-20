@@ -128,12 +128,7 @@ export function useExplorerConnectionState() {
   return useExplorerEventsContext().connectionState;
 }
 
-export function useLatestMessageRows(
-  enabled: boolean,
-  domains: number[],
-  limit: number,
-  refresh: () => void,
-) {
+export function useLatestMessageRows(enabled: boolean, domains: number[], refresh: () => void) {
   const { connectionState, messageRows, readyVersion } = useExplorerEventsContext();
   useRefreshWhenReady(enabled, readyVersion, refresh);
 
@@ -143,13 +138,13 @@ export function useLatestMessageRows(
         ? messageRows
             .filter(
               (row) =>
-                domains.includes(row.origin_domain_id) &&
-                domains.includes(row.destination_domain_id),
+                domains.length === 0 ||
+                (domains.includes(row.origin_domain_id) &&
+                  domains.includes(row.destination_domain_id)),
             )
             .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at))
-            .slice(0, limit)
         : [],
-    [domains, enabled, limit, messageRows],
+    [domains, enabled, messageRows],
   );
 
   return { connected: enabled && connectionState === 'connected', messageRows: filteredRows };
