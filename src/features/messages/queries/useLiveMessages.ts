@@ -180,9 +180,7 @@ export function shouldRefreshAfterReconnect(
   previousConnectionState: ExplorerConnectionState,
   connectionState: ExplorerConnectionState,
 ) {
-  return (
-    enabled && previousConnectionState === 'disconnected' && connectionState === 'connected'
-  );
+  return enabled && previousConnectionState === 'disconnected' && connectionState === 'connected';
 }
 
 function useExplorerEventsContext() {
