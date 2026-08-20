@@ -25,7 +25,6 @@ export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected
 interface ExplorerEventsContextValue {
   connectionState: ExplorerConnectionState;
   messageRows: MessageEntry[];
-  readyVersion: number;
 }
 
 const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
@@ -35,7 +34,6 @@ export function ExplorerEventsProvider({ children }: PropsWithChildren) {
     config.wsUrl ? 'connecting' : 'unavailable',
   );
   const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
-  const [readyVersion, setReadyVersion] = useState(0);
 
   useEffect(() => {
     if (!config.wsUrl) return;
@@ -84,7 +82,6 @@ export function ExplorerEventsProvider({ children }: PropsWithChildren) {
         if (message?.type === 'ready') {
           reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
           setConnectionState('connected');
-          setReadyVersion((version) => version + 1);
         } else if (message?.type === 'message_upsert') {
           setMessageRows((rows) =>
             [message.data, ...rows.filter((row) => row.msg_id !== message.data.msg_id)].slice(
@@ -116,10 +113,7 @@ export function ExplorerEventsProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const value = useMemo(
-    () => ({ connectionState, messageRows, readyVersion }),
-    [connectionState, messageRows, readyVersion],
-  );
+  const value = useMemo(() => ({ connectionState, messageRows }), [connectionState, messageRows]);
 
   return createElement(ExplorerEventsContext.Provider, { value }, children);
 }
@@ -129,8 +123,8 @@ export function useExplorerConnectionState() {
 }
 
 export function useLatestMessageRows(enabled: boolean, domains: number[], refresh: () => void) {
-  const { connectionState, messageRows, readyVersion } = useExplorerEventsContext();
-  useRefreshWhenReady(enabled, readyVersion, refresh);
+  const { connectionState, messageRows } = useExplorerEventsContext();
+  useRefreshAfterReconnect(enabled, connectionState, refresh);
 
   const filteredRows = useMemo(
     () =>
@@ -155,8 +149,8 @@ export function useMessageRowSubscription(
   enabled: boolean,
   refresh: () => void,
 ) {
-  const { connectionState, messageRows, readyVersion } = useExplorerEventsContext();
-  useRefreshWhenReady(enabled, readyVersion, refresh);
+  const { connectionState, messageRows } = useExplorerEventsContext();
+  useRefreshAfterReconnect(enabled, connectionState, refresh);
   const messageRow = enabled
     ? messageRows.find((row) => normalizeId(row.msg_id) === normalizeId(messageId)) || null
     : null;
@@ -164,37 +158,31 @@ export function useMessageRowSubscription(
   return { connected: enabled && connectionState === 'connected', messageRow };
 }
 
-function useRefreshWhenReady(enabled: boolean, readyVersion: number, refresh: () => void) {
+function useRefreshAfterReconnect(
+  enabled: boolean,
+  connectionState: ExplorerConnectionState,
+  refresh: () => void,
+) {
   const refreshRef = useRef(refresh);
-  const previousReadyVersion = useRef(readyVersion);
-  const isFirstEffect = useRef(true);
+  const previousConnectionState = useRef(connectionState);
   refreshRef.current = refresh;
 
   useEffect(() => {
-    if (
-      shouldRefreshForReadyState(
-        enabled,
-        readyVersion,
-        previousReadyVersion.current,
-        isFirstEffect.current,
-      )
-    ) {
+    if (shouldRefreshAfterReconnect(enabled, previousConnectionState.current, connectionState)) {
       refreshRef.current();
     }
-    isFirstEffect.current = false;
-    previousReadyVersion.current = readyVersion;
-  }, [enabled, readyVersion]);
+    previousConnectionState.current = connectionState;
+  }, [connectionState, enabled]);
 }
 
-export function shouldRefreshForReadyState(
+export function shouldRefreshAfterReconnect(
   enabled: boolean,
-  readyVersion: number,
-  previousReadyVersion: number,
-  isFirstEffect: boolean,
+  previousConnectionState: ExplorerConnectionState,
+  connectionState: ExplorerConnectionState,
 ) {
-  const mountedAfterReady = isFirstEffect && readyVersion > 0;
-  const reconnected = previousReadyVersion > 0 && previousReadyVersion !== readyVersion;
-  return enabled && (mountedAfterReady || reconnected);
+  return (
+    enabled && previousConnectionState === 'disconnected' && connectionState === 'connected'
+  );
 }
 
 function useExplorerEventsContext() {

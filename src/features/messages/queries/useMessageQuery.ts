@@ -207,6 +207,7 @@ export function useMessageSearchQuery(
     query,
     variables,
     pause: !isValidInput || !isSearchMetadataReady,
+    requestPolicy: 'cache-and-network',
   });
   const { data, fetching, error } = result;
   const isFetching = isValidInput && (!isSearchMetadataReady || fetching);
@@ -309,6 +310,7 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     query,
     variables,
     pause,
+    requestPolicy: 'cache-and-network',
   });
 
   // Parse results

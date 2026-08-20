@@ -1,19 +1,15 @@
-import { shouldRefreshForReadyState } from './useLiveMessages';
+import { shouldRefreshAfterReconnect } from './useLiveMessages';
 
-describe('shouldRefreshForReadyState', () => {
+describe('shouldRefreshAfterReconnect', () => {
   it('does not refresh when the initial connection becomes ready', () => {
-    expect(shouldRefreshForReadyState(true, 1, 0, false)).toBe(false);
-  });
-
-  it('refreshes consumers mounted after the connection is ready', () => {
-    expect(shouldRefreshForReadyState(true, 1, 1, true)).toBe(true);
+    expect(shouldRefreshAfterReconnect(true, 'connecting', 'connected')).toBe(false);
   });
 
   it('refreshes after reconnecting', () => {
-    expect(shouldRefreshForReadyState(true, 2, 1, false)).toBe(true);
+    expect(shouldRefreshAfterReconnect(true, 'disconnected', 'connected')).toBe(true);
   });
 
   it('does not refresh disabled consumers', () => {
-    expect(shouldRefreshForReadyState(false, 2, 1, false)).toBe(false);
+    expect(shouldRefreshAfterReconnect(false, 'disconnected', 'connected')).toBe(false);
   });
 });

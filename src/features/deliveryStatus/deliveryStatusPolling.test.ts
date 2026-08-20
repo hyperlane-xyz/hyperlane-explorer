@@ -7,7 +7,7 @@ describe('shouldUseDeliveryStatusPolling', () => {
 
   it('only polls scraped messages when the websocket is down', () => {
     expect(shouldUseDeliveryStatusPolling(false, 'connected')).toBe(false);
-    expect(shouldUseDeliveryStatusPolling(false, 'connecting')).toBe(false);
+    expect(shouldUseDeliveryStatusPolling(false, 'connecting')).toBe(true);
     expect(shouldUseDeliveryStatusPolling(false, 'disconnected')).toBe(true);
     expect(shouldUseDeliveryStatusPolling(false, 'unavailable')).toBe(true);
   });

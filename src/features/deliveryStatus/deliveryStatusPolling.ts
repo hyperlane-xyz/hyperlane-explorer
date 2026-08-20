@@ -4,5 +4,5 @@ export function shouldUseDeliveryStatusPolling(
   isPiMsg: boolean | undefined,
   connectionState: ExplorerConnectionState,
 ) {
-  return !!isPiMsg || connectionState === 'disconnected' || connectionState === 'unavailable';
+  return !!isPiMsg || connectionState !== 'connected';
 }
