@@ -166,14 +166,35 @@ export function useMessageRowSubscription(
 
 function useRefreshWhenReady(enabled: boolean, readyVersion: number, refresh: () => void) {
   const refreshRef = useRef(refresh);
-  const previousReadyVersion = useRef(0);
+  const previousReadyVersion = useRef(readyVersion);
+  const isFirstEffect = useRef(true);
   refreshRef.current = refresh;
 
   useEffect(() => {
-    if (!enabled || readyVersion === 0) return;
-    if (previousReadyVersion.current !== readyVersion) refreshRef.current();
+    if (
+      shouldRefreshForReadyState(
+        enabled,
+        readyVersion,
+        previousReadyVersion.current,
+        isFirstEffect.current,
+      )
+    ) {
+      refreshRef.current();
+    }
+    isFirstEffect.current = false;
     previousReadyVersion.current = readyVersion;
   }, [enabled, readyVersion]);
+}
+
+export function shouldRefreshForReadyState(
+  enabled: boolean,
+  readyVersion: number,
+  previousReadyVersion: number,
+  isFirstEffect: boolean,
+) {
+  const mountedAfterReady = isFirstEffect && readyVersion > 0;
+  const reconnected = previousReadyVersion > 0 && previousReadyVersion !== readyVersion;
+  return enabled && (mountedAfterReady || reconnected);
 }
 
 function useExplorerEventsContext() {
