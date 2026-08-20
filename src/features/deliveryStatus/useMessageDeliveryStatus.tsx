@@ -11,6 +11,7 @@ import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
+import { useExplorerConnectionState } from '../messages/queries/useLiveMessages';
 
 type DeliveryStatusQueryMessage = MessageStub &
   Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
@@ -33,6 +34,7 @@ export function useMessageDeliveryStatus({
   const multiProvider = useReadyMultiProvider();
   const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
+  const explorerConnectionState = useExplorerConnectionState();
   const queryMessage = createDeliveryStatusQueryMessage(message);
 
   const { data, error, isFetching } = useQuery({
@@ -98,7 +100,10 @@ export function useMessageDeliveryStatus({
     retry: false,
     refetchInterval: (query) =>
       query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
-    enabled: enabled && !!multiProvider,
+    enabled:
+      enabled &&
+      !!multiProvider &&
+      (explorerConnectionState === 'disconnected' || explorerConnectionState === 'unavailable'),
   });
 
   useEffect(() => {

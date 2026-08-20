@@ -1,76 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  PropsWithChildren,
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { config } from '../../../consts/config';
 import { logger } from '../../../utils/logger';
-import type { MessageEntry, MessageStubEntry } from './fragments';
+import type { MessageEntry } from './fragments';
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 65_000;
+const MAX_RETAINED_MESSAGES = 500;
 
-type MessageUpsert = {
-  data: MessageEntry;
-  type: 'message_upsert';
-};
+type MessageUpsert = { data: MessageEntry; type: 'message_upsert' };
 
-export function useLatestMessageRows(
-  enabled: boolean,
-  domains: number[],
-  limit: number,
-  refresh: () => void,
-) {
-  const [messageRows, setMessageRows] = useState<MessageStubEntry[]>([]);
-  const connected = useExplorerEvents(enabled, refresh, ({ data }) => {
-    if (!domains.includes(data.origin_domain_id) || !domains.includes(data.destination_domain_id)) {
-      return;
-    }
-    setMessageRows((rows) =>
-      [data, ...rows.filter((row) => row.msg_id !== data.msg_id)]
-        .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at))
-        .slice(0, limit),
-    );
-  });
+export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected' | 'unavailable';
 
-  useEffect(() => {
-    if (!enabled) setMessageRows([]);
-  }, [enabled]);
-
-  return { connected, messageRows };
+interface ExplorerEventsContextValue {
+  connectionState: ExplorerConnectionState;
+  messageRows: MessageEntry[];
+  readyVersion: number;
 }
 
-export function useMessageRowSubscription(
-  messageId: string,
-  enabled: boolean,
-  refresh: () => void,
-) {
-  const [messageRow, setMessageRow] = useState<MessageEntry | null>(null);
-  const connected = useExplorerEvents(enabled, refresh, (event) => {
-    if (normalizeId(event.data.msg_id) === normalizeId(messageId)) setMessageRow(event.data);
-  });
+const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
 
-  return {
-    connected,
-    messageRow: normalizeId(messageRow?.msg_id) === normalizeId(messageId) ? messageRow : null,
-  };
-}
-
-function useExplorerEvents(
-  enabled: boolean,
-  refresh: () => void,
-  onEvent: (event: MessageUpsert) => void,
-) {
-  const [connected, setConnected] = useState(false);
-  const refreshRef = useRef(refresh);
-  const eventRef = useRef(onEvent);
-  refreshRef.current = refresh;
-  eventRef.current = onEvent;
+export function ExplorerEventsProvider({ children }: PropsWithChildren) {
+  const [connectionState, setConnectionState] = useState<ExplorerConnectionState>(
+    config.wsUrl ? 'connecting' : 'unavailable',
+  );
+  const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
+  const [readyVersion, setReadyVersion] = useState(0);
 
   useEffect(() => {
-    if (!enabled || !config.wsUrl) return;
-    setConnected(false);
+    if (!config.wsUrl) return;
 
     let closed = false;
-    let reconnect = false;
     let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
     let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -78,7 +48,8 @@ function useExplorerEvents(
 
     const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
-      reconnect = true;
+      setConnectionState('disconnected');
+      setMessageRows([]);
       reconnectTimer = setTimeout(() => {
         reconnectTimer = undefined;
         connect();
@@ -94,7 +65,6 @@ function useExplorerEvents(
           return;
         }
         if (ws !== socket) return;
-        setConnected(false);
         socket.close();
         scheduleReconnect();
       }, HEARTBEAT_TIMEOUT_MS);
@@ -113,16 +83,19 @@ function useExplorerEvents(
         const message = parseMessage(data);
         if (message?.type === 'ready') {
           reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
-          if (reconnect) refreshRef.current();
-          reconnect = false;
-          setConnected(true);
+          setConnectionState('connected');
+          setReadyVersion((version) => version + 1);
         } else if (message?.type === 'message_upsert') {
-          eventRef.current(message);
+          setMessageRows((rows) =>
+            [message.data, ...rows.filter((row) => row.msg_id !== message.data.msg_id)].slice(
+              0,
+              MAX_RETAINED_MESSAGES,
+            ),
+          );
         }
       };
       socket.onerror = () => {
         if (ws !== socket) return;
-        setConnected(false);
         logger.warn('Explorer live message websocket error');
         socket.close();
         scheduleReconnect();
@@ -130,7 +103,6 @@ function useExplorerEvents(
       socket.onclose = () => {
         if (closed || ws !== socket) return;
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
-        setConnected(false);
         scheduleReconnect();
       };
     };
@@ -142,9 +114,77 @@ function useExplorerEvents(
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };
-  }, [enabled]);
+  }, []);
 
-  return enabled && connected;
+  const value = useMemo(
+    () => ({ connectionState, messageRows, readyVersion }),
+    [connectionState, messageRows, readyVersion],
+  );
+
+  return createElement(ExplorerEventsContext.Provider, { value }, children);
+}
+
+export function useExplorerConnectionState() {
+  return useExplorerEventsContext().connectionState;
+}
+
+export function useLatestMessageRows(
+  enabled: boolean,
+  domains: number[],
+  limit: number,
+  refresh: () => void,
+) {
+  const { connectionState, messageRows, readyVersion } = useExplorerEventsContext();
+  useRefreshWhenReady(enabled, readyVersion, refresh);
+
+  const filteredRows = useMemo(
+    () =>
+      enabled
+        ? messageRows
+            .filter(
+              (row) =>
+                domains.includes(row.origin_domain_id) &&
+                domains.includes(row.destination_domain_id),
+            )
+            .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at))
+            .slice(0, limit)
+        : [],
+    [domains, enabled, limit, messageRows],
+  );
+
+  return { connected: enabled && connectionState === 'connected', messageRows: filteredRows };
+}
+
+export function useMessageRowSubscription(
+  messageId: string,
+  enabled: boolean,
+  refresh: () => void,
+) {
+  const { connectionState, messageRows, readyVersion } = useExplorerEventsContext();
+  useRefreshWhenReady(enabled, readyVersion, refresh);
+  const messageRow = enabled
+    ? messageRows.find((row) => normalizeId(row.msg_id) === normalizeId(messageId)) || null
+    : null;
+
+  return { connected: enabled && connectionState === 'connected', messageRow };
+}
+
+function useRefreshWhenReady(enabled: boolean, readyVersion: number, refresh: () => void) {
+  const refreshRef = useRef(refresh);
+  const previousReadyVersion = useRef(0);
+  refreshRef.current = refresh;
+
+  useEffect(() => {
+    if (!enabled || readyVersion === 0) return;
+    if (previousReadyVersion.current !== readyVersion) refreshRef.current();
+    previousReadyVersion.current = readyVersion;
+  }, [enabled, readyVersion]);
+}
+
+function useExplorerEventsContext() {
+  const context = useContext(ExplorerEventsContext);
+  if (!context) throw new Error('ExplorerEventsProvider is required');
+  return context;
 }
 
 function parseMessage(data: unknown): MessageUpsert | { type: 'heartbeat' | 'ready' } | null {
