@@ -4,7 +4,17 @@ import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
-import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
+import {
+  PropsWithChildren,
+  ReactNode,
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -23,6 +33,8 @@ import { prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
+const TIME_SENT_REFRESH_MS = 1_000;
+const RelativeTimeContext = createContext(0);
 
 export function MessageTable({
   messageList,
@@ -34,6 +46,13 @@ export function MessageTable({
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const previousMessageIds = useRef<Set<string> | null>(null);
+  const previousMessageStatuses = useRef<Map<string, MessageStatus>>(new Map());
+  const insertedMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const deliveredMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [insertedMessageIds, setInsertedMessageIds] = useState<Set<string>>(() => new Set());
+  const [deliveredMessageIds, setDeliveredMessageIds] = useState<Set<string>>(() => new Set());
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
     return messageList
@@ -69,37 +88,140 @@ export function MessageTable({
     };
   }, [backgroundPrefetchKey, messageList, router]);
 
+  useEffect(() => {
+    const currentIds = new Set(messageList.map((message) => message.id));
+    const currentStatuses = new Map(messageList.map((message) => [message.id, message.status]));
+    const previousIds = previousMessageIds.current;
+    const previousStatuses = previousMessageStatuses.current;
+    previousMessageIds.current = currentIds;
+    previousMessageStatuses.current = currentStatuses;
+
+    if (!previousIds) return;
+
+    const newIds = [...currentIds].filter((id) => !previousIds.has(id));
+    if (newIds.length) {
+      setInsertedMessageIds((ids) => new Set([...ids, ...newIds]));
+      newIds.forEach((id) => {
+        const existingTimer = insertedMessageTimers.current.get(id);
+        if (existingTimer) clearTimeout(existingTimer);
+
+        const timer = setTimeout(() => {
+          insertedMessageTimers.current.delete(id);
+          setInsertedMessageIds((ids) => {
+            const nextIds = new Set(ids);
+            nextIds.delete(id);
+            return nextIds;
+          });
+        }, 1_000);
+
+        insertedMessageTimers.current.set(id, timer);
+      });
+    }
+
+    const newlyDeliveredIds = messageList
+      .filter(
+        (message) =>
+          previousStatuses.get(message.id) === MessageStatus.Pending &&
+          message.status === MessageStatus.Delivered,
+      )
+      .map((message) => message.id);
+    if (!newlyDeliveredIds.length) return;
+
+    setDeliveredMessageIds((ids) => new Set([...ids, ...newlyDeliveredIds]));
+    newlyDeliveredIds.forEach((id) => {
+      const existingTimer = deliveredMessageTimers.current.get(id);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        deliveredMessageTimers.current.delete(id);
+        setDeliveredMessageIds((ids) => {
+          const nextIds = new Set(ids);
+          nextIds.delete(id);
+          return nextIds;
+        });
+      }, 1_000);
+
+      deliveredMessageTimers.current.set(id, timer);
+    });
+  }, [messageList]);
+
+  useEffect(
+    () => () => {
+      insertedMessageTimers.current.forEach((timer) => clearTimeout(timer));
+      insertedMessageTimers.current.clear();
+      deliveredMessageTimers.current.forEach((timer) => clearTimeout(timer));
+      deliveredMessageTimers.current.clear();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeRefreshKey((key) => key + 1), TIME_SENT_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <table className="mb-1 w-full">
-      <thead>
-        <tr className="border-b border-gray-100">
-          <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
-          <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
-          <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
-          <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
-          <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
-          <th className={styles.header}>Time sent</th>
-          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
-        </tr>
-      </thead>
-      <tbody>
-        {messageList.map((m) => (
-          <tr
-            key={`message-${m.id}`}
-            className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
-              isFetching && 'blur-xs'
-            } transition-all duration-500`}
-          >
-            <MessageSummaryRow
-              message={m}
-              chainMetadataResolver={chainMetadataResolver}
-              router={router}
-              warpRouteChainAddressMap={warpRouteChainAddressMap}
-            />
+    <RelativeTimeContext.Provider value={timeRefreshKey}>
+      <table className="mb-1 w-full">
+        <thead>
+          <tr className="border-b border-gray-100">
+            <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
+            <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
+            <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
+            <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
+            <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
+            <th className={styles.header}>Time sent</th>
+            <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {messageList.map((m) => {
+            const isInserted = insertedMessageIds.has(m.id);
+            const isDelivered = deliveredMessageIds.has(m.id);
+            return (
+              <tr
+                key={`message-${m.id}`}
+                className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
+                  isFetching && 'blur-xs'
+                } ${
+                  isInserted ? 'bg-primary-50 live-message-insert' : ''
+                } ${isDelivered ? 'bg-[#dcfce7]' : ''} transition-all duration-500`}
+              >
+                <MessageSummaryRow
+                  message={m}
+                  chainMetadataResolver={chainMetadataResolver}
+                  router={router}
+                  warpRouteChainAddressMap={warpRouteChainAddressMap}
+                />
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <style jsx global>{`
+        @keyframes live-message-insert {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px);
+            box-shadow: inset 3px 0 0 ${Color.primaryDark};
+          }
+          35% {
+            opacity: 1;
+            transform: translateY(0);
+            box-shadow: inset 3px 0 0 ${Color.primaryDark};
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+            box-shadow: inset 0 0 0 transparent;
+          }
+        }
+
+        .live-message-insert {
+          animation: live-message-insert 900ms ease-out;
+        }
+      `}</style>
+    </RelativeTimeContext.Provider>
   );
 }
 
@@ -142,6 +264,18 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         alt={statusTitle}
         title={statusTitle}
         className="pt-px"
+      />
+    );
+  } else if (status === MessageStatus.Pending) {
+    statusTitle = 'Pending';
+    statusIcon = (
+      <span
+        className="block h-3.5 w-3.5 animate-spin rounded-full border-[1.5px]"
+        style={{
+          borderColor: `${Color.primaryDark}33`,
+          borderTopColor: Color.primaryDark,
+        }}
+        title={statusTitle}
       />
     );
   }
@@ -230,7 +364,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
       >
-        {getHumanReadableTimeString(origin.timestamp)}
+        <RelativeTime timestamp={origin.timestamp} />
       </LinkCell>
       <LinkCell
         path={detailPath}
@@ -272,10 +406,20 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         tdClasses="w-8"
         onNavigateIntent={primeDetailPage}
       >
-        {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
+        {statusIcon && (
+          <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
+            {statusIcon}
+          </span>
+        )}
       </LinkCell>
     </>
   );
+});
+
+const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
+  useContext(RelativeTimeContext);
+
+  return <>{getHumanReadableTimeString(timestamp)}</>;
 });
 
 function LinkCell({
