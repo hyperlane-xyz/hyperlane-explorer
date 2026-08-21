@@ -72,10 +72,12 @@ describe('parseExplorerEvent', () => {
       destination_block_height: '117195539',
       destination_tx_nonce: '103594',
     };
-    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: delivered }))).toEqual({
-      type: 'message_upsert',
-      data: delivered,
-    });
+    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: delivered }))).toEqual(
+      {
+        type: 'message_upsert',
+        data: delivered,
+      },
+    );
   });
 
   it('rejects malformed message upserts', () => {
