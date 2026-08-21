@@ -183,7 +183,7 @@ export function MessageTable({
                   isFetching && 'blur-xs'
                 } ${
                   isInserted ? 'motion-safe:animate-live-message-insert bg-primary-50' : ''
-                } ${isDelivered ? 'bg-green-100' : ''} transition-all duration-500`}
+                } ${isDelivered ? 'bg-green-25' : ''} transition-all duration-500`}
               >
                 <MessageSummaryRow
                   message={m}
