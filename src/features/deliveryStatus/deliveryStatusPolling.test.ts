@@ -1,4 +1,7 @@
-import { shouldUseDeliveryStatusPolling } from './deliveryStatusPolling';
+import {
+  getDeliveryStatusRefetchInterval,
+  shouldUseDeliveryStatusPolling,
+} from './deliveryStatusPolling';
 
 describe('shouldUseDeliveryStatusPolling', () => {
   it('polls PI messages while the websocket is connected', () => {
@@ -10,5 +13,12 @@ describe('shouldUseDeliveryStatusPolling', () => {
     expect(shouldUseDeliveryStatusPolling(false, 'connecting')).toBe(true);
     expect(shouldUseDeliveryStatusPolling(false, 'disconnected')).toBe(true);
     expect(shouldUseDeliveryStatusPolling(false, 'unavailable')).toBe(true);
+  });
+});
+
+describe('getDeliveryStatusRefetchInterval', () => {
+  it('suppresses only subsequent scraped-message checks while live updates are connected', () => {
+    expect(getDeliveryStatusRefetchInterval(false, false, 'connected')).toBe(false);
+    expect(getDeliveryStatusRefetchInterval(false, false, 'disconnected')).toBe(10_000);
   });
 });

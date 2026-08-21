@@ -18,7 +18,10 @@ import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { config } from '../consts/config';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
 import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
-import { ExplorerEventsProvider } from '../features/messages/queries/useLiveMessages';
+import {
+  ExplorerEventsProvider,
+  shouldEnableExplorerEvents,
+} from '../features/messages/queries/ExplorerEventsProvider';
 
 import '../styles/global.css';
 
@@ -103,7 +106,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
   const appContent = (
     <QueryClientProvider client={reactQueryClient}>
       <UrqlProvider value={urqlClient}>
-        <ExplorerEventsProvider>
+        <ExplorerEventsProvider enabled={shouldEnableExplorerEvents(router.pathname)}>
           <AppLayout pathName={router.pathname}>
             {pendingRoute ? (
               getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />

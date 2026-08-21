@@ -164,7 +164,27 @@ module.exports = {
         xs: '3px',
       },
       animation: {
+        'live-message-insert': 'live-message-insert 900ms ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;',
+      },
+      keyframes: {
+        'live-message-insert': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(-10px)',
+            boxShadow: 'inset 3px 0 0 #1a0a28',
+          },
+          '35%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+            boxShadow: 'inset 3px 0 0 #1a0a28',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+            boxShadow: 'inset 0 0 0 transparent',
+          },
+        },
       },
       backgroundImage: ({ theme }) => ({
         'app-gradient': `radial-gradient(81.94% 51.02% at 50% 100%, ${theme('colors.primary.100')} 0%, ${theme('colors.cream.300')} 100%)`,

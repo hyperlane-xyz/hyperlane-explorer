@@ -6,3 +6,11 @@ export function shouldUseDeliveryStatusPolling(
 ) {
   return !!isPiMsg || connectionState !== 'connected';
 }
+
+export function getDeliveryStatusRefetchInterval(
+  isDelivered: boolean,
+  isPiMsg: boolean | undefined,
+  connectionState: ExplorerConnectionState,
+) {
+  return isDelivered || !shouldUseDeliveryStatusPolling(isPiMsg, connectionState) ? false : 10_000;
+}

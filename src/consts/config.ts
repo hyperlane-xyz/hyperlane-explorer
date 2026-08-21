@@ -1,7 +1,9 @@
+import { logger } from '../utils/logger';
+
 const isDevMode = process.env.NODE_ENV === 'development';
 const version = process.env.NEXT_PUBLIC_VERSION ?? null;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://explorer-api.hyperlane.xyz/graphql';
-const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? graphqlUrlToWsUrl(apiUrl);
+const wsUrl = resolveWsUrl(process.env.NEXT_PUBLIC_WS_URL, apiUrl);
 const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
 const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
 const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
@@ -34,15 +36,26 @@ export const unscrapedChainsInDb = ['proteustestnet'];
 
 export const debugIgnoredChains = ['treasure', 'treasuretopaz'];
 
-function graphqlUrlToWsUrl(url: string): string | null {
+export function resolveWsUrl(override: string | undefined, graphqlUrl: string): string | null {
+  const url = override ?? graphqlUrl;
   try {
     const parsed = new URL(url);
-    parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-    parsed.pathname = '/messages';
-    parsed.search = '';
-    parsed.hash = '';
+    if (override) {
+      if (!['ws:', 'wss:'].includes(parsed.protocol) || parsed.hash) {
+        throw new Error('NEXT_PUBLIC_WS_URL must use ws/wss and must not contain a fragment');
+      }
+    } else {
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('NEXT_PUBLIC_API_URL must use http/https');
+      }
+      parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+      parsed.pathname = '/messages';
+      parsed.search = '';
+      parsed.hash = '';
+    }
     return parsed.toString();
-  } catch {
+  } catch (error) {
+    logger.error('Invalid Explorer websocket configuration', error);
     return null;
   }
 }

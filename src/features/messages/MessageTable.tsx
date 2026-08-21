@@ -27,6 +27,7 @@ import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString } from '../../utils/time';
+import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
@@ -155,10 +156,7 @@ export function MessageTable({
     [],
   );
 
-  useEffect(() => {
-    const timer = setInterval(() => setTimeRefreshKey((key) => key + 1), TIME_SENT_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, []);
+  useVisibleInterval(() => setTimeRefreshKey((key) => key + 1), TIME_SENT_REFRESH_MS);
 
   return (
     <RelativeTimeContext.Provider value={timeRefreshKey}>
@@ -184,8 +182,8 @@ export function MessageTable({
                 className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
                   isFetching && 'blur-xs'
                 } ${
-                  isInserted ? 'bg-primary-50 live-message-insert' : ''
-                } ${isDelivered ? 'bg-[#dcfce7]' : ''} transition-all duration-500`}
+                  isInserted ? 'motion-safe:animate-live-message-insert bg-primary-50' : ''
+                } ${isDelivered ? 'bg-green-100' : ''} transition-all duration-500`}
               >
                 <MessageSummaryRow
                   message={m}
@@ -198,29 +196,6 @@ export function MessageTable({
           })}
         </tbody>
       </table>
-      <style jsx global>{`
-        @keyframes live-message-insert {
-          0% {
-            opacity: 0;
-            transform: translateY(-10px);
-            box-shadow: inset 3px 0 0 ${Color.primaryDark};
-          }
-          35% {
-            opacity: 1;
-            transform: translateY(0);
-            box-shadow: inset 3px 0 0 ${Color.primaryDark};
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-            box-shadow: inset 0 0 0 transparent;
-          }
-        }
-
-        .live-message-insert {
-          animation: live-message-insert 900ms ease-out;
-        }
-      `}</style>
     </RelativeTimeContext.Provider>
   );
 }

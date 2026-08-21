@@ -1,7 +1,12 @@
 import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
-import { messageMatchesSearchFilters, messageMatchesWarpRoute } from './useMessageQuery';
+import {
+  getSearchMetadataState,
+  messageMatchesSearchFilters,
+  messageMatchesWarpRoute,
+  shouldUseMessageQueryCache,
+} from './useMessageQuery';
 
 const ORIGIN_DOMAIN = 1;
 const DEST_DOMAIN = 10;
@@ -151,5 +156,28 @@ describe('message query caching', () => {
         cached: false,
       }).query,
     ).not.toContain('@cached');
+  });
+
+  it('only bypasses server caching while live updates are connected', () => {
+    expect(shouldUseMessageQueryCache('connected')).toBe(false);
+    expect(shouldUseMessageQueryCache('connecting')).toBe(true);
+    expect(shouldUseMessageQueryCache('disconnected')).toBe(true);
+    expect(shouldUseMessageQueryCache('unavailable')).toBe(true);
+  });
+});
+
+describe('search metadata readiness', () => {
+  it('propagates metadata query errors without leaving the search loading', () => {
+    expect(getSearchMetadataState(0, 0, false, true)).toEqual({
+      isReady: false,
+      isError: true,
+    });
+  });
+
+  it('treats a completed empty domains response as an error', () => {
+    expect(getSearchMetadataState(0, 0, false, false)).toEqual({
+      isReady: false,
+      isError: true,
+    });
   });
 });

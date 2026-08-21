@@ -17,7 +17,12 @@ import {
   parseMessageStubEntry,
   parseMessageStubResult,
 } from './parse';
-import { useLatestMessageRows, useMessageRowSubscription } from './useLiveMessages';
+import {
+  type ExplorerConnectionState,
+  useExplorerConnectionState,
+  useLatestMessageRows,
+  useMessageRowSubscription,
+} from './useLiveMessages';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
@@ -31,6 +36,23 @@ const PENDING_FILTER_BATCH_SIZE = 500;
 export function isValidSearchQuery(input: string) {
   if (!input) return false;
   return !!searchValueToPostgresBytea(input);
+}
+
+export function getSearchMetadataState(
+  scrapedDomainCount: number,
+  mainnetDomainCount: number,
+  isFetching: boolean,
+  isError: boolean,
+) {
+  const isReady = scrapedDomainCount > 0 && mainnetDomainCount > 0;
+  return {
+    isReady,
+    isError: isError || (!isFetching && scrapedDomainCount === 0),
+  };
+}
+
+export function shouldUseMessageQueryCache(connectionState: ExplorerConnectionState) {
+  return connectionState !== 'connected';
 }
 
 // A message belongs to the warp route if it was sent from the route's token on
@@ -107,9 +129,14 @@ export function useMessageSearchQuery(
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
 ) {
-  const { scrapedDomains: scrapedChains } = useScrapedDomains();
+  const {
+    scrapedDomains: scrapedChains,
+    isFetching: isScrapedDomainsFetching,
+    isError: isScrapedDomainsError,
+  } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
-  const { chains } = useScrapedChains(chainMetadataResolver);
+  const { chains, isError: isScrapedChainsError } = useScrapedChains(chainMetadataResolver);
+  const explorerConnectionState = useExplorerConnectionState();
   const mainnetDomainIds = useMemo(
     () =>
       Object.values(chains)
@@ -117,7 +144,12 @@ export function useMessageSearchQuery(
         .map((chain) => chain.domainId),
     [chains],
   );
-  const isSearchMetadataReady = scrapedChains.length > 0 && mainnetDomainIds.length > 0;
+  const { isReady: isSearchMetadataReady, isError: isSearchMetadataError } = getSearchMetadataState(
+    scrapedChains.length,
+    mainnetDomainIds.length,
+    isScrapedDomainsFetching,
+    isScrapedDomainsError || isScrapedChainsError,
+  );
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
@@ -199,7 +231,7 @@ export function useMessageSearchQuery(
     dbStatusFilter,
     warpAddresses,
     isPendingFilter,
-    { cached: !liveSearchEnabled },
+    { cached: shouldUseMessageQueryCache(explorerConnectionState) },
   );
 
   // Execute query
@@ -210,7 +242,7 @@ export function useMessageSearchQuery(
     requestPolicy: 'cache-and-network',
   });
   const { data, fetching, error } = result;
-  const isFetching = isValidInput && (!isSearchMetadataReady || fetching);
+  const isFetching = isValidInput && !isSearchMetadataError && (!isSearchMetadataReady || fetching);
   const refresh = useCallback(() => {
     if (!query || !isValidInput) return;
     reexecuteQuery({ requestPolicy: 'network-only' });
@@ -283,7 +315,7 @@ export function useMessageSearchQuery(
     isValidOrigin,
     isValidDestination,
     isFetching,
-    isError: !!error,
+    isError: isSearchMetadataError || !!error,
     hasRun: isSearchMetadataReady && !!data,
     isMessagesFound,
     messageList,
@@ -294,6 +326,7 @@ export function useMessageSearchQuery(
 export function useMessageQuery({ messageId, pause }: { messageId: string; pause: boolean }) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
+  const explorerConnectionState = useExplorerConnectionState();
 
   // Assemble GraphQL Query
   const { query, variables } = buildMessageQuery(
@@ -302,7 +335,7 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     1,
     false,
     undefined,
-    { cached: false },
+    { cached: shouldUseMessageQueryCache(explorerConnectionState) },
   );
 
   // Execute query

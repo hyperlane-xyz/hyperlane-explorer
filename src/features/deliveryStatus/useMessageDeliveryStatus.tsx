@@ -12,7 +12,7 @@ import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { useExplorerConnectionState } from '../messages/queries/useLiveMessages';
-import { shouldUseDeliveryStatusPolling } from './deliveryStatusPolling';
+import { getDeliveryStatusRefetchInterval } from './deliveryStatusPolling';
 
 type DeliveryStatusQueryMessage = MessageStub &
   Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
@@ -100,11 +100,12 @@ export function useMessageDeliveryStatus({
     },
     retry: false,
     refetchInterval: (query) =>
-      query.state.data?.message.status === MessageStatus.Delivered ? false : 10_000,
-    enabled:
-      enabled &&
-      !!multiProvider &&
-      shouldUseDeliveryStatusPolling(message.isPiMsg, explorerConnectionState),
+      getDeliveryStatusRefetchInterval(
+        query.state.data?.message.status === MessageStatus.Delivered,
+        message.isPiMsg,
+        explorerConnectionState,
+      ),
+    enabled: enabled && !!multiProvider,
   });
 
   useEffect(() => {
