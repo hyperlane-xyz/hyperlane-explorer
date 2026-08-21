@@ -18,6 +18,7 @@ export function useScrapedDomains() {
     pause: !!scrapedDomains?.length,
   });
   const { data, fetching: isFetching, error } = result;
+  const resolvedScrapedDomains = scrapedDomains.length ? scrapedDomains : (data?.domain ?? []);
 
   useEffect(() => {
     if (!data) return;
@@ -25,14 +26,15 @@ export function useScrapedDomains() {
   }, [data, error, setScrapedDomains]);
 
   return {
-    scrapedDomains,
+    scrapedDomains: resolvedScrapedDomains,
     isFetching,
     isError: !!error,
+    hasRun: !!data || !!error || resolvedScrapedDomains.length > 0,
   };
 }
 
 export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
-  const { scrapedDomains, isFetching, isError } = useScrapedDomains();
+  const { scrapedDomains, isFetching, isError, hasRun } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
 
   const { chains } = useMemo(() => {
@@ -45,7 +47,7 @@ export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
     return { chains: scrapedChains };
   }, [chainMetadataResolver, chainMetadata, scrapedDomains]);
 
-  return { chains, isFetching, isError };
+  return { chains, isFetching, isError, hasRun };
 }
 
 // TODO: Remove once all chains in the DB are scraped

@@ -41,13 +41,13 @@ export function isValidSearchQuery(input: string) {
 export function getSearchMetadataState(
   scrapedDomainCount: number,
   mainnetDomainCount: number,
-  isFetching: boolean,
+  hasRun: boolean,
   isError: boolean,
 ) {
   const isReady = scrapedDomainCount > 0 && mainnetDomainCount > 0;
   return {
     isReady,
-    isError: isError || (!isFetching && scrapedDomainCount === 0),
+    isError: isError || (hasRun && scrapedDomainCount === 0),
   };
 }
 
@@ -131,8 +131,8 @@ export function useMessageSearchQuery(
 ) {
   const {
     scrapedDomains: scrapedChains,
-    isFetching: isScrapedDomainsFetching,
     isError: isScrapedDomainsError,
+    hasRun: hasScrapedDomainsRun,
   } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
   const { chains, isError: isScrapedChainsError } = useScrapedChains(chainMetadataResolver);
@@ -147,7 +147,7 @@ export function useMessageSearchQuery(
   const { isReady: isSearchMetadataReady, isError: isSearchMetadataError } = getSearchMetadataState(
     scrapedChains.length,
     mainnetDomainIds.length,
-    isScrapedDomainsFetching,
+    hasScrapedDomainsRun,
     isScrapedDomainsError || isScrapedChainsError,
   );
 

@@ -168,16 +168,23 @@ describe('message query caching', () => {
 
 describe('search metadata readiness', () => {
   it('propagates metadata query errors without leaving the search loading', () => {
-    expect(getSearchMetadataState(0, 0, false, true)).toEqual({
+    expect(getSearchMetadataState(0, 0, true, true)).toEqual({
       isReady: false,
       isError: true,
     });
   });
 
   it('treats a completed empty domains response as an error', () => {
-    expect(getSearchMetadataState(0, 0, false, false)).toEqual({
+    expect(getSearchMetadataState(0, 0, true, false)).toEqual({
       isReady: false,
       isError: true,
+    });
+  });
+
+  it('keeps loading before the domains query has completed', () => {
+    expect(getSearchMetadataState(0, 0, false, false)).toEqual({
+      isReady: false,
+      isError: false,
     });
   });
 });

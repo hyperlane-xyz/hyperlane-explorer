@@ -192,71 +192,41 @@ function isMessageEntry(value: unknown): value is MessageEntry {
     'origin_tx_recipient',
     'origin_block_hash',
     'origin_mailbox',
-    'destination_mailbox',
-    'destination_tx_recipient',
   ];
-  const numberFields = [
+  const scalarFields = [
     'id',
     'nonce',
     'origin_chain_id',
-    'origin_domain_id',
     'origin_tx_id',
     'destination_chain_id',
-    'destination_domain_id',
-    'origin_block_height',
-    'origin_block_id',
-    'origin_tx_cumulative_gas_used',
-    'origin_tx_effective_gas_price',
-    'origin_tx_gas_limit',
-    'origin_tx_gas_price',
-    'origin_tx_gas_used',
-    'origin_tx_max_fee_per_gas',
-    'origin_tx_max_priority_fee_per_gas',
-    'origin_tx_nonce',
     'total_gas_amount',
     'total_payment',
     'num_payments',
   ];
-  const nullableStringFields = [
-    'message_body',
-    'delivery_occurred_at',
-    'delivery_latency',
-    'destination_tx_hash',
-    'destination_tx_sender',
-    'destination_block_hash',
-  ];
-  const nullableNumberFields = [
-    'destination_tx_id',
-    'destination_block_height',
-    'destination_block_id',
-    'destination_tx_cumulative_gas_used',
-    'destination_tx_effective_gas_price',
-    'destination_tx_gas_limit',
-    'destination_tx_gas_price',
-    'destination_tx_gas_used',
-    'destination_tx_max_fee_per_gas',
-    'destination_tx_max_priority_fee_per_gas',
-    'destination_tx_nonce',
-  ];
   return (
     stringFields.every((field) => typeof entry[field] === 'string') &&
-    numberFields.every((field) => typeof entry[field] === 'number') &&
-    nullableStringFields.every(
-      (field) => entry[field] === null || typeof entry[field] === 'string',
-    ) &&
-    nullableNumberFields.every(
-      (field) => entry[field] === null || typeof entry[field] === 'number',
-    ) &&
+    scalarFields.every((field) => isNumericScalar(entry[field])) &&
+    typeof entry.origin_domain_id === 'number' &&
+    typeof entry.destination_domain_id === 'number' &&
+    (entry.message_body === null || typeof entry.message_body === 'string') &&
     typeof entry.is_delivered === 'boolean' &&
     !Number.isNaN(Date.parse(entry.send_occurred_at as string)) &&
     (!entry.is_delivered ||
       (typeof entry.delivery_occurred_at === 'string' &&
+        typeof entry.destination_mailbox === 'string' &&
         typeof entry.destination_tx_hash === 'string' &&
         typeof entry.destination_tx_sender === 'string' &&
         typeof entry.destination_tx_recipient === 'string' &&
         typeof entry.destination_block_hash === 'string' &&
-        typeof entry.destination_block_height === 'number' &&
-        typeof entry.destination_tx_nonce === 'number'))
+        isNumericScalar(entry.destination_block_height) &&
+        isNumericScalar(entry.destination_tx_nonce)))
+  );
+}
+
+function isNumericScalar(value: unknown) {
+  return (
+    (typeof value === 'number' && Number.isFinite(value)) ||
+    (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))
   );
 }
 
