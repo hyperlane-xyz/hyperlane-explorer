@@ -47,7 +47,7 @@ export function getSearchMetadataState(
   const isReady = scrapedDomainCount > 0 && mainnetDomainCount > 0;
   return {
     isReady,
-    isError: isError || (hasRun && scrapedDomainCount === 0),
+    isError: isError || (hasRun && (!scrapedDomainCount || !mainnetDomainCount)),
   };
 }
 
@@ -129,13 +129,13 @@ export function useMessageSearchQuery(
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
 ) {
-  const {
-    scrapedDomains: scrapedChains,
-    isError: isScrapedDomainsError,
-    hasRun: hasScrapedDomainsRun,
-  } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
-  const { chains, isError: isScrapedChainsError } = useScrapedChains(chainMetadataResolver);
+  const {
+    chains,
+    scrapedDomains: scrapedChains,
+    isError: isSearchMetadataQueryError,
+    hasRun: hasSearchMetadataRun,
+  } = useScrapedChains(chainMetadataResolver);
   const explorerConnectionState = useExplorerConnectionState();
   const mainnetDomainIds = useMemo(
     () =>
@@ -147,8 +147,8 @@ export function useMessageSearchQuery(
   const { isReady: isSearchMetadataReady, isError: isSearchMetadataError } = getSearchMetadataState(
     scrapedChains.length,
     mainnetDomainIds.length,
-    hasScrapedDomainsRun,
-    isScrapedDomainsError || isScrapedChainsError,
+    hasSearchMetadataRun,
+    isSearchMetadataQueryError,
   );
 
   const hasInput = !!sanitizedInput;

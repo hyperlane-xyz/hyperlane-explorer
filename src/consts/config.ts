@@ -37,10 +37,11 @@ export const unscrapedChainsInDb = ['proteustestnet'];
 export const debugIgnoredChains = ['treasure', 'treasuretopaz'];
 
 export function resolveWsUrl(override: string | undefined, graphqlUrl: string): string | null {
-  const url = override ?? graphqlUrl;
+  const normalizedOverride = override?.trim() || undefined;
+  const url = normalizedOverride ?? graphqlUrl;
   try {
     const parsed = new URL(url);
-    if (override) {
+    if (normalizedOverride) {
       if (!['ws:', 'wss:'].includes(parsed.protocol) || parsed.hash) {
         throw new Error('NEXT_PUBLIC_WS_URL must use ws/wss and must not contain a fragment');
       }

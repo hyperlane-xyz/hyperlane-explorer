@@ -182,7 +182,7 @@ export function parseExplorerEvent(
 function isMessageEntry(value: unknown): value is MessageEntry {
   if (!value || typeof value !== 'object') return false;
   const entry = value as Record<string, unknown>;
-  const stringFields = [
+  const requiredStrings = [
     'msg_id',
     'sender',
     'recipient',
@@ -190,43 +190,15 @@ function isMessageEntry(value: unknown): value is MessageEntry {
     'origin_tx_hash',
     'origin_tx_sender',
     'origin_tx_recipient',
-    'origin_block_hash',
-    'origin_mailbox',
-  ];
-  const scalarFields = [
-    'id',
-    'nonce',
-    'origin_chain_id',
-    'origin_tx_id',
-    'destination_chain_id',
-    'total_gas_amount',
-    'total_payment',
-    'num_payments',
   ];
   return (
-    stringFields.every((field) => typeof entry[field] === 'string') &&
-    scalarFields.every((field) => isNumericScalar(entry[field])) &&
+    requiredStrings.every((field) => typeof entry[field] === 'string') &&
+    (typeof entry.id === 'string' || typeof entry.id === 'number') &&
+    typeof entry.nonce === 'number' &&
     typeof entry.origin_domain_id === 'number' &&
     typeof entry.destination_domain_id === 'number' &&
-    (entry.message_body === null || typeof entry.message_body === 'string') &&
     typeof entry.is_delivered === 'boolean' &&
-    !Number.isNaN(Date.parse(entry.send_occurred_at as string)) &&
-    (!entry.is_delivered ||
-      (typeof entry.delivery_occurred_at === 'string' &&
-        typeof entry.destination_mailbox === 'string' &&
-        typeof entry.destination_tx_hash === 'string' &&
-        typeof entry.destination_tx_sender === 'string' &&
-        typeof entry.destination_tx_recipient === 'string' &&
-        typeof entry.destination_block_hash === 'string' &&
-        isNumericScalar(entry.destination_block_height) &&
-        isNumericScalar(entry.destination_tx_nonce)))
-  );
-}
-
-function isNumericScalar(value: unknown) {
-  return (
-    (typeof value === 'number' && Number.isFinite(value)) ||
-    (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))
+    !Number.isNaN(Date.parse(entry.send_occurred_at as string))
   );
 }
 

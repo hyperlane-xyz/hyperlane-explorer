@@ -36,6 +36,7 @@ export function useScrapedDomains() {
 export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
   const { scrapedDomains, isFetching, isError, hasRun } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
+  const isChainMetadataLoaded = useStore((s) => s.isChainMetadataLoaded);
 
   const { chains } = useMemo(() => {
     const scrapedChains = objFilter(
@@ -47,7 +48,13 @@ export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
     return { chains: scrapedChains };
   }, [chainMetadataResolver, chainMetadata, scrapedDomains]);
 
-  return { chains, isFetching, isError, hasRun };
+  return {
+    chains,
+    scrapedDomains,
+    isFetching,
+    isError,
+    hasRun: hasRun && isChainMetadataLoaded,
+  };
 }
 
 // TODO: Remove once all chains in the DB are scraped

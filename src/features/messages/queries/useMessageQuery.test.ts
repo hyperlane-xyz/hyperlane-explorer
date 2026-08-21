@@ -181,6 +181,10 @@ describe('search metadata readiness', () => {
     });
   });
 
+  it('treats completed metadata without mainnet domains as an error', () => {
+    expect(getSearchMetadataState(1, 0, true, false).isError).toBe(true);
+  });
+
   it('keeps loading before the domains query has completed', () => {
     expect(getSearchMetadataState(0, 0, false, false)).toEqual({
       isReady: false,

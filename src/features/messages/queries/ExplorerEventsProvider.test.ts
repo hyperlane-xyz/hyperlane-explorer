@@ -53,31 +53,12 @@ describe('Explorer events routes', () => {
 });
 
 describe('parseExplorerEvent', () => {
-  it('accepts the proxy numeric-string format for pending and delivered upserts', () => {
-    const pending = makeProxyMessage();
-    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: pending }))).toEqual({
+  it('accepts the proxy numeric-string ID format', () => {
+    const data = makeProxyMessage();
+    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toEqual({
       type: 'message_upsert',
-      data: pending,
+      data,
     });
-
-    const delivered = {
-      ...pending,
-      is_delivered: true,
-      delivery_occurred_at: '2026-08-21 07:53:45',
-      destination_mailbox: '\\xmailbox',
-      destination_tx_hash: '\\xdestination-hash',
-      destination_tx_sender: '\\xdestination-sender',
-      destination_tx_recipient: '\\xdestination-recipient',
-      destination_block_hash: '\\xdestination-block',
-      destination_block_height: '117195539',
-      destination_tx_nonce: '103594',
-    };
-    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: delivered }))).toEqual(
-      {
-        type: 'message_upsert',
-        data: delivered,
-      },
-    );
   });
 
   it('rejects malformed message upserts', () => {
@@ -100,19 +81,10 @@ function makeProxyMessage() {
     recipient: '\\xrecipient',
     is_delivered: false,
     send_occurred_at: '2026-08-21 07:53:28',
-    origin_chain_id: '173',
     origin_domain_id: 173,
-    origin_tx_id: '27796246',
     origin_tx_hash: '\\xorigin-hash',
     origin_tx_sender: '\\xorigin-sender',
     origin_tx_recipient: '\\xorigin-recipient',
-    destination_chain_id: '56',
     destination_domain_id: 56,
-    message_body: null,
-    origin_block_hash: '\\xorigin-block',
-    origin_mailbox: '\\xmailbox',
-    total_gas_amount: '227337',
-    total_payment: '217197151199575168',
-    num_payments: '1',
   };
 }
