@@ -55,6 +55,10 @@ export function shouldUseMessageQueryCache(connectionState: ExplorerConnectionSt
   return connectionState !== 'connected';
 }
 
+export function shouldPollMessageSearch(isLiveConnected: boolean, hasFilters: boolean) {
+  return !isLiveConnected || hasFilters;
+}
+
 // A message belongs to the warp route if it was sent from the route's token on
 // the origin chain or received by it on the destination chain. eqAddress is
 // protocol-aware so this stays correct across EVM/Sealevel/Cosmos/etc.
@@ -306,8 +310,8 @@ export function useMessageSearchQuery(
   const isMessagesFound = messageList.length > 0;
 
   const poll = useCallback(() => {
-    if (!isLiveConnected) refresh();
-  }, [isLiveConnected, refresh]);
+    if (shouldPollMessageSearch(isLiveConnected, hasFilters)) refresh();
+  }, [hasFilters, isLiveConnected, refresh]);
   useVisibleInterval(poll, SEARCH_AUTO_REFRESH_DELAY);
 
   return {

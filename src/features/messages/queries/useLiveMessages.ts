@@ -49,7 +49,16 @@ export function useMessageRowSubscription(
     return subscribe(messageId, setRetainedMessageRow);
   }, [enabled, messageId, subscribe]);
 
-  const messageRow = selectSubscribedMessageRow(currentMessageRow, retainedMessageRow, messageId);
+  useEffect(() => {
+    if (connectionState !== 'connected') setRetainedMessageRow(null);
+  }, [connectionState]);
+
+  const messageRow = selectSubscribedMessageRow(
+    currentMessageRow,
+    retainedMessageRow,
+    messageId,
+    connectionState,
+  );
 
   return { connected: enabled && connectionState === 'connected', messageRow };
 }
@@ -58,7 +67,9 @@ export function selectSubscribedMessageRow(
   currentMessageRow: MessageEntry | null,
   retainedMessageRow: MessageEntry | null,
   messageId: string,
+  connectionState: ExplorerConnectionState,
 ) {
+  if (connectionState !== 'connected') return null;
   const retainedRowMatches = normalizeId(retainedMessageRow?.msg_id) === normalizeId(messageId);
   return currentMessageRow ?? (retainedRowMatches ? retainedMessageRow : null);
 }

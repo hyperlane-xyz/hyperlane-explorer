@@ -5,6 +5,7 @@ import {
   getSearchMetadataState,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
+  shouldPollMessageSearch,
   shouldUseMessageQueryCache,
 } from './useMessageQuery';
 
@@ -163,6 +164,14 @@ describe('message query caching', () => {
     expect(shouldUseMessageQueryCache('connecting')).toBe(true);
     expect(shouldUseMessageQueryCache('disconnected')).toBe(true);
     expect(shouldUseMessageQueryCache('unavailable')).toBe(true);
+  });
+});
+
+describe('message search polling', () => {
+  it('keeps a safety refresh for filtered live searches', () => {
+    expect(shouldPollMessageSearch(true, true)).toBe(true);
+    expect(shouldPollMessageSearch(true, false)).toBe(false);
+    expect(shouldPollMessageSearch(false, false)).toBe(true);
   });
 });
 

@@ -19,12 +19,18 @@ describe('selectSubscribedMessageRow', () => {
   it('retains a subscribed upsert after it leaves the bounded list overlay', () => {
     const delivered = { msg_id: '\\xabc' } as MessageEntry;
 
-    expect(selectSubscribedMessageRow(null, delivered, '0xabc')).toBe(delivered);
+    expect(selectSubscribedMessageRow(null, delivered, '0xabc', 'connected')).toBe(delivered);
   });
 
   it('does not retain a row from a previous subscription', () => {
     const delivered = { msg_id: '\\xabc' } as MessageEntry;
 
-    expect(selectSubscribedMessageRow(null, delivered, '0xdef')).toBeNull();
+    expect(selectSubscribedMessageRow(null, delivered, '0xdef', 'connected')).toBeNull();
+  });
+
+  it('drops a retained row while disconnected so GraphQL can become authoritative', () => {
+    const pending = { msg_id: '\\xabc' } as MessageEntry;
+
+    expect(selectSubscribedMessageRow(null, pending, '0xabc', 'disconnected')).toBeNull();
   });
 });
