@@ -5,7 +5,6 @@ import type { MessageStub, WarpRouteDetails } from '../../../types';
 import {
   computeFeeBps,
   countReceivedTransferRemotes,
-  isLockboxStandard,
   isSyntheticSameChainCcrMessage,
   parseIgpPaymentForMessage,
   parseSentTransferRemoteAmount,
@@ -13,6 +12,7 @@ import {
   parseTotalTokenPulledFromUser,
   resolveUserPullToken,
   sliceLogsForMessage,
+  usesWrappedCollateral,
 } from './fetchWarpFees';
 
 const erc20Iface = new utils.Interface([
@@ -196,15 +196,20 @@ describe('parseTotalTokenPulledFromUser', () => {
   });
 });
 
-describe('isLockboxStandard', () => {
+describe('usesWrappedCollateral', () => {
   it('is true for xERC20 lockbox standards', () => {
-    expect(isLockboxStandard(TokenStandard.EvmHypXERC20Lockbox)).toBe(true);
-    expect(isLockboxStandard(TokenStandard.EvmHypVSXERC20Lockbox)).toBe(true);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypXERC20Lockbox)).toBe(true);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypVSXERC20Lockbox)).toBe(true);
   });
 
-  it('is false for collateral / synthetic standards', () => {
-    expect(isLockboxStandard(TokenStandard.EvmHypCollateral)).toBe(false);
-    expect(isLockboxStandard(TokenStandard.EvmHypSynthetic)).toBe(false);
+  it('is true for ERC4626 vault-collateral standards', () => {
+    expect(usesWrappedCollateral(TokenStandard.EvmHypOwnerCollateral)).toBe(true);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypRebaseCollateral)).toBe(true);
+  });
+
+  it('is false for plain collateral / synthetic standards', () => {
+    expect(usesWrappedCollateral(TokenStandard.EvmHypCollateral)).toBe(false);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypSynthetic)).toBe(false);
   });
 });
 
