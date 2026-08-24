@@ -1,12 +1,13 @@
 import {
+  HypXERC20Lockbox__factory, // eslint-disable-line camelcase
   IERC20__factory, // eslint-disable-line camelcase
   InterchainGasPaymaster__factory, // eslint-disable-line camelcase
   Mailbox__factory, // eslint-disable-line camelcase
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
-import { PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
+import { LOCKBOX_STANDARDS, PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
 import { ProtocolType, fromWei, isEVMLike, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
-import { BigNumber, constants } from 'ethers';
+import { BigNumber, constants, providers } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
@@ -37,12 +38,20 @@ type RawLog = { address: string; topics: Array<string>; data: string };
 // All HypNative standards across protocols, from the SDK (matches Token.isHypNative()).
 const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIVE_STANDARD));
 
+// xERC20 lockbox standards (standard + Velodrome variants). Their
+// `collateralAddressOrDenom` points at the xERC20 lockbox, but the user pays
+// the lockbox's underlying wrapped ERC20 — see `resolveUserPullToken`.
+const LOCKBOX_STANDARD_SET = new Set<string>(LOCKBOX_STANDARDS);
+
 /**
  * Parse warp route fees from the origin transaction receipt.
  *
  * Two paths:
- *   - **ERC20 routes** (collateral / synthetic): fee = tokens pulled from user
- *     − `SentTransferRemote` amount, reversed through the token's scale.
+ *   - **ERC20 routes** (collateral / synthetic / xERC20 lockbox): fee = tokens
+ *     pulled from user − `SentTransferRemote` amount, reversed through the
+ *     token's scale. Lockbox routes pull the underlying wrapped ERC20, resolved
+ *     via `resolveUserPullToken` (their `collateralAddressOrDenom` is the
+ *     lockbox, not the token the user pays).
  *   - **Native routes** (`HypNative`): fee = (`tx.value` − `IGP.GasPayment.payment`)
  *     − `SentTransferRemote` amount. IGP is always excluded so it doesn't leak
  *     into "warp fee". Skipped for multi-send native txs since `tx.value`
@@ -122,9 +131,7 @@ export async function fetchWarpFees(
     : parseTotalTokenPulledFromUser(
         messageLogs,
         routerAddress,
-        // For collateral routes the ERC20 token differs from the router;
-        // for synthetic routes the router IS the ERC20 token.
-        warpRouteDetails.originToken.collateralAddressOrDenom ?? routerAddress,
+        await resolveUserPullToken(warpRouteDetails.originToken, routerAddress, provider),
       );
   if (!totalTransferred || totalTransferred.isZero()) return null;
 
@@ -146,6 +153,31 @@ export async function fetchWarpFees(
     tokenSymbol: symbol ?? 'tokens',
     totalSent: fromWei(totalTransferred.toString(), decimals),
   };
+}
+
+export function isLockboxStandard(standard: string): boolean {
+  return LOCKBOX_STANDARD_SET.has(standard);
+}
+
+/**
+ * The ERC20 the user actually pays into the route.
+ *
+ *   - Collateral routes: `collateralAddressOrDenom` (differs from the router).
+ *   - Synthetic routes: the router itself is the ERC20.
+ *   - xERC20 lockbox routes: `collateralAddressOrDenom` is the lockbox, but the
+ *     user pays its underlying wrapped ERC20 (e.g. USDT). Scanning the lockbox
+ *     address finds no user `Transfer` and hides the fee, so read the router's
+ *     `wrappedToken()` (it is a `HypXERC20Lockbox`).
+ */
+export async function resolveUserPullToken(
+  originToken: WarpRouteDetails['originToken'],
+  routerAddress: string,
+  provider: providers.Provider,
+): Promise<string> {
+  if (isLockboxStandard(originToken.standard)) {
+    return HypXERC20Lockbox__factory.connect(routerAddress, provider).wrappedToken();
+  }
+  return originToken.collateralAddressOrDenom ?? routerAddress;
 }
 
 /**
