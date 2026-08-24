@@ -1,12 +1,17 @@
 import {
+  HypERC20Collateral__factory, // eslint-disable-line camelcase
   IERC20__factory, // eslint-disable-line camelcase
   InterchainGasPaymaster__factory, // eslint-disable-line camelcase
   Mailbox__factory, // eslint-disable-line camelcase
   TokenRouter__factory, // eslint-disable-line camelcase
 } from '@hyperlane-xyz/core';
-import { PROTOCOL_TO_HYP_NATIVE_STANDARD } from '@hyperlane-xyz/sdk';
+import {
+  ERC4626_COLLATERAL_STANDARDS,
+  LOCKBOX_STANDARDS,
+  PROTOCOL_TO_HYP_NATIVE_STANDARD,
+} from '@hyperlane-xyz/sdk';
 import { ProtocolType, fromWei, isEVMLike, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
-import { BigNumber, constants } from 'ethers';
+import { BigNumber, constants, providers } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
@@ -37,12 +42,25 @@ type RawLog = { address: string; topics: Array<string>; data: string };
 // All HypNative standards across protocols, from the SDK (matches Token.isHypNative()).
 const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIVE_STANDARD));
 
+// Standards whose `collateralAddressOrDenom` is a wrapper (xERC20 lockbox or
+// ERC4626 vault), not the ERC20 the user actually pays. For these the user
+// pull and the fee are in the router's underlying `wrappedToken()` — see
+// `resolveUserPullToken`.
+const WRAPPED_COLLATERAL_STANDARDS = new Set<string>([
+  ...LOCKBOX_STANDARDS,
+  ...ERC4626_COLLATERAL_STANDARDS,
+]);
+
 /**
  * Parse warp route fees from the origin transaction receipt.
  *
  * Two paths:
- *   - **ERC20 routes** (collateral / synthetic): fee = tokens pulled from user
- *     − `SentTransferRemote` amount, reversed through the token's scale.
+ *   - **ERC20 routes** (collateral / synthetic / xERC20 lockbox / ERC4626 vault):
+ *     fee = tokens pulled from user − `SentTransferRemote` amount, reversed
+ *     through the token's scale. Lockbox and vault-collateral routes pull the
+ *     underlying wrapped ERC20, resolved via `resolveUserPullToken` (their
+ *     `collateralAddressOrDenom` is the lockbox / vault, not the token the user
+ *     pays).
  *   - **Native routes** (`HypNative`): fee = (`tx.value` − `IGP.GasPayment.payment`)
  *     − `SentTransferRemote` amount. IGP is always excluded so it doesn't leak
  *     into "warp fee". Skipped for multi-send native txs since `tx.value`
@@ -122,9 +140,7 @@ export async function fetchWarpFees(
     : parseTotalTokenPulledFromUser(
         messageLogs,
         routerAddress,
-        // For collateral routes the ERC20 token differs from the router;
-        // for synthetic routes the router IS the ERC20 token.
-        warpRouteDetails.originToken.collateralAddressOrDenom ?? routerAddress,
+        await resolveUserPullToken(warpRouteDetails.originToken, routerAddress, provider),
       );
   if (!totalTransferred || totalTransferred.isZero()) return null;
 
@@ -146,6 +162,32 @@ export async function fetchWarpFees(
     tokenSymbol: symbol ?? 'tokens',
     totalSent: fromWei(totalTransferred.toString(), decimals),
   };
+}
+
+export function usesWrappedCollateral(standard: string): boolean {
+  return WRAPPED_COLLATERAL_STANDARDS.has(standard);
+}
+
+/**
+ * The ERC20 the user actually pays into the route.
+ *
+ *   - Collateral routes: `collateralAddressOrDenom` (differs from the router).
+ *   - Synthetic routes: the router itself is the ERC20.
+ *   - xERC20 lockbox and ERC4626 vault-collateral routes: `collateralAddressOrDenom`
+ *     is the lockbox / vault, but the user pays (and is charged the fee in) the
+ *     router's underlying `wrappedToken()` (e.g. USDT). Scanning the wrapper
+ *     address finds no user `Transfer` and hides the fee, so read `wrappedToken()`
+ *     from the router (every affected router extends `HypERC20Collateral`).
+ */
+export async function resolveUserPullToken(
+  originToken: WarpRouteDetails['originToken'],
+  routerAddress: string,
+  provider: providers.Provider,
+): Promise<string> {
+  if (usesWrappedCollateral(originToken.standard)) {
+    return HypERC20Collateral__factory.connect(routerAddress, provider).wrappedToken();
+  }
+  return originToken.collateralAddressOrDenom ?? routerAddress;
 }
 
 /**
