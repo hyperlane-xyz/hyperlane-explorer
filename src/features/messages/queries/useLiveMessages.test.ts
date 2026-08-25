@@ -1,5 +1,28 @@
 import type { MessageEntry } from './fragments';
-import { selectSubscribedMessageRow, shouldRefreshAfterReconnect } from './useLiveMessages';
+import {
+  filterLatestMessageRows,
+  selectSubscribedMessageRow,
+  shouldRefreshAfterReconnect,
+} from './useLiveMessages';
+
+describe('filterLatestMessageRows', () => {
+  it('excludes a testnet upsert from a mainnet-scoped pending search', () => {
+    const mainnet = {
+      msg_id: '\\xmainnet',
+      origin_domain_id: 1,
+      destination_domain_id: 10,
+      send_occurred_at: '2026-08-25T10:00:00Z',
+    } as MessageEntry;
+    const baseSepolia = {
+      msg_id: '\\xtestnet',
+      origin_domain_id: 84532,
+      destination_domain_id: 11155111,
+      send_occurred_at: '2026-08-25T11:00:00Z',
+    } as MessageEntry;
+
+    expect(filterLatestMessageRows([baseSepolia, mainnet], [1, 10])).toEqual([mainnet]);
+  });
+});
 
 describe('shouldRefreshAfterReconnect', () => {
   it('refreshes when the initial connection becomes ready', () => {

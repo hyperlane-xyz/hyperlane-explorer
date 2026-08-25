@@ -3,6 +3,7 @@ import { adjustToUtcTime } from '../../../utils/time';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import {
   getSearchMetadataState,
+  getLiveMessageDomainIds,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
   shouldPollMessageSearch,
@@ -172,6 +173,19 @@ describe('message search polling', () => {
     expect(shouldPollMessageSearch(true, true)).toBe(true);
     expect(shouldPollMessageSearch(true, false)).toBe(false);
     expect(shouldPollMessageSearch(false, false)).toBe(true);
+  });
+});
+
+describe('live message domain scope', () => {
+  const mainnetDomains = [1, 10];
+
+  it('keeps generic filters scoped to mainnet', () => {
+    expect(getLiveMessageDomainIds(mainnetDomains, false, [])).toBe(mainnetDomains);
+  });
+
+  it('widens for identifier searches and explicit testnet domains', () => {
+    expect(getLiveMessageDomainIds(mainnetDomains, true, [])).toEqual([]);
+    expect(getLiveMessageDomainIds(mainnetDomains, false, [84532])).toEqual([]);
   });
 });
 

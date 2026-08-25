@@ -59,6 +59,15 @@ export function shouldPollMessageSearch(isLiveConnected: boolean, hasFilters: bo
   return !isLiveConnected || hasFilters;
 }
 
+export function getLiveMessageDomainIds(
+  mainnetDomainIds: number[],
+  hasIdentifierSearch: boolean,
+  selectedDomainIds: number[],
+) {
+  const selectsTestnet = selectedDomainIds.some((domainId) => !mainnetDomainIds.includes(domainId));
+  return hasIdentifierSearch || selectsTestnet ? [] : mainnetDomainIds;
+}
+
 // A message belongs to the warp route if it was sent from the route's token on
 // the origin chain or received by it on the destination chain. eqAddress is
 // protocol-aware so this stays correct across EVM/Sealevel/Cosmos/etc.
@@ -219,10 +228,14 @@ export function useMessageSearchQuery(
     statusFilter !== 'all' ||
     warpRouteAddresses.length > 0
   );
-  const liveDomains = useMemo(
-    () => (hasFilters ? [] : mainnetDomainIds),
-    [hasFilters, mainnetDomainIds],
-  );
+  const liveDomains = useMemo(() => {
+    const selectedDomainIds = [
+      originDomainId,
+      destDomainId,
+      ...warpRouteDomainAddresses.map((a) => a.domainId),
+    ].filter((domainId): domainId is number => domainId !== null);
+    return getLiveMessageDomainIds(mainnetDomainIds, hasInput, selectedDomainIds);
+  }, [destDomainId, hasInput, mainnetDomainIds, originDomainId, warpRouteDomainAddresses]);
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
     isValidOrigin ? originDomainId : null,

@@ -29,6 +29,14 @@ export function getHumanReadableTimeString(timestamp: number) {
   return date.toLocaleDateString();
 }
 
+export function getRelativeTimeRefreshInterval(timestamp: number, now = Date.now()) {
+  const age = Math.max(0, now - timestamp);
+  if (age < 61_000) return 1_000;
+  if (age < 60 * 60_000) return 60_000;
+  if (age < 24 * 60 * 60_000) return 60 * 60_000;
+  return null;
+}
+
 export function getHumanReadableDuration(ms: number, minSec?: number) {
   let seconds = Math.round(ms / 1000);
 

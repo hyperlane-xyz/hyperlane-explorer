@@ -14,21 +14,21 @@ export function useLatestMessageRows(enabled: boolean, domains: number[], refres
   useRefreshAfterReconnect(enabled, connectionState, refresh);
 
   const filteredRows = useMemo(
-    () =>
-      enabled
-        ? messageRows
-            .filter(
-              (row) =>
-                domains.length === 0 ||
-                (domains.includes(row.origin_domain_id) &&
-                  domains.includes(row.destination_domain_id)),
-            )
-            .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at))
-        : [],
+    () => (enabled ? filterLatestMessageRows(messageRows, domains) : []),
     [domains, enabled, messageRows],
   );
 
   return { connected: enabled && connectionState === 'connected', messageRows: filteredRows };
+}
+
+export function filterLatestMessageRows(messageRows: MessageEntry[], domains: number[]) {
+  return messageRows
+    .filter(
+      (row) =>
+        domains.length === 0 ||
+        (domains.includes(row.origin_domain_id) && domains.includes(row.destination_domain_id)),
+    )
+    .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at));
 }
 
 export function useMessageRowSubscription(

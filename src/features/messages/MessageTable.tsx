@@ -4,17 +4,7 @@ import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
-import {
-  PropsWithChildren,
-  ReactNode,
-  createContext,
-  memo,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -26,7 +16,7 @@ import { MessageStatus, MessageStub } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
-import { getHumanReadableTimeString } from '../../utils/time';
+import { getHumanReadableTimeString, getRelativeTimeRefreshInterval } from '../../utils/time';
 import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
@@ -34,8 +24,6 @@ import { prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
-const TIME_SENT_REFRESH_MS = 1_000;
-const RelativeTimeContext = createContext(0);
 
 export function MessageTable({
   messageList,
@@ -53,7 +41,6 @@ export function MessageTable({
   const deliveredMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [insertedMessageIds, setInsertedMessageIds] = useState<Set<string>>(() => new Set());
   const [deliveredMessageIds, setDeliveredMessageIds] = useState<Set<string>>(() => new Set());
-  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
     return messageList
@@ -156,47 +143,43 @@ export function MessageTable({
     [],
   );
 
-  useVisibleInterval(() => setTimeRefreshKey((key) => key + 1), TIME_SENT_REFRESH_MS);
-
   return (
-    <RelativeTimeContext.Provider value={timeRefreshKey}>
-      <table className="mb-1 w-full">
-        <thead>
-          <tr className="border-b border-gray-100">
-            <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
-            <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
-            <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
-            <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
-            <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
-            <th className={styles.header}>Time sent</th>
-            <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
-          </tr>
-        </thead>
-        <tbody>
-          {messageList.map((m) => {
-            const isInserted = insertedMessageIds.has(m.id);
-            const isDelivered = deliveredMessageIds.has(m.id);
-            return (
-              <tr
-                key={`message-${m.id}`}
-                className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
-                  isFetching && 'blur-xs'
-                } ${
-                  isInserted ? 'motion-safe:animate-live-message-insert bg-primary-50' : ''
-                } ${isDelivered ? 'bg-green-25' : ''} transition-all duration-500`}
-              >
-                <MessageSummaryRow
-                  message={m}
-                  chainMetadataResolver={chainMetadataResolver}
-                  router={router}
-                  warpRouteChainAddressMap={warpRouteChainAddressMap}
-                />
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </RelativeTimeContext.Provider>
+    <table className="mb-1 w-full">
+      <thead>
+        <tr className="border-b border-gray-100">
+          <th className={`${styles.header} xs:text-left pl-3 sm:pl-6`}>Origin</th>
+          <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
+          <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
+          <th className={styles.header}>Time sent</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
+        </tr>
+      </thead>
+      <tbody>
+        {messageList.map((m) => {
+          const isInserted = insertedMessageIds.has(m.id);
+          const isDelivered = deliveredMessageIds.has(m.id);
+          return (
+            <tr
+              key={`message-${m.id}`}
+              className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
+                isFetching && 'blur-xs'
+              } ${
+                isInserted ? 'motion-safe:animate-live-message-insert bg-primary-50' : ''
+              } ${isDelivered ? 'bg-green-25' : ''} transition-all duration-500`}
+            >
+              <MessageSummaryRow
+                message={m}
+                chainMetadataResolver={chainMetadataResolver}
+                router={router}
+                warpRouteChainAddressMap={warpRouteChainAddressMap}
+              />
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -245,7 +228,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     statusTitle = 'Pending';
     statusIcon = (
       <span
-        className="block h-3.5 w-3.5 animate-spin rounded-full border-[1.5px]"
+        className="block h-3.5 w-3.5 rounded-full border-[1.5px] motion-safe:animate-spin"
         style={{
           borderColor: `${Color.primaryDark}33`,
           borderTopColor: Color.primaryDark,
@@ -392,7 +375,9 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 });
 
 const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
-  useContext(RelativeTimeContext);
+  const [, setRefreshKey] = useState(0);
+  const refreshInterval = getRelativeTimeRefreshInterval(timestamp);
+  useVisibleInterval(() => setRefreshKey((key) => key + 1), refreshInterval);
 
   return <>{getHumanReadableTimeString(timestamp)}</>;
 });

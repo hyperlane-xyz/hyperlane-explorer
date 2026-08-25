@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 
 import { isWindowVisible } from './window';
 
-export function useVisibleInterval(callback: () => void, delay: number) {
+export function useVisibleInterval(callback: () => void, delay: number | null) {
   const visibleCallback = useCallback(() => {
     if (!isWindowVisible()) return;
     callback();
