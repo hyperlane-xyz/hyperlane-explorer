@@ -148,6 +148,7 @@ export function useMessageSearchQuery(
     scrapedDomains: scrapedChains,
     isError: isSearchMetadataQueryError,
     hasRun: hasSearchMetadataRun,
+    retry: retrySearchMetadata,
   } = useScrapedChains(chainMetadataResolver);
   const explorerConnectionState = useExplorerConnectionState();
   const mainnetDomainIds = useMemo(
@@ -261,8 +262,14 @@ export function useMessageSearchQuery(
   const isFetching = isValidInput && !isSearchMetadataError && (!isSearchMetadataReady || fetching);
   const refresh = useCallback(() => {
     if (!query || !isValidInput) return;
+    if (!isSearchMetadataReady) {
+      retrySearchMetadata().catch((error) =>
+        logger.error('Error retrying message search metadata', error),
+      );
+      return;
+    }
     reexecuteQuery({ requestPolicy: 'network-only' });
-  }, [reexecuteQuery, query, isValidInput]);
+  }, [isSearchMetadataReady, isValidInput, query, reexecuteQuery, retrySearchMetadata]);
   const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
     liveSearchEnabled,
     searchDomainIds,
