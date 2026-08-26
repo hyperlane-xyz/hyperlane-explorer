@@ -220,7 +220,7 @@ export function MessageSearch() {
   const isAnyFetching = isFetching || piSearchState.isFetching;
   const isAnyError = isError || piSearchState.isError;
   const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
-  const isReadyToShowEmptyState = hasAllRun && isChainMetadataReady;
+  const isSearchSettled = hasAllRun && isChainMetadataReady;
   const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
   const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
   const messageTableKey = [
@@ -381,29 +381,22 @@ export function MessageSearch() {
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
-        <Fade show={showMessageTable && !redirectUrl}>
-          <MessageTable
-            key={messageTableKey}
-            messageList={messageListResult}
-            isFetching={isAnyFetching}
-          />
-        </Fade>
+        {isSearchSettled && (
+          <Fade show={showMessageTable && !redirectUrl}>
+            <MessageTable
+              key={messageTableKey}
+              messageList={messageListResult}
+              isFetching={isAnyFetching}
+            />
+          </Fade>
+        )}
         <SearchFetching
-          show={
-            !isAnyError &&
-            isValidInput &&
-            !isAnyMessageFound &&
-            (!hasAllRun || !isChainMetadataReady)
-          }
+          show={!isAnyError && isValidInput && !isSearchSettled}
           isPiFetching={piSearchState.isFetching}
         />
         <SearchEmptyError
           show={
-            !redirectUrl &&
-            !isAnyError &&
-            isValidInput &&
-            !isAnyMessageFound &&
-            isReadyToShowEmptyState
+            !redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && isSearchSettled
           }
           hasInput={hasInput}
           allowAddress={true}
