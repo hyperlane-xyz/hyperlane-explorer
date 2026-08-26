@@ -1,6 +1,7 @@
-import { BigNumber, utils } from 'ethers';
+import { TokenStandard } from '@hyperlane-xyz/sdk';
+import { BigNumber, providers, utils } from 'ethers';
 
-import type { MessageStub } from '../../../types';
+import type { MessageStub, WarpRouteDetails } from '../../../types';
 import {
   computeFeeBps,
   countReceivedTransferRemotes,
@@ -9,7 +10,9 @@ import {
   parseSentTransferRemoteAmount,
   parseSwapAmountFromBody,
   parseTotalTokenPulledFromUser,
+  resolveUserPullToken,
   sliceLogsForMessage,
+  usesWrappedCollateral,
 } from './fetchWarpFees';
 
 const erc20Iface = new utils.Interface([
@@ -190,6 +193,48 @@ describe('parseTotalTokenPulledFromUser', () => {
     ];
     const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result?.eq(BigNumber.from('200000000'))).toBe(true);
+  });
+});
+
+describe('usesWrappedCollateral', () => {
+  it('is true for xERC20 lockbox standards', () => {
+    expect(usesWrappedCollateral(TokenStandard.EvmHypXERC20Lockbox)).toBe(true);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypVSXERC20Lockbox)).toBe(true);
+  });
+
+  it('is true for ERC4626 vault-collateral standards', () => {
+    expect(usesWrappedCollateral(TokenStandard.EvmHypOwnerCollateral)).toBe(true);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypRebaseCollateral)).toBe(true);
+  });
+
+  it('is false for plain collateral / synthetic standards', () => {
+    expect(usesWrappedCollateral(TokenStandard.EvmHypCollateral)).toBe(false);
+    expect(usesWrappedCollateral(TokenStandard.EvmHypSynthetic)).toBe(false);
+  });
+});
+
+describe('resolveUserPullToken', () => {
+  // Non-lockbox branches never touch the provider.
+  const provider = new providers.JsonRpcProvider('http://localhost:0');
+
+  function makeOriginToken(overrides: Partial<WarpRouteDetails['originToken']>) {
+    return {
+      standard: TokenStandard.EvmHypCollateral,
+      ...overrides,
+    } as WarpRouteDetails['originToken'];
+  }
+
+  it('uses collateralAddressOrDenom for collateral routes', async () => {
+    const originToken = makeOriginToken({
+      standard: TokenStandard.EvmHypCollateral,
+      collateralAddressOrDenom: TOKEN,
+    });
+    expect(await resolveUserPullToken(originToken, ROUTER, provider)).toBe(TOKEN);
+  });
+
+  it('falls back to the router for synthetic routes', async () => {
+    const originToken = makeOriginToken({ standard: TokenStandard.EvmHypSynthetic });
+    expect(await resolveUserPullToken(originToken, ROUTER, provider)).toBe(ROUTER);
   });
 });
 
