@@ -1,5 +1,14 @@
 import { MessageStatus, MessageStub } from '../../../types';
-import { messageMatchesWarpRoute } from './useMessageQuery';
+import { adjustToUtcTime } from '../../../utils/time';
+import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
+import {
+  getSearchMetadataState,
+  getMessageSearchDomainIds,
+  messageMatchesSearchFilters,
+  messageMatchesWarpRoute,
+  shouldPollMessageSearch,
+  shouldUseMessageQueryCache,
+} from './useMessageQuery';
 
 const ORIGIN_DOMAIN = 1;
 const DEST_DOMAIN = 10;
@@ -71,5 +80,177 @@ describe('messageMatchesWarpRoute', () => {
 
   it('returns false for an empty route list', () => {
     expect(messageMatchesWarpRoute(makeStub(), [])).toBe(false);
+  });
+});
+
+describe('messageMatchesSearchFilters', () => {
+  const noFilters = {
+    searchInput: '',
+    originDomainId: null,
+    destinationDomainId: null,
+    startTime: null,
+    endTime: null,
+    status: 'all' as const,
+  };
+
+  it('matches origin and destination domains', () => {
+    expect(
+      messageMatchesSearchFilters(makeStub(), {
+        ...noFilters,
+        originDomainId: ORIGIN_DOMAIN,
+        destinationDomainId: DEST_DOMAIN,
+      }),
+    ).toBe(true);
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, originDomainId: 999 })).toBe(
+      false,
+    );
+  });
+
+  it('matches the inclusive adjusted time range used by GraphQL', () => {
+    const startTime = Date.now() - 60_000;
+    const endTime = Date.now() + 60_000;
+    const timestamp = Date.parse(adjustToUtcTime(Date.now()));
+    const message = makeStub({ origin: { ...makeStub().origin, timestamp } });
+
+    expect(messageMatchesSearchFilters(message, { ...noFilters, startTime, endTime })).toBe(true);
+    expect(messageMatchesSearchFilters(message, { ...noFilters, startTime: endTime })).toBe(false);
+  });
+
+  it('matches delivery status', () => {
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, status: 'delivered' })).toBe(
+      true,
+    );
+    expect(messageMatchesSearchFilters(makeStub(), { ...noFilters, status: 'pending' })).toBe(
+      false,
+    );
+  });
+
+  it('matches message, transaction, and address searches', () => {
+    const message = makeStub();
+    expect(messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.msgId })).toBe(
+      true,
+    );
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.origin.hash }),
+    ).toBe(true);
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: message.sender }),
+    ).toBe(true);
+    expect(
+      messageMatchesSearchFilters(message, { ...noFilters, searchInput: '0x' + 'ff'.repeat(32) }),
+    ).toBe(false);
+  });
+});
+
+describe('message query caching', () => {
+  it('caches by default', () => {
+    expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain('@cached');
+    expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain('@cached');
+  });
+
+  it('can be disabled for live queries', () => {
+    expect(
+      buildMessageQuery(MessageIdentifierType.Id, '0x01', 1, false, undefined, { cached: false })
+        .query,
+    ).not.toContain('@cached');
+    expect(
+      buildMessageSearchQuery('', null, null, null, null, 1, false, [], 'all', [], {
+        cached: false,
+      }).query,
+    ).not.toContain('@cached');
+  });
+
+  it('only bypasses server caching while live updates are connected', () => {
+    expect(shouldUseMessageQueryCache('connected')).toBe(false);
+    expect(shouldUseMessageQueryCache('connecting')).toBe(true);
+    expect(shouldUseMessageQueryCache('disconnected')).toBe(true);
+    expect(shouldUseMessageQueryCache('unavailable')).toBe(true);
+  });
+});
+
+describe('message search polling', () => {
+  it('keeps a safety refresh for filtered live searches', () => {
+    expect(shouldPollMessageSearch(true, true)).toBe(true);
+    expect(shouldPollMessageSearch(true, false)).toBe(false);
+    expect(shouldPollMessageSearch(false, false)).toBe(true);
+  });
+});
+
+describe('live message domain scope', () => {
+  const mainnetDomains = [1, 10];
+
+  it('keeps generic filters scoped to mainnet', () => {
+    expect(getMessageSearchDomainIds(mainnetDomains, false, [])).toBe(mainnetDomains);
+  });
+
+  it('widens for identifier searches and explicit testnet domains', () => {
+    expect(getMessageSearchDomainIds(mainnetDomains, true, [])).toEqual([]);
+    expect(getMessageSearchDomainIds(mainnetDomains, false, [84532])).toEqual([]);
+  });
+});
+
+describe('GraphQL message domain scope', () => {
+  it('keeps a status-only search scoped to mainnet', () => {
+    const scopeDomainIds = getMessageSearchDomainIds([1, 10], false, []);
+    const query = buildMessageSearchQuery(
+      '',
+      null,
+      null,
+      null,
+      null,
+      500,
+      true,
+      scopeDomainIds,
+      'pending',
+      [],
+    ).query;
+
+    expect(query).toContain('origin_domain_id: {_in: [1,10]}');
+    expect(query).toContain('destination_domain_id: {_in: [1,10]}');
+  });
+
+  it('leaves identifier searches and explicit testnet selections unbounded', () => {
+    const identifierQuery = buildMessageSearchQuery(
+      '0x01',
+      null,
+      null,
+      null,
+      null,
+      50,
+      true,
+      [],
+    ).query;
+    const testnetQuery = buildMessageSearchQuery('', 84532, null, null, null, 100, true, []).query;
+
+    expect(identifierQuery).not.toContain('domain_id: {_in:');
+    expect(testnetQuery).toContain('origin_domain_id: {_in: $originChains}');
+    expect(testnetQuery).not.toContain('destination_domain_id: {_in:');
+  });
+});
+
+describe('search metadata readiness', () => {
+  it('propagates metadata query errors without leaving the search loading', () => {
+    expect(getSearchMetadataState(0, 0, true, true)).toEqual({
+      isReady: false,
+      isError: true,
+    });
+  });
+
+  it('treats a completed empty domains response as an error', () => {
+    expect(getSearchMetadataState(0, 0, true, false)).toEqual({
+      isReady: false,
+      isError: true,
+    });
+  });
+
+  it('treats completed metadata without mainnet domains as an error', () => {
+    expect(getSearchMetadataState(1, 0, true, false).isError).toBe(true);
+  });
+
+  it('keeps loading before the domains query has completed', () => {
+    expect(getSearchMetadataState(0, 0, false, false)).toEqual({
+      isReady: false,
+      isError: false,
+    });
   });
 });

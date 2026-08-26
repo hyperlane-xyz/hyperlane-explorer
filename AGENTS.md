@@ -33,7 +33,7 @@ pnpm run prettier     # Format code in src/
 - Use `useMultiProvider()`, `useChainMetadata()`, `useRegistry()` hooks to access state
 
 ### Data Fetching
-- **GraphQL via urql** for querying the Hasura API (`https://explorer4.hasura.app/v1/graphql`)
+- **GraphQL via urql** for querying the Explorer API (`https://explorer-api.hyperlane.xyz/graphql`)
 - **TanStack React Query** for caching
 - **Ethers.js v5** for direct blockchain calls
 - PI (Permissionless Interop) chains have separate query paths in `src/features/messages/pi-queries/`

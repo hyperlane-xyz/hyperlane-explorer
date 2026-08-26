@@ -1,7 +1,7 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import { objFilter } from '@hyperlane-xyz/utils';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from 'urql';
 
 import { unscrapedChainsInDb } from '../../../consts/config';
@@ -13,11 +13,16 @@ export function useScrapedDomains() {
   const scrapedDomains = useStore((s) => s.scrapedDomains);
   const setScrapedDomains = useStore((s) => s.setScrapedDomains);
 
-  const [result] = useQuery<{ domain: Array<DomainsEntry> }>({
+  const [result, reexecuteQuery] = useQuery<{ domain: Array<DomainsEntry> }>({
     query: DOMAINS_QUERY,
     pause: !!scrapedDomains?.length,
   });
   const { data, fetching: isFetching, error } = result;
+  const resolvedScrapedDomains = scrapedDomains.length ? scrapedDomains : (data?.domain ?? []);
+  const retry = useCallback(
+    () => reexecuteQuery({ requestPolicy: 'network-only' }),
+    [reexecuteQuery],
+  );
 
   useEffect(() => {
     if (!data) return;
@@ -25,15 +30,20 @@ export function useScrapedDomains() {
   }, [data, error, setScrapedDomains]);
 
   return {
-    scrapedDomains,
+    scrapedDomains: resolvedScrapedDomains,
     isFetching,
     isError: !!error,
+    hasRun: !!data || !!error || resolvedScrapedDomains.length > 0,
+    retry,
   };
 }
 
 export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
-  const { scrapedDomains, isFetching, isError } = useScrapedDomains();
+  const { scrapedDomains, isFetching, isError, hasRun, retry: retryDomains } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
+  const isChainMetadataLoaded = useStore((s) => s.isChainMetadataLoaded);
+  const chainMetadataError = useStore((s) => s.chainMetadataError);
+  const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
 
   const { chains } = useMemo(() => {
     const scrapedChains = objFilter(
@@ -44,8 +54,27 @@ export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
     );
     return { chains: scrapedChains };
   }, [chainMetadataResolver, chainMetadata, scrapedDomains]);
+  const retry = useCallback(
+    () => retryScrapedChains(ensureChainMetadata, retryDomains),
+    [ensureChainMetadata, retryDomains],
+  );
 
-  return { chains, isFetching, isError };
+  return {
+    chains,
+    scrapedDomains,
+    isFetching,
+    isError: isError || !!chainMetadataError,
+    hasRun: hasRun && isChainMetadataLoaded,
+    retry,
+  };
+}
+
+export async function retryScrapedChains(
+  ensureChainMetadata: () => Promise<void>,
+  retryDomains: () => void,
+) {
+  retryDomains();
+  await ensureChainMetadata();
 }
 
 // TODO: Remove once all chains in the DB are scraped

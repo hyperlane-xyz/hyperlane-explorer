@@ -36,6 +36,22 @@ export function parseMessageQueryResult(
   return queryResult(chainMetadataResolver, scrapedChains, data, parseMessage);
 }
 
+export function parseMessageStubEntry(
+  chainMetadataResolver: ChainMetadataResolver,
+  scrapedChains: DomainsEntry[],
+  data: MessageStubEntry,
+): MessageStub | null {
+  return parseMessageStub(chainMetadataResolver, scrapedChains, data);
+}
+
+export function parseMessageEntry(
+  chainMetadataResolver: ChainMetadataResolver,
+  scrapedChains: DomainsEntry[],
+  data: MessageEntry,
+): Message | null {
+  return parseMessage(chainMetadataResolver, scrapedChains, data);
+}
+
 function queryResult<D, M extends MessageStub>(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],

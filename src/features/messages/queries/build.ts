@@ -29,6 +29,7 @@ export function buildMessageQuery(
   limit: number,
   useStub = false,
   orderBy?: string,
+  { cached = true }: { cached?: boolean } = {},
 ) {
   let whereClause: string;
   if (idType === MessageIdentifierType.Id) {
@@ -51,9 +52,9 @@ export function buildMessageQuery(
   const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
   const query = `
-  query ($identifier: bytea!) @cached(ttl: 5) {
+  query ($identifier: bytea!)${cached ? ' @cached(ttl: 5)' : ''} {
     message_view(
-      where: {${whereClause}},
+      where: {send_occurred_at: {_is_null: false}, ${whereClause}},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
     ) {
@@ -72,10 +73,10 @@ export function buildMessageSearchQuery(
   endTimeFilter: number | null,
   limit: number,
   useStub = false,
-  mainnetDomainIds?: number[],
+  scopeDomainIds?: number[],
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
-  isPendingFilter = false,
+  { cached = true }: { cached?: boolean } = {},
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
@@ -100,28 +101,16 @@ export function buildMessageSearchQuery(
     variables.warpAddresses = warpAddressesBytea;
   }
 
-  const hasFilters = !!(
-    originDomainIdFilter ||
-    destDomainIdFilter ||
-    startTimeFilter ||
-    endTimeFilter ||
-    searchInput ||
-    statusFilter !== 'all' ||
-    warpAddressesBytea.length > 0 ||
-    isPendingFilter
-  );
   const whereClauses = buildSearchWhereClauses(searchInput);
   const originDomainWhereClause = buildDomainIdWhereClause(
     originDomainIdFilter,
-    hasFilters,
     'origin',
-    mainnetDomainIds,
+    scopeDomainIds,
   );
   const destinationDomainWhereClause = buildDomainIdWhereClause(
     destDomainIdFilter,
-    hasFilters,
     'destination',
-    mainnetDomainIds,
+    scopeDomainIds,
   );
 
   // Build status filter clause
@@ -137,6 +126,7 @@ export function buildMessageSearchQuery(
       `q${i}: message_view(
     where: {
       _and: [
+        {send_occurred_at: {_is_null: false}},
         ${originDomainWhereClause}
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
@@ -165,7 +155,7 @@ export function buildMessageSearchQuery(
     variableDeclarations.push('$warpAddresses: [bytea!]');
   }
 
-  const query = `query (${variableDeclarations.join(', ')}) @cached(ttl: 5) {
+  const query = `query (${variableDeclarations.join(', ')})${cached ? ' @cached(ttl: 5)' : ''} {
     ${queries.join('\n')}
   }`;
   return { query, variables };
@@ -208,16 +198,9 @@ function buildSearchWhereClauses(searchInput: string) {
 
 function buildDomainIdWhereClause(
   domainId: number | null,
-  hasFilters: boolean,
   fieldName: 'origin' | 'destination',
-  mainnetDomainIds: number[] = [],
+  scopeDomainIds: number[] = [],
 ) {
-  // if no filters are set, filter by mainnet chains to not display testnest messages for vanilla query
-  if (!hasFilters) return `{${fieldName}_domain_id: {_in: [${mainnetDomainIds}]}},`;
-
-  // if the domainId is set, filter by this domainId instead of mainnet domains
   if (domainId) return `{${fieldName}_domain_id: {_in: $${fieldName}Chains}},`;
-
-  // if domainId is not set but there are other filters, remove condition of filtering by mainnet chains
-  return '';
+  return scopeDomainIds.length ? `{${fieldName}_domain_id: {_in: [${scopeDomainIds}]}},` : '';
 }

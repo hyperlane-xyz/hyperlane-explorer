@@ -4,7 +4,7 @@ import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
-import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef } from 'react';
+import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
@@ -16,7 +16,8 @@ import { MessageStatus, MessageStub } from '../../types';
 import { formatAddress, formatTxHash } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
-import { getHumanReadableTimeString } from '../../utils/time';
+import { getHumanReadableTimeString, getRelativeTimeRefreshInterval } from '../../utils/time';
+import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
@@ -34,6 +35,12 @@ export function MessageTable({
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const previousMessageIds = useRef<Set<string> | null>(null);
+  const previousMessageStatuses = useRef<Map<string, MessageStatus>>(new Map());
+  const insertedMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const deliveredMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [insertedMessageIds, setInsertedMessageIds] = useState<Set<string>>(() => new Set());
+  const [deliveredMessageIds, setDeliveredMessageIds] = useState<Set<string>>(() => new Set());
   const backgroundPrefetchKey = useMemo(() => {
     if (isFetching) return '';
     return messageList
@@ -69,6 +76,73 @@ export function MessageTable({
     };
   }, [backgroundPrefetchKey, messageList, router]);
 
+  useEffect(() => {
+    const currentIds = new Set(messageList.map((message) => message.id));
+    const currentStatuses = new Map(messageList.map((message) => [message.id, message.status]));
+    const previousIds = previousMessageIds.current;
+    const previousStatuses = previousMessageStatuses.current;
+    previousMessageIds.current = currentIds;
+    previousMessageStatuses.current = currentStatuses;
+
+    if (!previousIds) return;
+
+    const newIds = [...currentIds].filter((id) => !previousIds.has(id));
+    if (newIds.length) {
+      setInsertedMessageIds((ids) => new Set([...ids, ...newIds]));
+      newIds.forEach((id) => {
+        const existingTimer = insertedMessageTimers.current.get(id);
+        if (existingTimer) clearTimeout(existingTimer);
+
+        const timer = setTimeout(() => {
+          insertedMessageTimers.current.delete(id);
+          setInsertedMessageIds((ids) => {
+            const nextIds = new Set(ids);
+            nextIds.delete(id);
+            return nextIds;
+          });
+        }, 1_000);
+
+        insertedMessageTimers.current.set(id, timer);
+      });
+    }
+
+    const newlyDeliveredIds = messageList
+      .filter(
+        (message) =>
+          previousStatuses.get(message.id) === MessageStatus.Pending &&
+          message.status === MessageStatus.Delivered,
+      )
+      .map((message) => message.id);
+    if (!newlyDeliveredIds.length) return;
+
+    setDeliveredMessageIds((ids) => new Set([...ids, ...newlyDeliveredIds]));
+    newlyDeliveredIds.forEach((id) => {
+      const existingTimer = deliveredMessageTimers.current.get(id);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        deliveredMessageTimers.current.delete(id);
+        setDeliveredMessageIds((ids) => {
+          const nextIds = new Set(ids);
+          nextIds.delete(id);
+          return nextIds;
+        });
+      }, 1_000);
+
+      deliveredMessageTimers.current.set(id, timer);
+    });
+  }, [messageList]);
+
+  useEffect(
+    () => () => {
+      insertedMessageTimers.current.forEach((timer) => clearTimeout(timer));
+      insertedMessageTimers.current.clear();
+      deliveredMessageTimers.current.forEach((timer) => clearTimeout(timer));
+      deliveredMessageTimers.current.clear();
+    },
+    [],
+  );
+
   return (
     <table className="mb-1 w-full">
       <thead>
@@ -83,21 +157,27 @@ export function MessageTable({
         </tr>
       </thead>
       <tbody>
-        {messageList.map((m) => (
-          <tr
-            key={`message-${m.id}`}
-            className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
-              isFetching && 'blur-xs'
-            } transition-all duration-500`}
-          >
-            <MessageSummaryRow
-              message={m}
-              chainMetadataResolver={chainMetadataResolver}
-              router={router}
-              warpRouteChainAddressMap={warpRouteChainAddressMap}
-            />
-          </tr>
-        ))}
+        {messageList.map((m) => {
+          const isInserted = insertedMessageIds.has(m.id);
+          const isDelivered = deliveredMessageIds.has(m.id);
+          return (
+            <tr
+              key={`message-${m.id}`}
+              className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
+                isFetching && 'blur-xs'
+              } ${
+                isInserted ? 'motion-safe:animate-live-message-insert bg-primary-50' : ''
+              } ${isDelivered ? 'bg-green-25' : ''} transition-all duration-500`}
+            >
+              <MessageSummaryRow
+                message={m}
+                chainMetadataResolver={chainMetadataResolver}
+                router={router}
+                warpRouteChainAddressMap={warpRouteChainAddressMap}
+              />
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -142,6 +222,18 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         alt={statusTitle}
         title={statusTitle}
         className="pt-px"
+      />
+    );
+  } else if (status === MessageStatus.Pending) {
+    statusTitle = 'Pending';
+    statusIcon = (
+      <span
+        className="block h-3.5 w-3.5 rounded-full border-[1.5px] motion-safe:animate-spin"
+        style={{
+          borderColor: `${Color.primaryDark}33`,
+          borderTopColor: Color.primaryDark,
+        }}
+        title={statusTitle}
       />
     );
   }
@@ -230,7 +322,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
       >
-        {getHumanReadableTimeString(origin.timestamp)}
+        <RelativeTime timestamp={origin.timestamp} />
       </LinkCell>
       <LinkCell
         path={detailPath}
@@ -272,10 +364,22 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         tdClasses="w-8"
         onNavigateIntent={primeDetailPage}
       >
-        {statusIcon && <span title={statusTitle}>{statusIcon}</span>}
+        {statusIcon && (
+          <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
+            {statusIcon}
+          </span>
+        )}
       </LinkCell>
     </>
   );
+});
+
+const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
+  const [, setRefreshKey] = useState(0);
+  const refreshInterval = getRelativeTimeRefreshInterval(timestamp);
+  useVisibleInterval(() => setRefreshKey((key) => key + 1), refreshInterval);
+
+  return <>{getHumanReadableTimeString(timestamp)}</>;
 });
 
 function LinkCell({
