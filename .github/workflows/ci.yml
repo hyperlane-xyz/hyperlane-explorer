@@ -1,8 +1,7 @@
 name: CI benchmark (GitHub)
 
 on:
-  pull_request:
-    branches: [ci/migrate-to-depot]
+  workflow_dispatch:
 
 jobs:
   benchmark:
@@ -26,7 +25,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-11-depot-comparison-v1-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-11-depot-comparison-v2-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
