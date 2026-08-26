@@ -54,6 +54,8 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
+  const pauseType =
+    status === MessageStatus.Pending && message ? getMessagePauseType(message) : undefined;
 
   const { isOpen, open, close } = useModal();
 
@@ -110,6 +112,8 @@ export function DestinationTransactionCard({
         )}
       </>
     );
+  } else if (pauseType) {
+    content = <PausedMessageWarning type={pauseType} />;
   } else if (!hasChainConfig) {
     content = (
       <>
@@ -134,20 +138,18 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending) {
-    const pauseType = message ? getMessagePauseType(message) : undefined;
     // Show collateral warning for pending routes when the explorer can query
     // the destination runtime directly. Today that path is EVM-only.
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
       <>
-        {pauseType && <PausedMessageWarning type={pauseType} />}
-        {!pauseType && hasCollateralWarning && (
+        {hasCollateralWarning && (
           <InsufficientCollateralWarning
             warpRouteDetails={warpRouteDetails}
             collateralInfo={collateralInfo}
           />
         )}
-        {!pauseType && !hasCollateralWarning && (
+        {!hasCollateralWarning && (
           <DeliveryStatus>
             <div className="flex flex-col items-center">
               <div>Delivery to destination chain still in progress.</div>
@@ -191,6 +193,13 @@ export function DestinationTransactionCard({
 
 function PausedMessageWarning({ type }: { type: MessagePauseType }) {
   const isChainHalted = type === 'chain';
+  const message = isChainHalted
+    ? 'A chain involved in this message is currently halted. ' +
+      'This message will not be processed while the chain remains halted, so its ' +
+      'transferred assets will not be available on the destination chain.'
+    : 'This route is halted due to a security incident. ' +
+      'This message will not be processed while the route remains halted, so its ' +
+      'transferred assets will not be available on the destination chain.';
 
   return (
     <div className="space-y-3">
@@ -200,11 +209,7 @@ function PausedMessageWarning({ type }: { type: MessagePauseType }) {
           {isChainHalted ? 'Chain Halted' : 'Route Halted'}
         </h3>
       </div>
-      <p className="text-sm leading-relaxed text-gray-700">
-        {isChainHalted
-          ? 'A chain involved in this message is currently halted. This message will not be processed while the chain remains halted, so its transferred assets will not be available on the destination chain.'
-          : 'This route is halted due to a security incident. This message will not be processed while the pause remains active, so its transferred assets will not be available on the destination chain.'}
-      </p>
+      <p className="text-sm leading-relaxed text-gray-700">{message}</p>
     </div>
   );
 }
