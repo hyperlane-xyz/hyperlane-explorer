@@ -1,6 +1,6 @@
-import { isRoutePaused } from './pausedRoutes';
+import { getMessagePauseType } from './pausedRoutes';
 
-describe('isRoutePaused', () => {
+describe('getMessagePauseType', () => {
   const pausedRoute = {
     originDomainId: 10,
     destinationDomainId: 8453,
@@ -9,48 +9,81 @@ describe('isRoutePaused', () => {
   };
 
   it('matches a paused route', () => {
-    expect(isRoutePaused(pausedRoute)).toBe(true);
+    expect(getMessagePauseType(pausedRoute)).toBe('route');
   });
 
   it('matches another configured paused route', () => {
     expect(
-      isRoutePaused({
-        originDomainId: 1,
-        destinationDomainId: 41443,
-        sender: '0x230f1e241c621d5af670dad83ebcdd18971e2995',
-        recipient: '0xeec6574eabba52bac3f0277f2cd5ac7e67197886',
+      getMessagePauseType({
+        originDomainId: 42161,
+        destinationDomainId: 1399811149,
+        sender: '0xef9295afcff293956e8b149b33449f246f6f107d',
+        recipient: 'Ht37Rn665vxVD4mChW7Qf9r5MnGJQQwLAdfBZzpoKqTp',
       }),
-    ).toBe(true);
+    ).toBe('route');
   });
 
   it('matches a paused route in reverse', () => {
     expect(
-      isRoutePaused({
+      getMessagePauseType({
         originDomainId: pausedRoute.destinationDomainId,
         destinationDomainId: pausedRoute.originDomainId,
         sender: pausedRoute.recipient,
         recipient: pausedRoute.sender,
       }),
-    ).toBe(true);
+    ).toBe('route');
   });
 
-  it('matches addresses case-insensitively', () => {
+  it('matches EVM addresses case-insensitively', () => {
     expect(
-      isRoutePaused({
+      getMessagePauseType({
         ...pausedRoute,
         sender: pausedRoute.sender.toUpperCase(),
         recipient: pausedRoute.recipient.toUpperCase(),
       }),
-    ).toBe(true);
+    ).toBe('route');
   });
 
   it('does not pause unrelated routes between the same chains', () => {
     expect(
-      isRoutePaused({
+      getMessagePauseType({
         ...pausedRoute,
         sender: '0x1111111111111111111111111111111111111111',
         recipient: '0x2222222222222222222222222222222222222222',
       }),
-    ).toBe(false);
+    ).toBeUndefined();
+  });
+
+  it('matches a halted origin chain without matching addresses', () => {
+    expect(
+      getMessagePauseType({
+        originDomainId: 1783,
+        destinationDomainId: 1,
+        sender: '0x1111111111111111111111111111111111111111',
+        recipient: '0x2222222222222222222222222222222222222222',
+      }),
+    ).toBe('chain');
+  });
+
+  it('matches a halted destination chain without matching addresses', () => {
+    expect(
+      getMessagePauseType({
+        originDomainId: 8453,
+        destinationDomainId: 1783,
+        sender: '0x1111111111111111111111111111111111111111',
+        recipient: '0x2222222222222222222222222222222222222222',
+      }),
+    ).toBe('chain');
+  });
+
+  it('does not pause route legs that exclude the halted chain', () => {
+    expect(
+      getMessagePauseType({
+        originDomainId: 1,
+        destinationDomainId: 8453,
+        sender: '0xeec6574eabba52bac3f0277f2cd5ac7e67197886',
+        recipient: '0x3eba6644819546c44eb3e7c3a92f034f921dca80',
+      }),
+    ).toBeUndefined();
   });
 });
