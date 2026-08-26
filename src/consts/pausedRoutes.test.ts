@@ -1,7 +1,7 @@
 import { isRoutePaused } from './pausedRoutes';
 
 describe('isRoutePaused', () => {
-  const infiniteTradingProtocolRoute = {
+  const pausedRoute = {
     originDomainId: 10,
     destinationDomainId: 8453,
     sender: '0xb231e9c3bc267db389e3bf5d6ab26ca078c6123b',
@@ -9,10 +9,10 @@ describe('isRoutePaused', () => {
   };
 
   it('matches a paused route', () => {
-    expect(isRoutePaused(infiniteTradingProtocolRoute)).toBe(true);
+    expect(isRoutePaused(pausedRoute)).toBe(true);
   });
 
-  it('matches the paused Nesa route', () => {
+  it('matches another configured paused route', () => {
     expect(
       isRoutePaused({
         originDomainId: 1,
@@ -26,10 +26,10 @@ describe('isRoutePaused', () => {
   it('matches a paused route in reverse', () => {
     expect(
       isRoutePaused({
-        originDomainId: infiniteTradingProtocolRoute.destinationDomainId,
-        destinationDomainId: infiniteTradingProtocolRoute.originDomainId,
-        sender: infiniteTradingProtocolRoute.recipient,
-        recipient: infiniteTradingProtocolRoute.sender,
+        originDomainId: pausedRoute.destinationDomainId,
+        destinationDomainId: pausedRoute.originDomainId,
+        sender: pausedRoute.recipient,
+        recipient: pausedRoute.sender,
       }),
     ).toBe(true);
   });
@@ -37,9 +37,9 @@ describe('isRoutePaused', () => {
   it('matches addresses case-insensitively', () => {
     expect(
       isRoutePaused({
-        ...infiniteTradingProtocolRoute,
-        sender: infiniteTradingProtocolRoute.sender.toUpperCase(),
-        recipient: infiniteTradingProtocolRoute.recipient.toUpperCase(),
+        ...pausedRoute,
+        sender: pausedRoute.sender.toUpperCase(),
+        recipient: pausedRoute.recipient.toUpperCase(),
       }),
     ).toBe(true);
   });
@@ -47,7 +47,7 @@ describe('isRoutePaused', () => {
   it('does not pause unrelated routes between the same chains', () => {
     expect(
       isRoutePaused({
-        ...infiniteTradingProtocolRoute,
+        ...pausedRoute,
         sender: '0x1111111111111111111111111111111111111111',
         recipient: '0x2222222222222222222222222222222222222222',
       }),
