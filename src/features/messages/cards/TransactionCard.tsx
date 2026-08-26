@@ -1,10 +1,11 @@
-import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
+import { ErrorIcon, Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
+import { isRoutePaused } from '../../../consts/pausedRoutes';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
 import {
@@ -135,16 +136,18 @@ export function DestinationTransactionCard({
   } else if (status === MessageStatus.Pending) {
     // Show collateral warning for pending routes when the explorer can query
     // the destination runtime directly. Today that path is EVM-only.
+    const hasPausedRouteWarning = !!message && isRoutePaused(message);
     const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
       <>
-        {hasCollateralWarning && (
+        {hasPausedRouteWarning && <PausedRouteWarning />}
+        {!hasPausedRouteWarning && hasCollateralWarning && (
           <InsufficientCollateralWarning
             warpRouteDetails={warpRouteDetails}
             collateralInfo={collateralInfo}
           />
         )}
-        {!hasCollateralWarning && (
+        {!hasPausedRouteWarning && !hasCollateralWarning && (
           <DeliveryStatus>
             <div className="flex flex-col items-center">
               <div>Delivery to destination chain still in progress.</div>
@@ -183,6 +186,22 @@ export function DestinationTransactionCard({
     >
       {content}
     </TransactionCard>
+  );
+}
+
+function PausedRouteWarning() {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <ErrorIcon width={20} height={20} color={Color.red} />
+        <h3 className="text-sm font-medium text-red-600">Route Paused</h3>
+      </div>
+      <p className="text-sm leading-relaxed text-gray-700">
+        This route is paused due to a security incident. This message will not be processed while
+        the pause remains active, so its transferred assets will not be available on the destination
+        chain.
+      </p>
+    </div>
   );
 }
 
