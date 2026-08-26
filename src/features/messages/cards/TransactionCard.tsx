@@ -197,13 +197,13 @@ function PausedMessageWarning({ type }: { type: MessagePauseType }) {
       <div className="flex items-center gap-2">
         <ErrorIcon width={20} height={20} color={Color.red} />
         <h3 className="text-sm font-medium text-red-600">
-          {isChainHalted ? 'Chain Halted' : 'Route Paused'}
+          {isChainHalted ? 'Chain Halted' : 'Route Halted'}
         </h3>
       </div>
       <p className="text-sm leading-relaxed text-gray-700">
         {isChainHalted
           ? 'A chain involved in this message is currently halted. This message will not be processed while the chain remains halted, so its transferred assets will not be available on the destination chain.'
-          : 'This route is paused due to a security incident. This message will not be processed while the pause remains active, so its transferred assets will not be available on the destination chain.'}
+          : 'This route is halted due to a security incident. This message will not be processed while the pause remains active, so its transferred assets will not be available on the destination chain.'}
       </p>
     </div>
   );
