@@ -5,30 +5,21 @@ interface RouteEndpoint {
   address: string;
 }
 
-interface PauseConfig {
-  link?: string;
-}
+export type MessagePauseType = 'chain' | 'route';
 
-export interface PausedChain extends PauseConfig {
-  domainId: number;
-}
+export type PauseConfig =
+  | { type: 'chain'; domainId: number; link?: string }
+  | { type: 'route'; endpoints: readonly RouteEndpoint[]; link?: string };
 
-export interface PausedRoute extends PauseConfig {
-  endpoints: readonly RouteEndpoint[];
-}
-
-// Chains that are halted entirely. A message matches when either domain is listed.
-export const pausedChains: readonly PausedChain[] = [
+// Chain configs match either domain; route configs match both endpoints.
+export const pauseConfigs: readonly PauseConfig[] = [
   {
+    type: 'chain',
     domainId: 1783,
     link: 'https://x.com/KiiChainio/status/2091330990027296992',
   },
-];
-
-// Route endpoint groups that are temporarily paused due to security incidents.
-// A message matches when both its origin and destination endpoints belong to one group.
-export const pausedRoutes: readonly PausedRoute[] = [
   {
+    type: 'route',
     link: 'https://x.com/InfiniteTradePr/status/2090409024437039569',
     endpoints: [
       { domainId: 10, address: '0xb231e9c3bc267db389e3bf5d6ab26ca078c6123b' },
@@ -36,6 +27,7 @@ export const pausedRoutes: readonly PausedRoute[] = [
     ],
   },
   {
+    type: 'route',
     link: 'https://x.com/nesaorg/status/2091915864497066077',
     endpoints: [
       { domainId: 42161, address: '0xef9295afcff293956e8b149b33449f246f6f107d' },
@@ -54,32 +46,26 @@ type MessageRoute = Pick<
   'originDomainId' | 'destinationDomainId' | 'sender' | 'recipient'
 >;
 
-export type MessagePauseType = 'chain' | 'route';
+export function getMessagePause(message: MessageRoute) {
+  const pause = pauseConfigs.find((config) => {
+    if (config.type === 'chain') {
+      return (
+        config.domainId === message.originDomainId ||
+        config.domainId === message.destinationDomainId
+      );
+    }
 
-export interface MessagePause {
-  type: MessagePauseType;
-  link?: string;
-}
-
-export function getMessagePause(message: MessageRoute): MessagePause | undefined {
-  const pausedChain = pausedChains.find(
-    ({ domainId }) =>
-      domainId === message.originDomainId || domainId === message.destinationDomainId,
-  );
-  if (pausedChain) return { type: 'chain', link: pausedChain.link };
-
-  const pausedRoute = pausedRoutes.find(({ endpoints }) => {
-    const originMatches = endpoints.some((endpoint) =>
+    const originMatches = config.endpoints.some((endpoint) =>
       endpointMatches(endpoint, message.originDomainId, message.sender),
     );
-    const destinationMatches = endpoints.some((endpoint) =>
+    const destinationMatches = config.endpoints.some((endpoint) =>
       endpointMatches(endpoint, message.destinationDomainId, message.recipient),
     );
 
     return originMatches && destinationMatches;
   });
 
-  return pausedRoute ? { type: 'route', link: pausedRoute.link } : undefined;
+  return pause ? { type: pause.type, link: pause.link } : undefined;
 }
 
 export function getMessagePauseType(message: MessageRoute): MessagePauseType | undefined {
