@@ -73,10 +73,9 @@ export function buildMessageSearchQuery(
   endTimeFilter: number | null,
   limit: number,
   useStub = false,
-  mainnetDomainIds?: number[],
+  scopeDomainIds?: number[],
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
-  isPendingFilter = false,
   { cached = true }: { cached?: boolean } = {},
 ) {
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
@@ -102,28 +101,16 @@ export function buildMessageSearchQuery(
     variables.warpAddresses = warpAddressesBytea;
   }
 
-  const hasFilters = !!(
-    originDomainIdFilter ||
-    destDomainIdFilter ||
-    startTimeFilter ||
-    endTimeFilter ||
-    searchInput ||
-    statusFilter !== 'all' ||
-    warpAddressesBytea.length > 0 ||
-    isPendingFilter
-  );
   const whereClauses = buildSearchWhereClauses(searchInput);
   const originDomainWhereClause = buildDomainIdWhereClause(
     originDomainIdFilter,
-    hasFilters,
     'origin',
-    mainnetDomainIds,
+    scopeDomainIds,
   );
   const destinationDomainWhereClause = buildDomainIdWhereClause(
     destDomainIdFilter,
-    hasFilters,
     'destination',
-    mainnetDomainIds,
+    scopeDomainIds,
   );
 
   // Build status filter clause
@@ -211,16 +198,9 @@ function buildSearchWhereClauses(searchInput: string) {
 
 function buildDomainIdWhereClause(
   domainId: number | null,
-  hasFilters: boolean,
   fieldName: 'origin' | 'destination',
-  mainnetDomainIds: number[] = [],
+  scopeDomainIds: number[] = [],
 ) {
-  // if no filters are set, filter by mainnet chains to not display testnest messages for vanilla query
-  if (!hasFilters) return `{${fieldName}_domain_id: {_in: [${mainnetDomainIds}]}},`;
-
-  // if the domainId is set, filter by this domainId instead of mainnet domains
   if (domainId) return `{${fieldName}_domain_id: {_in: $${fieldName}Chains}},`;
-
-  // if domainId is not set but there are other filters, remove condition of filtering by mainnet chains
-  return '';
+  return scopeDomainIds.length ? `{${fieldName}_domain_id: {_in: [${scopeDomainIds}]}},` : '';
 }

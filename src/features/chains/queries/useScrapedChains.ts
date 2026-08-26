@@ -37,6 +37,7 @@ export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
   const { scrapedDomains, isFetching, isError, hasRun } = useScrapedDomains();
   const chainMetadata = useStore((s) => s.chainMetadata);
   const isChainMetadataLoaded = useStore((s) => s.isChainMetadataLoaded);
+  const chainMetadataError = useStore((s) => s.chainMetadataError);
 
   const { chains } = useMemo(() => {
     const scrapedChains = objFilter(
@@ -52,7 +53,7 @@ export function useScrapedChains(chainMetadataResolver: ChainMetadataResolver) {
     chains,
     scrapedDomains,
     isFetching,
-    isError,
+    isError: isError || !!chainMetadataError,
     hasRun: hasRun && isChainMetadataLoaded,
   };
 }

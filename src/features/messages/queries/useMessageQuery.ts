@@ -59,7 +59,7 @@ export function shouldPollMessageSearch(isLiveConnected: boolean, hasFilters: bo
   return !isLiveConnected || hasFilters;
 }
 
-export function getLiveMessageDomainIds(
+export function getMessageSearchDomainIds(
   mainnetDomainIds: number[],
   hasIdentifierSearch: boolean,
   selectedDomainIds: number[],
@@ -228,13 +228,13 @@ export function useMessageSearchQuery(
     statusFilter !== 'all' ||
     warpRouteAddresses.length > 0
   );
-  const liveDomains = useMemo(() => {
+  const searchDomainIds = useMemo(() => {
     const selectedDomainIds = [
       originDomainId,
       destDomainId,
       ...warpRouteDomainAddresses.map((a) => a.domainId),
     ].filter((domainId): domainId is number => domainId !== null);
-    return getLiveMessageDomainIds(mainnetDomainIds, hasInput, selectedDomainIds);
+    return getMessageSearchDomainIds(mainnetDomainIds, hasInput, selectedDomainIds);
   }, [destDomainId, hasInput, mainnetDomainIds, originDomainId, warpRouteDomainAddresses]);
   const { query, variables } = buildMessageSearchQuery(
     sanitizedInput,
@@ -244,10 +244,9 @@ export function useMessageSearchQuery(
     endTimeFilter,
     queryLimit,
     true,
-    mainnetDomainIds,
+    searchDomainIds,
     dbStatusFilter,
     warpAddresses,
-    isPendingFilter,
     { cached: shouldUseMessageQueryCache(explorerConnectionState) },
   );
 
@@ -266,7 +265,7 @@ export function useMessageSearchQuery(
   }, [reexecuteQuery, query, isValidInput]);
   const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
     liveSearchEnabled,
-    liveDomains,
+    searchDomainIds,
     refresh,
   );
 

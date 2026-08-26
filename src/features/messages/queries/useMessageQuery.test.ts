@@ -3,7 +3,7 @@ import { adjustToUtcTime } from '../../../utils/time';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import {
   getSearchMetadataState,
-  getLiveMessageDomainIds,
+  getMessageSearchDomainIds,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
   shouldPollMessageSearch,
@@ -154,7 +154,7 @@ describe('message query caching', () => {
         .query,
     ).not.toContain('@cached');
     expect(
-      buildMessageSearchQuery('', null, null, null, null, 1, false, [], 'all', [], false, {
+      buildMessageSearchQuery('', null, null, null, null, 1, false, [], 'all', [], {
         cached: false,
       }).query,
     ).not.toContain('@cached');
@@ -180,12 +180,51 @@ describe('live message domain scope', () => {
   const mainnetDomains = [1, 10];
 
   it('keeps generic filters scoped to mainnet', () => {
-    expect(getLiveMessageDomainIds(mainnetDomains, false, [])).toBe(mainnetDomains);
+    expect(getMessageSearchDomainIds(mainnetDomains, false, [])).toBe(mainnetDomains);
   });
 
   it('widens for identifier searches and explicit testnet domains', () => {
-    expect(getLiveMessageDomainIds(mainnetDomains, true, [])).toEqual([]);
-    expect(getLiveMessageDomainIds(mainnetDomains, false, [84532])).toEqual([]);
+    expect(getMessageSearchDomainIds(mainnetDomains, true, [])).toEqual([]);
+    expect(getMessageSearchDomainIds(mainnetDomains, false, [84532])).toEqual([]);
+  });
+});
+
+describe('GraphQL message domain scope', () => {
+  it('keeps a status-only search scoped to mainnet', () => {
+    const scopeDomainIds = getMessageSearchDomainIds([1, 10], false, []);
+    const query = buildMessageSearchQuery(
+      '',
+      null,
+      null,
+      null,
+      null,
+      500,
+      true,
+      scopeDomainIds,
+      'pending',
+      [],
+    ).query;
+
+    expect(query).toContain('origin_domain_id: {_in: [1,10]}');
+    expect(query).toContain('destination_domain_id: {_in: [1,10]}');
+  });
+
+  it('leaves identifier searches and explicit testnet selections unbounded', () => {
+    const identifierQuery = buildMessageSearchQuery(
+      '0x01',
+      null,
+      null,
+      null,
+      null,
+      50,
+      true,
+      [],
+    ).query;
+    const testnetQuery = buildMessageSearchQuery('', 84532, null, null, null, 100, true, []).query;
+
+    expect(identifierQuery).not.toContain('domain_id: {_in:');
+    expect(testnetQuery).toContain('origin_domain_id: {_in: $originChains}');
+    expect(testnetQuery).not.toContain('destination_domain_id: {_in:');
   });
 });
 

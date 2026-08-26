@@ -33,6 +33,7 @@ interface MetadataState {
     overrides?: ChainMap<Partial<ChainMetadata> | undefined>,
   ) => Promise<void>;
   isChainMetadataLoaded: boolean;
+  chainMetadataError: Error | null;
   ensureChainMetadata: () => Promise<void>;
   registry: IRegistry;
   setRegistry: (registry: IRegistry) => void;
@@ -76,10 +77,12 @@ export const useStore = create<MetadataState>()(
         set({
           chainMetadataOverrides: filtered,
           isChainMetadataLoaded: false,
+          chainMetadataError: null,
         });
         await get().ensureChainMetadata();
       },
       isChainMetadataLoaded: false,
+      chainMetadataError: null,
       ensureChainMetadata: async () => {
         const state = get();
         const { registry, chainMetadataOverrides } = state;
@@ -90,6 +93,7 @@ export const useStore = create<MetadataState>()(
           chainMetadataRequest.registry !== registry ||
           chainMetadataRequest.overrides !== chainMetadataOverrides
         ) {
+          set({ chainMetadataError: null });
           chainMetadataRequest = {
             registry,
             overrides: chainMetadataOverrides,
@@ -111,7 +115,19 @@ export const useStore = create<MetadataState>()(
           set({
             chainMetadata: metadata,
             isChainMetadataLoaded: true,
+            chainMetadataError: null,
           });
+        } catch (error) {
+          if (
+            get().registry === registry &&
+            get().chainMetadataOverrides === chainMetadataOverrides
+          ) {
+            set({
+              chainMetadataError:
+                error instanceof Error ? error : new Error('Failed to load chain metadata'),
+            });
+          }
+          throw error;
         } finally {
           if (chainMetadataRequest === request) {
             chainMetadataRequest = null;
@@ -130,6 +146,7 @@ export const useStore = create<MetadataState>()(
         set({
           chainMetadata: {},
           isChainMetadataLoaded: false,
+          chainMetadataError: null,
           registry,
           warpRouteChainAddressMap: {},
           warpRouteIdToAddressesMap: {},
