@@ -5,7 +5,7 @@ import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
-import { getMessagePauseType, MessagePauseType } from '../../../consts/pausedRoutes';
+import { getMessagePause, MessagePauseType } from '../../../consts/pausedRoutes';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
 import {
@@ -54,8 +54,7 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
-  const pauseType =
-    status === MessageStatus.Pending && message ? getMessagePauseType(message) : undefined;
+  const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
 
   const { isOpen, open, close } = useModal();
 
@@ -112,8 +111,8 @@ export function DestinationTransactionCard({
         )}
       </>
     );
-  } else if (pauseType) {
-    content = <PausedMessageWarning type={pauseType} />;
+  } else if (pause) {
+    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
   } else if (!hasChainConfig) {
     content = (
       <>
@@ -191,7 +190,7 @@ export function DestinationTransactionCard({
   );
 }
 
-function PausedMessageWarning({ type }: { type: MessagePauseType }) {
+function PausedMessageWarning({ type, link }: { type: MessagePauseType; link?: string }) {
   const isChainHalted = type === 'chain';
   const message = isChainHalted
     ? 'A chain involved in this message is currently halted. ' +
@@ -210,6 +209,16 @@ function PausedMessageWarning({ type }: { type: MessagePauseType }) {
         </h3>
       </div>
       <p className="text-sm leading-relaxed text-gray-700">{message}</p>
+      {link && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-sm text-gray-700 underline underline-offset-2 hover:text-gray-900"
+        >
+          Read more about this
+        </a>
+      )}
     </div>
   );
 }
