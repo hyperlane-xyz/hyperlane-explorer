@@ -1,6 +1,6 @@
 import { eqAddress, isAddress } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo } from 'react';
-import { useQuery } from 'urql';
+import { createRequest, useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
@@ -57,6 +57,10 @@ export function shouldUseMessageQueryCache(connectionState: ExplorerConnectionSt
 
 export function shouldPollMessageSearch(isLiveConnected: boolean, hasFilters: boolean) {
   return !isLiveConnected || hasFilters;
+}
+
+export function doesQueryResultMatchRequest(requestKey: number, resultOperationKey?: number) {
+  return requestKey === resultOperationKey;
 }
 
 export function getMessageSearchDomainIds(
@@ -259,6 +263,9 @@ export function useMessageSearchQuery(
     requestPolicy: 'cache-and-network',
   });
   const { data, fetching, error } = result;
+  const hasCurrentQueryResult =
+    !!data &&
+    doesQueryResultMatchRequest(createRequest(query, variables).key, result.operation?.key);
   const isFetching = isValidInput && !isSearchMetadataError && (!isSearchMetadataReady || fetching);
   const refresh = useCallback(() => {
     if (!query || !isValidInput) return;
@@ -339,7 +346,7 @@ export function useMessageSearchQuery(
     isValidDestination,
     isFetching,
     isError: isSearchMetadataError || !!error,
-    hasRun: isSearchMetadataReady && !!data,
+    hasRun: isSearchMetadataReady && hasCurrentQueryResult,
     isMessagesFound,
     messageList,
     refetch: refresh,

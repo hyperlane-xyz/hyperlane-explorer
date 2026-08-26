@@ -2,6 +2,7 @@ import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import {
+  doesQueryResultMatchRequest,
   getSearchMetadataState,
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
@@ -18,6 +19,16 @@ const OTHER = '0x' + '33'.repeat(20);
 // Alpha hex digits so upper/lower casing actually differ — needed to exercise
 // case-insensitive address comparison.
 const ROUTER_MIXED = '0x' + 'ab'.repeat(20);
+
+describe('doesQueryResultMatchRequest', () => {
+  it('rejects preserved data from the previous filter request', () => {
+    expect(doesQueryResultMatchRequest(2, 1)).toBe(false);
+  });
+
+  it('keeps the current result settled during a background refresh', () => {
+    expect(doesQueryResultMatchRequest(2, 2)).toBe(true);
+  });
+});
 
 function makeStub(overrides: Partial<MessageStub> = {}): MessageStub {
   return {
