@@ -23,6 +23,11 @@ export enum MessageIdentifierType {
   DestinationTxSender = 'destination-tx-sender',
 }
 
+export type MessagePageCursor =
+  | { after: string; before?: never }
+  | { after?: never; before: string }
+  | { after?: never; before?: never };
+
 export function buildMessageQuery(
   idType: MessageIdentifierType,
   idValue: string,
@@ -76,8 +81,17 @@ export function buildMessageSearchQuery(
   scopeDomainIds?: number[],
   statusFilter: MessageStatusFilter = 'all',
   warpRouteAddresses: string[] = [],
-  { cached = true }: { cached?: boolean } = {},
+  {
+    cached = true,
+    after,
+    before,
+  }: {
+    cached?: boolean;
+  } & MessagePageCursor = {},
 ) {
+  if (after && before) throw new Error('Message query cannot use both before and after cursors');
+  const cursor = before || after;
+  const orderDirection = before ? 'ASC' : 'DESC';
   const originChains = originDomainIdFilter ? [originDomainIdFilter] : undefined;
   const destinationChains = destDomainIdFilter ? [destDomainIdFilter] : undefined;
   const startTime = startTimeFilter ? adjustToUtcTime(startTimeFilter) : undefined;
@@ -95,6 +109,7 @@ export function buildMessageSearchQuery(
     startTime,
     endTime,
   };
+  if (cursor) variables.cursor = cursor;
 
   // Only add warpAddresses to variables if there are valid addresses to filter
   if (warpAddressesBytea.length > 0) {
@@ -136,8 +151,8 @@ export function buildMessageSearchQuery(
         ${whereClause}
       ]
     },
-    order_by: {id: desc},
-    limit: ${limit}
+    order_by: {id: ${orderDirection.toLowerCase()}},
+    limit: ${limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,
@@ -151,6 +166,7 @@ export function buildMessageSearchQuery(
     '$startTime: timestamp',
     '$endTime: timestamp',
   ];
+  if (cursor) variableDeclarations.push('$cursor: bigint!');
   if (warpAddressesBytea.length > 0) {
     variableDeclarations.push('$warpAddresses: [bytea!]');
   }

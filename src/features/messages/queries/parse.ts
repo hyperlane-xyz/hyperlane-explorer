@@ -24,8 +24,15 @@ export function parseMessageStubResult(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
+  ascending = false,
 ): MessageStub[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStub);
+  return queryResult(
+    chainMetadataResolver,
+    scrapedChains,
+    data,
+    parseMessageStub,
+    ascending,
+  );
 }
 
 export function parseMessageQueryResult(
@@ -61,6 +68,7 @@ function queryResult<D, M extends MessageStub>(
     scrapedChains: DomainsEntry[],
     data: D,
   ) => M | null,
+  ascending = false,
 ) {
   if (!data || !Object.keys(data).length) return [];
   return deduplicateMessageList(
@@ -68,8 +76,16 @@ function queryResult<D, M extends MessageStub>(
       .flat()
       .map((d) => parseFn(chainMetadataResolver, scrapedChains, d))
       .filter((m): m is M => !!m)
-      .sort((a, b) => b.origin.timestamp - a.origin.timestamp),
+      .sort((a, b) =>
+        ascending ? compareMessageIdsDescending(b, a) : compareMessageIdsDescending(a, b),
+      ),
   );
+}
+
+export function compareMessageIdsDescending(a: MessageStub, b: MessageStub): number {
+  const aId = BigInt(a.id);
+  const bId = BigInt(b.id);
+  return aId === bId ? 0 : aId > bId ? -1 : 1;
 }
 
 function parseMessageStub(

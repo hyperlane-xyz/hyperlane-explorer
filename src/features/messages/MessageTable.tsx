@@ -28,9 +28,11 @@ const BACKGROUND_PREFETCH_COUNT = 5;
 export function MessageTable({
   messageList,
   isFetching,
+  animateInserts = true,
 }: {
   messageList: MessageStub[];
   isFetching: boolean;
+  animateInserts?: boolean;
 }) {
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
@@ -87,7 +89,7 @@ export function MessageTable({
     if (!previousIds) return;
 
     const newIds = [...currentIds].filter((id) => !previousIds.has(id));
-    if (newIds.length) {
+    if (animateInserts && newIds.length) {
       setInsertedMessageIds((ids) => new Set([...ids, ...newIds]));
       newIds.forEach((id) => {
         const existingTimer = insertedMessageTimers.current.get(id);
@@ -131,7 +133,7 @@ export function MessageTable({
 
       deliveredMessageTimers.current.set(id, timer);
     });
-  }, [messageList]);
+  }, [animateInserts, messageList]);
 
   useEffect(
     () => () => {
