@@ -36,7 +36,7 @@ const MESSAGE_PAGE_SIZE = 50;
 
 // Larger batch size for pending filter since most messages are delivered quickly,
 // so we need to fetch more to find pending ones.
-const PENDING_FILTER_BATCH_SIZE = 100;
+const PENDING_FILTER_BATCH_SIZE = 500;
 
 export function getMessagePage(
   filteredMessages: MessageStub[],

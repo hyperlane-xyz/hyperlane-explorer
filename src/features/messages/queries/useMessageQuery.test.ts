@@ -305,7 +305,7 @@ describe('GraphQL message domain scope', () => {
       null,
       null,
       null,
-      100,
+      500,
       true,
       scopeDomainIds,
       'pending',
