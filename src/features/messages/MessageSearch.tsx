@@ -251,12 +251,13 @@ export function MessageSearch() {
   }, [shouldRunPiSearch]);
 
   // Coalesce GraphQL + PI results
-  const isAnyFetching = isFetching || piSearchState.isFetching;
-  const isAnyError = isError || piSearchState.isError;
-  const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
+  const activePiSearchState = isFirstPage ? piSearchState : DEFAULT_PI_MESSAGE_SEARCH_STATE;
+  const isAnyFetching = isFetching || activePiSearchState.isFetching;
+  const isAnyError = isError || activePiSearchState.isError;
+  const hasAllRun = hasRun && (!shouldRunPiSearch || activePiSearchState.hasRun);
   const isSearchSettled = hasAllRun && isChainMetadataReady;
-  const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
-  const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
+  const isAnyMessageFound = isMessagesFound || activePiSearchState.isMessagesFound;
+  const messageListResult = isMessagesFound ? messageList : activePiSearchState.messageList;
   const messageTableKey = [
     trimmedInput,
     originChainFilter,
@@ -466,7 +467,7 @@ export function MessageSearch() {
         )}
         <SearchFetching
           show={!isAnyError && isValidInput && !isSearchSettled}
-          isPiFetching={piSearchState.isFetching}
+          isPiFetching={activePiSearchState.isFetching}
         />
         <SearchEmptyError
           show={

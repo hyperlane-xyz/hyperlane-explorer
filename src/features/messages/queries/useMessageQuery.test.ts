@@ -5,7 +5,9 @@ import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } fro
 import { compareMessageIdsDescending } from './parse';
 import {
   doesQueryResultMatchRequest,
+  getMessageCandidates,
   getMessagePage,
+  getRawMessagePage,
   getSearchMetadataState,
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
@@ -216,7 +218,8 @@ describe('message pagination', () => {
     );
     const filtered = candidates.filter((_, index) => index % 10 === 0);
 
-    expect(getMessagePage(filtered, candidates, 51)).toEqual({
+    const rawPage = getRawMessagePage({ q0: candidates }, 51, false);
+    expect(getMessagePage(filtered, rawPage, 51)).toEqual({
       messages: filtered,
       continuationCursor: '50',
       reverseCursor: '100',
@@ -228,7 +231,7 @@ describe('message pagination', () => {
       makeStub({ id: String(100 - index) }),
     );
 
-    const page = getMessagePage(messages, messages, 51);
+    const page = getMessagePage(messages, getRawMessagePage({ q0: messages }, 51, false), 51);
     expect(page.messages).toHaveLength(50);
     expect(page.continuationCursor).toBe('51');
   });
@@ -236,7 +239,7 @@ describe('message pagination', () => {
   it('selects the nearest ascending page and displays it descending', () => {
     const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
 
-    const page = getMessagePage(messages, messages, 51);
+    const page = getMessagePage(messages, getRawMessagePage({ q0: messages }, 51, true), 51);
     expect(page.continuationCursor).toBe('100');
     expect(page.reverseCursor).toBe('51');
     expect(page.messages.map(({ id }) => id)).toEqual(
@@ -251,11 +254,43 @@ describe('message pagination', () => {
       makeStub({ id: '12', origin: { ...makeStub().origin, timestamp: 200 } }),
     ];
 
-    expect(getMessagePage(messages, messages, 4).messages.map(({ id }) => id)).toEqual([
+    const rawPage = getRawMessagePage({ q0: messages }, 4, false);
+    expect(getMessagePage(messages, rawPage, 4).messages.map(({ id }) => id)).toEqual([
       '11',
       '12',
       '10',
     ]);
+  });
+
+  it('uses raw rows for continuation when parsing rejects a row', () => {
+    const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
+    const parsedRows = rawRows.slice(0, 50).map(({ id }) => makeStub({ id }));
+
+    const page = getMessagePage(parsedRows, getRawMessagePage({ q0: rawRows }, 51, false), 51);
+    expect(page.continuationCursor).toBe('50');
+  });
+
+  it('filters unrelated live rows before merging GraphQL matches', () => {
+    const matchingMessage = makeStub({ id: '100', msgId: '0x' + 'aa'.repeat(32) });
+    const unrelatedLiveMessages = Array.from({ length: 51 }, (_, index) =>
+      makeStub({ id: String(200 - index), msgId: '0x' + String(index).padStart(64, '0') }),
+    );
+
+    const candidates = getMessageCandidates(
+      unrelatedLiveMessages,
+      [matchingMessage],
+      51,
+      {
+        searchInput: matchingMessage.msgId,
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'all',
+      },
+      [],
+    );
+    expect(candidates.map(({ id }) => id)).toEqual(['100']);
   });
 
   it('resets a completed previous query to the live first page', () => {
