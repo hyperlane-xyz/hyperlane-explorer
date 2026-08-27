@@ -1,13 +1,19 @@
 import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
+import { parseMessageCursor } from '../MessageSearch';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
+import { compareMessageIdsDescending } from './parse';
 import {
   doesQueryResultMatchRequest,
+  getMessageCandidates,
+  getMessagePage,
+  getRawMessageIds,
   getSearchMetadataState,
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
   shouldPollMessageSearch,
+  shouldResetToFirstMessagePage,
   shouldUseMessageQueryCache,
 } from './useMessageQuery';
 
@@ -179,11 +185,177 @@ describe('message query caching', () => {
   });
 });
 
+describe('message pagination', () => {
+  it('adds a cursor to the GraphQL query', () => {
+    const result = buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], {
+      after: '100',
+    });
+
+    expect(result.query).toContain('limit: 51');
+    expect(result.query).toContain('cursor: [{initial_value: {id: $cursor}, ordering: DESC}]');
+    expect(result.variables.cursor).toBe('100');
+  });
+
+  it('adds an ascending cursor for previous pages', () => {
+    const result = buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], {
+      before: '100',
+    });
+
+    expect(result.query).toContain('order_by: {id: asc}');
+    expect(result.query).toContain('cursor: [{initial_value: {id: $cursor}, ordering: ASC}]');
+  });
+
+  it('accepts only integer cursor params', () => {
+    expect(parseMessageCursor('123')).toBe('123');
+    expect(parseMessageCursor('9223372036854775807')).toBe('9223372036854775807');
+    expect(parseMessageCursor('0')).toBeNull();
+    expect(parseMessageCursor('2.5')).toBeNull();
+    expect(parseMessageCursor('wat')).toBeNull();
+    expect(parseMessageCursor('9223372036854775808')).toBeNull();
+  });
+
+  it('continues after a full candidate batch narrowed by client filters', () => {
+    const candidates = Array.from({ length: 51 }, (_, index) =>
+      makeStub({ id: String(100 - index) }),
+    );
+    const filtered = candidates.filter((_, index) => index % 10 === 0);
+
+    const rawIds = getRawMessageIds({ q0: candidates }, 51, false);
+    expect(getMessagePage(filtered, rawIds, 51)).toEqual({
+      messages: filtered,
+      continuationCursor: '50',
+      reverseCursor: '100',
+    });
+  });
+
+  it('uses the last displayed ID when more than one page matches', () => {
+    const messages = Array.from({ length: 51 }, (_, index) =>
+      makeStub({ id: String(100 - index) }),
+    );
+
+    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, false), 51);
+    expect(page.messages).toHaveLength(50);
+    expect(page.continuationCursor).toBe('51');
+  });
+
+  it('selects the nearest ascending page and displays it descending', () => {
+    const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
+
+    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, true), 51);
+    expect(page.continuationCursor).toBe('100');
+    expect(page.reverseCursor).toBe('51');
+    expect(page.messages.map(({ id }) => id)).toEqual(
+      Array.from({ length: 50 }, (_, index) => String(100 - index)),
+    );
+  });
+
+  it('displays each page by send time, independent of cursor order', () => {
+    const messages = [
+      makeStub({ id: '10', origin: { ...makeStub().origin, timestamp: 100 } }),
+      makeStub({ id: '11', origin: { ...makeStub().origin, timestamp: 300 } }),
+      makeStub({ id: '12', origin: { ...makeStub().origin, timestamp: 200 } }),
+    ];
+
+    const rawIds = getRawMessageIds({ q0: messages }, 4, false);
+    expect(getMessagePage(messages, rawIds, 4).messages.map(({ id }) => id)).toEqual([
+      '11',
+      '12',
+      '10',
+    ]);
+  });
+
+  it('uses raw rows for continuation when parsing rejects a row', () => {
+    const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
+    const parsedRows = rawRows.slice(0, 50).map(({ id }) => makeStub({ id }));
+
+    const page = getMessagePage(parsedRows, getRawMessageIds({ q0: rawRows }, 51, false), 51);
+    expect(page.continuationCursor).toBe('50');
+  });
+
+  it('exposes continuation when a full raw page has no filtered matches', () => {
+    const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
+    const page = getMessagePage([], getRawMessageIds({ q0: rawRows }, 51, false), 51);
+
+    expect(page.messages).toEqual([]);
+    expect(page.continuationCursor).toBe('50');
+  });
+
+  it('filters unrelated live rows before merging GraphQL matches', () => {
+    const matchingMessage = makeStub({ id: '100', msgId: '0x' + 'aa'.repeat(32) });
+    const unrelatedLiveMessages = Array.from({ length: 51 }, (_, index) =>
+      makeStub({ id: String(200 - index), msgId: '0x' + String(index).padStart(64, '0') }),
+    );
+
+    const candidates = getMessageCandidates(
+      unrelatedLiveMessages,
+      [matchingMessage],
+      51,
+      {
+        searchInput: matchingMessage.msgId,
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'all',
+      },
+      [],
+    );
+    expect(candidates.map(({ id }) => id)).toEqual(['100']);
+  });
+
+  it('lets delivered live state replace a stale pending query row before filtering', () => {
+    const msgId = '0x' + 'aa'.repeat(32);
+    const pendingQueryMessage = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
+    const deliveredLiveMessage = makeStub({ id: '100', msgId, status: MessageStatus.Delivered });
+
+    const candidates = getMessageCandidates(
+      [deliveredLiveMessage],
+      [pendingQueryMessage],
+      51,
+      {
+        searchInput: '',
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'pending',
+      },
+      [],
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it('resets a completed previous query to the live first page', () => {
+    expect(shouldResetToFirstMessagePage(true, true, false, null)).toBe(true);
+    expect(shouldResetToFirstMessagePage(true, true, false, '100')).toBe(false);
+    expect(shouldResetToFirstMessagePage(false, true, false, null)).toBe(false);
+    expect(shouldResetToFirstMessagePage(true, true, true, null)).toBe(false);
+  });
+
+  it('orders displayed messages by the same database ID used by the cursor', () => {
+    const messages = [
+      makeStub({ id: '9', origin: { ...makeStub().origin, timestamp: 3 } }),
+      makeStub({ id: '11', origin: { ...makeStub().origin, timestamp: 1 } }),
+      makeStub({ id: '10', origin: { ...makeStub().origin, timestamp: 2 } }),
+    ];
+    expect(messages.sort(compareMessageIdsDescending).map(({ id }) => id)).toEqual([
+      '11',
+      '10',
+      '9',
+    ]);
+  });
+});
+
 describe('message search polling', () => {
   it('keeps a safety refresh for filtered live searches', () => {
     expect(shouldPollMessageSearch(true, true)).toBe(true);
     expect(shouldPollMessageSearch(true, false)).toBe(false);
     expect(shouldPollMessageSearch(false, false)).toBe(true);
+  });
+
+  it('keeps older pages stable', () => {
+    expect(shouldPollMessageSearch(false, false, false)).toBe(false);
+    expect(shouldPollMessageSearch(true, true, false)).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
-import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
+import { Button, Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -22,6 +22,7 @@ import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { isWarpRouteIdFormat, sanitizeString } from '../../utils/string';
 import { MessageTable } from './MessageTable';
 import { DEFAULT_PI_MESSAGE_SEARCH_STATE, PiMessageSearchState } from './piSearchState';
+import type { MessagePageCursor } from './queries/build';
 import { useMessageSearchQuery } from './queries/useMessageQuery';
 import { SearchFilterBarSkeleton } from './SearchFilterBarSkeleton';
 
@@ -58,6 +59,23 @@ enum MESSAGE_QUERY_PARAMS {
   START_TIME = 'startTime',
   END_TIME = 'endTime',
   STATUS = 'status',
+  AFTER = 'after',
+  BEFORE = 'before',
+}
+
+const MAX_MESSAGE_CURSOR = 9_223_372_036_854_775_807n;
+
+export function parseMessageCursor(value: string): string | null {
+  if (!/^\d+$/.test(value)) return null;
+  const cursor = BigInt(value);
+  return cursor > 0n && cursor <= MAX_MESSAGE_CURSOR ? value : null;
+}
+
+function parseMessagePageCursor(after: string, before: string): MessagePageCursor {
+  const parsedBefore = parseMessageCursor(before);
+  if (parsedBefore) return { before: parsedBefore };
+  const parsedAfter = parseMessageCursor(after);
+  return parsedAfter ? { after: parsedAfter } : {};
 }
 
 export function MessageSearch() {
@@ -79,6 +97,8 @@ export function MessageSearch() {
       defaultStartTime,
       defaultEndTime,
       defaultStatus,
+      defaultAfter,
+      defaultBefore,
     ],
     isRouterReady,
   ] = useMultipleQueryParams([
@@ -88,6 +108,8 @@ export function MessageSearch() {
     MESSAGE_QUERY_PARAMS.START_TIME,
     MESSAGE_QUERY_PARAMS.END_TIME,
     MESSAGE_QUERY_PARAMS.STATUS,
+    MESSAGE_QUERY_PARAMS.AFTER,
+    MESSAGE_QUERY_PARAMS.BEFORE,
   ]);
 
   // Search text input
@@ -128,6 +150,11 @@ export function MessageSearch() {
   const [statusFilter, setStatusFilter] = useState<MessageStatusFilter>(
     parseStatusFilter(defaultStatus),
   );
+  const [pageCursor, setPageCursor] = useState<MessagePageCursor>(() =>
+    parseMessagePageCursor(defaultAfter, defaultBefore),
+  );
+  const cursorValue = pageCursor.before || pageCursor.after;
+  const isFirstPage = !cursorValue;
 
   // One-way sync: URL params → state on initial hydration only
   const hasHydratedRef = useRef(false);
@@ -140,6 +167,7 @@ export function MessageSearch() {
     if (defaultStartTime) setStartTimeFilter(tryToDecimalNumber(defaultStartTime));
     if (defaultEndTime) setEndTimeFilter(tryToDecimalNumber(defaultEndTime));
     if (defaultStatus) setStatusFilter(parseStatusFilter(defaultStatus));
+    setPageCursor(parseMessagePageCursor(defaultAfter, defaultBefore));
   }, [
     isRouterReady,
     defaultSearchQuery,
@@ -148,6 +176,8 @@ export function MessageSearch() {
     defaultStartTime,
     defaultEndTime,
     defaultStatus,
+    defaultAfter,
+    defaultBefore,
   ]);
 
   // Check if input looks like a warp route format (use trimmedInput, not sanitizedInput)
@@ -191,6 +221,9 @@ export function MessageSearch() {
     hasRun,
     messageList,
     isMessagesFound,
+    previousCursor,
+    nextCursor,
+    shouldResetToFirstPage,
     refetch,
   } = useMessageSearchQuery(
     searchInputForQuery,
@@ -200,9 +233,14 @@ export function MessageSearch() {
     endTimeFilter,
     statusFilter,
     warpRouteAddresses,
+    pageCursor,
   );
 
-  const shouldRunPiSearch = !!sanitizedInput && hasRun && !isMessagesFound;
+  useEffect(() => {
+    if (shouldResetToFirstPage) setPageCursor({});
+  }, [shouldResetToFirstPage]);
+
+  const shouldRunPiSearch = isFirstPage && !!sanitizedInput && hasRun && !isMessagesFound;
 
   useEffect(() => {
     setPiSearchState(DEFAULT_PI_MESSAGE_SEARCH_STATE);
@@ -217,12 +255,13 @@ export function MessageSearch() {
   }, [shouldRunPiSearch]);
 
   // Coalesce GraphQL + PI results
-  const isAnyFetching = isFetching || piSearchState.isFetching;
-  const isAnyError = isError || piSearchState.isError;
-  const hasAllRun = hasRun && (!shouldRunPiSearch || piSearchState.hasRun);
+  const activePiSearchState = isFirstPage ? piSearchState : DEFAULT_PI_MESSAGE_SEARCH_STATE;
+  const isAnyFetching = isFetching || activePiSearchState.isFetching;
+  const isAnyError = isError || activePiSearchState.isError;
+  const hasAllRun = hasRun && (!shouldRunPiSearch || activePiSearchState.hasRun);
   const isSearchSettled = hasAllRun && isChainMetadataReady;
-  const isAnyMessageFound = isMessagesFound || piSearchState.isMessagesFound;
-  const messageListResult = isMessagesFound ? messageList : piSearchState.messageList;
+  const isAnyMessageFound = isMessagesFound || activePiSearchState.isMessagesFound;
+  const messageListResult = isMessagesFound ? messageList : activePiSearchState.messageList;
   const messageTableKey = [
     trimmedInput,
     originChainFilter,
@@ -230,6 +269,7 @@ export function MessageSearch() {
     startTimeFilter,
     endTimeFilter,
     statusFilter,
+    cursorValue,
   ].join(':');
 
   // Compute redirect URL for direct message/tx lookups
@@ -239,7 +279,7 @@ export function MessageSearch() {
     if (!hasAllRun || isAnyFetching) return null;
 
     // Only redirect when there is an explicit search input.
-    if (!hasInput) return null;
+    if (!hasInput || !isFirstPage) return null;
 
     // Filters mean the user is running a results query. Only auto-open exact
     // tx/message lookup searches when the search is unfiltered.
@@ -280,6 +320,7 @@ export function MessageSearch() {
     isMessagesFound,
     messageList,
     originChainFilter,
+    isFirstPage,
     sanitizedInput,
     startTimeFilter,
     statusFilter,
@@ -308,6 +349,8 @@ export function MessageSearch() {
     [MESSAGE_QUERY_PARAMS.START_TIME]: startTimeFilter !== null ? String(startTimeFilter) : '',
     [MESSAGE_QUERY_PARAMS.END_TIME]: endTimeFilter !== null ? String(endTimeFilter) : '',
     [MESSAGE_QUERY_PARAMS.STATUS]: statusFilter !== 'all' ? statusFilter : '',
+    [MESSAGE_QUERY_PARAMS.AFTER]: pageCursor.after || '',
+    [MESSAGE_QUERY_PARAMS.BEFORE]: pageCursor.before || '',
   });
 
   const lastRedirectUrlRef = useRef<string | null>(null);
@@ -340,7 +383,29 @@ export function MessageSearch() {
 
   function onChangeSearchInput(value: string) {
     hasUserEditedSearchRef.current = true;
+    resetPagination();
     setSearchInput(value);
+  }
+
+  function resetPagination() {
+    setPageCursor({});
+  }
+
+  function changeFilter<T>(setter: (value: T) => void) {
+    return (value: T) => {
+      resetPagination();
+      setter(value);
+    };
+  }
+
+  function goToNextPage() {
+    if (!nextCursor) return;
+    setPageCursor({ after: nextCursor });
+  }
+
+  function goToPreviousPage() {
+    if (!previousCursor) return;
+    setPageCursor({ before: previousCursor });
   }
 
   return (
@@ -368,35 +433,54 @@ export function MessageSearch() {
           <div className="flex items-center space-x-2 md:space-x-4">
             <SearchFilterBar
               originChain={originChainFilter}
-              onChangeOrigin={setOriginChainFilter}
+              onChangeOrigin={changeFilter(setOriginChainFilter)}
               destinationChain={destinationChainFilter}
-              onChangeDestination={setDestinationChainFilter}
+              onChangeDestination={changeFilter(setDestinationChainFilter)}
               startTimestamp={startTimeFilter}
-              onChangeStartTimestamp={setStartTimeFilter}
+              onChangeStartTimestamp={changeFilter(setStartTimeFilter)}
               endTimestamp={endTimeFilter}
-              onChangeEndTimestamp={setEndTimeFilter}
+              onChangeEndTimestamp={changeFilter(setEndTimeFilter)}
               statusFilter={statusFilter}
-              onChangeStatus={setStatusFilter}
+              onChangeStatus={changeFilter(setStatusFilter)}
             />
             <RefreshButton loading={isAnyFetching} onClick={refetch} />
           </div>
         </div>
         {isSearchSettled && (
-          <Fade show={showMessageTable && !redirectUrl}>
-            <MessageTable
-              key={messageTableKey}
-              messageList={messageListResult}
-              isFetching={isAnyFetching}
-            />
+          <Fade show={(showMessageTable || !isFirstPage || !!nextCursor) && !redirectUrl}>
+            <div>
+              {showMessageTable && (
+                <MessageTable
+                  key={messageTableKey}
+                  messageList={messageListResult}
+                  isFetching={isAnyFetching}
+                  animateInserts={isFirstPage}
+                />
+              )}
+              <MessagePagination
+                isFirstPage={isFirstPage}
+                canGoPrevious={!!previousCursor}
+                canGoNext={!!nextCursor}
+                loading={isAnyFetching}
+                onFirstPage={resetPagination}
+                onPreviousPage={goToPreviousPage}
+                onNextPage={goToNextPage}
+              />
+            </div>
           </Fade>
         )}
         <SearchFetching
           show={!isAnyError && isValidInput && !isSearchSettled}
-          isPiFetching={piSearchState.isFetching}
+          isPiFetching={activePiSearchState.isFetching}
         />
         <SearchEmptyError
           show={
-            !redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && isSearchSettled
+            !redirectUrl &&
+            !isAnyError &&
+            isValidInput &&
+            !isAnyMessageFound &&
+            isSearchSettled &&
+            !nextCursor
           }
           hasInput={hasInput}
           allowAddress={true}
@@ -431,6 +515,48 @@ export function MessageSearch() {
         />
       </Card>
     </>
+  );
+}
+
+function MessagePagination({
+  isFirstPage,
+  canGoPrevious,
+  canGoNext,
+  loading,
+  onFirstPage,
+  onPreviousPage,
+  onNextPage,
+}: {
+  isFirstPage: boolean;
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  loading: boolean;
+  onFirstPage: () => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+}) {
+  const buttonClassName =
+    'border-primary-800 text-primary-800 border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:border-gray-300 disabled:text-gray-300';
+
+  return (
+    <nav
+      className="flex items-center justify-center gap-2 px-4 py-4 sm:gap-4"
+      aria-label="Message pages"
+    >
+      <Button className={buttonClassName} disabled={isFirstPage || loading} onClick={onFirstPage}>
+        First
+      </Button>
+      <Button
+        className={buttonClassName}
+        disabled={!canGoPrevious || loading}
+        onClick={onPreviousPage}
+      >
+        Previous
+      </Button>
+      <Button className={buttonClassName} disabled={!canGoNext || loading} onClick={onNextPage}>
+        Next
+      </Button>
+    </nav>
   );
 }
 
