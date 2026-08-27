@@ -1,4 +1,4 @@
-import { getMessagePauseType } from './pausedRoutes';
+import { getMessagePause, getMessagePauseType } from './pausedRoutes';
 
 describe('getMessagePauseType', () => {
   const pausedRoute = {
@@ -74,6 +74,41 @@ describe('getMessagePauseType', () => {
         recipient: '0x2222222222222222222222222222222222222222',
       }),
     ).toBe('chain');
+  });
+
+  it('returns the configured link for a halted chain', () => {
+    expect(
+      getMessagePause({
+        originDomainId: 1783,
+        destinationDomainId: 1,
+        sender: '0x1111111111111111111111111111111111111111',
+        recipient: '0x2222222222222222222222222222222222222222',
+      }),
+    ).toEqual({
+      type: 'chain',
+      link: 'https://x.com/KiiChainio/status/2091330990027296992',
+    });
+  });
+
+  it('returns the configured link for a halted route', () => {
+    expect(getMessagePause(pausedRoute)).toEqual({
+      type: 'route',
+      link: 'https://x.com/InfiniteTradePr/status/2090409024437039569',
+    });
+  });
+
+  it('returns another configured route link', () => {
+    expect(
+      getMessagePause({
+        originDomainId: 42161,
+        destinationDomainId: 1399811149,
+        sender: '0xef9295afcff293956e8b149b33449f246f6f107d',
+        recipient: 'Ht37Rn665vxVD4mChW7Qf9r5MnGJQQwLAdfBZzpoKqTp',
+      }),
+    ).toEqual({
+      type: 'route',
+      link: 'https://x.com/nesaorg/status/2091915864497066077',
+    });
   });
 
   it('does not pause route legs that exclude the halted chain', () => {
