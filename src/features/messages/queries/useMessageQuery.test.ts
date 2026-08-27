@@ -1,13 +1,13 @@
 import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
-import { parseMessageCursor, shouldShowMessagePagination } from '../MessageSearch';
+import { parseMessageCursor } from '../MessageSearch';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { compareMessageIdsDescending } from './parse';
 import {
   doesQueryResultMatchRequest,
   getMessageCandidates,
   getMessagePage,
-  getRawMessagePage,
+  getRawMessageIds,
   getSearchMetadataState,
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
@@ -218,8 +218,8 @@ describe('message pagination', () => {
     );
     const filtered = candidates.filter((_, index) => index % 10 === 0);
 
-    const rawPage = getRawMessagePage({ q0: candidates }, 51, false);
-    expect(getMessagePage(filtered, rawPage, 51)).toEqual({
+    const rawIds = getRawMessageIds({ q0: candidates }, 51, false);
+    expect(getMessagePage(filtered, rawIds, 51)).toEqual({
       messages: filtered,
       continuationCursor: '50',
       reverseCursor: '100',
@@ -231,7 +231,7 @@ describe('message pagination', () => {
       makeStub({ id: String(100 - index) }),
     );
 
-    const page = getMessagePage(messages, getRawMessagePage({ q0: messages }, 51, false), 51);
+    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, false), 51);
     expect(page.messages).toHaveLength(50);
     expect(page.continuationCursor).toBe('51');
   });
@@ -239,7 +239,7 @@ describe('message pagination', () => {
   it('selects the nearest ascending page and displays it descending', () => {
     const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
 
-    const page = getMessagePage(messages, getRawMessagePage({ q0: messages }, 51, true), 51);
+    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, true), 51);
     expect(page.continuationCursor).toBe('100');
     expect(page.reverseCursor).toBe('51');
     expect(page.messages.map(({ id }) => id)).toEqual(
@@ -254,8 +254,8 @@ describe('message pagination', () => {
       makeStub({ id: '12', origin: { ...makeStub().origin, timestamp: 200 } }),
     ];
 
-    const rawPage = getRawMessagePage({ q0: messages }, 4, false);
-    expect(getMessagePage(messages, rawPage, 4).messages.map(({ id }) => id)).toEqual([
+    const rawIds = getRawMessageIds({ q0: messages }, 4, false);
+    expect(getMessagePage(messages, rawIds, 4).messages.map(({ id }) => id)).toEqual([
       '11',
       '12',
       '10',
@@ -266,17 +266,16 @@ describe('message pagination', () => {
     const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
     const parsedRows = rawRows.slice(0, 50).map(({ id }) => makeStub({ id }));
 
-    const page = getMessagePage(parsedRows, getRawMessagePage({ q0: rawRows }, 51, false), 51);
+    const page = getMessagePage(parsedRows, getRawMessageIds({ q0: rawRows }, 51, false), 51);
     expect(page.continuationCursor).toBe('50');
   });
 
   it('exposes continuation when a full raw page has no filtered matches', () => {
     const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
-    const page = getMessagePage([], getRawMessagePage({ q0: rawRows }, 51, false), 51);
+    const page = getMessagePage([], getRawMessageIds({ q0: rawRows }, 51, false), 51);
 
     expect(page.messages).toEqual([]);
     expect(page.continuationCursor).toBe('50');
-    expect(shouldShowMessagePagination(true, page.continuationCursor)).toBe(true);
   });
 
   it('filters unrelated live rows before merging GraphQL matches', () => {

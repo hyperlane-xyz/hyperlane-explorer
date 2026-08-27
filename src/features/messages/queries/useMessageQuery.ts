@@ -40,15 +40,15 @@ const PENDING_FILTER_BATCH_SIZE = 500;
 
 export function getMessagePage(
   filteredMessages: MessageStub[],
-  rawPage: RawMessagePage,
+  rawIds: string[],
   queryLimit: number,
 ) {
   const pageMessages = filteredMessages.slice(0, MESSAGE_PAGE_SIZE);
   const continuationCursor =
     filteredMessages.length > MESSAGE_PAGE_SIZE
       ? pageMessages[pageMessages.length - 1]?.id || null
-      : rawPage.count === queryLimit
-        ? rawPage.lastCursor
+      : rawIds.length === queryLimit
+        ? rawIds.at(-1) || null
         : null;
   const messages = pageMessages.sort(
     (a, b) => b.origin.timestamp - a.origin.timestamp || compareMessageIdsDescending(a, b),
@@ -56,24 +56,16 @@ export function getMessagePage(
   return {
     messages,
     continuationCursor,
-    reverseCursor: rawPage.firstCursor,
+    reverseCursor: rawIds[0] || null,
   };
 }
 
-interface RawMessagePage {
-  count: number;
-  firstCursor: string | null;
-  lastCursor: string | null;
-}
-
-export function getRawMessagePage(
+export function getRawMessageIds(
   data: Record<string, Array<{ id: number | string }>> | undefined,
   queryLimit: number,
   ascending: boolean,
-): RawMessagePage {
-  const ids = [
-    ...new Set(Object.values(data ?? {}).flatMap((rows) => rows.map(({ id }) => String(id)))),
-  ]
+): string[] {
+  return [...new Set(Object.values(data ?? {}).flatMap((rows) => rows.map(({ id }) => String(id))))]
     .sort((a, b) => {
       const aId = BigInt(a);
       const bId = BigInt(b);
@@ -81,11 +73,6 @@ export function getRawMessagePage(
       return ascending ? -descending : descending;
     })
     .slice(0, queryLimit);
-  return {
-    count: ids.length,
-    firstCursor: ids[0] ?? null,
-    lastCursor: ids[ids.length - 1] ?? null,
-  };
 }
 
 export function isValidSearchQuery(input: string) {
@@ -154,7 +141,7 @@ export function messageMatchesWarpRoute(
   );
 }
 
-export interface MessageSearchFilters {
+interface MessageSearchFilters {
   searchInput: string;
   originDomainId: number | null;
   destinationDomainId: number | null;
@@ -182,17 +169,6 @@ export function messageMatchesSearchFilters(
   return true;
 }
 
-export function filterMessageList(
-  messages: MessageStub[],
-  filters: MessageSearchFilters,
-  warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
-): MessageStub[] {
-  const filtered = messages.filter((message) => messageMatchesSearchFilters(message, filters));
-  return warpRouteDomainAddresses.length
-    ? filtered.filter((message) => messageMatchesWarpRoute(message, warpRouteDomainAddresses))
-    : filtered;
-}
-
 export function getMessageCandidates(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
@@ -201,8 +177,14 @@ export function getMessageCandidates(
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
   ascending = false,
 ): MessageStub[] {
-  const mergedMessages = mergeMessageLists(liveMessages, queryMessages, ascending);
-  return filterMessageList(mergedMessages, filters, warpRouteDomainAddresses).slice(0, queryLimit);
+  return mergeMessageLists(liveMessages, queryMessages, ascending)
+    .filter(
+      (message) =>
+        messageMatchesSearchFilters(message, filters) &&
+        (!warpRouteDomainAddresses.length ||
+          messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
+    )
+    .slice(0, queryLimit);
 }
 
 function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
@@ -392,8 +374,8 @@ export function useMessageSearchQuery(
       ),
     [chainMetadataResolver, scrapedChains, data, isBeforeQuery],
   );
-  const rawMessagePage = useMemo(
-    () => getRawMessagePage(data, queryLimit, isBeforeQuery),
+  const rawMessageIds = useMemo(
+    () => getRawMessageIds(data, queryLimit, isBeforeQuery),
     [data, isBeforeQuery, queryLimit],
   );
   const liveMessageList = useMemo(
@@ -403,43 +385,37 @@ export function useMessageSearchQuery(
         .filter((message): message is MessageStub => !!message),
     [chainMetadataResolver, scrapedChains, liveMessageRows],
   );
-  const clientFilters = useMemo<MessageSearchFilters>(
-    () => ({
-      searchInput: sanitizedInput,
-      originDomainId: isValidOrigin ? originDomainId : null,
-      destinationDomainId: isValidDestination ? destDomainId : null,
-      startTime: startTimeFilter,
-      endTime: endTimeFilter,
-      status: statusFilter,
-    }),
-    [
-      destDomainId,
-      endTimeFilter,
-      isValidDestination,
-      isValidOrigin,
-      originDomainId,
-      sanitizedInput,
-      startTimeFilter,
-      statusFilter,
-    ],
-  );
-  // Apply client-side filters before merging so unrelated live rows cannot
-  // evict GraphQL matches. Raw query metadata controls cursor continuation.
+  // Filter before limiting so unrelated live rows cannot evict query matches.
+  // Raw query metadata controls cursor continuation.
   const candidateMessageList = useMemo(
     () =>
       getMessageCandidates(
         liveMessageList,
         unfilteredMessageList,
         queryLimit,
-        clientFilters,
+        {
+          searchInput: sanitizedInput,
+          originDomainId: isValidOrigin ? originDomainId : null,
+          destinationDomainId: isValidDestination ? destDomainId : null,
+          startTime: startTimeFilter,
+          endTime: endTimeFilter,
+          status: statusFilter,
+        },
         warpRouteDomainAddresses,
         isBeforeQuery,
       ),
     [
-      clientFilters,
+      destDomainId,
+      endTimeFilter,
       isBeforeQuery,
+      isValidDestination,
+      isValidOrigin,
       liveMessageList,
+      originDomainId,
       queryLimit,
+      sanitizedInput,
+      startTimeFilter,
+      statusFilter,
       unfilteredMessageList,
       warpRouteDomainAddresses,
     ],
@@ -449,7 +425,7 @@ export function useMessageSearchQuery(
     messages: paginatedMessageList,
     continuationCursor,
     reverseCursor,
-  } = getMessagePage(candidateMessageList, rawMessagePage, queryLimit);
+  } = getMessagePage(candidateMessageList, rawMessageIds, queryLimit);
   const previousCursor = isBeforeQuery ? continuationCursor : reverseCursor;
   const nextCursor = isBeforeQuery ? reverseCursor : continuationCursor;
   const isMessagesFound = paginatedMessageList.length > 0;
