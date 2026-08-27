@@ -207,9 +207,11 @@ describe('message pagination', () => {
 
   it('accepts only integer cursor params', () => {
     expect(parseMessageCursor('123')).toBe('123');
-    expect(parseMessageCursor('0')).toBe('0');
+    expect(parseMessageCursor('9223372036854775807')).toBe('9223372036854775807');
+    expect(parseMessageCursor('0')).toBeNull();
     expect(parseMessageCursor('2.5')).toBeNull();
     expect(parseMessageCursor('wat')).toBeNull();
+    expect(parseMessageCursor('9223372036854775808')).toBeNull();
   });
 
   it('continues after a full candidate batch narrowed by client filters', () => {

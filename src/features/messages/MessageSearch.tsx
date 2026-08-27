@@ -1,5 +1,5 @@
 import type { WarpRouteIdToAddressesMap } from '@hyperlane-xyz/sdk/warp/read';
-import { Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
+import { Button, Fade, IconButton, RefreshIcon, useDebounce } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -63,8 +63,12 @@ enum MESSAGE_QUERY_PARAMS {
   BEFORE = 'before',
 }
 
+const MAX_MESSAGE_CURSOR = 9_223_372_036_854_775_807n;
+
 export function parseMessageCursor(value: string): string | null {
-  return /^\d+$/.test(value) ? value : null;
+  if (!/^\d+$/.test(value)) return null;
+  const cursor = BigInt(value);
+  return cursor > 0n && cursor <= MAX_MESSAGE_CURSOR ? value : null;
 }
 
 function parseMessagePageCursor(after: string, before: string): MessagePageCursor {
@@ -531,35 +535,27 @@ function MessagePagination({
   onPreviousPage: () => void;
   onNextPage: () => void;
 }) {
+  const buttonClassName =
+    'border-primary-800 text-primary-800 border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:border-gray-300 disabled:text-gray-300';
+
   return (
     <nav
       className="flex items-center justify-center gap-2 px-4 py-4 sm:gap-4"
       aria-label="Message pages"
     >
-      <button
-        type="button"
-        className="border-primary-800 text-primary-800 rounded border px-3 py-1.5 text-sm transition-colors hover:bg-gray-50 disabled:border-gray-300 disabled:text-gray-300"
-        disabled={isFirstPage || loading}
-        onClick={onFirstPage}
-      >
+      <Button className={buttonClassName} disabled={isFirstPage || loading} onClick={onFirstPage}>
         First
-      </button>
-      <button
-        type="button"
-        className="border-primary-800 text-primary-800 rounded border px-3 py-1.5 text-sm transition-colors hover:bg-gray-50 disabled:border-gray-300 disabled:text-gray-300"
+      </Button>
+      <Button
+        className={buttonClassName}
         disabled={!canGoPrevious || loading}
         onClick={onPreviousPage}
       >
         Previous
-      </button>
-      <button
-        type="button"
-        className="border-primary-800 text-primary-800 rounded border px-3 py-1.5 text-sm transition-colors hover:bg-gray-50 disabled:border-gray-300 disabled:text-gray-300"
-        disabled={!canGoNext || loading}
-        onClick={onNextPage}
-      >
+      </Button>
+      <Button className={buttonClassName} disabled={!canGoNext || loading} onClick={onNextPage}>
         Next
-      </button>
+      </Button>
     </nav>
   );
 }
