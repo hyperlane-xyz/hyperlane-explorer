@@ -67,6 +67,10 @@ export function parseMessageCursor(value: string): string | null {
   return /^\d+$/.test(value) ? value : null;
 }
 
+export function shouldShowMessagePagination(isFirstPage: boolean, nextCursor: string | null) {
+  return !isFirstPage || !!nextCursor;
+}
+
 function parseMessagePageCursor(after: string, before: string): MessagePageCursor {
   const parsedBefore = parseMessageCursor(before);
   if (parsedBefore) return { before: parsedBefore };
@@ -443,7 +447,12 @@ export function MessageSearch() {
           </div>
         </div>
         {isSearchSettled && (
-          <Fade show={(showMessageTable || !isFirstPage) && !redirectUrl}>
+          <Fade
+            show={
+              (showMessageTable || shouldShowMessagePagination(isFirstPage, nextCursor)) &&
+              !redirectUrl
+            }
+          >
             <div>
               {showMessageTable && (
                 <MessageTable
@@ -471,7 +480,12 @@ export function MessageSearch() {
         />
         <SearchEmptyError
           show={
-            !redirectUrl && !isAnyError && isValidInput && !isAnyMessageFound && isSearchSettled
+            !redirectUrl &&
+            !isAnyError &&
+            isValidInput &&
+            !isAnyMessageFound &&
+            isSearchSettled &&
+            !nextCursor
           }
           hasInput={hasInput}
           allowAddress={true}

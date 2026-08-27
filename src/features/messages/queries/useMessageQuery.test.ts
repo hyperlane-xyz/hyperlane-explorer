@@ -1,6 +1,6 @@
 import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
-import { parseMessageCursor } from '../MessageSearch';
+import { parseMessageCursor, shouldShowMessagePagination } from '../MessageSearch';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
 import { compareMessageIdsDescending } from './parse';
 import {
@@ -270,6 +270,15 @@ describe('message pagination', () => {
     expect(page.continuationCursor).toBe('50');
   });
 
+  it('exposes continuation when a full raw page has no filtered matches', () => {
+    const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
+    const page = getMessagePage([], getRawMessagePage({ q0: rawRows }, 51, false), 51);
+
+    expect(page.messages).toEqual([]);
+    expect(page.continuationCursor).toBe('50');
+    expect(shouldShowMessagePagination(true, page.continuationCursor)).toBe(true);
+  });
+
   it('filters unrelated live rows before merging GraphQL matches', () => {
     const matchingMessage = makeStub({ id: '100', msgId: '0x' + 'aa'.repeat(32) });
     const unrelatedLiveMessages = Array.from({ length: 51 }, (_, index) =>
@@ -291,6 +300,28 @@ describe('message pagination', () => {
       [],
     );
     expect(candidates.map(({ id }) => id)).toEqual(['100']);
+  });
+
+  it('lets delivered live state replace a stale pending query row before filtering', () => {
+    const msgId = '0x' + 'aa'.repeat(32);
+    const pendingQueryMessage = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
+    const deliveredLiveMessage = makeStub({ id: '100', msgId, status: MessageStatus.Delivered });
+
+    const candidates = getMessageCandidates(
+      [deliveredLiveMessage],
+      [pendingQueryMessage],
+      51,
+      {
+        searchInput: '',
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'pending',
+      },
+      [],
+    );
+    expect(candidates).toEqual([]);
   });
 
   it('resets a completed previous query to the live first page', () => {

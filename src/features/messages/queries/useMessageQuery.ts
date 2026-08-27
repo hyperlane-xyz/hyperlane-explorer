@@ -201,12 +201,8 @@ export function getMessageCandidates(
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
   ascending = false,
 ): MessageStub[] {
-  const matchingLiveMessages = filterMessageList(liveMessages, filters, warpRouteDomainAddresses);
-  const matchingQueryMessages = filterMessageList(queryMessages, filters, warpRouteDomainAddresses);
-  return mergeMessageLists(matchingLiveMessages, matchingQueryMessages, ascending).slice(
-    0,
-    queryLimit,
-  );
+  const mergedMessages = mergeMessageLists(liveMessages, queryMessages, ascending);
+  return filterMessageList(mergedMessages, filters, warpRouteDomainAddresses).slice(0, queryLimit);
 }
 
 function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
