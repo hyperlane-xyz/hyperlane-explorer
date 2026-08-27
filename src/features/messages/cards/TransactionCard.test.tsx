@@ -73,5 +73,10 @@ it('shows a halt warning before missing chain metadata', async () => {
 
   expect(container.textContent).toContain('Chain Halted');
   expect(container.textContent).not.toContain('Delivery status is unknown.');
+  const link = container.querySelector('a');
+  expect(link?.textContent).toBe('Read more about this');
+  expect(link?.getAttribute('href')).toBe('https://x.com/KiiChainio/status/2091330990027296992');
+  expect(link?.getAttribute('target')).toBe('_blank');
+  expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   await act(async () => root.unmount());
 });
