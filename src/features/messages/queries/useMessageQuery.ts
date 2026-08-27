@@ -1,6 +1,6 @@
 import { eqAddress, isAddress } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo } from 'react';
-import { useQuery } from 'urql';
+import { createRequest, useQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
@@ -97,6 +97,10 @@ export function shouldResetToFirstMessagePage(
   continuationCursor: string | null,
 ) {
   return isBeforeQuery && hasRun && !isFetching && !continuationCursor;
+}
+
+export function doesQueryResultMatchRequest(requestKey: number, resultOperationKey?: number) {
+  return requestKey === resultOperationKey;
 }
 
 export function getMessageSearchDomainIds(
@@ -306,6 +310,9 @@ export function useMessageSearchQuery(
     requestPolicy: 'cache-and-network',
   });
   const { data, fetching, error } = result;
+  const hasCurrentQueryResult =
+    !!data &&
+    doesQueryResultMatchRequest(createRequest(query, variables).key, result.operation?.key);
   const isFetching = isValidInput && !isSearchMetadataError && (!isSearchMetadataReady || fetching);
   const refresh = useCallback(() => {
     if (!query || !isValidInput) return;
@@ -386,7 +393,7 @@ export function useMessageSearchQuery(
   const previousCursor = isBeforeQuery ? continuationCursor : reverseCursor;
   const nextCursor = isBeforeQuery ? reverseCursor : continuationCursor;
   const isMessagesFound = paginatedMessageList.length > 0;
-  const hasRun = isSearchMetadataReady && !!data;
+  const hasRun = isSearchMetadataReady && hasCurrentQueryResult;
   const shouldResetToFirstPage = shouldResetToFirstMessagePage(
     isBeforeQuery,
     hasRun,

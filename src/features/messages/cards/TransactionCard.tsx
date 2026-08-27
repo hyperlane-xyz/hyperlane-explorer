@@ -1,10 +1,11 @@
-import { Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
+import { ErrorIcon, Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
 import { PropsWithChildren, ReactNode, useId, useState } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
+import { getMessagePauseType, MessagePauseType } from '../../../consts/pausedRoutes';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
 import {
@@ -53,6 +54,8 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
+  const pauseType =
+    status === MessageStatus.Pending && message ? getMessagePauseType(message) : undefined;
 
   const { isOpen, open, close } = useModal();
 
@@ -109,6 +112,8 @@ export function DestinationTransactionCard({
         )}
       </>
     );
+  } else if (pauseType) {
+    content = <PausedMessageWarning type={pauseType} />;
   } else if (!hasChainConfig) {
     content = (
       <>
@@ -183,6 +188,29 @@ export function DestinationTransactionCard({
     >
       {content}
     </TransactionCard>
+  );
+}
+
+function PausedMessageWarning({ type }: { type: MessagePauseType }) {
+  const isChainHalted = type === 'chain';
+  const message = isChainHalted
+    ? 'A chain involved in this message is currently halted. ' +
+      'This message will not be processed while the chain remains halted, so its ' +
+      'transferred assets will not be available on the destination chain.'
+    : 'This route is halted due to a security incident. ' +
+      'This message will not be processed while the route remains halted, so its ' +
+      'transferred assets will not be available on the destination chain.';
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <ErrorIcon width={20} height={20} color={Color.red} />
+        <h3 className="text-sm font-medium text-red-600">
+          {isChainHalted ? 'Chain Halted' : 'Route Halted'}
+        </h3>
+      </div>
+      <p className="text-sm leading-relaxed text-gray-700">{message}</p>
+    </div>
   );
 }
 
