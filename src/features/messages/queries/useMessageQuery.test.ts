@@ -234,9 +234,7 @@ describe('message pagination', () => {
   });
 
   it('selects the nearest ascending page and displays it descending', () => {
-    const messages = Array.from({ length: 51 }, (_, index) =>
-      makeStub({ id: String(51 + index) }),
-    );
+    const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
 
     const page = getMessagePage(messages, messages, 51);
     expect(page.continuationCursor).toBe('100');

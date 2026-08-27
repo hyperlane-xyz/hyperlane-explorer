@@ -332,8 +332,7 @@ export function useMessageSearchQuery(
 
   // Parse results
   const unfilteredMessageList = useMemo(
-    () =>
-      parseMessageStubResult(chainMetadataResolver, scrapedChains, data, isBeforeQuery),
+    () => parseMessageStubResult(chainMetadataResolver, scrapedChains, data, isBeforeQuery),
     [chainMetadataResolver, scrapedChains, data, isBeforeQuery],
   );
   const liveMessageList = useMemo(
@@ -344,8 +343,7 @@ export function useMessageSearchQuery(
     [chainMetadataResolver, scrapedChains, liveMessageRows],
   );
   const mergedUnfilteredMessageList = useMemo(
-    () =>
-      mergeMessageLists(liveMessageList, unfilteredMessageList, isBeforeQuery),
+    () => mergeMessageLists(liveMessageList, unfilteredMessageList, isBeforeQuery),
     [isBeforeQuery, liveMessageList, unfilteredMessageList],
   );
   // Apply client-side filters. Note: these run after the DB LIMIT, so they
@@ -385,11 +383,11 @@ export function useMessageSearchQuery(
     warpRouteDomainAddresses,
   ]);
 
-  const { messages: paginatedMessageList, continuationCursor, reverseCursor } = getMessagePage(
-    filteredMessageList,
-    candidateMessageList,
-    queryLimit,
-  );
+  const {
+    messages: paginatedMessageList,
+    continuationCursor,
+    reverseCursor,
+  } = getMessagePage(filteredMessageList, candidateMessageList, queryLimit);
   const previousCursor = isBeforeQuery ? continuationCursor : reverseCursor;
   const nextCursor = isBeforeQuery ? reverseCursor : continuationCursor;
   const isMessagesFound = paginatedMessageList.length > 0;

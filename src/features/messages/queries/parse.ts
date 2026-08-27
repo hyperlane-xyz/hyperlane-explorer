@@ -26,13 +26,7 @@ export function parseMessageStubResult(
   data: MessagesStubQueryResult | undefined,
   ascending = false,
 ): MessageStub[] {
-  return queryResult(
-    chainMetadataResolver,
-    scrapedChains,
-    data,
-    parseMessageStub,
-    ascending,
-  );
+  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStub, ascending);
 }
 
 export function parseMessageQueryResult(
