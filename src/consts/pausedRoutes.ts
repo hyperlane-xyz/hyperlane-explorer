@@ -14,11 +14,6 @@ export type PauseConfig =
 // Chain configs match either domain; route configs match both endpoints.
 export const pauseConfigs: readonly PauseConfig[] = [
   {
-    type: 'chain',
-    domainId: 1783,
-    link: 'https://x.com/KiiChainio/status/2091330990027296992',
-  },
-  {
     type: 'route',
     link: 'https://x.com/InfiniteTradePr/status/2090409024437039569',
     endpoints: [

@@ -54,42 +54,6 @@ describe('getMessagePauseType', () => {
     ).toBeUndefined();
   });
 
-  it('matches a halted origin chain without matching addresses', () => {
-    expect(
-      getMessagePauseType({
-        originDomainId: 1783,
-        destinationDomainId: 1,
-        sender: '0x1111111111111111111111111111111111111111',
-        recipient: '0x2222222222222222222222222222222222222222',
-      }),
-    ).toBe('chain');
-  });
-
-  it('matches a halted destination chain without matching addresses', () => {
-    expect(
-      getMessagePauseType({
-        originDomainId: 8453,
-        destinationDomainId: 1783,
-        sender: '0x1111111111111111111111111111111111111111',
-        recipient: '0x2222222222222222222222222222222222222222',
-      }),
-    ).toBe('chain');
-  });
-
-  it('returns the configured link for a halted chain', () => {
-    expect(
-      getMessagePause({
-        originDomainId: 1783,
-        destinationDomainId: 1,
-        sender: '0x1111111111111111111111111111111111111111',
-        recipient: '0x2222222222222222222222222222222222222222',
-      }),
-    ).toEqual({
-      type: 'chain',
-      link: 'https://x.com/KiiChainio/status/2091330990027296992',
-    });
-  });
-
   it('returns the configured link for a halted route', () => {
     expect(getMessagePause(pausedRoute)).toEqual({
       type: 'route',
