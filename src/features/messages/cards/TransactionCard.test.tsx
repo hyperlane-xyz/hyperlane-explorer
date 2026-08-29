@@ -48,14 +48,14 @@ afterAll(() => {
   delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
 });
 
-it('shows a halt warning before missing chain metadata', async () => {
+it('shows a route halt warning before missing chain metadata', async () => {
   const container = document.createElement('div');
   const root = createRoot(container);
   const message = {
-    originDomainId: 1783,
-    destinationDomainId: 999999,
-    sender: '0x1111111111111111111111111111111111111111',
-    recipient: '0x2222222222222222222222222222222222222222',
+    originDomainId: 10,
+    destinationDomainId: 8453,
+    sender: '0xb231e9c3bc267db389e3bf5d6ab26ca078c6123b',
+    recipient: '0xba8cd87120aca631f59231f9fd6c5469bbee3440',
   } as MessageStub;
 
   await act(async () => {
@@ -71,11 +71,13 @@ it('shows a halt warning before missing chain metadata', async () => {
     );
   });
 
-  expect(container.textContent).toContain('Chain Halted');
+  expect(container.textContent).toContain('Route Halted');
   expect(container.textContent).not.toContain('Delivery status is unknown.');
   const link = container.querySelector('a');
   expect(link?.textContent).toBe('Read more about this');
-  expect(link?.getAttribute('href')).toBe('https://x.com/KiiChainio/status/2091330990027296992');
+  expect(link?.getAttribute('href')).toBe(
+    'https://x.com/InfiniteTradePr/status/2090409024437039569',
+  );
   expect(link?.getAttribute('target')).toBe('_blank');
   expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   await act(async () => root.unmount());
