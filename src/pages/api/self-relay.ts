@@ -1,5 +1,4 @@
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import { BaseMetadataBuilder, isMetadataBuildable } from '@hyperlane-xyz/relayer/metadata';
 import { EvmIsmReader, HookType, HyperlaneCore, MultiProvider } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -88,6 +87,8 @@ export default async function handler(
     // Match the CLI self-relay workaround: the canonical Merkle tree hook is
     // the source of the checkpoint used to build validator metadata.
     const hook = { type: HookType.MERKLE_TREE, address: merkleTreeHook };
+    const { BaseMetadataBuilder, isMetadataBuildable } =
+      await import('@hyperlane-xyz/relayer/metadata');
     const metadataResult = await new BaseMetadataBuilder(core).build({
       message,
       ism,
