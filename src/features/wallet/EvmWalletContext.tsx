@@ -6,32 +6,40 @@ import {
   rainbowWallet,
   walletConnectWallet,
 } from '@rainbow-me/rainbowkit/wallets';
-import { PropsWithChildren, useMemo } from 'react';
+import { injected } from '@wagmi/core';
+import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react';
 import { createClient, fallback, http } from 'viem';
 import { mainnet } from 'viem/chains';
 import { WagmiProvider, createConfig } from 'wagmi';
 
 import { APP_NAME } from '../../consts/appMetadata';
 import { config } from '../../consts/config';
-import { useMultiProvider } from '../../store';
+import { useReadyMultiProvider } from '../../store';
 import { Color } from '../../styles/Color';
 
-function createWagmiConfig(multiProvider: ReturnType<typeof useMultiProvider>) {
-  const configuredChains = getWagmiChainConfigs(multiProvider);
-  const chains = configuredChains.length ? configuredChains : [mainnet];
-  const connectors = connectorsForWallets(
+const WalletReadyContext = createContext(false);
+
+export function getConnectors(walletConnectProjectId?: string) {
+  if (!walletConnectProjectId) return [injected()];
+
+  return connectorsForWallets(
     [
       {
         groupName: 'Recommended',
         wallets: [metaMaskWallet, injectedWallet, rainbowWallet, walletConnectWallet],
       },
     ],
-    { appName: APP_NAME, projectId: config.walletConnectProjectId },
+    { appName: APP_NAME, projectId: walletConnectProjectId },
   );
+}
+
+function createWagmiConfig(multiProvider?: NonNullable<ReturnType<typeof useReadyMultiProvider>>) {
+  const configuredChains = multiProvider ? getWagmiChainConfigs(multiProvider) : [];
+  const chains = configuredChains.length ? configuredChains : [mainnet];
 
   return createConfig({
     chains: [chains[0], ...chains.slice(1)],
-    connectors,
+    connectors: getConnectors(config.walletConnectProjectId),
     client({ chain }) {
       const transport = fallback(chain.rpcUrls.default.http.map((url) => http(url)));
       return createClient({ chain, transport });
@@ -40,11 +48,19 @@ function createWagmiConfig(multiProvider: ReturnType<typeof useMultiProvider>) {
 }
 
 export function EvmWalletContext({ children }: PropsWithChildren) {
-  const multiProvider = useMultiProvider();
-  const wagmiConfig = useMemo(() => createWagmiConfig(multiProvider), [multiProvider]);
+  const multiProvider = useReadyMultiProvider();
+  const [walletState, setWalletState] = useState(() => ({
+    wagmiConfig: createWagmiConfig(multiProvider),
+    isReady: !!multiProvider,
+  }));
+
+  useEffect(() => {
+    if (!multiProvider || walletState.isReady) return;
+    setWalletState({ wagmiConfig: createWagmiConfig(multiProvider), isReady: true });
+  }, [multiProvider, walletState.isReady]);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={walletState.wagmiConfig}>
       <RainbowKitProvider
         theme={lightTheme({
           accentColor: Color.primary,
@@ -52,8 +68,14 @@ export function EvmWalletContext({ children }: PropsWithChildren) {
           fontStack: 'system',
         })}
       >
-        {children}
+        <WalletReadyContext.Provider value={walletState.isReady}>
+          {children}
+        </WalletReadyContext.Provider>
       </RainbowKitProvider>
     </WagmiProvider>
   );
+}
+
+export function useIsWalletReady() {
+  return useContext(WalletReadyContext);
 }

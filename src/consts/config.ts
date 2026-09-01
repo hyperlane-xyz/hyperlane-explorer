@@ -6,7 +6,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://explorer-api.hyperlan
 const wsUrl = resolveWsUrl(process.env.NEXT_PUBLIC_WS_URL, apiUrl);
 const registryUrl = process.env.NEXT_PUBLIC_REGISTRY_URL || undefined;
 const registryBranch = process.env.NEXT_PUBLIC_REGISTRY_BRANCH || 'main';
-const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_ID || '';
+const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_ID?.trim() || undefined;
 const explorerApiKeys = JSON.parse(process.env.EXPLORER_API_KEYS || '{}');
 
 interface Config {
@@ -18,7 +18,7 @@ interface Config {
   githubProxy?: string;
   registryUrl: string | undefined; // Optional URL to use a custom registry instead of the published canonical version
   registryBranch?: string | undefined; // Optional customization of the registry branch instead of main
-  walletConnectProjectId: string;
+  walletConnectProjectId?: string;
 }
 
 export const config: Config = Object.freeze({
