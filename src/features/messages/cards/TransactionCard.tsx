@@ -18,7 +18,6 @@ import {
 } from '../../../types';
 import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult, MessageDebugStatus } from '../../debugger/types';
-import { shouldCheckSelfRelay } from '../../selfRelay/eligibility';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
@@ -59,22 +58,18 @@ export function DestinationTransactionCard({
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
   const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
-  const canSelfRelay =
-    !!message &&
+  const isHealthyPendingMessage =
+    status === MessageStatus.Pending &&
     !transaction &&
-    shouldCheckSelfRelay({
-      isPending: status === MessageStatus.Pending,
-      hasNoKnownDeliveryError:
-        !isStatusFetching && debugResult?.status === MessageDebugStatus.NoErrorsFound,
-      isPiMessage: !!isPiMsg,
-      isPaused: !!pause,
-      hasDestinationConfig: hasChainConfig,
-      hasSufficientCollateral: collateralInfo.status !== CollateralStatus.Insufficient,
-      isOriginEvm:
-        multiProvider.tryGetChainMetadata(message.originDomainId)?.protocol === 'ethereum',
-      isDestinationEvm:
-        multiProvider.tryGetChainMetadata(message.destinationDomainId)?.protocol === 'ethereum',
-    });
+    debugResult?.status === MessageDebugStatus.NoErrorsFound;
+  const hasSelfRelayBlocker =
+    !!isPiMsg || !!pause || collateralInfo.status === CollateralStatus.Insufficient;
+  const isEvmRoute =
+    !!message &&
+    [message.originDomainId, message.destinationDomainId].every(
+      (domainId) => multiProvider.tryGetChainMetadata(domainId)?.protocol === 'ethereum',
+    );
+  const canSelfRelay = isHealthyPendingMessage && !hasSelfRelayBlocker && isEvmRoute;
 
   const { isOpen, open, close } = useModal();
 
