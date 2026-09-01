@@ -17,7 +17,8 @@ import {
   WarpRouteDetails,
 } from '../../../types';
 import { debugStatusToDesc } from '../../debugger/strings';
-import { MessageDebugResult } from '../../debugger/types';
+import { MessageDebugResult, MessageDebugStatus } from '../../debugger/types';
+import { shouldCheckSelfRelay } from '../../selfRelay/eligibility';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
@@ -26,6 +27,9 @@ import { TransactionDetailsRows } from './TransactionDetailsRows';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
+const SelfRelayButton = dynamic(() =>
+  import('../../selfRelay/SelfRelayButton').then((mod) => mod.SelfRelayButton),
 );
 
 export function DestinationTransactionCard({
@@ -55,6 +59,22 @@ export function DestinationTransactionCard({
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
   const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
+  const canSelfRelay =
+    !!message &&
+    !transaction &&
+    shouldCheckSelfRelay({
+      isPending: status === MessageStatus.Pending,
+      hasNoKnownDeliveryError:
+        !isStatusFetching && debugResult?.status === MessageDebugStatus.NoErrorsFound,
+      isPiMessage: !!isPiMsg,
+      isPaused: !!pause,
+      hasDestinationConfig: hasChainConfig,
+      hasSufficientCollateral: collateralInfo.status !== CollateralStatus.Insufficient,
+      isOriginEvm:
+        multiProvider.tryGetChainMetadata(message.originDomainId)?.protocol === 'ethereum',
+      isDestinationEvm:
+        multiProvider.tryGetChainMetadata(message.destinationDomainId)?.protocol === 'ethereum',
+    });
 
   const { isOpen, open, close } = useModal();
 
@@ -186,6 +206,7 @@ export function DestinationTransactionCard({
       helpText={transactionHelpText.destination}
     >
       {content}
+      {canSelfRelay && <SelfRelayButton message={message} />}
     </TransactionCard>
   );
 }
