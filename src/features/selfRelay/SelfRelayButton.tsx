@@ -8,12 +8,16 @@ import { useAccount, useConfig } from 'wagmi';
 
 import { SolidButton } from '../../components/buttons/SolidButton';
 import type { Message, MessageStub } from '../../types';
+import { useIsWalletReady } from '../wallet/EvmWalletContext';
+import { SelfRelayPrepareError, getSelfRelayRefetchInterval } from './polling';
+import { getRelayTransactionError, type RelayReplacementReason } from './transactionOutcome';
 import { type SelfRelayPrepareRequest, SelfRelayPrepareResponseSchema } from './types';
 
 type RelayStep = 'idle' | 'preparing' | 'switching' | 'signing' | 'confirming';
 
 export function SelfRelayButton({ message }: { message: Message | MessageStub }) {
   const account = useAccount();
+  const isWalletReady = useIsWalletReady();
   const wagmiConfig = useConfig();
   const { openConnectModal } = useConnectModal();
   const queryClient = useQueryClient();
@@ -28,13 +32,15 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
     queryKey: ['selfRelayEligibility', message.msgId, message.origin.hash],
     queryFn: () => prepareSelfRelay(prepareRequest),
     refetchInterval: (query) =>
-      query.state.data?.status === 'ready' || query.state.data?.status === 'delivered'
-        ? false
-        : 30_000,
+      getSelfRelayRefetchInterval(query.state.error, query.state.fetchFailureCount),
     retry: false,
   });
 
   const relay = async () => {
+    if (!isWalletReady) {
+      toast.info('Wallet connection is still loading.');
+      return;
+    }
     if (!account.isConnected) {
       openConnectModal?.();
       return;
@@ -63,11 +69,17 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
       });
 
       setStep('confirming');
-      await waitForTransactionReceipt(wagmiConfig, {
+      let replacementReason: RelayReplacementReason | undefined;
+      const receipt = await waitForTransactionReceipt(wagmiConfig, {
         chainId: result.destinationChainId,
         hash,
         confirmations: 1,
+        onReplaced: (replacement) => {
+          replacementReason = replacement.reason;
+        },
       });
+      const transactionError = getRelayTransactionError(receipt.status, replacementReason);
+      if (transactionError) throw transactionError;
       toast.success(`Message relayed on ${result.destinationChainName}.`);
       await queryClient.invalidateQueries({ queryKey: ['messageDeliveryStatus'] });
     } catch (error) {
@@ -100,7 +112,7 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
       <SolidButton
         color="primary"
         classes="mx-auto min-w-48 px-5 py-2 text-sm"
-        disabled={isBusy}
+        disabled={isBusy || !isWalletReady}
         onClick={relay}
         passThruProps={{ 'aria-busy': isBusy }}
       >
@@ -118,7 +130,10 @@ async function prepareSelfRelay(request: SelfRelayPrepareRequest) {
   });
   const result = SelfRelayPrepareResponseSchema.parse(await response.json());
   if (!response.ok || result.status === 'error') {
-    throw new Error(result.status === 'error' ? result.error : 'Unable to prepare relay');
+    throw new SelfRelayPrepareError(
+      result.status === 'error' ? result.error : 'Unable to prepare relay',
+      response.status,
+    );
   }
   return result;
 }

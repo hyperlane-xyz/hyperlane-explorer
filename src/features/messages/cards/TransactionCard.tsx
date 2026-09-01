@@ -57,6 +57,7 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
+  const { isOpen, open, close } = useModal();
   const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
   const isHealthyPendingMessage =
     status === MessageStatus.Pending &&
@@ -70,8 +71,6 @@ export function DestinationTransactionCard({
       (domainId) => multiProvider.tryGetChainMetadata(domainId)?.protocol === 'ethereum',
     );
   const canSelfRelay = isHealthyPendingMessage && !hasSelfRelayBlocker && isEvmRoute;
-
-  const { isOpen, open, close } = useModal();
 
   let content: ReactNode;
   if (transaction) {
