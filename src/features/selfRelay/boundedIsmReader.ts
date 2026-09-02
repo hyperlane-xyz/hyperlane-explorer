@@ -181,15 +181,19 @@ export function isUnsupportedSelfRelayIsm(error: unknown): boolean {
 }
 
 export function assertSelfRelayIsmSupported(ism: IsmConfig): void {
-  if (typeof ism === 'string') throw unsupportedIsm(ism);
-  if (SUPPORTED_LEAF_ISM_TYPES.has(ism.type)) return;
+  if (isSelfRelayIsmSupported(ism)) return;
+  const address = typeof ism === 'string' ? ism : 'address' in ism ? ism.address : 'unknown';
+  const type = typeof ism === 'string' ? undefined : ism.type;
+  throw unsupportedIsm(address, type);
+}
 
-  if (ism.type === IsmType.AGGREGATION || ism.type === IsmType.STORAGE_AGGREGATION) {
-    for (const nestedIsm of ism.modules) assertSelfRelayIsmSupported(nestedIsm);
-    return;
-  }
+function isSelfRelayIsmSupported(ism: IsmConfig): boolean {
+  if (typeof ism === 'string') return false;
+  if (SUPPORTED_LEAF_ISM_TYPES.has(ism.type)) return true;
+  if (ism.type !== IsmType.AGGREGATION && ism.type !== IsmType.STORAGE_AGGREGATION) return false;
 
-  throw unsupportedIsm('address' in ism ? ism.address : 'unknown', ism.type);
+  const supportedModules = ism.modules.filter(isSelfRelayIsmSupported).length;
+  return ism.threshold > 0 && supportedModules >= ism.threshold;
 }
 
 function unsupportedIsm(address: string, type?: string): Error {

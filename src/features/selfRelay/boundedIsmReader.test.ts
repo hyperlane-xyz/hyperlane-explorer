@@ -98,6 +98,23 @@ describe('assertSelfRelayIsmSupported', () => {
     ).not.toThrow();
   });
 
+  it('accepts an aggregation with enough supported branches for quorum', () => {
+    expect(() =>
+      assertSelfRelayIsmSupported({
+        type: IsmType.AGGREGATION,
+        threshold: 1,
+        modules: [
+          {
+            type: IsmType.MESSAGE_ID_MULTISIG,
+            validators: [ADDRESS_A],
+            threshold: 1,
+          },
+          { type: IsmType.MERKLE_ROOT_MULTISIG },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
   it.each([IsmType.TRUSTED_RELAYER, IsmType.ARB_L2_TO_L1, IsmType.MERKLE_ROOT_MULTISIG])(
     'rejects unsupported %s modules',
     (type) => {
@@ -116,5 +133,22 @@ describe('assertSelfRelayIsmSupported', () => {
     } catch (error) {
       expect(isUnsupportedSelfRelayIsm(error)).toBe(true);
     }
+  });
+
+  it('rejects an aggregation that requires an unsupported branch for quorum', () => {
+    expect(() =>
+      assertSelfRelayIsmSupported({
+        type: IsmType.AGGREGATION,
+        threshold: 2,
+        modules: [
+          {
+            type: IsmType.MESSAGE_ID_MULTISIG,
+            validators: [ADDRESS_A],
+            threshold: 1,
+          },
+          { type: IsmType.MERKLE_ROOT_MULTISIG },
+        ],
+      }),
+    ).toThrow('not supported');
   });
 });

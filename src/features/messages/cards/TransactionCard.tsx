@@ -58,19 +58,20 @@ export function DestinationTransactionCard({
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
   const { isOpen, open, close } = useModal();
-  const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
-  const isHealthyPendingMessage =
-    status === MessageStatus.Pending &&
-    !transaction &&
-    debugResult?.status === MessageDebugStatus.NoErrorsFound;
+  const messagePause = message ? getMessagePause(message) : undefined;
+  const pause = status === MessageStatus.Pending ? messagePause : undefined;
+  const hasSelfRelayableStatus =
+    (status === MessageStatus.Pending &&
+      debugResult?.status === MessageDebugStatus.NoErrorsFound) ||
+    (status === MessageStatus.Failing && debugResult?.status === MessageDebugStatus.GasUnderfunded);
   const hasSelfRelayBlocker =
-    !!isPiMsg || !!pause || collateralInfo.status === CollateralStatus.Insufficient;
+    !!isPiMsg || !!messagePause || collateralInfo.status === CollateralStatus.Insufficient;
   const isEvmRoute =
     !!message &&
     [message.originDomainId, message.destinationDomainId].every(
       (domainId) => multiProvider.tryGetChainMetadata(domainId)?.protocol === 'ethereum',
     );
-  const canSelfRelay = isHealthyPendingMessage && !hasSelfRelayBlocker && isEvmRoute;
+  const canSelfRelay = !transaction && hasSelfRelayableStatus && !hasSelfRelayBlocker && isEvmRoute;
 
   let content: ReactNode;
   if (transaction) {
