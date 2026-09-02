@@ -9,7 +9,7 @@ import { MessagesQueryResult } from '../messages/queries/fragments';
 import { parseMessageQueryResult } from '../messages/queries/parse';
 
 const TX_AUTO_REFRESH_DELAY = 10_000; // 10s
-const TX_QUERY_LIMIT = 1000; // Max messages per transaction
+const TX_QUERY_LIMIT = 500; // Scraper proxy maximum
 
 /**
  * Hook to query all messages dispatched in a single origin transaction.
