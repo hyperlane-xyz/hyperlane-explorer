@@ -1,17 +1,22 @@
 import { GithubRegistry } from '@hyperlane-xyz/registry';
-import { HookType, HyperlaneCore, MultiProvider } from '@hyperlane-xyz/sdk';
+import { HookType, HyperlaneCore, MultiProvider, type ChainMap } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
+import type { providers } from 'ethers';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { config } from '../../consts/config';
+import { wrapWithAbort } from '../../features/messages/queries/abortableProvider';
 import {
   BoundedEvmIsmReader,
+  assertSelfRelayIsmSupported,
   isSelfRelayIsmRejection,
+  isUnsupportedSelfRelayIsm,
 } from '../../features/selfRelay/boundedIsmReader';
 import { findMailboxDispatchedMessage } from '../../features/selfRelay/dispatch';
 import {
   InFlightLimit,
   SelfRelayPreparationTimeoutError,
+  abortable,
   withDeadline,
 } from '../../features/selfRelay/serverLimits';
 import { withServerRpcConnections } from '../../features/selfRelay/serverRpc';
@@ -25,6 +30,7 @@ import { logger } from '../../utils/logger';
 
 const PREPARATION_TIMEOUT_MS = 25_000;
 const RELAY_CONTEXT_TTL_MS = 5 * 60_000;
+// Bounds one warm server instance; deployment-level rate limiting remains separate.
 const preparationLimit = new InFlightLimit(2);
 
 interface ApiResult {
@@ -53,13 +59,15 @@ export default async function handler(
     return res.status(400).json({ status: 'error', error: 'Invalid self-relay request' });
   }
 
-  const preparation = preparationLimit.run(() => prepareSelfRelay(parsedRequest.data));
+  const preparation = preparationLimit.run(() =>
+    withDeadline((signal) => prepareSelfRelay(parsedRequest.data, signal), PREPARATION_TIMEOUT_MS),
+  );
   if (!preparation) {
     return res.status(429).json({ status: 'error', error: 'Self-relay service is busy' });
   }
 
   try {
-    const result = await withDeadline(preparation, PREPARATION_TIMEOUT_MS);
+    const result = await preparation;
     return res.status(result.statusCode).json(result.body);
   } catch (error) {
     if (isSelfRelayIsmRejection(error)) {
@@ -68,7 +76,9 @@ export default async function handler(
         status: 'error',
         error: isOffchainLookup
           ? 'OffchainLookup security modules are not supported for self-relay'
-          : 'Destination security configuration exceeds self-relay safety limits',
+          : isUnsupportedSelfRelayIsm(error)
+            ? 'Destination security module is not supported for self-relay'
+            : 'Destination security configuration exceeds self-relay safety limits',
       });
     }
     if (error instanceof SelfRelayPreparationTimeoutError) {
@@ -83,16 +93,24 @@ export default async function handler(
   }
 }
 
-async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<ApiResult> {
-  const { coreAddresses, multiProvider, core, getMetadataBuilder } = await getRelayContext();
+async function prepareSelfRelay(
+  request: SelfRelayPrepareRequest,
+  signal: AbortSignal,
+): Promise<ApiResult> {
+  const {
+    chainMetadata,
+    coreAddresses,
+    multiProvider: baseMultiProvider,
+    getMetadataModule,
+  } = await abortable(getRelayContext(), signal);
   const { messageId, originDomainId, originTxHash } = request;
-  const originChainName = multiProvider.tryGetChainName(originDomainId);
+  const originChainName = baseMultiProvider.tryGetChainName(originDomainId);
 
   if (!originChainName) {
     return errorResult(404, 'Origin chain not found');
   }
 
-  const originMetadata = multiProvider.getChainMetadata(originChainName);
+  const originMetadata = baseMultiProvider.getChainMetadata(originChainName);
   if (originMetadata.protocol !== ProtocolType.Ethereum) {
     return errorResult(422, 'Self-relay supports EVM only');
   }
@@ -102,9 +120,11 @@ async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<ApiRe
     return errorResult(422, 'Origin Mailbox is not configured');
   }
 
-  const dispatchReceipt = await multiProvider
-    .getProvider(originChainName)
-    .getTransactionReceipt(originTxHash);
+  const originProvider = wrapWithAbort(baseMultiProvider.getProvider(originChainName), signal);
+  const dispatchReceipt = await abortable<providers.TransactionReceipt | null>(
+    originProvider.getTransactionReceipt(originTxHash),
+    signal,
+  );
   if (!dispatchReceipt) {
     return errorResult(404, 'Dispatch transaction not found');
   }
@@ -114,17 +134,27 @@ async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<ApiRe
     return errorResult(404, 'Message not found in dispatch');
   }
 
-  const destinationChainName = multiProvider.tryGetChainName(message.parsed.destination);
+  const destinationChainName = baseMultiProvider.tryGetChainName(message.parsed.destination);
   if (!destinationChainName) {
     return errorResult(404, 'Destination chain not found');
   }
 
-  const destinationMetadata = multiProvider.getChainMetadata(destinationChainName);
+  const destinationMetadata = baseMultiProvider.getChainMetadata(destinationChainName);
   if (destinationMetadata.protocol !== ProtocolType.Ethereum) {
     return errorResult(422, 'Self-relay supports EVM only');
   }
 
-  if (await core.isDelivered(message)) {
+  const requestProviders: ChainMap<providers.Provider> = {
+    [originChainName]: originProvider,
+    [destinationChainName]: wrapWithAbort(
+      baseMultiProvider.getProvider(destinationChainName),
+      signal,
+    ),
+  };
+  const multiProvider = new MultiProvider(chainMetadata, { providers: requestProviders });
+  const core = HyperlaneCore.fromAddressesMap(coreAddresses, multiProvider);
+
+  if (await abortable(core.isDelivered(message), signal)) {
     return { statusCode: 200, body: { status: 'delivered' } };
   }
 
@@ -133,18 +163,26 @@ async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<ApiRe
     return errorResult(422, 'Origin Merkle tree hook is not configured');
   }
 
-  const ismAddress = await core.getRecipientIsmAddress(message);
-  const ism = await new BoundedEvmIsmReader(multiProvider, destinationChainName, message, {
-    maxDepth: 10,
-    maxFanout: 16,
-    maxModules: 64,
-    deadline: Date.now() + PREPARATION_TIMEOUT_MS - 1_000,
-  }).deriveIsmConfig(ismAddress);
+  const ismAddress = await abortable(core.getRecipientIsmAddress(message), signal);
+  const ism = await abortable(
+    new BoundedEvmIsmReader(multiProvider, destinationChainName, message, {
+      maxDepth: 10,
+      maxFanout: 16,
+      maxModules: 64,
+      maxValidators: 16,
+      deadline: Date.now() + PREPARATION_TIMEOUT_MS - 1_000,
+    }).deriveIsmConfig(ismAddress),
+    signal,
+  );
+  assertSelfRelayIsmSupported(ism);
   // Match the CLI self-relay workaround: the canonical Merkle tree hook is
   // the source of the checkpoint used to build validator metadata.
   const hook = { type: HookType.MERKLE_TREE, address: merkleTreeHook };
-  const { builder, isMetadataBuildable } = await getMetadataBuilder();
-  const metadataResult = await builder.build({
+  const { SelfRelayMetadataBuilder, isMetadataBuildable } = await abortable(
+    getMetadataModule(),
+    signal,
+  );
+  const metadataResult = await new SelfRelayMetadataBuilder(core, signal).build({
     message,
     ism,
     hook,
@@ -163,10 +201,13 @@ async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<ApiRe
     metadataResult.metadata,
     message.message,
   ]);
-  await multiProvider.getProvider(destinationChainName).estimateGas({
-    to: mailbox.address,
-    data: calldata,
-  });
+  await abortable(
+    multiProvider.getProvider(destinationChainName).estimateGas({
+      to: mailbox.address,
+      data: calldata,
+    }),
+    signal,
+  );
 
   return {
     statusCode: 200,
@@ -208,22 +249,19 @@ async function createRelayContext() {
     registry.getAddresses(),
   ]);
   const multiProvider = new MultiProvider(withServerRpcConnections(chainMetadata));
-  const core = HyperlaneCore.fromAddressesMap(coreAddresses, multiProvider);
-  let metadataBuilderPromise: ReturnType<typeof createMetadataBuilder> | undefined;
+  let metadataModulePromise: ReturnType<typeof loadMetadataModule> | undefined;
 
   return {
+    chainMetadata,
     coreAddresses,
     multiProvider,
-    core,
-    getMetadataBuilder() {
-      metadataBuilderPromise ??= createMetadataBuilder(core);
-      return metadataBuilderPromise;
+    getMetadataModule() {
+      metadataModulePromise ??= loadMetadataModule();
+      return metadataModulePromise;
     },
   };
 }
 
-async function createMetadataBuilder(core: HyperlaneCore) {
-  const { BaseMetadataBuilder, isMetadataBuildable } =
-    await import('@hyperlane-xyz/relayer/metadata');
-  return { builder: new BaseMetadataBuilder(core), isMetadataBuildable };
+function loadMetadataModule() {
+  return import('../../features/selfRelay/serverMetadata');
 }

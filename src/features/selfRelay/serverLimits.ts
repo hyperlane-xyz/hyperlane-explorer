@@ -14,19 +14,51 @@ export class InFlightLimit {
 
 export class SelfRelayPreparationTimeoutError extends Error {}
 
-export async function withDeadline<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+export function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(getAbortReason(signal));
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(getAbortReason(signal));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    operation.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+export async function withDeadline<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([
-      operation,
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(
-          () => reject(new SelfRelayPreparationTimeoutError('Self-relay preparation timed out')),
-          timeoutMs,
-        );
-      }),
-    ]);
+    timeout = setTimeout(
+      () =>
+        controller.abort(new SelfRelayPreparationTimeoutError('Self-relay preparation timed out')),
+      timeoutMs,
+    );
+    return await abortable(
+      Promise.resolve().then(() => operation(controller.signal)),
+      controller.signal,
+    );
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+function getAbortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new Error('Self-relay preparation aborted');
 }

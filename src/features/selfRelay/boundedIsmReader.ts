@@ -6,8 +6,10 @@ import {
   type DerivedIsmConfig,
   type DispatchedMessage,
   EvmIsmReader,
+  type IsmConfig,
   IsmType,
   ModuleType,
+  type MultisigIsmConfig,
   type MultiProvider,
   type OffchainLookupIsmConfig,
 } from '@hyperlane-xyz/sdk';
@@ -15,11 +17,23 @@ import { concurrentMap, type Address, type WithAddress } from '@hyperlane-xyz/ut
 import { constants } from 'ethers';
 
 export const SELF_RELAY_ISM_REJECTION = 'SELF_RELAY_ISM_REJECTION';
+export const SELF_RELAY_ISM_UNSUPPORTED = 'SELF_RELAY_ISM_UNSUPPORTED';
+
+const SUPPORTED_LEAF_ISM_TYPES = new Set<string>([
+  IsmType.MESSAGE_ID_MULTISIG,
+  IsmType.STORAGE_MESSAGE_ID_MULTISIG,
+  IsmType.TEST_ISM,
+  IsmType.OP_STACK,
+  IsmType.PAUSABLE,
+  IsmType.CCIP,
+  IsmType.RATE_LIMITED,
+]);
 
 export interface IsmTraversalLimits {
   maxDepth: number;
   maxFanout: number;
   maxModules: number;
+  maxValidators: number;
   deadline: number;
 }
 
@@ -66,6 +80,24 @@ export class IsmTraversalGuard {
     }
   }
 
+  normalizeValidators(validators: Address[], threshold: number): Address[] {
+    if (validators.length > this.limits.maxValidators) {
+      throw this.rejection(`Multisig ISM exceeds ${this.limits.maxValidators} validators`);
+    }
+
+    const uniqueValidators = new Map<string, Address>();
+    for (const validator of validators) {
+      uniqueValidators.set(validator.toLowerCase(), validator);
+    }
+    if (threshold <= 0 || threshold > uniqueValidators.size) {
+      throw this.rejection(
+        `Multisig ISM threshold ${threshold} exceeds ${uniqueValidators.size} unique validators`,
+      );
+    }
+
+    return [...uniqueValidators.values()];
+  }
+
   private assertWithinDeadline() {
     if (Date.now() >= this.limits.deadline) {
       throw this.rejection('ISM derivation deadline exceeded');
@@ -91,7 +123,14 @@ export class BoundedEvmIsmReader extends EvmIsmReader {
   }
 
   override deriveIsmConfigFromAddress(address: Address): Promise<DerivedIsmConfig> {
-    return this.guard.visit(address, () => super.deriveIsmConfigFromAddress(address));
+    return this.guard.visit(address, async () => {
+      try {
+        return await super.deriveIsmConfigFromAddress(address);
+      } catch (error) {
+        if (isUnsupportedModuleTypeError(error)) throw unsupportedIsm(address);
+        throw error;
+      }
+    });
   }
 
   override async deriveAggregationConfig(
@@ -117,10 +156,52 @@ export class BoundedEvmIsmReader extends EvmIsmReader {
   override async deriveOffchainLookupConfig(
     address: Address,
   ): Promise<WithAddress<OffchainLookupIsmConfig>> {
-    throw new Error(`${SELF_RELAY_ISM_REJECTION}: OffchainLookup ISM ${address} is not supported`);
+    throw unsupportedIsm(address, IsmType.OFFCHAIN_LOOKUP);
+  }
+
+  override async deriveMultisigConfig(address: Address): Promise<WithAddress<MultisigIsmConfig>> {
+    const config = await super.deriveMultisigConfig(address);
+    return {
+      ...config,
+      validators: this.guard.normalizeValidators(config.validators, config.threshold),
+    };
   }
 }
 
 export function isSelfRelayIsmRejection(error: unknown): boolean {
-  return error instanceof Error && error.message.includes(SELF_RELAY_ISM_REJECTION);
+  return (
+    error instanceof Error &&
+    (error.message.includes(SELF_RELAY_ISM_REJECTION) ||
+      error.message.includes(SELF_RELAY_ISM_UNSUPPORTED))
+  );
+}
+
+export function isUnsupportedSelfRelayIsm(error: unknown): boolean {
+  return error instanceof Error && error.message.includes(SELF_RELAY_ISM_UNSUPPORTED);
+}
+
+export function assertSelfRelayIsmSupported(ism: IsmConfig): void {
+  if (typeof ism === 'string') throw unsupportedIsm(ism);
+  if (SUPPORTED_LEAF_ISM_TYPES.has(ism.type)) return;
+
+  if (ism.type === IsmType.AGGREGATION || ism.type === IsmType.STORAGE_AGGREGATION) {
+    for (const nestedIsm of ism.modules) assertSelfRelayIsmSupported(nestedIsm);
+    return;
+  }
+
+  throw unsupportedIsm('address' in ism ? ism.address : 'unknown', ism.type);
+}
+
+function unsupportedIsm(address: string, type?: string): Error {
+  const label = type ? `${type} ISM` : 'ISM';
+  return new Error(`${SELF_RELAY_ISM_UNSUPPORTED}: ${label} ${address} is not supported`);
+}
+
+function isUnsupportedModuleTypeError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes('Unknown ISM ModuleType') ||
+    error.message.includes('UNUSED does not have a corresponding IsmType') ||
+    error.message.includes('LEGACY_MULTISIG is deprecated')
+  );
 }

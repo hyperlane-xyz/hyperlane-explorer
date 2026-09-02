@@ -1,4 +1,4 @@
-import { InFlightLimit, withDeadline } from './serverLimits';
+import { InFlightLimit, abortable, withDeadline } from './serverLimits';
 
 describe('InFlightLimit', () => {
   it('rejects work beyond the in-flight bound until a slot is released', async () => {
@@ -21,11 +21,26 @@ describe('InFlightLimit', () => {
 describe('withDeadline', () => {
   it('rejects work that does not settle before the deadline', async () => {
     jest.useFakeTimers();
-    const result = withDeadline(new Promise<never>(() => undefined), 100);
+    const result = withDeadline(() => new Promise<never>(() => undefined), 100);
     const expectation = expect(result).rejects.toThrow('timed out');
 
     await jest.advanceTimersByTimeAsync(100);
     await expectation;
+    jest.useRealTimers();
+  });
+
+  it('aborts preparatory work and recovers its in-flight slot', async () => {
+    jest.useFakeTimers();
+    const limit = new InFlightLimit(1);
+    const first = limit.run(() =>
+      withDeadline((signal) => abortable(new Promise<never>(() => undefined), signal), 100),
+    );
+    expect(first).toBeDefined();
+    const expectation = expect(first).rejects.toThrow('timed out');
+
+    await jest.advanceTimersByTimeAsync(100);
+    await expectation;
+    await expect(limit.run(async () => 'ready')).resolves.toBe('ready');
     jest.useRealTimers();
   });
 });
