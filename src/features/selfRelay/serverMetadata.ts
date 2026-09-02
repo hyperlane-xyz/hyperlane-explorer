@@ -16,7 +16,7 @@ import {
 import { eqAddress, errorToString, type ValidatorConfig } from '@hyperlane-xyz/utils';
 import { z } from 'zod';
 
-import { abortable } from './serverLimits';
+import { abortAfterSettled } from './serverLimits';
 
 const ANNOUNCEMENT_KEY = 'announcement.json';
 const MAX_METADATA_FETCHES = 8;
@@ -51,7 +51,7 @@ export class SelfRelayIoLimit {
   async run<T>(operation: () => Promise<T>, signal: AbortSignal): Promise<T> {
     await this.acquire(signal);
     try {
-      return await abortable(
+      return await abortAfterSettled(
         Promise.resolve().then(() => {
           if (signal.aborted) throw abortReason(signal);
           return operation();
@@ -112,7 +112,7 @@ export class SelfRelayMetadataBuilder {
   }
 
   build(context: MetadataContext): Promise<MetadataBuildResult> {
-    return abortable(this.builder.build(context), this.signal);
+    return abortAfterSettled(this.builder.build(context), this.signal);
   }
 }
 
@@ -143,7 +143,7 @@ class SafeMultisigMetadataBuilder extends MultisigMetadataBuilder {
 
       await Promise.all(
         toFetch.map(async (validator, index) => {
-          const storageLocation = storageLocations[index].at(-1);
+          const storageLocation = storageLocations[index]?.at(-1);
           if (!storageLocation) return;
 
           try {

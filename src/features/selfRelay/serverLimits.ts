@@ -36,6 +36,21 @@ export function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promis
   });
 }
 
+/**
+ * Stops the preparation chain after the active operation settles. This keeps
+ * capacity reserved for non-cancellable RPC work after the request times out.
+ */
+export async function abortAfterSettled<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  try {
+    const value = await operation;
+    if (signal.aborted) throw getAbortReason(signal);
+    return value;
+  } catch (error) {
+    if (signal.aborted) throw getAbortReason(signal);
+    throw error;
+  }
+}
+
 export async function withDeadline<T>(
   operation: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number,

@@ -20,11 +20,11 @@ describe('getSelfRelayRefetchInterval', () => {
     expect(getSelfRelayRefetchInterval(pending, 3)).toBe(false);
   });
 
-  it.each([409, 429, 503])('classifies transient HTTP %i responses as retryable', (status) => {
-    expect(isRetryableSelfRelayStatus(status)).toBe(true);
+  it('classifies metadata-pending responses as retryable', () => {
+    expect(isRetryableSelfRelayStatus(409)).toBe(true);
   });
 
-  it.each([400, 404, 422, 500])('does not repeat permanent HTTP %i failures', (status) => {
+  it.each([400, 404, 422, 429, 500, 503])('does not repeat HTTP %i failures', (status) => {
     expect(isRetryableSelfRelayStatus(status)).toBe(false);
   });
 

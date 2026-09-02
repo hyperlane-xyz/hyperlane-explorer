@@ -2,7 +2,7 @@ import type { SelfRelayPrepareResponse } from './types';
 
 const MAX_PENDING_ATTEMPTS = 3;
 const PENDING_INTERVAL_MS = 30_000;
-const RETRYABLE_STATUS_CODES = new Set([409, 429, 503]);
+const RETRYABLE_STATUS_CODES = new Set([409]);
 
 export interface PendingSelfRelayPreparation {
   status: 'pending';

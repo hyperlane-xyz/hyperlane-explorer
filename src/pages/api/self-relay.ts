@@ -16,7 +16,7 @@ import { findMailboxDispatchedMessage } from '../../features/selfRelay/dispatch'
 import {
   InFlightLimit,
   SelfRelayPreparationTimeoutError,
-  abortable,
+  abortAfterSettled,
   withDeadline,
 } from '../../features/selfRelay/serverLimits';
 import { withServerRpcConnections } from '../../features/selfRelay/serverRpc';
@@ -59,12 +59,12 @@ export default async function handler(
     return res.status(400).json({ status: 'error', error: 'Invalid self-relay request' });
   }
 
-  const preparation = preparationLimit.run(() =>
-    withDeadline((signal) => prepareSelfRelay(parsedRequest.data, signal), PREPARATION_TIMEOUT_MS),
+  const preparation = withDeadline(
+    (signal) =>
+      preparationLimit.run(() => prepareSelfRelay(parsedRequest.data, signal)) ??
+      Promise.resolve(errorResult(429, 'Self-relay service is busy')),
+    PREPARATION_TIMEOUT_MS,
   );
-  if (!preparation) {
-    return res.status(429).json({ status: 'error', error: 'Self-relay service is busy' });
-  }
 
   try {
     const result = await preparation;
@@ -102,7 +102,7 @@ async function prepareSelfRelay(
     coreAddresses,
     multiProvider: baseMultiProvider,
     getMetadataModule,
-  } = await abortable(getRelayContext(), signal);
+  } = await abortAfterSettled(getRelayContext(), signal);
   const { messageId, originDomainId, originTxHash } = request;
   const originChainName = baseMultiProvider.tryGetChainName(originDomainId);
 
@@ -121,7 +121,7 @@ async function prepareSelfRelay(
   }
 
   const originProvider = wrapWithAbort(baseMultiProvider.getProvider(originChainName), signal);
-  const dispatchReceipt = await abortable<providers.TransactionReceipt | null>(
+  const dispatchReceipt = await abortAfterSettled<providers.TransactionReceipt | null>(
     originProvider.getTransactionReceipt(originTxHash),
     signal,
   );
@@ -154,7 +154,7 @@ async function prepareSelfRelay(
   const multiProvider = new MultiProvider(chainMetadata, { providers: requestProviders });
   const core = HyperlaneCore.fromAddressesMap(coreAddresses, multiProvider);
 
-  if (await abortable(core.isDelivered(message), signal)) {
+  if (await abortAfterSettled(core.isDelivered(message), signal)) {
     return { statusCode: 200, body: { status: 'delivered' } };
   }
 
@@ -163,8 +163,8 @@ async function prepareSelfRelay(
     return errorResult(422, 'Origin Merkle tree hook is not configured');
   }
 
-  const ismAddress = await abortable(core.getRecipientIsmAddress(message), signal);
-  const ism = await abortable(
+  const ismAddress = await abortAfterSettled(core.getRecipientIsmAddress(message), signal);
+  const ism = await abortAfterSettled(
     new BoundedEvmIsmReader(multiProvider, destinationChainName, message, {
       maxDepth: 10,
       maxFanout: 16,
@@ -178,7 +178,7 @@ async function prepareSelfRelay(
   // Match the CLI self-relay workaround: the canonical Merkle tree hook is
   // the source of the checkpoint used to build validator metadata.
   const hook = { type: HookType.MERKLE_TREE, address: merkleTreeHook };
-  const { SelfRelayMetadataBuilder, isMetadataBuildable } = await abortable(
+  const { SelfRelayMetadataBuilder, isMetadataBuildable } = await abortAfterSettled(
     getMetadataModule(),
     signal,
   );
@@ -201,7 +201,7 @@ async function prepareSelfRelay(
     metadataResult.metadata,
     message.message,
   ]);
-  await abortable(
+  await abortAfterSettled(
     multiProvider.getProvider(destinationChainName).estimateGas({
       to: mailbox.address,
       data: calldata,
