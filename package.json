@@ -1,8 +1,29 @@
 {
   "name": "@hyperlane-xyz/explorer",
-  "description": "An interchain explorer for the Hyperlane protocol and network.",
   "version": "12.0.0",
+  "private": true,
+  "description": "An interchain explorer for the Hyperlane protocol and network.",
+  "homepage": "https://www.hyperlane.xyz",
+  "license": "Apache-2.0",
   "author": "J M Rossy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hyperlane-xyz/hyperlane-explorer"
+  },
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf dist cache .next",
+    "prebuild": "node scripts/fetch-fonts.mjs",
+    "fetch-fonts": "node --env-file=.env.local scripts/fetch-fonts.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc",
+    "lint": "oxlint ./src",
+    "start": "next start",
+    "test": "jest",
+    "format": "oxfmt ./src"
+  },
   "dependencies": {
     "@ethersproject/abi": "^5.8.0",
     "@ethersproject/abstract-provider": "^5.8.0",
@@ -18,12 +39,15 @@
     "@headlessui/react": "^2.2.10",
     "@hyperlane-xyz/core": "12.0.0",
     "@hyperlane-xyz/registry": "25.3.0",
+    "@hyperlane-xyz/relayer": "1.1.40",
     "@hyperlane-xyz/sdk": "40.0.0",
     "@hyperlane-xyz/utils": "40.0.0",
     "@hyperlane-xyz/widgets": "40.0.0",
+    "@rainbow-me/rainbowkit": "2.2.11",
     "@tanstack/query-core": "^5.101.4",
     "@tanstack/react-query": "^5.101.4",
     "@vercel/og": "^0.11.1",
+    "@wagmi/core": "^2.22.1",
     "bignumber.js": "^11.1.5",
     "clsx": "^2.1.1",
     "ethers": "^5.8.0",
@@ -35,6 +59,8 @@
     "react-toastify": "^11.1.0",
     "react-tooltip": "^6.0.8",
     "urql": "^5.0.3",
+    "viem": "^2.55.13",
+    "wagmi": "^2.19.5",
     "yaml": "^2.9.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -56,29 +82,8 @@
     "ts-node": "^10.9.2",
     "typescript": "7.0.2"
   },
-  "homepage": "https://www.hyperlane.xyz",
   "engines": {
     "node": "24.x"
   },
-  "license": "Apache-2.0",
-  "main": "dist/src/index.js",
-  "packageManager": "pnpm@11.20.0",
-  "private": true,
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hyperlane-xyz/hyperlane-explorer"
-  },
-  "scripts": {
-    "clean": "rm -rf dist cache .next",
-    "prebuild": "node scripts/fetch-fonts.mjs",
-    "fetch-fonts": "node --env-file=.env.local scripts/fetch-fonts.mjs",
-    "dev": "next dev",
-    "build": "next build",
-    "typecheck": "tsc",
-    "lint": "oxlint ./src",
-    "start": "next start",
-    "test": "jest",
-    "format": "oxfmt ./src"
-  },
-  "types": "dist/src/index.d.ts"
+  "packageManager": "pnpm@11.20.0"
 }

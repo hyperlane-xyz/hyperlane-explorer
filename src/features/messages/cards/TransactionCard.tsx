@@ -17,7 +17,7 @@ import {
   WarpRouteDetails,
 } from '../../../types';
 import { debugStatusToDesc } from '../../debugger/strings';
-import { MessageDebugResult } from '../../debugger/types';
+import { MessageDebugResult, MessageDebugStatus } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
@@ -26,6 +26,9 @@ import { TransactionDetailsRows } from './TransactionDetailsRows';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
+);
+const SelfRelayButton = dynamic(() =>
+  import('../../selfRelay/SelfRelayButton').then((mod) => mod.SelfRelayButton),
 );
 
 export function DestinationTransactionCard({
@@ -54,9 +57,21 @@ export function DestinationTransactionCard({
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
-  const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
-
   const { isOpen, open, close } = useModal();
+  const messagePause = message ? getMessagePause(message) : undefined;
+  const pause = status === MessageStatus.Pending ? messagePause : undefined;
+  const hasSelfRelayableStatus =
+    (status === MessageStatus.Pending &&
+      debugResult?.status === MessageDebugStatus.NoErrorsFound) ||
+    (status === MessageStatus.Failing && debugResult?.status === MessageDebugStatus.GasUnderfunded);
+  const hasSelfRelayBlocker =
+    !!isPiMsg || !!messagePause || collateralInfo.status === CollateralStatus.Insufficient;
+  const isEvmRoute =
+    !!message &&
+    [message.originDomainId, message.destinationDomainId].every(
+      (domainId) => multiProvider.tryGetChainMetadata(domainId)?.protocol === 'ethereum',
+    );
+  const canSelfRelay = !transaction && hasSelfRelayableStatus && !hasSelfRelayBlocker && isEvmRoute;
 
   let content: ReactNode;
   if (transaction) {
@@ -186,6 +201,7 @@ export function DestinationTransactionCard({
       helpText={transactionHelpText.destination}
     >
       {content}
+      {canSelfRelay && <SelfRelayButton message={message} />}
     </TransactionCard>
   );
 }

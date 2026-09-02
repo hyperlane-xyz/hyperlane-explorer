@@ -5,9 +5,12 @@ const { version } = require('./package.json');
 const isDev = process.env.NODE_ENV !== 'production';
 
 const IMG_SRC_HOSTS = [
+  'https://*.walletconnect.com',
   'https://raw.githubusercontent.com',
   'https://cdn.jsdelivr.net/gh/hyperlane-xyz/hyperlane-registry@main/',
 ];
+
+const FRAME_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.walletconnect.org'];
 
 const securityHeaders = [
   {
@@ -30,7 +33,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${
       isDev ? " 'unsafe-eval'" : ''
-    }; connect-src *; img-src 'self' data: ${IMG_SRC_HOSTS.join(' ')}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; base-uri 'self'; form-action 'self'`,
+    }; connect-src *; img-src 'self' data: ${IMG_SRC_HOSTS.join(' ')}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' ${FRAME_SRC_HOSTS.join(' ')}; base-uri 'self'; form-action 'self'`,
   },
 ];
 
@@ -61,6 +64,7 @@ const nextConfig = {
     '@hyperlane-xyz/deploy-sdk',
     '@hyperlane-xyz/provider-sdk',
     '@hyperlane-xyz/radix-sdk',
+    '@hyperlane-xyz/relayer',
     '@hyperlane-xyz/registry',
     '@hyperlane-xyz/sdk',
     '@hyperlane-xyz/starknet-core',
@@ -73,7 +77,10 @@ const nextConfig = {
   turbopack: {
     resolveAlias: {
       // Mock modules that break during bundling
-      'pino': './src/utils/pino-noop.js',
+      pino: {
+        browser: 'pino/browser.js',
+        default: './src/utils/pino-noop.js',
+      },
       '@hyperlane-xyz/aleo-sdk': './src/utils/aleo-sdk-noop.js',
     },
   },
