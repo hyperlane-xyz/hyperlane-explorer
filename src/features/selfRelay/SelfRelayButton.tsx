@@ -9,7 +9,11 @@ import { useAccount, useConfig } from 'wagmi';
 import { SolidButton } from '../../components/buttons/SolidButton';
 import type { Message, MessageStub } from '../../types';
 import { useIsWalletReady } from '../wallet/EvmWalletContext';
-import { SelfRelayPrepareError, getSelfRelayRefetchInterval } from './polling';
+import {
+  getSelfRelayRefetchInterval,
+  isRetryableSelfRelayStatus,
+  type SelfRelayPreparation,
+} from './polling';
 import { getRelayTransactionError, type RelayReplacementReason } from './transactionOutcome';
 import { type SelfRelayPrepareRequest, SelfRelayPrepareResponseSchema } from './types';
 
@@ -32,7 +36,9 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
     queryKey: ['selfRelayEligibility', message.msgId, message.origin.hash],
     queryFn: () => prepareSelfRelay(prepareRequest),
     refetchInterval: (query) =>
-      getSelfRelayRefetchInterval(query.state.error, query.state.fetchFailureCount),
+      getSelfRelayRefetchInterval(query.state.data, query.state.dataUpdateCount),
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 
@@ -52,6 +58,10 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
       if (result.status === 'delivered') {
         toast.info('This message has already been delivered.');
         await queryClient.invalidateQueries({ queryKey: ['messageDeliveryStatus'] });
+        return;
+      }
+      if (result.status === 'pending') {
+        toast.info(result.error);
         return;
       }
 
@@ -101,6 +111,13 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
       </p>
     );
   }
+  if (prepareQuery.data.status === 'pending') {
+    return (
+      <p className="mt-4 text-center text-xs text-gray-500">
+        Self-relay is not ready yet: {prepareQuery.data.error}
+      </p>
+    );
+  }
   if (prepareQuery.data.status === 'delivered') return null;
 
   return (
@@ -122,18 +139,18 @@ export function SelfRelayButton({ message }: { message: Message | MessageStub })
   );
 }
 
-async function prepareSelfRelay(request: SelfRelayPrepareRequest) {
+async function prepareSelfRelay(request: SelfRelayPrepareRequest): Promise<SelfRelayPreparation> {
   const response = await fetch('/api/self-relay', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
   const result = SelfRelayPrepareResponseSchema.parse(await response.json());
+  if (result.status === 'error' && isRetryableSelfRelayStatus(response.status)) {
+    return { status: 'pending', error: result.error };
+  }
   if (!response.ok || result.status === 'error') {
-    throw new SelfRelayPrepareError(
-      result.status === 'error' ? result.error : 'Unable to prepare relay',
-      response.status,
-    );
+    throw new Error(result.status === 'error' ? result.error : 'Unable to prepare relay');
   }
   return result;
 }

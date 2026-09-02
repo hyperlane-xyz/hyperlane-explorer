@@ -1,17 +1,27 @@
-const MAX_NOT_READY_FAILURES = 3;
-const NOT_READY_INTERVAL_MS = 30_000;
+import type { SelfRelayPrepareResponse } from './types';
 
-export class SelfRelayPrepareError extends Error {
-  constructor(
-    message: string,
-    readonly statusCode: number,
-  ) {
-    super(message);
-  }
+const MAX_PENDING_ATTEMPTS = 3;
+const PENDING_INTERVAL_MS = 30_000;
+const RETRYABLE_STATUS_CODES = new Set([409, 429, 503]);
+
+export interface PendingSelfRelayPreparation {
+  status: 'pending';
+  error: string;
 }
 
-export function getSelfRelayRefetchInterval(error: unknown, failureCount: number): number | false {
-  if (!(error instanceof SelfRelayPrepareError) || error.statusCode !== 409) return false;
-  if (failureCount >= MAX_NOT_READY_FAILURES) return false;
-  return NOT_READY_INTERVAL_MS * 2 ** Math.max(0, failureCount - 1);
+export type SelfRelayPreparation =
+  | Exclude<SelfRelayPrepareResponse, { status: 'error' }>
+  | PendingSelfRelayPreparation;
+
+export function isRetryableSelfRelayStatus(statusCode: number): boolean {
+  return RETRYABLE_STATUS_CODES.has(statusCode);
+}
+
+export function getSelfRelayRefetchInterval(
+  preparation: SelfRelayPreparation | undefined,
+  pendingAttemptCount: number,
+): number | false {
+  if (preparation?.status !== 'pending' || pendingAttemptCount >= MAX_PENDING_ATTEMPTS)
+    return false;
+  return PENDING_INTERVAL_MS * 2 ** Math.max(0, pendingAttemptCount - 1);
 }
