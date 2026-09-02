@@ -1,4 +1,9 @@
-import { SelfRelayIoLimit, fetchBoundedS3Json, parseS3StorageLocation } from './serverMetadata';
+import {
+  SelfRelayIoLimit,
+  fetchBoundedS3Json,
+  parseS3StorageLocation,
+  parseValidatorAnnouncement,
+} from './serverMetadata';
 
 describe('SelfRelayIoLimit', () => {
   it('bounds concurrent metadata operations', async () => {
@@ -138,5 +143,35 @@ describe('parseS3StorageLocation', () => {
     's3://validator-bucket/us-east-1/../internal',
   ])('rejects unsafe storage location %s', (location) => {
     expect(() => parseS3StorageLocation(location)).toThrow();
+  });
+});
+
+describe('parseValidatorAnnouncement', () => {
+  it('accepts the bytes32 mailbox address published by EVM validators', () => {
+    expect(
+      parseValidatorAnnouncement({
+        value: {
+          validator: '0x4d966438fe9E2B1e7124c87bBB90cB4F0F6C59a1',
+          mailbox_domain: 42161,
+          mailbox_address: '0x000000000000000000000000979ca5202784112f4738403dbec5d0f3b9daabb9',
+        },
+      }),
+    ).toEqual({
+      address: '0x4d966438fe9E2B1e7124c87bBB90cB4F0F6C59a1',
+      localDomain: 42161,
+      mailbox: '0x000000000000000000000000979ca5202784112f4738403dbec5d0f3b9daabb9',
+    });
+  });
+
+  it('rejects malformed validator announcements', () => {
+    expect(() =>
+      parseValidatorAnnouncement({
+        value: {
+          validator: 'not-an-address',
+          mailbox_domain: 42161,
+          mailbox_address: '0x1234',
+        },
+      }),
+    ).toThrow();
   });
 });

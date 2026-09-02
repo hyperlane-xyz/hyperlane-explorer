@@ -25,12 +25,13 @@ const S3_BUCKET_PATTERN = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 const S3_REGION_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
 const S3_FOLDER_PATTERN = /^[A-Za-z0-9._/-]+$/;
 const EVM_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+const HYPERLANE_ADDRESS_PATTERN = /^0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
 
 const validatorAnnouncementSchema = z.object({
   value: z.object({
     validator: z.string().regex(EVM_ADDRESS_PATTERN),
     mailbox_domain: z.number().int().nonnegative(),
-    mailbox_address: z.string().regex(EVM_ADDRESS_PATTERN),
+    mailbox_address: z.string().regex(HYPERLANE_ADDRESS_PATTERN),
   }),
 });
 
@@ -185,14 +186,18 @@ class SafeS3Validator extends S3Validator {
     const announcement = await s3Bucket.getS3Obj<unknown>(ANNOUNCEMENT_KEY);
     if (!announcement) throw new Error('No validator announcement found');
 
-    const parsed = validatorAnnouncementSchema.parse(announcement.data);
-    const validatorConfig: ValidatorConfig = {
-      address: parsed.value.validator,
-      localDomain: parsed.value.mailbox_domain,
-      mailbox: parsed.value.mailbox_address,
-    };
+    const validatorConfig = parseValidatorAnnouncement(announcement.data);
     return new SafeS3Validator(validatorConfig, s3Config, s3Bucket);
   }
+}
+
+export function parseValidatorAnnouncement(announcement: unknown): ValidatorConfig {
+  const parsed = validatorAnnouncementSchema.parse(announcement);
+  return {
+    address: parsed.value.validator,
+    localDomain: parsed.value.mailbox_domain,
+    mailbox: parsed.value.mailbox_address,
+  };
 }
 
 class SafeS3Wrapper extends S3Wrapper {
