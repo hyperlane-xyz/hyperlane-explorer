@@ -9,6 +9,7 @@ import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
+import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { ContentDetailsCard } from '../messages/cards/ContentDetailsCard';
 import { IcaDetailsCard } from '../messages/cards/IcaDetailsCard';
 import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
@@ -26,21 +27,26 @@ type MessageType = 'warp' | 'ica' | 'generic';
 
 export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   const [isExpanded, setIsExpanded] = useState(forceExpanded ?? false);
-
-  const toggleExpanded = () => {
-    setIsExpanded((prev) => !prev);
-  };
-
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const { messageWithDeliveryStatus, debugResult, isDeliveryStatusFetching } =
+    useMessageDeliveryStatus({
+      message,
+      enabled: isExpanded && (message.status !== MessageStatus.Delivered || !message.destination),
+    });
 
-  // Use message data directly from GraphQL - no additional RPC calls for performance
-  const { status, originDomainId, destinationDomainId, destination } = message;
+  // Prefer live delivery state when the scraper has not indexed a destination transaction yet.
+  const { status, originDomainId, destinationDomainId, destination } = messageWithDeliveryStatus;
 
   // Parse warp route details
   const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [message, warpRouteChainAddressMap, chainMetadataResolver],
+    () =>
+      parseWarpRouteMessageDetails(
+        messageWithDeliveryStatus,
+        warpRouteChainAddressMap,
+        chainMetadataResolver,
+      ),
+    [messageWithDeliveryStatus, warpRouteChainAddressMap, chainMetadataResolver],
   );
 
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
@@ -58,22 +64,37 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
       };
     }
 
-    if (isIcaMessage({ sender: message.sender, recipient: message.recipient })) {
+    if (
+      isIcaMessage({
+        sender: messageWithDeliveryStatus.sender,
+        recipient: messageWithDeliveryStatus.recipient,
+      })
+    ) {
       return {
         messageType: 'ica' as MessageType,
         title: 'Interchain Account Message',
-        summaryLine: `ICA ${trimToLength(message.msgId, 12)} - ${route}`,
+        summaryLine: `ICA ${trimToLength(messageWithDeliveryStatus.msgId, 12)} - ${route}`,
       };
     }
 
     return { messageType: 'generic' as MessageType, title: 'Message', summaryLine: route };
-  }, [chainMetadataResolver, destinationChainName, originChainName, message, warpRouteDetails]);
+  }, [
+    chainMetadataResolver,
+    destinationChainName,
+    originChainName,
+    messageWithDeliveryStatus,
+    warpRouteDetails,
+  ]);
 
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - message.origin.timestamp, 2)
     : undefined;
 
   const isIcaMsg = messageType === 'ica';
+
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => !prev);
+  };
 
   useEffect(() => {
     setIsExpanded(forceExpanded ?? false);
@@ -125,26 +146,35 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
             domainId={destinationDomainId}
             status={status}
             transaction={destination}
-            isStatusFetching={false}
+            debugResult={debugResult}
+            isStatusFetching={isDeliveryStatusFetching}
             blur={false}
-            message={message}
+            message={messageWithDeliveryStatus}
             warpRouteDetails={warpRouteDetails}
           />
 
           {/* Warp Transfer Details */}
           {messageType === 'warp' && warpRouteDetails && (
             <WarpTransferDetailsCard
-              message={message}
+              message={messageWithDeliveryStatus}
               warpRouteDetails={warpRouteDetails}
               blur={false}
             />
           )}
 
           {/* ICA Details */}
-          {isIcaMsg && <IcaDetailsCard message={message} blur={false} />}
+          {isIcaMsg && (
+            <IcaDetailsCard
+              message={messageWithDeliveryStatus}
+              blur={false}
+              debugResult={debugResult}
+            />
+          )}
 
           {/* Content Details - only show if no decoded content (warp/ICA) */}
-          {messageType === 'generic' && <ContentDetailsCard message={message} blur={false} />}
+          {messageType === 'generic' && (
+            <ContentDetailsCard message={messageWithDeliveryStatus} blur={false} />
+          )}
         </div>
       )}
     </div>

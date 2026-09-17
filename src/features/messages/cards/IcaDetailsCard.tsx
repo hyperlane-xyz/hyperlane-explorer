@@ -685,7 +685,7 @@ function IcaCallDetails({
     <div
       className={clsx(
         'rounded border p-3',
-        isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50',
+        isFailed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-transparent',
       )}
     >
       <label className={clsx('text-xs font-medium', isFailed ? 'text-red-600' : 'text-gray-600')}>
