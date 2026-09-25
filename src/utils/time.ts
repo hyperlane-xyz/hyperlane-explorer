@@ -30,10 +30,12 @@ export function getHumanReadableTimeString(timestamp: number) {
 }
 
 export function getRelativeTimeRefreshInterval(timestamp: number, now = Date.now()) {
+  if (timestamp <= 0) return null;
+
   const age = Math.max(0, now - timestamp);
-  if (age < 61_000) return 1_000;
-  if (age < 60 * 60_000) return 60_000;
-  if (age < 24 * 60 * 60_000) return 60 * 60_000;
+  if (age < 61_000) return 1_000 - (age % 1_000);
+  if (age < 60 * 60_000) return 60_000 - (age % 60_000);
+  if (age < 24 * 60 * 60_000) return 60 * 60_000 - (age % (60 * 60_000));
   return null;
 }
 

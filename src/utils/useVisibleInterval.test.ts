@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { useInterval } from '@hyperlane-xyz/widgets';
 
 import { useVisibleInterval } from './useVisibleInterval';
@@ -5,6 +7,7 @@ import { isWindowVisible } from './window';
 
 jest.mock('react', () => ({
   useCallback: (callback: () => void) => callback,
+  useEffect: (effect: () => void | (() => void)) => effect(),
 }));
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -50,5 +53,15 @@ describe('useVisibleInterval', () => {
 
     expect(useInterval).toHaveBeenNthCalledWith(1, expect.any(Function), 1000);
     expect(useInterval).toHaveBeenNthCalledWith(2, expect.any(Function), 2000);
+  });
+
+  it('invokes the callback immediately when the window becomes visible', () => {
+    const callback = jest.fn();
+    jest.mocked(isWindowVisible).mockReturnValue(true);
+
+    useVisibleInterval(callback, 1000);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 });
