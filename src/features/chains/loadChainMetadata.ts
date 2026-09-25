@@ -32,7 +32,7 @@ export async function loadChainMetadata(
 
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
 
-  return objFilter(
+  const parsedMetadata = objFilter(
     objMap(mergedMetadata, (chain, metadata) => {
       const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
       if (parsedMetadata.success) return parsedMetadata.data;
@@ -48,4 +48,45 @@ export async function loadChainMetadata(
     }),
     (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
   );
+
+  return dropDuplicateDomainIds(parsedMetadata, registryChainMetadata);
+}
+
+// ChainMetadataSchema validates each chain in isolation, so a (possibly
+// user-supplied) override can introduce a chain whose domainId collides with a
+// canonical one. Downstream `createChainMetadataResolver` treats a duplicate
+// domainId as a broken invariant and throws on the render path, which — because
+// overrides are persisted to localStorage and replayed on load — would brick
+// the app permanently. Enforce cross-record domainId uniqueness here so the
+// resolver never sees a duplicate. Canonical registry chains are processed
+// first and always win the domainId; any colliding chain is dropped (and the
+// app recovers on next load) rather than crashing.
+function dropDuplicateDomainIds(
+  metadata: ChainMap<ChainMetadata>,
+  registryChainMetadata: ChainMap<unknown>,
+): ChainMap<ChainMetadata> {
+  const claimedBy = new Map<number, string>();
+  const result: ChainMap<ChainMetadata> = {};
+
+  const canonicalFirst = Object.keys(metadata).sort((a, b) => {
+    const aCanonical = a in registryChainMetadata;
+    const bCanonical = b in registryChainMetadata;
+    if (aCanonical === bCanonical) return 0;
+    return aCanonical ? -1 : 1;
+  });
+
+  for (const chainName of canonicalFirst) {
+    const chainMetadata = metadata[chainName];
+    const owner = claimedBy.get(chainMetadata.domainId);
+    if (owner !== undefined && owner !== chainName) {
+      logger.error(
+        `Ignoring chain "${chainName}": domainId ${chainMetadata.domainId} already used by "${owner}"`,
+      );
+      continue;
+    }
+    claimedBy.set(chainMetadata.domainId, chainName);
+    result[chainName] = chainMetadata;
+  }
+
+  return result;
 }
