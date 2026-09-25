@@ -23,6 +23,10 @@ describe('useVisibleInterval', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('invokes the callback when the window is visible', () => {
     const callback = jest.fn();
     jest.mocked(isWindowVisible).mockReturnValue(true);
@@ -57,11 +61,33 @@ describe('useVisibleInterval', () => {
 
   it('invokes the callback immediately when the window becomes visible', () => {
     const callback = jest.fn();
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
     jest.mocked(isWindowVisible).mockReturnValue(true);
 
-    useVisibleInterval(callback, 1000);
-    document.dispatchEvent(new Event('visibilitychange'));
+    useVisibleInterval(callback, 1000, true);
+    const registeredCallback = addEventListener.mock.calls[0][1] as EventListener;
+    registeredCallback(new Event('visibilitychange'));
 
     expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invoke the visibility callback while hidden', () => {
+    const callback = jest.fn();
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
+    jest.mocked(isWindowVisible).mockReturnValue(false);
+
+    useVisibleInterval(callback, 1000, true);
+    const registeredCallback = addEventListener.mock.calls[0][1] as EventListener;
+    registeredCallback(new Event('visibilitychange'));
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('does not register visibility refreshes by default', () => {
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
+
+    useVisibleInterval(jest.fn(), 1000);
+
+    expect(addEventListener).not.toHaveBeenCalled();
   });
 });

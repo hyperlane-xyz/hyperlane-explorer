@@ -3,7 +3,11 @@ import { useCallback, useEffect } from 'react';
 
 import { isWindowVisible } from './window';
 
-export function useVisibleInterval(callback: () => void, delay: number | null) {
+export function useVisibleInterval(
+  callback: () => void,
+  delay: number | null,
+  refreshOnVisible = false,
+) {
   const visibleCallback = useCallback(() => {
     if (!isWindowVisible()) return;
     callback();
@@ -12,13 +16,9 @@ export function useVisibleInterval(callback: () => void, delay: number | null) {
   useInterval(visibleCallback, delay);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (!refreshOnVisible) return;
 
-    const refreshWhenVisible = () => {
-      if (isWindowVisible()) callback();
-    };
-
-    document.addEventListener('visibilitychange', refreshWhenVisible);
-    return () => document.removeEventListener('visibilitychange', refreshWhenVisible);
-  }, [callback]);
+    document.addEventListener('visibilitychange', visibleCallback);
+    return () => document.removeEventListener('visibilitychange', visibleCallback);
+  }, [refreshOnVisible, visibleCallback]);
 }
