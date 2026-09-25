@@ -379,7 +379,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: number }) {
   const [, setRefreshKey] = useState(0);
   const refreshInterval = getRelativeTimeRefreshInterval(timestamp);
-  useVisibleInterval(() => setRefreshKey((key) => key + 1), refreshInterval);
+  useVisibleInterval(() => setRefreshKey((key) => key + 1), refreshInterval, true);
 
   return <>{getHumanReadableTimeString(timestamp)}</>;
 });

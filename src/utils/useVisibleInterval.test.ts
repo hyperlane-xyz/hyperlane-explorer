@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { useInterval } from '@hyperlane-xyz/widgets';
 
 import { useVisibleInterval } from './useVisibleInterval';
@@ -5,6 +7,7 @@ import { isWindowVisible } from './window';
 
 jest.mock('react', () => ({
   useCallback: (callback: () => void) => callback,
+  useEffect: (effect: () => void | (() => void)) => effect(),
 }));
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -18,6 +21,10 @@ jest.mock('./window', () => ({
 describe('useVisibleInterval', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('invokes the callback when the window is visible', () => {
@@ -50,5 +57,37 @@ describe('useVisibleInterval', () => {
 
     expect(useInterval).toHaveBeenNthCalledWith(1, expect.any(Function), 1000);
     expect(useInterval).toHaveBeenNthCalledWith(2, expect.any(Function), 2000);
+  });
+
+  it('invokes the callback immediately when the window becomes visible', () => {
+    const callback = jest.fn();
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
+    jest.mocked(isWindowVisible).mockReturnValue(true);
+
+    useVisibleInterval(callback, 1000, true);
+    const registeredCallback = addEventListener.mock.calls[0][1] as EventListener;
+    registeredCallback(new Event('visibilitychange'));
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invoke the visibility callback while hidden', () => {
+    const callback = jest.fn();
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
+    jest.mocked(isWindowVisible).mockReturnValue(false);
+
+    useVisibleInterval(callback, 1000, true);
+    const registeredCallback = addEventListener.mock.calls[0][1] as EventListener;
+    registeredCallback(new Event('visibilitychange'));
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('does not register visibility refreshes by default', () => {
+    const addEventListener = jest.spyOn(document, 'addEventListener').mockImplementation();
+
+    useVisibleInterval(jest.fn(), 1000);
+
+    expect(addEventListener).not.toHaveBeenCalled();
   });
 });
