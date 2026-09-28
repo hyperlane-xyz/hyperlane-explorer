@@ -10,10 +10,15 @@ import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 import { links } from '../../consts/links';
 import { logger } from '../../utils/logger';
 
+export interface LoadedChainMetadata {
+  metadata: ChainMap<ChainMetadata>;
+  overrides: ChainMap<Partial<ChainMetadata>>;
+}
+
 export async function loadChainMetadata(
   registry: IRegistry,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
-) {
+): Promise<LoadedChainMetadata> {
   for (const chainName of Object.keys(overrideChainMetadata)) {
     if (chainName !== chainName.toLowerCase()) {
       throw new Error(`Override chain names must be lowercase: ${chainName}`);
@@ -31,11 +36,17 @@ export async function loadChainMetadata(
   );
 
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
+  // Only persist overrides whose merged metadata passed validation. Registry
+  // fallback keeps the app usable, but should not preserve the invalid input.
+  const validMergedChains = new Set<string>();
 
   const parsedMetadata = objFilter(
     objMap(mergedMetadata, (chain, metadata) => {
       const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
-      if (parsedMetadata.success) return parsedMetadata.data;
+      if (parsedMetadata.success) {
+        validMergedChains.add(chain);
+        return parsedMetadata.data;
+      }
 
       const fallbackMetadata = metadataWithLogos[chain];
       const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
@@ -49,33 +60,71 @@ export async function loadChainMetadata(
     (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
   );
 
-  return dropDuplicateDomainIds(parsedMetadata, registryChainMetadata);
+  const parsedRegistryMetadata = objFilter(
+    objMap(metadataWithLogos, (_chain, metadata) => {
+      const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
+      return parsedMetadata.success ? parsedMetadata.data : undefined;
+    }),
+    (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
+  );
+
+  return enforceDomainIdOwnership(
+    parsedMetadata,
+    parsedRegistryMetadata,
+    overrideChainMetadata,
+    validMergedChains,
+  );
 }
 
-// ChainMetadataSchema validates each chain in isolation, so a (possibly
-// user-supplied) override can introduce a chain whose domainId collides with a
-// canonical one. Downstream `createChainMetadataResolver` treats a duplicate
-// domainId as a broken invariant and throws on the render path, which — because
-// overrides are persisted to localStorage and replayed on load — would brick
-// the app permanently. Enforce cross-record domainId uniqueness here so the
-// resolver never sees a duplicate. Canonical registry chains are processed
-// first and always win the domainId; any colliding chain is dropped (and the
-// app recovers on next load) rather than crashing.
-function dropDuplicateDomainIds(
+// URL and localStorage overrides may customize canonical chains, but cannot
+// reassign registry domain IDs or claim them for new chains.
+function enforceDomainIdOwnership(
   metadata: ChainMap<ChainMetadata>,
-  registryChainMetadata: ChainMap<unknown>,
-): ChainMap<ChainMetadata> {
+  registryChainMetadata: ChainMap<ChainMetadata>,
+  overrideChainMetadata: ChainMap<Partial<ChainMetadata> | undefined>,
+  validMergedChains: Set<string>,
+): LoadedChainMetadata {
   const claimedBy = new Map<number, string>();
-  const result: ChainMap<ChainMetadata> = {};
+  const safeMetadata: ChainMap<ChainMetadata> = {};
+  const safeOverrides: ChainMap<Partial<ChainMetadata>> = {};
 
-  const canonicalFirst = Object.keys(metadata).sort((a, b) => {
-    const aCanonical = a in registryChainMetadata;
-    const bCanonical = b in registryChainMetadata;
-    if (aCanonical === bCanonical) return 0;
-    return aCanonical ? -1 : 1;
-  });
+  // Reserve registry domain IDs before processing user-controlled chains.
+  for (const chainName of Object.keys(registryChainMetadata).sort()) {
+    const canonicalMetadata = registryChainMetadata[chainName];
+    const owner = claimedBy.get(canonicalMetadata.domainId);
+    if (owner !== undefined && owner !== chainName) {
+      throw new Error(
+        `Duplicate canonical domainId ${canonicalMetadata.domainId}: "${owner}" and "${chainName}"`,
+      );
+    }
+    claimedBy.set(canonicalMetadata.domainId, chainName);
 
-  for (const chainName of canonicalFirst) {
+    const chainMetadata = metadata[chainName];
+    if (!chainMetadata) continue;
+
+    const override = overrideChainMetadata[chainName];
+    if (chainMetadata.domainId !== canonicalMetadata.domainId) {
+      logger.error(
+        `Ignoring domainId override for "${chainName}": canonical domainId is ${canonicalMetadata.domainId}`,
+      );
+    }
+
+    safeMetadata[chainName] = {
+      ...chainMetadata,
+      domainId: canonicalMetadata.domainId,
+    };
+
+    if (override && validMergedChains.has(chainName)) {
+      safeOverrides[chainName] = {
+        ...override,
+        domainId: canonicalMetadata.domainId,
+      };
+    }
+  }
+
+  for (const chainName of Object.keys(metadata).sort()) {
+    if (Object.hasOwn(registryChainMetadata, chainName)) continue;
+
     const chainMetadata = metadata[chainName];
     const owner = claimedBy.get(chainMetadata.domainId);
     if (owner !== undefined && owner !== chainName) {
@@ -85,8 +134,13 @@ function dropDuplicateDomainIds(
       continue;
     }
     claimedBy.set(chainMetadata.domainId, chainName);
-    result[chainName] = chainMetadata;
+    safeMetadata[chainName] = chainMetadata;
+
+    const override = overrideChainMetadata[chainName];
+    if (override && validMergedChains.has(chainName)) {
+      safeOverrides[chainName] = override;
+    }
   }
 
-  return result;
+  return { metadata: safeMetadata, overrides: safeOverrides };
 }

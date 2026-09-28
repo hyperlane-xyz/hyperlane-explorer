@@ -34,13 +34,14 @@ describe('loadChainMetadata', () => {
       zzz: chain('zzz', 1, 999999999),
     };
 
-    const result = await loadChainMetadata(fakeRegistry(CANONICAL), override);
+    const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), override);
 
     // Colliding override is dropped; canonical chain is preserved.
-    expect(result.zzz).toBeUndefined();
-    expect(result.ethereum?.domainId).toBe(1);
+    expect(metadata.zzz).toBeUndefined();
+    expect(metadata.ethereum?.domainId).toBe(1);
+    expect(overrides.zzz).toBeUndefined();
     // The resolver must not throw on the sanitized map (the crash the report hit).
-    expect(() => createChainMetadataResolver(result)).not.toThrow();
+    expect(() => createChainMetadataResolver(metadata)).not.toThrow();
   });
 
   it('keeps a genuinely new override chain with a unique domainId', async () => {
@@ -48,11 +49,12 @@ describe('loadChainMetadata', () => {
       newchain: chain('newchain', 12345, 12345),
     };
 
-    const result = await loadChainMetadata(fakeRegistry(CANONICAL), override);
+    const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), override);
 
-    expect(result.newchain?.domainId).toBe(12345);
-    expect(Object.keys(result).sort()).toEqual(['arbitrum', 'ethereum', 'newchain']);
-    expect(() => createChainMetadataResolver(result)).not.toThrow();
+    expect(metadata.newchain?.domainId).toBe(12345);
+    expect(overrides.newchain?.domainId).toBe(12345);
+    expect(Object.keys(metadata).sort()).toEqual(['arbitrum', 'ethereum', 'newchain']);
+    expect(() => createChainMetadataResolver(metadata)).not.toThrow();
   });
 
   it('merges an override for an existing chain without dropping it', async () => {
@@ -60,9 +62,47 @@ describe('loadChainMetadata', () => {
       ethereum: { rpcUrls: [{ http: 'https://custom.ethereum.example' }] },
     };
 
-    const result = await loadChainMetadata(fakeRegistry(CANONICAL), override);
+    const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), override);
 
-    expect(result.ethereum?.domainId).toBe(1);
-    expect(result.ethereum?.rpcUrls?.[0]?.http).toBe('https://custom.ethereum.example');
+    expect(metadata.ethereum?.domainId).toBe(1);
+    expect(metadata.ethereum?.rpcUrls?.[0]?.http).toBe('https://custom.ethereum.example');
+    expect(overrides.ethereum?.domainId).toBe(1);
+  });
+
+  it('preserves canonical owner when a canonical override steals its domainId', async () => {
+    const override: ChainMap<Partial<ChainMetadata>> = {
+      ethereum: { domainId: 42161 },
+    };
+
+    const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), override);
+
+    expect(metadata.ethereum?.domainId).toBe(1);
+    expect(metadata.arbitrum?.domainId).toBe(42161);
+    expect(overrides.ethereum?.domainId).toBe(1);
+  });
+
+  it('does not let an override vacate and steal a canonical domainId', async () => {
+    const override: ChainMap<Partial<ChainMetadata>> = {
+      ethereum: { domainId: 999 },
+      evil: chain('evil', 1, 999),
+    };
+
+    const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), override);
+
+    expect(metadata.ethereum?.domainId).toBe(1);
+    expect(metadata.evil).toBeUndefined();
+    expect(overrides.ethereum?.domainId).toBe(1);
+    expect(overrides.evil).toBeUndefined();
+  });
+
+  it('fails loudly when canonical registry chains share a domainId', async () => {
+    const invalidCanonical = {
+      ...CANONICAL,
+      arbitrum: chain('arbitrum', 1, 42161),
+    };
+
+    await expect(loadChainMetadata(fakeRegistry(invalidCanonical), {})).rejects.toThrow(
+      'Duplicate canonical domainId 1',
+    );
   });
 });

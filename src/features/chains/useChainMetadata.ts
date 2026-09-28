@@ -1,11 +1,7 @@
-import {
-  ChainMetadata,
-  ChainMetadataSchema,
-  mergeChainMetadataMap,
-} from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import { ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { fromBase64 } from '@hyperlane-xyz/utils';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { z } from 'zod';
 
 import { useStore } from '../../metadataStore';
@@ -22,9 +18,18 @@ export function useQueryParamChainConfigSync() {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides);
   const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
+  // Sanitization may remove a rejected override from the store. Remember the
+  // query value so the effect does not immediately add it back in a loop.
+  const processedQueryVal = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!queryVal) return;
+    if (!queryVal) {
+      processedQueryVal.current = null;
+      return;
+    }
+    if (processedQueryVal.current === queryVal) return;
+    processedQueryVal.current = queryVal;
+
     const decoded = fromBase64<ChainMetadata[]>(queryVal);
     if (!decoded) {
       logger.error('Unable to decode chain configs in query string');
@@ -37,12 +42,7 @@ export function useQueryParamChainConfigSync() {
     }
     const chainMetadataList = result.data as ChainMetadata[];
 
-    // Stop here if there are no new configs to save, otherwise the effect will loop
-    if (
-      !chainMetadataList.length ||
-      chainMetadataList.every((c) => !!chainMetadataOverrides[c.name])
-    )
-      return;
+    if (!chainMetadataList.length) return;
 
     const nameToChainConfig = chainMetadataList.reduce<ChainMap<ChainMetadata>>(
       (acc, chainMetadata) => {
@@ -54,8 +54,10 @@ export function useQueryParamChainConfigSync() {
       {},
     );
 
-    const mergedConfig = mergeChainMetadataMap(nameToChainConfig, chainMetadataOverrides);
-    setChainMetadataOverrides(mergedConfig);
+    const mergedConfig = { ...chainMetadataOverrides, ...nameToChainConfig };
+    setChainMetadataOverrides(mergedConfig).catch((error) => {
+      logger.error('Failed to save chain configs from query string', error);
+    });
   }, [chainMetadataOverrides, setChainMetadataOverrides, queryVal]);
 
   return chainMetadataOverrides;
