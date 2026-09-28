@@ -19,6 +19,7 @@ allowBuilds:
   '@parcel/watcher': false
   bigint-buffer: false
   bufferutil: false
+  cbor-extract: false
   core-js: false
   esbuild: false
   keccak: false
