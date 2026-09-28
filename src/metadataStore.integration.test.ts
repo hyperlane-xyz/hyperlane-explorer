@@ -49,6 +49,8 @@ describe('metadata store persistence', () => {
             ethereum: { domainId: 42161 },
             evil: chain('evil', 1),
             custom: chain('custom', 5000),
+            alpha: chain('alpha', 6000),
+            zeta: chain('zeta', 6000),
           },
         },
         version: 2,
@@ -62,6 +64,7 @@ describe('metadata store persistence', () => {
     expect(persisted.state.chainMetadataOverrides).toEqual({
       ethereum: { domainId: 1 },
       custom: chain('custom', 5000),
+      alpha: chain('alpha', 6000),
     });
   });
 });
