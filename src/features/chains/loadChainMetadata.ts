@@ -50,8 +50,11 @@ export async function loadChainMetadata(
 
       const fallbackMetadata = metadataWithLogos[chain];
       const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
+      const overrideAction = overrideChainMetadata[chain]
+        ? 'removing its invalid stored override and '
+        : '';
       logger.error(
-        `Failed to parse metadata for ${chain}, ${
+        `Failed to parse metadata for ${chain}, ${overrideAction}${
           parsedFallbackMetadata.success ? 'falling back to registry metadata' : 'skipping'
         }`,
       );

@@ -4,6 +4,7 @@ import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTyp
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 
+import { logger } from '../../utils/logger';
 import { loadChainMetadata } from './loadChainMetadata';
 
 function chain(name: string, domainId: number, chainId: number): ChainMetadata {
@@ -104,5 +105,19 @@ describe('loadChainMetadata', () => {
     await expect(loadChainMetadata(fakeRegistry(invalidCanonical), {})).rejects.toThrow(
       'Duplicate canonical domainId 1',
     );
+  });
+
+  it('logs when an invalid stored override is removed', async () => {
+    const error = jest.spyOn(logger, 'error').mockImplementation();
+
+    const { overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), {
+      removedchain: { domainId: 5000 },
+    });
+
+    expect(overrides.removedchain).toBeUndefined();
+    expect(error).toHaveBeenCalledWith(
+      'Failed to parse metadata for removedchain, removing its invalid stored override and skipping',
+    );
+    error.mockRestore();
   });
 });
