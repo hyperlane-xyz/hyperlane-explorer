@@ -2,7 +2,6 @@
 
 import { TextDecoder, TextEncoder } from 'util';
 
-import type { IRegistry } from '@hyperlane-xyz/registry';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 
@@ -13,24 +12,28 @@ Object.assign(globalThis, {
 });
 
 let useStore: typeof import('./metadataStore').useStore;
+let PartialRegistry: typeof import('@hyperlane-xyz/registry').PartialRegistry;
+let ProtocolType: typeof import('@hyperlane-xyz/utils').ProtocolType;
 
 beforeAll(async () => {
   // Load SDK consumers after jsdom receives the globals they require.
+  ({ PartialRegistry } = await import('@hyperlane-xyz/registry'));
+  ({ ProtocolType } = await import('@hyperlane-xyz/utils'));
   ({ useStore } = await import('./metadataStore'));
 });
 
 function chain(name: string, domainId: number): ChainMetadata {
   return {
     name,
-    protocol: 'ethereum' as ChainMetadata['protocol'],
+    protocol: ProtocolType.Ethereum,
     chainId: domainId,
     domainId,
     rpcUrls: [{ http: `https://rpc.${name}.example` }],
   };
 }
 
-function fakeRegistry(metadata: ChainMap<ChainMetadata>): IRegistry {
-  return { getMetadata: async () => metadata } as IRegistry;
+function fakeRegistry(metadata: ChainMap<ChainMetadata>) {
+  return new PartialRegistry({ chainMetadata: metadata });
 }
 
 describe('metadata store persistence', () => {

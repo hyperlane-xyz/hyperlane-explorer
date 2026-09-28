@@ -1,12 +1,7 @@
-import {
-  ChainMetadata,
-  ChainMetadataSchema,
-  mergeChainMetadataMap,
-} from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
+import { ChainMetadata, ChainMetadataSchema } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
 import { fromBase64 } from '@hyperlane-xyz/utils';
 import { useEffect, useRef } from 'react';
-import { z } from 'zod';
 
 import { useStore } from '../../metadataStore';
 import { logger } from '../../utils/logger';
@@ -14,24 +9,31 @@ import { useQueryParam } from '../../utils/queryParams';
 
 const CHAIN_CONFIGS_KEY = 'chains';
 
-const ChainMetadataArraySchema = z.array(ChainMetadataSchema);
+const ChainMetadataArraySchema = ChainMetadataSchema.array();
 
 export function mergeQueryParamChainMetadata(
   chainMetadataList: ChainMetadata[],
   persistedOverrides: ChainMap<Partial<ChainMetadata>>,
+  knownChainMetadata: ChainMap<ChainMetadata>,
 ) {
-  const persistedDomainOwners = new Map<number, string>();
+  const claimedDomainIds = new Map<number, string>();
+  for (const [chainName, metadata] of Object.entries(knownChainMetadata)) {
+    claimedDomainIds.set(metadata.domainId, chainName);
+  }
   for (const [chainName, metadata] of Object.entries(persistedOverrides)) {
     if (metadata.domainId !== undefined) {
-      persistedDomainOwners.set(metadata.domainId, chainName);
+      claimedDomainIds.set(metadata.domainId, chainName);
     }
   }
 
   const queryOverrides = chainMetadataList.reduce<ChainMap<ChainMetadata>>((acc, chainMetadata) => {
-    const owner = persistedDomainOwners.get(chainMetadata.domainId);
+    // A URL must never add fields or array entries to an existing saved choice.
+    if (persistedOverrides[chainMetadata.name] || acc[chainMetadata.name]) return acc;
+
+    const owner = claimedDomainIds.get(chainMetadata.domainId);
     if (owner !== undefined && owner !== chainMetadata.name) {
       logger.error(
-        `Ignoring URL chain "${chainMetadata.name}": domainId ${chainMetadata.domainId} is already saved for "${owner}"`,
+        `Ignoring URL chain "${chainMetadata.name}": domainId ${chainMetadata.domainId} is already used by "${owner}"`,
       );
       return acc;
     }
@@ -39,11 +41,11 @@ export function mergeQueryParamChainMetadata(
     // TODO would be great if we could get contract addrs here too
     // But would require apps like warp template to get that from devs
     acc[chainMetadata.name] = chainMetadata;
+    claimedDomainIds.set(chainMetadata.domainId, chainMetadata.name);
     return acc;
   }, {});
 
-  // Persisted choices take precedence over untrusted URL input.
-  return mergeChainMetadataMap(queryOverrides, persistedOverrides);
+  return { ...queryOverrides, ...persistedOverrides };
 }
 
 // Look for chainMetadata in the query string and merge them into the store
@@ -51,6 +53,8 @@ export function mergeQueryParamChainMetadata(
 export function useQueryParamChainConfigSync() {
   const chainMetadataOverrides = useStore((s) => s.chainMetadataOverrides);
   const setChainMetadataOverrides = useStore((s) => s.setChainMetadataOverrides);
+  const chainMetadata = useStore((s) => s.chainMetadata);
+  const isChainMetadataLoaded = useStore((s) => s.isChainMetadataLoaded);
   const queryVal = useQueryParam(CHAIN_CONFIGS_KEY);
   // Sanitization may remove a rejected override from the store. Remember the
   // query value so the effect does not immediately add it back in a loop.
@@ -61,6 +65,8 @@ export function useQueryParamChainConfigSync() {
       processedQueryVal.current = null;
       return;
     }
+    // Registry domain IDs must be loaded before URL entries can be checked.
+    if (!isChainMetadataLoaded) return;
     if (processedQueryVal.current === queryVal) return;
     processedQueryVal.current = queryVal;
 
@@ -83,11 +89,21 @@ export function useQueryParamChainConfigSync() {
     )
       return;
 
-    const mergedConfig = mergeQueryParamChainMetadata(chainMetadataList, chainMetadataOverrides);
+    const mergedConfig = mergeQueryParamChainMetadata(
+      chainMetadataList,
+      chainMetadataOverrides,
+      chainMetadata,
+    );
     setChainMetadataOverrides(mergedConfig).catch((error) => {
       logger.error('Failed to save chain configs from query string', error);
     });
-  }, [chainMetadataOverrides, setChainMetadataOverrides, queryVal]);
+  }, [
+    chainMetadata,
+    chainMetadataOverrides,
+    isChainMetadataLoaded,
+    setChainMetadataOverrides,
+    queryVal,
+  ]);
 
   return chainMetadataOverrides;
 }
