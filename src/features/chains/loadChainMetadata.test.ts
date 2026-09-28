@@ -1,4 +1,4 @@
-import type { IRegistry } from '@hyperlane-xyz/registry';
+import { PartialRegistry } from '@hyperlane-xyz/registry';
 import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
@@ -22,10 +22,8 @@ const CANONICAL: ChainMap<ChainMetadata> = {
   arbitrum: chain('arbitrum', 42161, 42161),
 };
 
-// loadChainMetadata only calls registry.getMetadata(); a minimal test double
-// mirrors the existing metadataStore.test.ts pattern.
-function fakeRegistry(metadata: ChainMap<ChainMetadata>): IRegistry {
-  return { getMetadata: async () => metadata } as IRegistry;
+function fakeRegistry(metadata: ChainMap<ChainMetadata>) {
+  return new PartialRegistry({ chainMetadata: metadata });
 }
 
 describe('loadChainMetadata', () => {

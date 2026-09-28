@@ -4,7 +4,7 @@ import { ProtocolType, toBase64 } from '@hyperlane-xyz/utils';
 
 import { useStore } from '../../metadataStore';
 import { useQueryParam } from '../../utils/queryParams';
-import { mergeQueryParamChainMetadata, useQueryParamChainConfigSync } from './useChainMetadata';
+import { filterQueryParamChainMetadata, useQueryParamChainConfigSync } from './useChainMetadata';
 
 const mockProcessedQueryVal: { current: string | null } = { current: null };
 
@@ -27,15 +27,15 @@ function chain(name: string, domainId: number, rpcHost = name): ChainMetadata {
   };
 }
 
-describe('mergeQueryParamChainMetadata', () => {
+describe('filterQueryParamChainMetadata', () => {
   it('does not replace a saved chain with URL metadata', () => {
     const saved = { ethereum: chain('ethereum', 1, 'saved') };
     const linked = [chain('ethereum', 1, 'linked'), chain('newchain', 5000)];
 
-    const merged = mergeQueryParamChainMetadata(linked, saved, {});
+    const accepted = filterQueryParamChainMetadata(linked, saved, {});
 
-    expect(merged.ethereum.rpcUrls).toEqual(saved.ethereum.rpcUrls);
-    expect(merged.newchain).toEqual(linked[1]);
+    expect(accepted.ethereum).toBeUndefined();
+    expect(accepted.newchain).toEqual(linked[1]);
   });
 
   it('does not let a URL chain evict a saved custom chain by domainId', () => {
@@ -43,31 +43,30 @@ describe('mergeQueryParamChainMetadata', () => {
       mychain: chain('mychain', 5000),
     };
 
-    const merged = mergeQueryParamChainMetadata([chain('aaa', 5000)], saved, {});
+    const accepted = filterQueryParamChainMetadata([chain('aaa', 5000)], saved, {});
 
-    expect(merged.mychain).toEqual(saved.mychain);
-    expect(merged.aaa).toBeUndefined();
+    expect(accepted).toEqual({});
   });
 
   it('rejects a URL chain using a registry domainId', () => {
-    const merged = mergeQueryParamChainMetadata(
+    const accepted = filterQueryParamChainMetadata(
       [chain('evil', 1)],
       {},
       { ethereum: chain('ethereum', 1) },
     );
 
-    expect(merged.evil).toBeUndefined();
+    expect(accepted).toEqual({});
   });
 
   it('rejects a duplicate domainId within the URL', () => {
-    const merged = mergeQueryParamChainMetadata(
+    const accepted = filterQueryParamChainMetadata(
       [chain('first', 5000), chain('second', 5000)],
       {},
       {},
     );
 
-    expect(merged.first).toBeDefined();
-    expect(merged.second).toBeUndefined();
+    expect(accepted.first).toBeDefined();
+    expect(accepted.second).toBeUndefined();
   });
 });
 
@@ -85,6 +84,18 @@ describe('useQueryParamChainConfigSync', () => {
     useQueryParamChainConfigSync();
 
     expect(setChainMetadataOverrides).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not write when every URL chain is rejected', () => {
+    const setChainMetadataOverrides = jest.fn().mockResolvedValue(undefined);
+    mockHookState({}, setChainMetadataOverrides, [chain('evil', 1)], {
+      ethereum: chain('ethereum', 1),
+    });
+
+    useQueryParamChainConfigSync();
+    useQueryParamChainConfigSync();
+
+    expect(setChainMetadataOverrides).not.toHaveBeenCalled();
   });
 
   it('does not replace saved metadata when the same URL is processed after a reload', () => {

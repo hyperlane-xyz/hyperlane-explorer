@@ -11,7 +11,7 @@ const CHAIN_CONFIGS_KEY = 'chains';
 
 const ChainMetadataArraySchema = ChainMetadataSchema.array();
 
-export function mergeQueryParamChainMetadata(
+export function filterQueryParamChainMetadata(
   chainMetadataList: ChainMetadata[],
   persistedOverrides: ChainMap<Partial<ChainMetadata>>,
   knownChainMetadata: ChainMap<ChainMetadata>,
@@ -45,7 +45,7 @@ export function mergeQueryParamChainMetadata(
     return acc;
   }, {});
 
-  return { ...queryOverrides, ...persistedOverrides };
+  return queryOverrides;
 }
 
 // Look for chainMetadata in the query string and merge them into the store
@@ -80,20 +80,18 @@ export function useQueryParamChainConfigSync() {
       logger.error('Invalid chain configs in query string', result.error);
       return;
     }
-    const chainMetadataList = result.data as ChainMetadata[];
+    const chainMetadataList = result.data;
 
-    // Avoid writes when every linked chain already has a saved configuration.
-    if (
-      !chainMetadataList.length ||
-      chainMetadataList.every((chain) => !!chainMetadataOverrides[chain.name])
-    )
-      return;
+    if (!chainMetadataList.length) return;
 
-    const mergedConfig = mergeQueryParamChainMetadata(
+    const queryOverrides = filterQueryParamChainMetadata(
       chainMetadataList,
       chainMetadataOverrides,
       chainMetadata,
     );
+    if (!Object.keys(queryOverrides).length) return;
+
+    const mergedConfig = { ...queryOverrides, ...chainMetadataOverrides };
     setChainMetadataOverrides(mergedConfig).catch((error) => {
       logger.error('Failed to save chain configs from query string', error);
     });
