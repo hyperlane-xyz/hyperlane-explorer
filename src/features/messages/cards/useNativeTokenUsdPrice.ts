@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, skipToken, useQueries, useQuery } from '@tanstack/react-query';
 
 import { useChainMetadataResolver } from '../../../metadataStore';
 
@@ -18,25 +18,53 @@ export function useNativeTokenUsdPrice(
 ): number | null {
   const chainMetadataResolver = useChainMetadataResolver();
   const originMetadata = chainMetadataResolver.tryGetChainMetadata(originDomainId);
-  const coinGeckoId = originMetadata?.gasCurrencyCoinGeckoId;
-  const isTestnet = !!originMetadata?.isTestnet;
 
+  const { data } = useQuery(
+    usdPriceQueryOptions(
+      originMetadata?.gasCurrencyCoinGeckoId,
+      !!originMetadata?.isTestnet,
+      dispatchTimestampMs,
+    ),
+  );
+
+  return data ?? null;
+}
+
+// Same price lookup for arbitrary CoinGecko ids (e.g. ERC20 tokens), keyed by id.
+export function useTokenUsdPrices(
+  coinGeckoIds: string[],
+  isTestnet: boolean,
+  dispatchTimestampMs?: number,
+): Record<string, number | null> {
+  const results = useQueries({
+    queries: coinGeckoIds.map((id) => usdPriceQueryOptions(id, isTestnet, dispatchTimestampMs)),
+  });
+
+  return Object.fromEntries(coinGeckoIds.map((id, i) => [id, results[i].data ?? null]));
+}
+
+// The query is skipped (no data) when there is no CoinGecko id or the chain is a testnet.
+export function usdPriceQueryOptions(
+  coinGeckoId: string | undefined,
+  isTestnet: boolean,
+  dispatchTimestampMs?: number,
+) {
   // dd-mm-yyyy (UTC) for the dispatch date, or undefined to use the current spot
   // price (no timestamp, or dispatched today so EOD data isn't available yet).
   const historyDate = getHistoryDate(dispatchTimestampMs);
 
-  const { data } = useQuery({
-    queryKey: ['nativeTokenUsdPrice', coinGeckoId, historyDate ?? 'current'],
-    queryFn: () =>
-      historyDate
-        ? fetchHistoricalUsdPrice(coinGeckoId!, historyDate)
-        : fetchCurrentUsdPrice(coinGeckoId!),
-    enabled: !!coinGeckoId && !isTestnet,
+  return queryOptions({
+    queryKey: ['tokenUsdPrice', coinGeckoId, historyDate ?? 'current'],
+    queryFn:
+      coinGeckoId && !isTestnet
+        ? () =>
+            historyDate
+              ? fetchHistoricalUsdPrice(coinGeckoId, historyDate)
+              : fetchCurrentUsdPrice(coinGeckoId)
+        : skipToken,
     // Historical prices are immutable; the current spot price can go stale.
     staleTime: historyDate ? Infinity : 5 * 60 * 1000,
   });
-
-  return data ?? null;
 }
 
 function getHistoryDate(dispatchTimestampMs?: number): string | undefined {
