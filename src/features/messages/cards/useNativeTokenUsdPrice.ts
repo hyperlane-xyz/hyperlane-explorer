@@ -43,7 +43,9 @@ export function useTokenUsdPrices(
   return Object.fromEntries(coinGeckoIds.map((id, i) => [id, results[i].data ?? null]));
 }
 
-// The query is skipped (no data) when there is no CoinGecko id or the chain is a testnet.
+// The query is skipped when there is no CoinGecko id or the chain is a testnet. A skipped query
+// still returns data cached under its key, so the testnet flag is part of the key to keep
+// testnet assets from reading the price cached for a mainnet asset with the same id.
 export function usdPriceQueryOptions(
   coinGeckoId: string | undefined,
   isTestnet: boolean,
@@ -54,7 +56,7 @@ export function usdPriceQueryOptions(
   const historyDate = getHistoryDate(dispatchTimestampMs);
 
   return queryOptions({
-    queryKey: ['tokenUsdPrice', coinGeckoId, historyDate ?? 'current'],
+    queryKey: ['tokenUsdPrice', coinGeckoId, isTestnet, historyDate ?? 'current'],
     queryFn:
       coinGeckoId && !isTestnet
         ? () =>
