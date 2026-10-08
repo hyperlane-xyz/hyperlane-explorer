@@ -8,8 +8,21 @@ import { docLinks } from '../../../consts/links';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { Message, MessageStub } from '../../../types';
 import { GasPayment } from '../../debugger/types';
+import { IgpPaymentsStatus } from '../igpPayments';
+import {
+  formatOtherPayments,
+  formatRawUnits,
+  formatUsd,
+  getOtherPayments,
+  hasNonNativePayments,
+  NATIVE_ASSET_ID,
+  PaymentAsset,
+  summarizePayments,
+  sumPayments,
+} from './gasPaymentSummary';
 import { KeyValueRow } from './KeyValueRow';
-import { useNativeTokenUsdPrice } from './useNativeTokenUsdPrice';
+import { useIgpPayments } from './useIgpPayments';
+import { useNativeTokenUsdPrice, useTokenUsdPrices } from './useNativeTokenUsdPrice';
 
 interface Props {
   message: Message | MessageStub;
@@ -32,6 +45,23 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const originMetadata = chainMetadataResolver.tryGetChainMetadata(message.originDomainId);
   const nativeDecimals = originMetadata?.nativeToken?.decimals || 18;
   const nativeSymbol = originMetadata?.nativeToken?.symbol || 'ETH';
+  const nativeAsset: PaymentAsset = {
+    id: NATIVE_ASSET_ID,
+    symbol: nativeSymbol,
+    decimals: nativeDecimals,
+    coinGeckoId: originMetadata?.gasCurrencyCoinGeckoId,
+  };
+  const {
+    status: receiptStatus,
+    payments: receiptPayments,
+    tokenMetadata,
+  } = useIgpPayments(message, !blur);
+  const hasTokenPayments = receiptPayments ? hasNonNativePayments(receiptPayments) : false;
+  const tokenUsdPrices = useTokenUsdPrices(
+    hasTokenPayments ? Object.values(tokenMetadata).flatMap((m) => m.coinGeckoId ?? []) : [],
+    !!originMetadata?.isTestnet,
+    message.origin?.timestamp,
+  );
   const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
   const destDecimals = destMetadata?.nativeToken?.decimals || 18;
   const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
@@ -67,11 +97,22 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       );
       numPayments = Math.max(numPayments, numPaymentsFromMessage || 0);
 
+      if (receiptPayments) {
+        totalGasAmount = new BigNumber(
+          BigNumberMax(totalGasAmount, sumPayments(receiptPayments, 'gasAmount')),
+        );
+        totalPaymentWei = new BigNumber(
+          BigNumberMax(totalPaymentWei, sumPayments(receiptPayments, 'paymentAmount')),
+        );
+        numPayments = Math.max(numPayments, receiptPayments.length);
+      }
+
       const paymentFormatted = fromWei(totalPaymentWei.toString(), nativeDecimals).toString();
       return { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr };
     }, [
       nativeDecimals,
       igpPayments,
+      receiptPayments,
       numPaymentsFromMessage,
       totalGasAmountFromMessage,
       totalPaymentFromMessage,
@@ -82,6 +123,23 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
         new BigNumber(fromWei(totalPaymentWei.toString(), nativeDecimals)).times(nativeUsdPrice),
       )
     : null;
+
+  const receiptTotals = receiptPayments
+    ? summarizePayments(receiptPayments, nativeAsset, tokenMetadata, (asset) =>
+        asset.id === NATIVE_ASSET_ID
+          ? nativeUsdPrice
+          : asset.coinGeckoId
+            ? tokenUsdPrices[asset.coinGeckoId]
+            : null,
+      )
+    : undefined;
+  const otherPayments = receiptPayments
+    ? getOtherPayments(numPayments, totalPaymentWei, receiptPayments)
+    : undefined;
+  // One width for all the rows of the receipt, so their values line up
+  const receiptLabelWidth = receiptTotals && receiptTotals.length > 1 ? 'w-52' : 'w-36';
+  const isDenominationUnresolved =
+    receiptStatus === IgpPaymentsStatus.Pending || receiptStatus === IgpPaymentsStatus.Error;
 
   const deliveryCostWei =
     !isNullish(deliveryGasUsed) && !isNullish(deliveryEffectiveGasPrice)
@@ -138,14 +196,68 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             />
           </div>
           <div className="flex flex-1 flex-col gap-y-2">
-            <KeyValueRow
-              label="Total paid:"
-              labelWidth="w-24"
-              display={`${paymentFormatted} ${nativeSymbol}`}
-              subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
-              allowZeroish={true}
-              blurValue={blur}
-            />
+            {receiptStatus === IgpPaymentsStatus.Pending && (
+              <KeyValueRow
+                label="Total paid:"
+                labelWidth="w-24"
+                display="Loading..."
+                allowZeroish={true}
+                blurValue={blur}
+              />
+            )}
+            {receiptStatus === IgpPaymentsStatus.Error && (
+              <KeyValueRow
+                label="Total paid:"
+                labelWidth="w-24"
+                display={formatRawUnits(totalPaymentWei.toFixed())}
+                subDisplay="(unit unverified)"
+                allowZeroish={true}
+                blurValue={blur}
+              />
+            )}
+            {!isDenominationUnresolved &&
+              (receiptTotals ? (
+                <>
+                  {!receiptTotals.length && (
+                    <KeyValueRow
+                      label="Paid at dispatch:"
+                      labelWidth={receiptLabelWidth}
+                      display="None"
+                      allowZeroish={true}
+                      blurValue={blur}
+                    />
+                  )}
+                  {receiptTotals.map((total) => (
+                    <KeyValueRow
+                      key={total.id}
+                      label={total.label}
+                      labelWidth={receiptLabelWidth}
+                      display={total.display}
+                      subDisplay={total.usd ? `(${total.usd})` : undefined}
+                      allowZeroish={true}
+                      blurValue={blur}
+                    />
+                  ))}
+                </>
+              ) : (
+                <KeyValueRow
+                  label="Total paid:"
+                  labelWidth="w-24"
+                  display={`${paymentFormatted} ${nativeSymbol}`}
+                  subDisplay={paymentUsdFormatted ? `(${paymentUsdFormatted})` : undefined}
+                  allowZeroish={true}
+                  blurValue={blur}
+                />
+              ))}
+            {otherPayments && (
+              <KeyValueRow
+                label="Other payments:"
+                labelWidth={receiptLabelWidth}
+                display={formatOtherPayments(otherPayments)}
+                allowZeroish={true}
+                blurValue={blur}
+              />
+            )}
           </div>
         </div>
         {!isNullish(deliveryGasUsed) && (
@@ -178,16 +290,19 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
             </div>
           </div>
         )}
-        {!!paymentsWithAddr.length && (
-          <div className="md:pt-2">
-            <IgpPaymentsTable
-              payments={paymentsWithAddr}
-              nativeUsdPrice={nativeUsdPrice}
-              nativeDecimals={nativeDecimals}
-              nativeSymbol={nativeSymbol}
-            />
-          </div>
-        )}
+        {!hasTokenPayments &&
+          !otherPayments &&
+          !isDenominationUnresolved &&
+          !!paymentsWithAddr.length && (
+            <div className="md:pt-2">
+              <IgpPaymentsTable
+                payments={paymentsWithAddr}
+                nativeUsdPrice={nativeUsdPrice}
+                nativeDecimals={nativeDecimals}
+                nativeSymbol={nativeSymbol}
+              />
+            </div>
+          )}
       </div>
     </SectionCard>
   );
@@ -233,17 +348,6 @@ function IgpPaymentsTable({
       </tbody>
     </table>
   );
-}
-
-function formatUsd(value: BigNumber): string {
-  const num = value.toNumber();
-  const fractionDigits = num !== 0 && Math.abs(num) < 0.01 ? 6 : 2;
-  return num.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: fractionDigits,
-  });
 }
 
 const style = {
