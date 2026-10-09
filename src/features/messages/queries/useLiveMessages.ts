@@ -10,8 +10,8 @@ export function useExplorerConnectionState() {
 }
 
 export function useLatestMessageRows(enabled: boolean, domains: number[], refresh: () => void) {
-  const { connectionState, messageRows } = useExplorerEventsContext();
-  useRefreshAfterReconnect(enabled, connectionState, refresh);
+  const { connectionState, messageRows, rollbackVersion } = useExplorerEventsContext();
+  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
 
   const filteredRows = useMemo(
     () => (enabled ? filterLatestMessageRows(messageRows, domains) : []),
@@ -36,8 +36,8 @@ export function useMessageRowSubscription(
   enabled: boolean,
   refresh: () => void,
 ) {
-  const { connectionState, messageRows, subscribe } = useExplorerEventsContext();
-  useRefreshAfterReconnect(enabled, connectionState, refresh);
+  const { connectionState, messageRows, rollbackVersion, subscribe } = useExplorerEventsContext();
+  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
   const [retainedMessageRow, setRetainedMessageRow] = useState<MessageEntry | null>(null);
   const currentMessageRow = enabled
     ? messageRows.find((row) => normalizeId(row.msg_id) === normalizeId(messageId)) || null
@@ -47,7 +47,7 @@ export function useMessageRowSubscription(
     setRetainedMessageRow(null);
     if (!enabled) return;
     return subscribe(messageId, setRetainedMessageRow);
-  }, [enabled, messageId, subscribe]);
+  }, [enabled, messageId, rollbackVersion, subscribe]);
 
   useEffect(() => {
     if (connectionState !== 'connected') setRetainedMessageRow(null);
@@ -77,21 +77,27 @@ export function selectSubscribedMessageRow(
 function useRefreshAfterReconnect(
   enabled: boolean,
   connectionState: ExplorerConnectionState,
+  rollbackVersion: number,
   refresh: () => void,
 ) {
   const refreshRef = useRef(refresh);
   const previousConnectionState = useRef(connectionState);
+  const previousRollbackVersion = useRef(rollbackVersion);
 
   useEffect(() => {
     refreshRef.current = refresh;
   }, [refresh]);
 
   useEffect(() => {
-    if (shouldRefreshAfterReconnect(enabled, previousConnectionState.current, connectionState)) {
+    if (
+      shouldRefreshAfterReconnect(enabled, previousConnectionState.current, connectionState) ||
+      (enabled && previousRollbackVersion.current !== rollbackVersion)
+    ) {
       refreshRef.current();
     }
     previousConnectionState.current = connectionState;
-  }, [connectionState, enabled]);
+    previousRollbackVersion.current = rollbackVersion;
+  }, [connectionState, enabled, rollbackVersion]);
 }
 
 export function shouldRefreshAfterReconnect(

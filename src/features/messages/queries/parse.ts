@@ -113,15 +113,15 @@ function parseMessageStub(
       origin: {
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
-        from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
-        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
+        from: parseOptionalAddress(m.origin_tx_sender, originMetadata),
+        to: parseOptionalAddress(m.origin_tx_recipient, originMetadata),
       },
-      destination: m.is_delivered
+      destination: hasDestinationTransaction(m)
         ? {
-            timestamp: parseTimestampString(m.delivery_occurred_at!),
-            hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
-            from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
-            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
+            timestamp: parseTimestampString(m.delivery_occurred_at),
+            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
+            from: postgresByteaToAddress(m.destination_tx_sender, destinationMetadata),
+            to: postgresByteaToAddress(m.destination_tx_recipient, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -192,6 +192,27 @@ function parseMessage(
 function parseTimestampString(t: string) {
   const asUtc = t.at(-1) === 'Z' ? t : t + 'Z';
   return new Date(asUtc).getTime();
+}
+
+function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry & {
+  delivery_occurred_at: string;
+  destination_tx_hash: string;
+  destination_tx_recipient: string;
+  destination_tx_sender: string;
+} {
+  return Boolean(
+    m.delivery_occurred_at &&
+    m.destination_tx_hash &&
+    m.destination_tx_recipient &&
+    m.destination_tx_sender,
+  );
+}
+
+function parseOptionalAddress(
+  value: string | null,
+  metadata: Parameters<typeof postgresByteaToAddress>[1],
+) {
+  return value ? postgresByteaToAddress(value, metadata) : undefined;
 }
 
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
