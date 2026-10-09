@@ -17,15 +17,24 @@ const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 65_000;
 const MAX_RETAINED_MESSAGES = 500;
+const EMPTY_DOMAINS: number[] = [];
 
 type MessageUpsert = { data: MessageEntry; type: 'message_upsert' };
-type MessageListener = (message: MessageEntry) => void;
+type Rollback = {
+  confirmations: number;
+  domain: number;
+  fromHeight: string;
+  toHeight: string;
+  type: 'rollback';
+};
+type MessageListener = (message: MessageEntry | null) => void;
 
 export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected' | 'unavailable';
 
 export interface ExplorerEventsContextValue {
   connectionState: ExplorerConnectionState;
   messageRows: MessageEntry[];
+  rollbackVersion: number;
   subscribe: (messageId: string, listener: MessageListener) => () => void;
 }
 
@@ -39,10 +48,13 @@ export function shouldEnableExplorerEvents(pathName: string) {
 
 export function ExplorerEventsProvider({
   children,
+  domains = EMPTY_DOMAINS,
   enabled = true,
-}: PropsWithChildren<{ enabled?: boolean }>) {
+}: PropsWithChildren<{ domains?: number[]; enabled?: boolean }>) {
   const [connectionState, setConnectionState] = useState<ExplorerConnectionState>('unavailable');
   const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
+  const [rollbackVersion, setRollbackVersion] = useState(0);
+  const domainIds = useMemo(() => [...new Set(domains)].sort((a, b) => a - b), [domains]);
   const listenersRef = useRef<Map<string, Set<MessageListener>>>(new Map());
 
   const subscribe = useCallback((messageId: string, listener: MessageListener) => {
@@ -59,7 +71,7 @@ export function ExplorerEventsProvider({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !config.wsUrl) {
+    if (!enabled || !config.wsUrl || !domainIds.length) {
       setConnectionState('unavailable');
       setMessageRows([]);
       return;
@@ -101,7 +113,7 @@ export function ExplorerEventsProvider({
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(config.wsUrl);
+        socket = new WebSocket(withConfirmations(config.wsUrl, domainIds));
       } catch (error) {
         logger.error('Could not create Explorer live message websocket', error);
         scheduleReconnect();
@@ -128,6 +140,15 @@ export function ExplorerEventsProvider({
               MAX_RETAINED_MESSAGES,
             ),
           );
+        } else if (message?.type === 'rollback') {
+          // A message row combines origin, delivery, and payment state. One
+          // chain rollback can therefore invalidate rows last updated by a
+          // different chain, so discard the complete provisional overlay.
+          listenersRef.current.forEach((listeners) =>
+            listeners.forEach((listener) => listener(null)),
+          );
+          setMessageRows([]);
+          setRollbackVersion((version) => version + 1);
         }
       };
       socket.onerror = () => {
@@ -150,11 +171,11 @@ export function ExplorerEventsProvider({
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };
-  }, [enabled]);
+  }, [domainIds, enabled]);
 
   const value = useMemo(
-    () => ({ connectionState, messageRows, subscribe }),
-    [connectionState, messageRows, subscribe],
+    () => ({ connectionState, messageRows, rollbackVersion, subscribe }),
+    [connectionState, messageRows, rollbackVersion, subscribe],
   );
 
   return createElement(ExplorerEventsContext.Provider, { value }, children);
@@ -162,11 +183,18 @@ export function ExplorerEventsProvider({
 
 export function parseExplorerEvent(
   data: unknown,
-): MessageUpsert | { type: 'heartbeat' | 'ready' } | null {
+): MessageUpsert | Rollback | { type: 'heartbeat' | 'ready' } | null {
   if (typeof data !== 'string') return null;
   try {
     const message = JSON.parse(data) as { data?: unknown; type?: unknown };
     if (message.type === 'ready' || message.type === 'heartbeat') return { type: message.type };
+    if (message.type === 'rollback') {
+      if (!isRollback(message)) {
+        logger.warn('Ignoring invalid Explorer rollback payload');
+        return null;
+      }
+      return message;
+    }
     if (message.type !== 'message_upsert') return null;
     if (!isMessageEntry(message.data)) {
       logger.warn('Ignoring invalid Explorer live message payload');
@@ -179,27 +207,50 @@ export function parseExplorerEvent(
   }
 }
 
-function isMessageEntry(value: unknown): value is MessageEntry {
-  if (!value || typeof value !== 'object') return false;
-  const entry = value as Record<string, unknown>;
-  const requiredStrings = [
-    'msg_id',
-    'sender',
-    'recipient',
-    'send_occurred_at',
-    'origin_tx_hash',
-    'origin_tx_sender',
-    'origin_tx_recipient',
-  ];
+export function withConfirmations(wsUrl: string, domains: number[]) {
+  const url = new URL(wsUrl);
+  url.searchParams.set('confirmations', '0');
+  url.searchParams.set('domains', domains.join(','));
+  return url.toString();
+}
+
+function isRollback(value: unknown): value is Rollback {
+  if (!isRecord(value)) return false;
+  const domain = value.domain;
   return (
-    requiredStrings.every((field) => typeof entry[field] === 'string') &&
-    (typeof entry.id === 'string' || typeof entry.id === 'number') &&
-    typeof entry.nonce === 'number' &&
-    typeof entry.origin_domain_id === 'number' &&
-    typeof entry.destination_domain_id === 'number' &&
-    typeof entry.is_delivered === 'boolean' &&
-    !Number.isNaN(Date.parse(entry.send_occurred_at as string))
+    value.confirmations === 0 &&
+    typeof domain === 'number' &&
+    Number.isSafeInteger(domain) &&
+    domain >= 0 &&
+    isHeight(value.fromHeight) &&
+    isHeight(value.toHeight) &&
+    BigInt(value.toHeight) < BigInt(value.fromHeight)
   );
+}
+
+function isHeight(value: unknown): value is string {
+  return typeof value === 'string' && /^(?:0|[1-9][0-9]*)$/.test(value);
+}
+
+function isMessageEntry(value: unknown): value is MessageEntry {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.msg_id === 'string' &&
+    typeof value.sender === 'string' &&
+    typeof value.recipient === 'string' &&
+    typeof value.send_occurred_at === 'string' &&
+    typeof value.origin_tx_hash === 'string' &&
+    (typeof value.id === 'string' || typeof value.id === 'number') &&
+    typeof value.nonce === 'number' &&
+    typeof value.origin_domain_id === 'number' &&
+    typeof value.destination_domain_id === 'number' &&
+    typeof value.is_delivered === 'boolean' &&
+    !Number.isNaN(Date.parse(value.send_occurred_at))
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
 }
 
 function normalizeId(value: unknown) {

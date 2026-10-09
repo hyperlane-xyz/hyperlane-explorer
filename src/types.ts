@@ -12,8 +12,8 @@ export enum MessageStatus {
 export interface MessageTxStub {
   timestamp: number;
   hash: string;
-  from: Address;
-  to: Address;
+  from?: Address;
+  to?: Address;
 }
 
 export interface MessageTx extends MessageTxStub {

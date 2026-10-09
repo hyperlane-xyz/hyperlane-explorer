@@ -29,7 +29,7 @@ export function TransactionDetailsRows({
   const formattedHash = formatTxHash(hash, domainId, resolver);
   const txExplorerLink =
     hash && !isZeroish(hash) ? getBlockExplorerTxUrl(resolver, chainName, formattedHash) : null;
-  const fromExplorerLink = getBlockExplorerAddressUrl(resolver, chainName, from);
+  const fromExplorerLink = from ? getBlockExplorerAddressUrl(resolver, chainName, from) : null;
   const idString =
     chainName && chainName !== resolver.tryGetChainName(domainId)
       ? `${chainName} / ${domainId}`
@@ -48,15 +48,17 @@ export function TransactionDetailsRows({
         link={txExplorerLink}
         truncateMiddle={true}
       />
-      <KeyValueRow
-        label="From:"
-        labelWidth="w-16"
-        display={from}
-        showCopy={true}
-        blurValue={blur}
-        link={fromExplorerLink}
-        truncateMiddle={true}
-      />
+      {from && (
+        <KeyValueRow
+          label="From:"
+          labelWidth="w-16"
+          display={from}
+          showCopy={true}
+          blurValue={blur}
+          link={fromExplorerLink}
+          truncateMiddle={true}
+        />
+      )}
       {!!timestamp && (
         <KeyValueRow
           label="Time:"

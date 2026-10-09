@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import 'react-toastify/dist/ReactToastify.css';
 import {
@@ -22,6 +22,7 @@ import {
   ExplorerEventsProvider,
   shouldEnableExplorerEvents,
 } from '../features/messages/queries/ExplorerEventsProvider';
+import { useStore } from '../metadataStore';
 
 import '../styles/global.css';
 
@@ -60,6 +61,8 @@ export default function App({ Component, router, pageProps }: AppProps) {
   // the page's Head component for OG meta tags to work with social crawlers.
   const isSsr = useIsSsr();
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+  const scrapedDomains = useStore((state) => state.scrapedDomains);
+  const scrapedDomainIds = useMemo(() => scrapedDomains.map(({ id }) => id), [scrapedDomains]);
 
   const onRouteChangeStart = useCallback((url: string) => {
     setPendingRoute(isMessageRoute(url) ? url : null);
@@ -106,7 +109,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   const appContent = (
     <QueryClientProvider client={reactQueryClient}>
       <UrqlProvider value={urqlClient}>
-        <ExplorerEventsProvider enabled={shouldEnableExplorerEvents(router.pathname)}>
+        <ExplorerEventsProvider
+          domains={scrapedDomainIds}
+          enabled={shouldEnableExplorerEvents(router.pathname)}
+        >
           <AppLayout pathName={router.pathname}>
             {pendingRoute ? (
               getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
