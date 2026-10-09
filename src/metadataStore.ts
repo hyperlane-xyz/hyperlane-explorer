@@ -18,6 +18,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { config } from './consts/config';
+import type { LoadedChainMetadata } from './features/chains/loadChainMetadata';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { clearPrefetchedMessages } from './features/messages/queries/prefetch';
 import { logger } from './utils/logger';
@@ -48,7 +49,7 @@ interface MetadataState {
 
 let chainMetadataRequest: {
   overrides: ChainMap<Partial<ChainMetadata>>;
-  promise: Promise<ChainMap<ChainMetadata>>;
+  promise: Promise<LoadedChainMetadata>;
   registry: IRegistry;
 } | null = null;
 let warpRouteDataRequest: {
@@ -105,7 +106,7 @@ export const useStore = create<MetadataState>()(
 
         const request = chainMetadataRequest;
         try {
-          const metadata = await request.promise;
+          const { metadata, overrides } = await request.promise;
           if (
             get().registry !== registry ||
             get().chainMetadataOverrides !== chainMetadataOverrides
@@ -114,6 +115,7 @@ export const useStore = create<MetadataState>()(
 
           set({
             chainMetadata: metadata,
+            chainMetadataOverrides: overrides,
             isChainMetadataLoaded: true,
             chainMetadataError: null,
           });

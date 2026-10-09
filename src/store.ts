@@ -18,6 +18,8 @@ export {
 interface ProviderState {
   multiProvider: ExplorerMultiProvider;
   isMultiProviderReady: boolean;
+  // Set when the first build of the provider failed, so no provider is or was ever ready
+  hasMultiProviderInitFailed: boolean;
   multiProviderVersion: number;
   syncMultiProvider: (chainMetadata?: ProviderChainMetadata) => Promise<void>;
 }
@@ -38,6 +40,7 @@ function syncMultiProviderSafely(chainMetadata?: ProviderChainMetadata) {
 const useProviderStore = create<ProviderState>()((set) => ({
   multiProvider: createEmptyMultiProvider(),
   isMultiProviderReady: false,
+  hasMultiProviderInitFailed: false,
   multiProviderVersion: 0,
   syncMultiProvider: async (requestedChainMetadata) => {
     let chainMetadata = requestedChainMetadata;
@@ -74,6 +77,7 @@ const useProviderStore = create<ProviderState>()((set) => ({
         set((state) => ({
           multiProvider: nextMultiProvider,
           isMultiProviderReady: true,
+          hasMultiProviderInitFailed: false,
           multiProviderVersion: state.multiProviderVersion + 1,
         }));
       })
@@ -81,6 +85,8 @@ const useProviderStore = create<ProviderState>()((set) => ({
         // Preserve the last known-good provider readiness if a rebuild fails.
         if (hadReadyProvider) {
           set({ isMultiProviderReady: true });
+        } else {
+          set({ hasMultiProviderInitFailed: true });
         }
         throw error;
       })
@@ -121,6 +127,11 @@ export function useReadyMultiProvider() {
   ensureProviderStoreSubscription();
   if (!isMultiProviderReady || !multiProvider.getKnownChainNames().length) return undefined;
   return multiProvider;
+}
+
+export function useMultiProviderInitFailed() {
+  ensureProviderStoreSubscription();
+  return useProviderStore((s) => s.hasMultiProviderInitFailed);
 }
 
 export function useMultiProviderVersion() {

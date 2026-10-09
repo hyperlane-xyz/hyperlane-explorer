@@ -1,6 +1,15 @@
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
-import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
-import { addressToBytes32, isAddressEvm, objKeys, ProtocolType } from '@hyperlane-xyz/utils';
+import type {
+  TokenArgsWithWireDecimals,
+  WarpRouteChainAddressMap,
+} from '@hyperlane-xyz/sdk/warp/read';
+import {
+  addressToBytes32,
+  eqAddressEvm,
+  isAddressEvm,
+  objKeys,
+  ProtocolType,
+} from '@hyperlane-xyz/utils';
 
 // Normalize an address to lowercase bytes32 hex so registry keys and
 // resolved message addresses can be compared regardless of source form.
@@ -45,4 +54,25 @@ export function getTokenFromWarpRouteChainAddressMap(
   }
 
   return undefined;
+}
+
+// Finds the registry token whose underlying ERC20 is `tokenAddress`. Unlike
+// getTokenFromWarpRouteChainAddressMap this matches the collateral (or synthetic) token
+// itself rather than the router, and prefers an entry that carries a coinGeckoId.
+export function findErc20TokenInWarpRouteChainAddressMap(
+  chainName: string,
+  tokenAddress: Address,
+  warpRouteChainAddressMap: WarpRouteChainAddressMap,
+): TokenArgsWithWireDecimals | undefined {
+  const chain = warpRouteChainAddressMap[chainName];
+  if (!chain) return undefined;
+
+  let match: TokenArgsWithWireDecimals | undefined;
+  for (const token of Object.values(chain)) {
+    const erc20Address = token.collateralAddressOrDenom ?? token.addressOrDenom;
+    if (!isAddressEvm(erc20Address) || !eqAddressEvm(erc20Address, tokenAddress)) continue;
+    if (token.coinGeckoId) return token;
+    match ??= token;
+  }
+  return match;
 }
