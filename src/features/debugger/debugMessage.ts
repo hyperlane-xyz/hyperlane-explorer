@@ -21,7 +21,6 @@ import {
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import { debugIgnoredChains } from '../../consts/config';
 import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
@@ -181,13 +180,20 @@ async function debugMessageDelivery(
     return { gasEstimate: deliveryGasEst.toString(), calldataDetails };
   } catch (err: any) {
     logger.info('Estimate gas call failed:', err);
-    const errorReason = extractReasonString(err);
+    const { reason: errorReason, isKnownRevert } = extractReasonString(err);
     logger.debug(errorReason);
 
-    if (debugIgnoredChains.includes(destName)) {
+    // ZKSync-era chains (e.g. Treasure) can reject eth_estimateGas for reasons
+    // unrelated to whether the message is actually deliverable — a gas-estimation
+    // quirk rather than a genuine `handle` revert. Blacklisting the whole chain
+    // (see the former `debugIgnoredChains`) hid those *and* every real failure.
+    // When the error carries no recognizable ethers revert reason, surface the
+    // estimation problem explicitly so the user sees why delivery can't be
+    // verified here, instead of silently reporting success or hiding the chain.
+    if (!isKnownRevert) {
       return {
-        status: null,
-        description: '',
+        status: MessageDebugStatus.HandleCallFailure,
+        description: `Unable to verify delivery on ${destName}: the gas estimation call was rejected by the chain (a known limitation on some ZKSync-based chains — not necessarily a delivery failure). ${errorReason}`,
         calldataDetails,
       };
     }
@@ -490,22 +496,22 @@ export async function tryCheckIcaCall(
     logger.debug(`No call error found for call from ${icaAddress} to ${destinationAddress}`);
     return null;
   } catch (err) {
-    const errorReason = extractReasonString(err);
-    logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, errorReason);
-    return errorReason;
+    const { reason } = extractReasonString(err);
+    logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, reason);
+    return reason;
   }
 }
 
-function extractReasonString(rawError: any) {
+export function extractReasonString(rawError: any): { reason: string; isKnownRevert: boolean } {
   const errorString = errorToString(rawError, 1000);
   const ethersReasonRegex = /reason="(.*?)"/gm;
   const matches = ethersReasonRegex.exec(errorString);
   if (matches && matches.length >= 2) {
-    return `Failure reason: ${matches[1]}`;
+    return { reason: `Failure reason: ${matches[1]}`, isKnownRevert: true };
   } else {
     logger.warn('Cannot extract reason string in tx error msg:', errorString);
     // TODO handle more cases here as needed
-    return `Failure reason: ${trimToLength(errorString, 250)}`;
+    return { reason: `Failure reason: ${trimToLength(errorString, 250)}`, isKnownRevert: false };
   }
 }
 
