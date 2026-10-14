@@ -71,6 +71,7 @@ Search filters sync with URL query params via `src/utils/queryParams.ts` for sha
 - Single quotes, trailing commas, 100 char line width
 - Prettier with import organization and Tailwind class sorting
 - Use `clsx()` for conditional classNames
+- **No async IIFEs in effects** — use `.then().catch()` instead of `void (async () => { ... })()`
 
 ## Engineering Philosophy
 
@@ -150,3 +151,7 @@ If output seems wrong, check:
 2. **Did I search for existing patterns?** The codebase likely has examples
 3. **Am I using stale context?** Re-read files that may have changed
 4. **Did I verify the error message?** Run the command and read actual output
+
+## Agent Skills
+
+Shared skills live in `.agents/skills/<name>/SKILL.md` and follow the [Agent Skills standard](https://agentskills.io/specification). Read a matching skill before using its workflow. Claude Code discovers the same files through the `.claude/skills` symlink; edit the files in `.agents/skills`. Use Claude Code v2.1.277 or later for native `AGENTS.md` loading.

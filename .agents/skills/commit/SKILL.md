@@ -1,6 +1,7 @@
 ---
 name: commit
-description: Commit changes following project quality gates and best practices. Run before creating any git commit.
+description: Commit changes following project quality gates and best practices. Run
+  before creating any git commit.
 ---
 
 # Commit Skill
@@ -31,7 +32,6 @@ Match the repo's existing style (run `git log --oneline -10` to confirm):
 - Conventional prefixes with optional scope: `fix(tron):`, `fix(warpFees):`, `feat(messages):`, `perf:`, `docs:`, `refactor:`, `test:`, `chore:`
 - First line under 72 characters
 - Blank line, then a short body explaining **why** (not what — the diff shows what)
-- End with `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
 - Use a HEREDOC to pass the message to avoid shell escaping issues
 
 ## Things to Watch For
@@ -58,7 +58,6 @@ fix(scope): description of change
 
 Short explanation of why this change is needed.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
