@@ -183,21 +183,13 @@ async function debugMessageDelivery(
     const { reason: errorReason, isKnownRevert } = extractReasonString(err);
     logger.debug(errorReason);
 
-    // ZKSync-era chains (e.g. Treasure) can reject eth_estimateGas for reasons
-    // unrelated to whether the message is actually deliverable — a gas-estimation
-    // quirk rather than a genuine `handle` revert. Blacklisting the whole chain
-    // (see the former `debugIgnoredChains`) hid those *and* every real failure.
-    // When the error carries no recognizable ethers revert reason, surface the
-    // estimation problem explicitly so the user sees why delivery can't be
-    // verified here, instead of silently reporting success or hiding the chain.
-    if (!isKnownRevert) {
-      return {
-        status: MessageDebugStatus.HandleCallFailure,
-        description: `Unable to verify delivery on ${destName}: the gas estimation call was rejected by the chain (a known limitation on some ZKSync-based chains — not necessarily a delivery failure). ${errorReason}`,
-        calldataDetails,
-      };
-    }
-
+    // When the error carries no recognizable ethers revert reason, it may be a
+    // gas-estimation quirk (e.g. ZKSync-era chains like Treasure) rather than a
+    // genuine `handle` revert. The former `debugIgnoredChains` blacklist hid
+    // those *and* every real failure. We no longer blacklist the chain; instead
+    // we still run the specific checks below (proxy / bytecode / ICA) so normal
+    // EVM chains keep their precise diagnostics, and only surface the
+    // "unable to verify" caveat as the final fallback for unrecognized errors.
     const proxyImplementationContract = await tryGetProxyImplementationContract(
       destProvider,
       recipient,
@@ -230,6 +222,19 @@ async function debugMessageDelivery(
         description: `ICA call ${icaDebugResult.failedCallIndex + 1} of ${icaDebugResult.totalCalls} cannot be executed. ${icaDebugResult.errorReason}`,
         calldataDetails,
         icaDetails: icaDebugResult,
+      };
+    }
+
+    if (!isKnownRevert) {
+      // No recognizable revert reason and none of the specific checks above
+      // applied: the gas-estimation call was rejected by the chain in a way we
+      // can't attribute to a delivery failure (a known limitation on some
+      // ZKSync-based chains). Surface it explicitly rather than silently
+      // reporting success or hiding the chain.
+      return {
+        status: MessageDebugStatus.HandleCallFailure,
+        description: `Unable to verify delivery on ${destName}: the gas estimation call was rejected by the chain (a known limitation on some ZKSync-based chains — not necessarily a delivery failure). ${errorReason}`,
+        calldataDetails,
       };
     }
 
