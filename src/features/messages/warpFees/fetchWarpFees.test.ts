@@ -135,6 +135,19 @@ describe('parseTotalTokenPulledFromUser', () => {
     expect(result?.eq(BigNumber.from('1000000'))).toBe(true);
   });
 
+  it('ignores CCTP burns after router forwards tokens', () => {
+    const amount = BigNumber.from('1000000');
+    const rebalancer = utils.getAddress('0x0000000000000000000000000000000000000043');
+    const cctpTokenMessenger = utils.getAddress('0x0000000000000000000000000000000000000044');
+    const logs = [
+      makeTransferLog(rebalancer, ROUTER, amount, TOKEN),
+      makeTransferLog(ROUTER, cctpTokenMessenger, amount, TOKEN),
+      makeTransferLog(cctpTokenMessenger, ZERO, amount, TOKEN),
+    ];
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
+    expect(result?.eq(amount)).toBe(true);
+  });
+
   it('ignores transfers to other addresses', () => {
     const other = utils.getAddress('0x0000000000000000000000000000000000000003');
     const logs = [makeTransferLog(SENDER, other, BigNumber.from('1000000'), TOKEN)];
@@ -159,6 +172,12 @@ describe('parseTotalTokenPulledFromUser', () => {
     const synth = ROUTER;
     const logs = [makeTransferLog(SENDER, ZERO, BigNumber.from('5004'), synth)];
     const result = parseTotalTokenPulledFromUser(logs, synth, synth);
+    expect(result?.eq(BigNumber.from('5004'))).toBe(true);
+  });
+
+  it('counts direct user burns when token is not the router', () => {
+    const logs = [makeTransferLog(SENDER, ZERO, BigNumber.from('5004'), TOKEN)];
+    const result = parseTotalTokenPulledFromUser(logs, ROUTER, TOKEN);
     expect(result?.eq(BigNumber.from('5004'))).toBe(true);
   });
 
