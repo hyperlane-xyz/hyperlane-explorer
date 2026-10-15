@@ -337,6 +337,9 @@ export function parseSentTransferRemoteAmount(
  *   - `to == router || to == 0x0`: accepts both pull patterns in one pass;
  *     the fee-recipient leg (`router → feeRecipient` / `0x0 → feeRecipient`)
  *     is excluded because `to` is the fee recipient, not router/0x0.
+ *   - burns from tokens forwarded by the router in the same slice are skipped
+ *     (e.g. CCTP router → messenger → 0x0 burns) so forwarded burns don't
+ *     double-count the original user pull.
  *
  * No sender filter: per-message log slicing already scopes events to a single
  * transferRemote call, so any qualifying Transfer inside the slice was pulled
@@ -353,6 +356,7 @@ export function parseTotalTokenPulledFromUser(
 
   let total = BigNumber.from(0);
   let found = false;
+  const routerRecipients = new Set<string>();
 
   for (const log of logs) {
     if (log.address.toLowerCase() !== lowerToken) continue;
@@ -364,6 +368,9 @@ export function parseTotalTokenPulledFromUser(
       if (from === constants.AddressZero) continue; // exclude mints
       const isCollateralPull = to === lowerRouter;
       const isBurn = to === constants.AddressZero;
+      const isRouterForwardedBurn = isBurn && (from === lowerRouter || routerRecipients.has(from));
+      if (from === lowerRouter && to !== constants.AddressZero) routerRecipients.add(to);
+      if (isRouterForwardedBurn) continue;
       if (!isCollateralPull && !isBurn) continue;
       total = total.add(parsed.args.value);
       found = true;
