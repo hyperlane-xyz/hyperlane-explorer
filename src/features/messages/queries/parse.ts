@@ -164,22 +164,25 @@ function parseMessage(
         maxFeePerGas: m.origin_tx_max_fee_per_gas,
         maxPriorityPerGas: m.origin_tx_max_priority_fee_per_gas,
       },
-      destination: stub.destination
+      destination: hasCompleteDestinationTransaction(m)
         ? {
-            ...stub.destination,
-            blockHash: postgresByteaToString(m.destination_block_hash!),
-            blockNumber: m.destination_block_height!,
-            mailbox: postgresByteaToAddress(m.destination_mailbox!, destinationMetadata),
-            nonce: m.destination_tx_nonce!,
-            gasLimit: m.destination_tx_gas_limit!,
-            gasPrice: m.destination_tx_gas_price!,
-            effectiveGasPrice: m.destination_tx_effective_gas_price!,
-            gasUsed: m.destination_tx_gas_used!,
-            cumulativeGasUsed: m.destination_tx_cumulative_gas_used!,
-            maxFeePerGas: m.destination_tx_max_fee_per_gas!,
-            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas!,
+            timestamp: parseTimestampString(m.delivery_occurred_at),
+            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
+            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
+            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
+            blockHash: postgresByteaToString(m.destination_block_hash),
+            blockNumber: m.destination_block_height,
+            mailbox: postgresByteaToAddress(m.destination_mailbox, destinationMetadata),
+            nonce: m.destination_tx_nonce,
+            gasLimit: m.destination_tx_gas_limit,
+            gasPrice: m.destination_tx_gas_price,
+            effectiveGasPrice: m.destination_tx_effective_gas_price,
+            gasUsed: m.destination_tx_gas_used,
+            cumulativeGasUsed: m.destination_tx_cumulative_gas_used,
+            maxFeePerGas: m.destination_tx_max_fee_per_gas,
+            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas,
           }
-        : undefined,
+        : stub.destination,
       totalGasAmount: m.total_gas_amount.toString(),
       totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
@@ -200,6 +203,39 @@ function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry &
   destination_tx_hash: string;
 } {
   return Boolean(m.delivery_occurred_at && m.destination_tx_hash);
+}
+
+type CompleteDestinationEntry = MessageEntry & {
+  delivery_occurred_at: string;
+  destination_block_hash: string;
+  destination_block_height: number;
+  destination_tx_hash: string;
+  destination_tx_cumulative_gas_used: number;
+  destination_tx_effective_gas_price: number;
+  destination_tx_gas_limit: number;
+  destination_tx_gas_price: number;
+  destination_tx_gas_used: number;
+  destination_tx_max_fee_per_gas: number;
+  destination_tx_max_priority_fee_per_gas: number;
+  destination_tx_nonce: number;
+};
+
+function hasCompleteDestinationTransaction(m: MessageEntry): m is CompleteDestinationEntry {
+  return (
+    hasDestinationTransaction(m) &&
+    Boolean(m.destination_block_hash && m.destination_mailbox) &&
+    [
+      m.destination_block_height,
+      m.destination_tx_cumulative_gas_used,
+      m.destination_tx_effective_gas_price,
+      m.destination_tx_gas_limit,
+      m.destination_tx_gas_price,
+      m.destination_tx_gas_used,
+      m.destination_tx_max_fee_per_gas,
+      m.destination_tx_max_priority_fee_per_gas,
+      m.destination_tx_nonce,
+    ].every((value) => value !== null)
+  );
 }
 
 function parseOptionalAddress(

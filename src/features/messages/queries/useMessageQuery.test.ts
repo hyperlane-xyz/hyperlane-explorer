@@ -256,7 +256,23 @@ describe('message pagination', () => {
     const rawIds = getRawMessageIds({ q0: queryMessages }, 50, false);
     const page = getMessagePage([provisionalMessage, ...queryMessages], rawIds, 50);
 
-    expect(page.continuationCursor).toBe('52');
+    expect(page.continuationCursor).toBe('51');
+    expect(page.messages).toHaveLength(51);
+  });
+
+  it('selects canonical rows by ID before sorting the page by send time', () => {
+    const messages = Array.from({ length: 51 }, (_, index) => {
+      const id = String(110 - index);
+      return makeStub({
+        id,
+        origin: { ...makeStub().origin, timestamp: id === '109' ? 0 : Number(id) },
+      });
+    });
+    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, false), 51);
+
+    expect(page.messages.map(({ id }) => id)).toContain('109');
+    expect(page.messages.map(({ id }) => id)).not.toContain('60');
+    expect(page.continuationCursor).toBe('61');
   });
 
   it('selects the nearest ascending page and displays it descending', () => {
@@ -310,7 +326,6 @@ describe('message pagination', () => {
     const candidates = getMessageCandidates(
       unrelatedLiveMessages,
       [matchingMessage],
-      51,
       {
         searchInput: matchingMessage.msgId,
         originDomainId: null,
@@ -339,7 +354,6 @@ describe('message pagination', () => {
     const candidates = getMessageCandidates(
       [olderLiveMessage],
       [newerQueryMessage],
-      2,
       {
         searchInput: '',
         originDomainId: null,
@@ -362,7 +376,6 @@ describe('message pagination', () => {
     const candidates = getMessageCandidates(
       [deliveredLiveMessage],
       [pendingQueryMessage],
-      51,
       {
         searchInput: '',
         originDomainId: null,
@@ -381,7 +394,6 @@ describe('message pagination', () => {
     const candidates = getMessageCandidates(
       [makeStub({ id: '10', msgId, status: MessageStatus.Delivered })],
       [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
-      51,
       {
         searchInput: '',
         originDomainId: null,
@@ -417,7 +429,6 @@ describe('message pagination', () => {
       getMessageCandidates(
         [provisional],
         [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
-        51,
         filters,
         [],
       )[0]?.isProvisional,
@@ -426,7 +437,6 @@ describe('message pagination', () => {
       getMessageCandidates(
         [provisional],
         [makeStub({ id: '100', msgId, status: MessageStatus.Delivered })],
-        51,
         filters,
         [],
       )[0]?.isProvisional,

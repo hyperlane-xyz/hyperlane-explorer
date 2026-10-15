@@ -48,10 +48,10 @@ export interface MessageStub {
   body: string;
 }
 
-export interface Message extends MessageStub {
+export interface Message extends Omit<MessageStub, 'destination'> {
   decodedBody?: string;
   origin: MessageTx;
-  destination?: MessageTx;
+  destination?: MessageTx | MessageTxStub;
   totalGasAmount?: string;
   totalPayment?: string;
   numPayments?: number;

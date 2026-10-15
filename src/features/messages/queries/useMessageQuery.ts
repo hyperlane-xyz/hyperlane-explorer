@@ -26,6 +26,7 @@ import {
 import {
   type ExplorerConnectionState,
   useExplorerConnectionState,
+  useExplorerReconciliationRefresh,
   useLatestMessageRows,
   useMessageRowSubscription,
 } from './useLiveMessages';
@@ -43,14 +44,19 @@ export function getMessagePage(
   rawIds: string[],
   queryLimit: number,
 ) {
-  const pageMessages = filteredMessages.slice(0, MESSAGE_PAGE_SIZE);
-  const rawIdSet = new Set(rawIds);
-  const canonicalPageBoundary = pageMessages.findLast((message) => rawIdSet.has(message.id))?.id;
+  const rawIdIndexes = new Map(rawIds.map((id, index) => [id, index]));
+  const canonicalMessages = filteredMessages
+    .filter((message) => rawIdIndexes.has(message.id))
+    .sort((a, b) => rawIdIndexes.get(a.id)! - rawIdIndexes.get(b.id)!);
+  const canonicalPage = canonicalMessages.slice(0, MESSAGE_PAGE_SIZE);
+  const liveOnlyMessages = filteredMessages.filter((message) => !rawIdIndexes.has(message.id));
+  const pageMessages = [...canonicalPage, ...liveOnlyMessages];
+  const canonicalPageBoundary = canonicalPage.at(-1)?.id;
   const continuationCursor =
-    filteredMessages.length > MESSAGE_PAGE_SIZE
-      ? canonicalPageBoundary || (rawIds.length === queryLimit ? rawIds.at(-1) || null : null)
+    canonicalMessages.length > MESSAGE_PAGE_SIZE
+      ? (canonicalPageBoundary ?? null)
       : rawIds.length === queryLimit
-        ? rawIds.at(-1) || null
+        ? (rawIds.at(-1) ?? null)
         : null;
   const messages = pageMessages.sort(
     (a, b) => b.origin.timestamp - a.origin.timestamp || compareMessageIdsDescending(a, b),
@@ -181,20 +187,17 @@ export function messageMatchesSearchFilters(
 export function getMessageCandidates(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
-  queryLimit: number,
   filters: MessageSearchFilters,
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
   ascending = false,
   orderBySendTime = true,
 ): MessageStub[] {
-  return mergeMessageLists(liveMessages, queryMessages, ascending, orderBySendTime)
-    .filter(
-      (message) =>
-        messageMatchesSearchFilters(message, filters) &&
-        (!warpRouteDomainAddresses.length ||
-          messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
-    )
-    .slice(0, queryLimit);
+  return mergeMessageLists(liveMessages, queryMessages, ascending, orderBySendTime).filter(
+    (message) =>
+      messageMatchesSearchFilters(message, filters) &&
+      (!warpRouteDomainAddresses.length ||
+        messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
+  );
 }
 
 function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
@@ -363,6 +366,7 @@ export function useMessageSearchQuery(
     searchDomainIds,
     refresh,
   );
+  useExplorerReconciliationRefresh(liveSearchEnabled && !!cursorValue, refresh);
 
   // Parse results
   const unfilteredMessageList = useMemo(
@@ -386,14 +390,13 @@ export function useMessageSearchQuery(
         .filter((message): message is MessageStub => !!message),
     [chainMetadataResolver, scrapedChains, liveMessageRows],
   );
-  // Filter before limiting so unrelated live rows cannot evict query matches.
+  // Filter before pagination so unrelated live rows cannot evict query matches.
   // Raw query metadata controls cursor continuation.
   const candidateMessageList = useMemo(
     () =>
       getMessageCandidates(
         liveMessageList,
         unfilteredMessageList,
-        queryLimit,
         {
           searchInput: sanitizedInput,
           originDomainId: isValidOrigin ? originDomainId : null,
@@ -415,7 +418,6 @@ export function useMessageSearchQuery(
       liveMessageList,
       cursorValue,
       originDomainId,
-      queryLimit,
       sanitizedInput,
       startTimeFilter,
       statusFilter,

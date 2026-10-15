@@ -9,6 +9,11 @@ export function useExplorerConnectionState() {
   return useExplorerEventsContext().connectionState;
 }
 
+export function useExplorerReconciliationRefresh(enabled: boolean, refresh: () => void) {
+  const { connectionState, rollbackVersion } = useExplorerEventsContext();
+  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
+}
+
 export function useLatestMessageRows(enabled: boolean, domains: number[], refresh: () => void) {
   const { connectionState, messageRows, rollbackVersion } = useExplorerEventsContext();
   useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
@@ -91,7 +96,7 @@ function useRefreshAfterReconnect(
   useEffect(() => {
     if (
       shouldRefreshAfterReconnect(enabled, previousConnectionState.current, connectionState) ||
-      (enabled && previousRollbackVersion.current !== rollbackVersion)
+      shouldRefreshAfterRollback(enabled, previousRollbackVersion.current, rollbackVersion)
     ) {
       refreshRef.current();
     }
@@ -106,6 +111,14 @@ export function shouldRefreshAfterReconnect(
   connectionState: ExplorerConnectionState,
 ) {
   return enabled && previousConnectionState !== 'connected' && connectionState === 'connected';
+}
+
+export function shouldRefreshAfterRollback(
+  enabled: boolean,
+  previousRollbackVersion: number,
+  rollbackVersion: number,
+) {
+  return enabled && previousRollbackVersion !== rollbackVersion;
 }
 
 function useExplorerEventsContext() {

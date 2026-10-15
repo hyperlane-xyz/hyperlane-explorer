@@ -1,8 +1,8 @@
 import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 
 import { MessageStatus } from '../../../types';
-import type { MessageStubEntry } from './fragments';
-import { parseMessageStubEntry } from './parse';
+import type { MessageEntry, MessageStubEntry } from './fragments';
+import { parseMessageEntry, parseMessageStubEntry } from './parse';
 
 describe('parseMessageStubEntry', () => {
   it('keeps provisional dispatches without transaction address enrichment', () => {
@@ -67,6 +67,23 @@ describe('parseMessageStubEntry', () => {
 
     expect(message?.isProvisional).toBe(true);
   });
+
+  it('keeps partial destination data when full enrichment is incomplete', () => {
+    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
+      ...messageEntry,
+      delivery_occurred_at: '2026-10-09T12:01:00',
+      destination_block_hash: null,
+      destination_tx_hash: '\\x08',
+      is_delivered: true,
+    });
+
+    expect(message?.destination).toEqual({
+      from: undefined,
+      hash: '0x08',
+      timestamp: Date.parse('2026-10-09T12:01:00Z'),
+      to: undefined,
+    });
+  });
 });
 
 const messageStubEntry = {
@@ -93,3 +110,34 @@ const messageStubEntry = {
   send_occurred_at: '2026-10-09T12:00:00',
   sender: '\\x06',
 } satisfies MessageStubEntry;
+
+const messageEntry = {
+  ...messageStubEntry,
+  destination_block_hash: null,
+  destination_block_height: null,
+  destination_block_id: null,
+  destination_mailbox: '\\x09',
+  destination_tx_cumulative_gas_used: null,
+  destination_tx_effective_gas_price: null,
+  destination_tx_gas_limit: null,
+  destination_tx_gas_price: null,
+  destination_tx_gas_used: null,
+  destination_tx_max_fee_per_gas: null,
+  destination_tx_max_priority_fee_per_gas: null,
+  destination_tx_nonce: null,
+  num_payments: 0,
+  origin_block_hash: '\\x0a',
+  origin_block_height: 1,
+  origin_block_id: 1,
+  origin_mailbox: '\\x0b',
+  origin_tx_cumulative_gas_used: 1,
+  origin_tx_effective_gas_price: 1,
+  origin_tx_gas_limit: 1,
+  origin_tx_gas_price: 1,
+  origin_tx_gas_used: 1,
+  origin_tx_max_fee_per_gas: 1,
+  origin_tx_max_priority_fee_per_gas: 1,
+  origin_tx_nonce: 1,
+  total_gas_amount: 0,
+  total_payment: 0,
+} satisfies MessageEntry;
