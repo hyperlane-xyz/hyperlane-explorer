@@ -238,6 +238,25 @@ describe('message pagination', () => {
     expect(page.continuationCursor).toBe('51');
   });
 
+  it('never uses a provisional ID as the pagination cursor', () => {
+    const queryMessages = Array.from({ length: 50 }, (_, index) =>
+      makeStub({
+        id: String(100 - index),
+        msgId: `0x${String(index).padStart(64, '0')}`,
+        origin: { ...makeStub().origin, timestamp: 100 - index },
+      }),
+    );
+    const provisionalMessage = makeStub({
+      id: '10',
+      msgId: '0x' + 'ff'.repeat(32),
+      origin: { ...makeStub().origin, timestamp: 200 },
+    });
+    const rawIds = getRawMessageIds({ q0: queryMessages }, 50, false);
+    const page = getMessagePage([provisionalMessage, ...queryMessages], rawIds, 50);
+
+    expect(page.continuationCursor).toBe('52');
+  });
+
   it('selects the nearest ascending page and displays it descending', () => {
     const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
 
@@ -303,6 +322,36 @@ describe('message pagination', () => {
     expect(candidates.map(({ id }) => id)).toEqual(['100']);
   });
 
+  it('orders first-page live and query rows by send time before limiting', () => {
+    const olderLiveMessage = makeStub({
+      id: '200',
+      msgId: '0x' + 'aa'.repeat(32),
+      origin: { ...makeStub().origin, timestamp: 100 },
+    });
+    const newerQueryMessage = makeStub({
+      id: '100',
+      msgId: '0x' + 'bb'.repeat(32),
+      origin: { ...makeStub().origin, timestamp: 200 },
+    });
+
+    const candidates = getMessageCandidates(
+      [olderLiveMessage],
+      [newerQueryMessage],
+      2,
+      {
+        searchInput: '',
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'all',
+      },
+      [],
+    );
+
+    expect(candidates.map(({ id }) => id)).toEqual(['100', '200']);
+  });
+
   it('lets delivered live state replace a stale pending query row before filtering', () => {
     const msgId = '0x' + 'aa'.repeat(32);
     const pendingQueryMessage = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
@@ -323,6 +372,26 @@ describe('message pagination', () => {
       [],
     );
     expect(candidates).toEqual([]);
+  });
+
+  it('keeps the canonical database ID when live state replaces a query row', () => {
+    const msgId = '0x' + 'aa'.repeat(32);
+    const candidates = getMessageCandidates(
+      [makeStub({ id: '10', msgId, status: MessageStatus.Delivered })],
+      [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
+      51,
+      {
+        searchInput: '',
+        originDomainId: null,
+        destinationDomainId: null,
+        startTime: null,
+        endTime: null,
+        status: 'all',
+      },
+      [],
+    );
+
+    expect(candidates).toEqual([expect.objectContaining({ id: '100', status: 'delivered' })]);
   });
 
   it('resets a completed previous query to the live first page', () => {
@@ -347,15 +416,12 @@ describe('message pagination', () => {
 });
 
 describe('message search polling', () => {
-  it('keeps a safety refresh for filtered live searches', () => {
-    expect(shouldPollMessageSearch(true, true)).toBe(true);
-    expect(shouldPollMessageSearch(true, false)).toBe(false);
-    expect(shouldPollMessageSearch(false, false)).toBe(true);
+  it('reconciles the current page even while live updates are connected', () => {
+    expect(shouldPollMessageSearch()).toBe(true);
   });
 
   it('keeps older pages stable', () => {
-    expect(shouldPollMessageSearch(false, false, false)).toBe(false);
-    expect(shouldPollMessageSearch(true, true, false)).toBe(false);
+    expect(shouldPollMessageSearch(false)).toBe(false);
   });
 });
 

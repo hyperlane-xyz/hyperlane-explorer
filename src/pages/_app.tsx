@@ -62,7 +62,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
   const isSsr = useIsSsr();
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
   const scrapedDomains = useStore((state) => state.scrapedDomains);
-  const scrapedDomainIds = useMemo(() => scrapedDomains.map(({ id }) => id), [scrapedDomains]);
+  const scrapedDomainIds = useMemo(
+    () => scrapedDomains.filter((domain) => !domain.is_test_net).map(({ id }) => id),
+    [scrapedDomains],
+  );
 
   const onRouteChangeStart = useCallback((url: string) => {
     setPendingRoute(isMessageRoute(url) ? url : null);

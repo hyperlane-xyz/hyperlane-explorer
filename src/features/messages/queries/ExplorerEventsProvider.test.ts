@@ -7,9 +7,11 @@ import {
   ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
+  reconcileMessageRowsAfterRollback,
   shouldEnableExplorerEvents,
   withConfirmations,
 } from './ExplorerEventsProvider';
+import type { MessageEntry } from './fragments';
 
 const reactTestGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -53,7 +55,7 @@ describe('Explorer events routes', () => {
     global.WebSocket = originalWebSocket;
   });
 
-  it('connects at zero confirmations and clears provisional rows on rollback', async () => {
+  it('connects at zero confirmations and drops a rolled-back origin', async () => {
     const originalWebSocket = global.WebSocket;
     const sockets: FakeWebSocket[] = [];
     global.WebSocket = class extends FakeWebSocket {
@@ -86,7 +88,7 @@ describe('Explorer events routes', () => {
       sockets[0].onmessage?.({
         data: JSON.stringify({
           confirmations: 0,
-          domain: 1,
+          domain: 173,
           fromHeight: '100',
           toHeight: '99',
           type: 'rollback',
@@ -95,6 +97,26 @@ describe('Explorer events routes', () => {
     });
     expect(container.textContent).toBe('0:1');
     expect(sockets[0].closed).toBe(false);
+
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+  });
+
+  it('keeps canonical live updates while domain metadata is unavailable', async () => {
+    const originalWebSocket = global.WebSocket;
+    const sockets: FakeWebSocket[] = [];
+    global.WebSocket = class extends FakeWebSocket {
+      constructor(url: string) {
+        super(url);
+        sockets.push(this);
+      }
+    } as unknown as typeof WebSocket;
+    const root = createRoot(document.createElement('div'));
+
+    await act(async () => {
+      root.render(createElement(ExplorerEventsProvider, null, createElement('div')));
+    });
+    expect(sockets[0]?.url).toBe('wss://explorer-api.hyperlane.xyz/messages');
 
     await act(async () => root.unmount());
     global.WebSocket = originalWebSocket;
@@ -169,6 +191,52 @@ describe('withConfirmations', () => {
   });
 });
 
+describe('reconcileMessageRowsAfterRollback', () => {
+  it('drops reverted origins and keeps unrelated provisional rows', () => {
+    const reverted = makeMessageRow();
+    const unrelated = makeMessageRow({ msg_id: '\\xunrelated', origin_domain_id: 10 });
+
+    expect(
+      reconcileMessageRowsAfterRollback([reverted, unrelated], {
+        confirmations: 0,
+        domain: 173,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toEqual([unrelated]);
+  });
+
+  it('reverts only delivery state when the destination block rolls back', () => {
+    const message = makeMessageRow({
+      delivery_occurred_at: '2026-08-21 07:54:28',
+      destination_block_height: 100,
+      destination_tx_hash: '\\xdestination-hash',
+      destination_tx_recipient: '\\xdestination-recipient',
+      destination_tx_sender: '\\xdestination-sender',
+      is_delivered: true,
+    });
+
+    expect(
+      reconcileMessageRowsAfterRollback([message], {
+        confirmations: 0,
+        domain: 56,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        delivery_occurred_at: null,
+        destination_tx_hash: null,
+        destination_tx_recipient: null,
+        destination_tx_sender: null,
+        is_delivered: false,
+      }),
+    ]);
+  });
+});
+
 function makeProxyMessage() {
   return {
     id: '164316136',
@@ -179,11 +247,16 @@ function makeProxyMessage() {
     is_delivered: false,
     send_occurred_at: '2026-08-21 07:53:28',
     origin_domain_id: 173,
+    origin_block_height: 100,
     origin_tx_hash: '\\xorigin-hash',
     origin_tx_sender: '\\xorigin-sender',
     origin_tx_recipient: '\\xorigin-recipient',
     destination_domain_id: 56,
   };
+}
+
+function makeMessageRow(overrides: Record<string, unknown> = {}) {
+  return { ...makeProxyMessage(), ...overrides } as unknown as MessageEntry;
 }
 
 function EventState() {

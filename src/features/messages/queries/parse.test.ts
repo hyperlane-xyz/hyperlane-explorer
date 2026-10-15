@@ -33,6 +33,31 @@ describe('parseMessageStubEntry', () => {
       status: MessageStatus.Delivered,
     });
   });
+
+  it('keeps a null body as an empty body', () => {
+    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
+      ...messageStubEntry,
+      message_body: null,
+    });
+
+    expect(message?.body).toBe('0x');
+  });
+
+  it('keeps a partially enriched destination transaction', () => {
+    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
+      ...messageStubEntry,
+      delivery_occurred_at: '2026-10-09T12:01:00',
+      destination_tx_hash: '\\x08',
+      is_delivered: true,
+    });
+
+    expect(message?.destination).toEqual({
+      from: undefined,
+      hash: '0x08',
+      timestamp: Date.parse('2026-10-09T12:01:00Z'),
+      to: undefined,
+    });
+  });
 });
 
 const messageStubEntry = {

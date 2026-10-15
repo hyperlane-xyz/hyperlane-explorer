@@ -44,9 +44,11 @@ export function getMessagePage(
   queryLimit: number,
 ) {
   const pageMessages = filteredMessages.slice(0, MESSAGE_PAGE_SIZE);
+  const rawIdSet = new Set(rawIds);
+  const canonicalPageBoundary = pageMessages.findLast((message) => rawIdSet.has(message.id))?.id;
   const continuationCursor =
     filteredMessages.length > MESSAGE_PAGE_SIZE
-      ? pageMessages[pageMessages.length - 1]?.id || null
+      ? canonicalPageBoundary || (rawIds.length === queryLimit ? rawIds.at(-1) || null : null)
       : rawIds.length === queryLimit
         ? rawIds.at(-1) || null
         : null;
@@ -97,12 +99,11 @@ export function shouldUseMessageQueryCache(connectionState: ExplorerConnectionSt
   return connectionState !== 'connected';
 }
 
-export function shouldPollMessageSearch(
-  isLiveConnected: boolean,
-  hasFilters: boolean,
-  isFirstPage = true,
-) {
-  return isFirstPage && (!isLiveConnected || hasFilters);
+export function shouldPollMessageSearch(isFirstPage = true) {
+  // The websocket is an edge-triggered overlay, not a complete message log.
+  // Reconcile the first page in case an event is delayed, dropped, or missed
+  // while connecting.
+  return isFirstPage;
 }
 
 export function shouldResetToFirstMessagePage(
@@ -176,8 +177,9 @@ export function getMessageCandidates(
   filters: MessageSearchFilters,
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
   ascending = false,
+  orderBySendTime = true,
 ): MessageStub[] {
-  return mergeMessageLists(liveMessages, queryMessages, ascending)
+  return mergeMessageLists(liveMessages, queryMessages, ascending, orderBySendTime)
     .filter(
       (message) =>
         messageMatchesSearchFilters(message, filters) &&
@@ -301,15 +303,6 @@ export function useMessageSearchQuery(
 
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : MESSAGE_PAGE_SIZE + 1;
   const liveSearchEnabled = isSearchMetadataReady && isValidInput;
-  const hasFilters = !!(
-    hasInput ||
-    originChainNameFilter ||
-    destinationChainNameFilter ||
-    startTimeFilter ||
-    endTimeFilter ||
-    statusFilter !== 'all' ||
-    warpRouteAddresses.length > 0
-  );
   const searchDomainIds = useMemo(() => {
     const selectedDomainIds = [
       originDomainId,
@@ -357,7 +350,7 @@ export function useMessageSearchQuery(
     }
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [isSearchMetadataReady, isValidInput, query, reexecuteQuery, retrySearchMetadata]);
-  const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
+  const { messageRows: liveMessageRows } = useLatestMessageRows(
     liveSearchEnabled && !cursorValue,
     searchDomainIds,
     refresh,
@@ -403,6 +396,7 @@ export function useMessageSearchQuery(
         },
         warpRouteDomainAddresses,
         isBeforeQuery,
+        !cursorValue,
       ),
     [
       destDomainId,
@@ -411,6 +405,7 @@ export function useMessageSearchQuery(
       isValidDestination,
       isValidOrigin,
       liveMessageList,
+      cursorValue,
       originDomainId,
       queryLimit,
       sanitizedInput,
@@ -438,8 +433,8 @@ export function useMessageSearchQuery(
   );
 
   const poll = useCallback(() => {
-    if (shouldPollMessageSearch(isLiveConnected, hasFilters, !cursorValue)) refresh();
-  }, [cursorValue, hasFilters, isLiveConnected, refresh]);
+    if (shouldPollMessageSearch(!cursorValue)) refresh();
+  }, [cursorValue, refresh]);
   useVisibleInterval(poll, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
@@ -523,12 +518,20 @@ function mergeMessageLists(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
   ascending = false,
+  orderBySendTime = true,
 ): MessageStub[] {
   const messagesById = new Map(
     queryMessages.map((message) => [message.msgId.toLowerCase(), message]),
   );
-  liveMessages.forEach((message) => messagesById.set(message.msgId.toLowerCase(), message));
-  return [...messagesById.values()].sort((a, b) =>
-    ascending ? compareMessageIdsDescending(b, a) : compareMessageIdsDescending(a, b),
-  );
+  liveMessages.forEach((message) => {
+    const key = message.msgId.toLowerCase();
+    const canonicalMessage = messagesById.get(key);
+    messagesById.set(key, canonicalMessage ? { ...message, id: canonicalMessage.id } : message);
+  });
+  return [...messagesById.values()].sort((a, b) => {
+    if (orderBySendTime) {
+      return b.origin.timestamp - a.origin.timestamp || compareMessageIdsDescending(a, b);
+    }
+    return ascending ? compareMessageIdsDescending(b, a) : compareMessageIdsDescending(a, b);
+  });
 }

@@ -20,7 +20,7 @@ const MAX_RETAINED_MESSAGES = 500;
 const EMPTY_DOMAINS: number[] = [];
 
 type MessageUpsert = { data: MessageEntry; type: 'message_upsert' };
-type Rollback = {
+export type Rollback = {
   confirmations: number;
   domain: number;
   fromHeight: string;
@@ -56,6 +56,7 @@ export function ExplorerEventsProvider({
   const [rollbackVersion, setRollbackVersion] = useState(0);
   const domainIds = useMemo(() => [...new Set(domains)].sort((a, b) => a - b), [domains]);
   const listenersRef = useRef<Map<string, Set<MessageListener>>>(new Map());
+  const messageRowsRef = useRef<MessageEntry[]>([]);
 
   const subscribe = useCallback((messageId: string, listener: MessageListener) => {
     const normalizedId = normalizeId(messageId);
@@ -71,8 +72,9 @@ export function ExplorerEventsProvider({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !config.wsUrl || !domainIds.length) {
+    if (!enabled || !config.wsUrl) {
       setConnectionState('unavailable');
+      messageRowsRef.current = [];
       setMessageRows([]);
       return;
     }
@@ -87,6 +89,7 @@ export function ExplorerEventsProvider({
     const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
       setConnectionState('disconnected');
+      messageRowsRef.current = [];
       setMessageRows([]);
       reconnectTimer = setTimeout(() => {
         reconnectTimer = undefined;
@@ -113,7 +116,9 @@ export function ExplorerEventsProvider({
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(withConfirmations(config.wsUrl, domainIds));
+        socket = new WebSocket(
+          domainIds.length ? withConfirmations(config.wsUrl, domainIds) : config.wsUrl,
+        );
       } catch (error) {
         logger.error('Could not create Explorer live message websocket', error);
         scheduleReconnect();
@@ -134,20 +139,28 @@ export function ExplorerEventsProvider({
           if (normalizedId) {
             listenersRef.current.get(normalizedId)?.forEach((listener) => listener(message.data));
           }
-          setMessageRows((rows) =>
-            [message.data, ...rows.filter((row) => row.msg_id !== message.data.msg_id)].slice(
-              0,
-              MAX_RETAINED_MESSAGES,
-            ),
-          );
+          const nextRows = [
+            message.data,
+            ...messageRowsRef.current.filter((row) => row.msg_id !== message.data.msg_id),
+          ].slice(0, MAX_RETAINED_MESSAGES);
+          messageRowsRef.current = nextRows;
+          setMessageRows(nextRows);
         } else if (message?.type === 'rollback') {
-          // A message row combines origin, delivery, and payment state. One
-          // chain rollback can therefore invalidate rows last updated by a
-          // different chain, so discard the complete provisional overlay.
-          listenersRef.current.forEach((listeners) =>
-            listeners.forEach((listener) => listener(null)),
+          const rows = messageRowsRef.current;
+          const nextRows = reconcileMessageRowsAfterRollback(rows, message);
+          const nextRowsById = new Map(
+            nextRows.map((row) => [normalizeId(row.msg_id), row] as const),
           );
-          setMessageRows([]);
+          rows.forEach((row) => {
+            const normalizedId = normalizeId(row.msg_id);
+            const nextRow = nextRowsById.get(normalizedId);
+            if (!normalizedId || nextRow === row) return;
+            listenersRef.current
+              .get(normalizedId)
+              ?.forEach((listener) => listener(nextRow ?? null));
+          });
+          messageRowsRef.current = nextRows;
+          setMessageRows(nextRows);
           setRollbackVersion((version) => version + 1);
         }
       };
@@ -212,6 +225,41 @@ export function withConfirmations(wsUrl: string, domains: number[]) {
   url.searchParams.set('confirmations', '0');
   url.searchParams.set('domains', domains.join(','));
   return url.toString();
+}
+
+export function reconcileMessageRowsAfterRollback(messageRows: MessageEntry[], rollback: Rollback) {
+  const toHeight = BigInt(rollback.toHeight);
+  return messageRows.flatMap((row) => {
+    if (
+      row.origin_domain_id === rollback.domain &&
+      isHeightAbove(row.origin_block_height, toHeight)
+    ) {
+      return [];
+    }
+    if (
+      row.destination_domain_id !== rollback.domain ||
+      !isHeightAbove(row.destination_block_height, toHeight)
+    ) {
+      return [row];
+    }
+    return [
+      {
+        ...row,
+        delivery_occurred_at: null,
+        destination_tx_hash: null,
+        destination_tx_recipient: null,
+        destination_tx_sender: null,
+        is_delivered: false,
+      },
+    ];
+  });
+}
+
+function isHeightAbove(value: unknown, height: bigint) {
+  return (
+    (typeof value === 'number' && Number.isSafeInteger(value) && BigInt(value) > height) ||
+    (typeof value === 'string' && isHeight(value) && BigInt(value) > height)
+  );
 }
 
 function isRollback(value: unknown): value is Rollback {

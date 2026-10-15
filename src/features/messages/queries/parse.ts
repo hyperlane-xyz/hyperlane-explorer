@@ -92,7 +92,7 @@ function parseMessageStub(
   try {
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
-    const body = postgresByteaToString(m.message_body ?? '');
+    const body = m.message_body ? postgresByteaToString(m.message_body) : '0x';
 
     const isPiMsg =
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
@@ -120,8 +120,8 @@ function parseMessageStub(
         ? {
             timestamp: parseTimestampString(m.delivery_occurred_at),
             hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
-            from: postgresByteaToAddress(m.destination_tx_sender, destinationMetadata),
-            to: postgresByteaToAddress(m.destination_tx_recipient, destinationMetadata),
+            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
+            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -197,15 +197,8 @@ function parseTimestampString(t: string) {
 function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry & {
   delivery_occurred_at: string;
   destination_tx_hash: string;
-  destination_tx_recipient: string;
-  destination_tx_sender: string;
 } {
-  return Boolean(
-    m.delivery_occurred_at &&
-    m.destination_tx_hash &&
-    m.destination_tx_recipient &&
-    m.destination_tx_sender,
-  );
+  return Boolean(m.delivery_occurred_at && m.destination_tx_hash);
 }
 
 function parseOptionalAddress(
