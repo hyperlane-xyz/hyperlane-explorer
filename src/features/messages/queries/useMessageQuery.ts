@@ -106,6 +106,14 @@ export function shouldPollMessageSearch(isFirstPage = true) {
   return isFirstPage;
 }
 
+export function shouldPollMessageDetails(
+  isLiveConnected: boolean,
+  isDelivered: boolean,
+  isProvisional: boolean,
+) {
+  return isProvisional || (!isLiveConnected && !isDelivered);
+}
+
 export function shouldResetToFirstMessagePage(
   isBeforeQuery: boolean,
   hasRun: boolean,
@@ -497,12 +505,14 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
         : null,
     [chainMetadataResolver, scrapedChains, liveMessageRow],
   );
-  const message = liveMessage ?? messageList[0] ?? null;
+  const message = selectLiveMessage(liveMessage, messageList[0] ?? null);
   const isMessageFound = !!message;
   const isDelivered = message?.status === MessageStatus.Delivered;
   const poll = useCallback(() => {
-    if (!isLiveConnected && !isDelivered) refresh();
-  }, [isDelivered, isLiveConnected, refresh]);
+    if (shouldPollMessageDetails(isLiveConnected, isDelivered, !!message?.isProvisional)) {
+      refresh();
+    }
+  }, [isDelivered, isLiveConnected, message?.isProvisional, refresh]);
   useVisibleInterval(poll, MSG_AUTO_REFRESH_DELAY);
 
   return {
@@ -512,6 +522,15 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     isMessageFound,
     message,
   };
+}
+
+export function selectLiveMessage<M extends MessageStub>(
+  liveMessage: M | null,
+  canonicalMessage: M | null,
+) {
+  if (!liveMessage) return canonicalMessage;
+  if (!canonicalMessage || liveMessage.status !== canonicalMessage.status) return liveMessage;
+  return canonicalMessage;
 }
 
 function mergeMessageLists(
@@ -526,7 +545,14 @@ function mergeMessageLists(
   liveMessages.forEach((message) => {
     const key = message.msgId.toLowerCase();
     const canonicalMessage = messagesById.get(key);
-    messagesById.set(key, canonicalMessage ? { ...message, id: canonicalMessage.id } : message);
+    messagesById.set(
+      key,
+      canonicalMessage
+        ? message.status === canonicalMessage.status
+          ? canonicalMessage
+          : { ...message, id: canonicalMessage.id }
+        : message,
+    );
   });
   return [...messagesById.values()].sort((a, b) => {
     if (orderBySendTime) {

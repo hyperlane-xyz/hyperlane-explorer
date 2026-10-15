@@ -110,7 +110,15 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     recipient: message.recipient,
   });
   const debugResult = activeRuntimeState?.debugResult;
-  const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
+  const {
+    status,
+    originDomainId,
+    destinationDomainId,
+    origin,
+    destination,
+    isPiMsg,
+    isProvisional,
+  } = message;
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
     : undefined;
@@ -167,6 +175,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         </div>
         <StatusHeader
           messageStatus={status}
+          isProvisional={isProvisional}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
@@ -268,12 +277,14 @@ function hasCompleteMessageDetails(message?: Message | MessageStub | null): mess
 
 function StatusHeader({
   messageStatus,
+  isProvisional,
   isMessageFound,
   isFetching,
   isError,
   duration,
 }: {
   messageStatus: MessageStatus;
+  isProvisional?: boolean;
   isMessageFound: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -283,7 +294,7 @@ function StatusHeader({
   if (isFetching) {
     text = 'Loading message';
   } else if (isMessageFound) {
-    text = `Status: ${toTitleCase(messageStatus)}`;
+    text = `Status: ${toTitleCase(messageStatus)}${isProvisional ? ' (0 confirmations)' : ''}`;
   } else if (isError) {
     text = 'Error finding message';
   } else {
@@ -297,7 +308,7 @@ function StatusHeader({
         <SpinnerIcon width={20} height={20} color={Color.white} />
       </div>
     );
-  } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
+  } else if (isMessageFound && messageStatus === MessageStatus.Delivered && !isProvisional) {
     icon = <CheckmarkIcon width={24} height={24} color={Color.white} />;
   } else {
     icon = null;

@@ -12,6 +12,8 @@ import {
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
+  selectLiveMessage,
+  shouldPollMessageDetails,
   shouldPollMessageSearch,
   shouldResetToFirstMessagePage,
   shouldUseMessageQueryCache,
@@ -394,6 +396,43 @@ describe('message pagination', () => {
     expect(candidates).toEqual([expect.objectContaining({ id: '100', status: 'delivered' })]);
   });
 
+  it('keeps a delivery provisional until the query also reports it delivered', () => {
+    const msgId = '0x' + 'aa'.repeat(32);
+    const provisional = makeStub({
+      id: '10',
+      isProvisional: true,
+      msgId,
+      status: MessageStatus.Delivered,
+    });
+    const filters = {
+      searchInput: '',
+      originDomainId: null,
+      destinationDomainId: null,
+      startTime: null,
+      endTime: null,
+      status: 'all' as const,
+    };
+
+    expect(
+      getMessageCandidates(
+        [provisional],
+        [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
+        51,
+        filters,
+        [],
+      )[0]?.isProvisional,
+    ).toBe(true);
+    expect(
+      getMessageCandidates(
+        [provisional],
+        [makeStub({ id: '100', msgId, status: MessageStatus.Delivered })],
+        51,
+        filters,
+        [],
+      )[0]?.isProvisional,
+    ).toBeFalsy();
+  });
+
   it('resets a completed previous query to the live first page', () => {
     expect(shouldResetToFirstMessagePage(true, true, false, null)).toBe(true);
     expect(shouldResetToFirstMessagePage(true, true, false, '100')).toBe(false);
@@ -422,6 +461,26 @@ describe('message search polling', () => {
 
   it('keeps older pages stable', () => {
     expect(shouldPollMessageSearch(false)).toBe(false);
+  });
+});
+
+describe('message detail live reconciliation', () => {
+  it('keeps provisional state until canonical status catches up', () => {
+    const provisional = makeStub({
+      isProvisional: true,
+      status: MessageStatus.Delivered,
+    });
+    const canonicalPending = makeStub({ status: MessageStatus.Pending });
+    const canonicalDelivered = makeStub({ status: MessageStatus.Delivered });
+
+    expect(selectLiveMessage(provisional, canonicalPending)).toBe(provisional);
+    expect(selectLiveMessage(provisional, canonicalDelivered)).toBe(canonicalDelivered);
+  });
+
+  it('polls provisional details even while the websocket is connected', () => {
+    expect(shouldPollMessageDetails(true, true, true)).toBe(true);
+    expect(shouldPollMessageDetails(true, true, false)).toBe(false);
+    expect(shouldPollMessageDetails(false, false, false)).toBe(true);
   });
 });
 

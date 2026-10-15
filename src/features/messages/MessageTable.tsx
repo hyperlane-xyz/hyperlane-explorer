@@ -112,7 +112,8 @@ export function MessageTable({
       .filter(
         (message) =>
           previousStatuses.get(message.id) === MessageStatus.Pending &&
-          message.status === MessageStatus.Delivered,
+          message.status === MessageStatus.Delivered &&
+          !message.isProvisional,
       )
       .map((message) => message.id);
     if (!newlyDeliveredIds.length) return;
@@ -196,7 +197,16 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   router: NextRouter;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
-  const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
+  const {
+    msgId,
+    status,
+    sender,
+    recipient,
+    originDomainId,
+    destinationDomainId,
+    origin,
+    isProvisional,
+  } = message;
 
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
@@ -209,11 +219,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
   let statusIcon: ReactNode = null;
   let statusTitle = '';
-  if (status === MessageStatus.Delivered) {
+  if (status === MessageStatus.Delivered && !isProvisional) {
     statusIcon = (
       <CheckmarkIcon width={18} height={18} color={Color.primaryDark} className="pt-px" />
     );
     statusTitle = 'Delivered';
+  } else if (status === MessageStatus.Delivered) {
+    statusTitle = 'Delivered (0 confirmations)';
+    statusIcon = <span className="border-primary-800 block h-3.5 w-3.5 rounded-full border" />;
   } else if (status === MessageStatus.Failing) {
     statusTitle = 'Failing';
     statusIcon = (
@@ -363,11 +376,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       <LinkCell
         path={detailPath}
         base64={base64}
-        tdClasses="w-8"
+        tdClasses={isProvisional ? 'w-20' : 'w-8'}
         onNavigateIntent={primeDetailPage}
       >
         {statusIcon && (
-          <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
+          <span className="flex items-center justify-center gap-1" title={statusTitle}>
+            {isProvisional && (
+              <span className="text-primary-800 text-[10px] whitespace-nowrap">0 conf</span>
+            )}
             {statusIcon}
           </span>
         )}

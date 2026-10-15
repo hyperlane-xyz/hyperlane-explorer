@@ -67,6 +67,9 @@ ${messageStubFragment}
  * ====================================
  */
 export interface MessageStubEntry {
+  live_confirmations?: number;
+  live_domain?: number;
+  live_height?: string;
   id: number; // database id, not message id
   msg_id: string; // binary e.g. \\x123
   nonce: number;

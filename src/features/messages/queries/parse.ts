@@ -100,6 +100,7 @@ function parseMessageStub(
 
     return {
       status: getMessageStatus(m),
+      isProvisional: m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,

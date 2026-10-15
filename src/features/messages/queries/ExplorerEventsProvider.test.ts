@@ -7,6 +7,7 @@ import {
   ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
+  partitionExplorerDomains,
   reconcileMessageRowsAfterRollback,
   shouldEnableExplorerEvents,
   withConfirmations,
@@ -88,6 +89,19 @@ describe('Explorer events routes', () => {
       sockets[0].onmessage?.({
         data: JSON.stringify({
           confirmations: 0,
+          domain: 1,
+          fromHeight: '100',
+          toHeight: '99',
+          type: 'rollback',
+        }),
+      } as MessageEvent);
+    });
+    expect(container.textContent).toBe('1:0');
+
+    await act(async () => {
+      sockets[0].onmessage?.({
+        data: JSON.stringify({
+          confirmations: 0,
           domain: 173,
           fromHeight: '100',
           toHeight: '99',
@@ -144,6 +158,21 @@ describe('parseExplorerEvent', () => {
     });
   });
 
+  it('keeps provisional event provenance', () => {
+    const data = makeProxyMessage();
+    expect(
+      parseExplorerEvent(
+        JSON.stringify({
+          confirmations: 0,
+          data,
+          domain: 173,
+          height: '100',
+          type: 'message_upsert',
+        }),
+      ),
+    ).toEqual({ confirmations: 0, data, domain: 173, height: '100', type: 'message_upsert' });
+  });
+
   it('rejects malformed message upserts', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: {} }))).toBeNull();
@@ -191,7 +220,29 @@ describe('withConfirmations', () => {
   });
 });
 
+describe('partitionExplorerDomains', () => {
+  it('deduplicates valid signed-int domains and separates invalid values', () => {
+    expect(partitionExplorerDomains([10, 1, 10, -1, 0x80000000, Number.NaN])).toEqual({
+      domainIds: [1, 10],
+      invalidDomainIds: [-1, 0x80000000, Number.NaN],
+    });
+  });
+});
+
 describe('reconcileMessageRowsAfterRollback', () => {
+  it('preserves the same list when a rollback does not affect it', () => {
+    const rows = [makeMessageRow()];
+    expect(
+      reconcileMessageRowsAfterRollback(rows, {
+        confirmations: 0,
+        domain: 1,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toBe(rows);
+  });
+
   it('drops reverted origins and keeps unrelated provisional rows', () => {
     const reverted = makeMessageRow();
     const unrelated = makeMessageRow({ msg_id: '\\xunrelated', origin_domain_id: 10 });

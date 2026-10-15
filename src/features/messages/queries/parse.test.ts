@@ -58,6 +58,15 @@ describe('parseMessageStubEntry', () => {
       to: undefined,
     });
   });
+
+  it('marks zero-confirmation live rows as provisional', () => {
+    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
+      ...messageStubEntry,
+      live_confirmations: 0,
+    });
+
+    expect(message?.isProvisional).toBe(true);
+  });
 });
 
 const messageStubEntry = {
