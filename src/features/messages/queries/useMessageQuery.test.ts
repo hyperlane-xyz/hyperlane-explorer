@@ -533,6 +533,14 @@ describe('message search polling', () => {
 });
 
 describe('message detail live reconciliation', () => {
+  it('preserves enrichment from either source without changing the chosen status', () => {
+    const complete = makeStub({ isProvisional: true });
+    const partial = makeStub({ origin: { hash: complete.origin.hash, timestamp: 0 } });
+    expect(selectLiveMessage(complete, partial)).toEqual({ ...partial, origin: complete.origin });
+    const pending = { ...complete, status: MessageStatus.Pending };
+    expect(selectLiveMessage(partial, pending)).toEqual({ ...partial, origin: complete.origin });
+  });
+
   it('keeps provisional state until canonical status catches up', () => {
     const provisional = makeStub({
       isProvisional: true,

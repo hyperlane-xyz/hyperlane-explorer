@@ -31,6 +31,7 @@ import {
   useLatestMessageRows,
   useMessageRowSubscription,
 } from './useLiveMessages';
+import { preserveMessageTransactionFields, useRetainedMessage } from './useRetainedMessage';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
@@ -515,7 +516,11 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
         : null,
     [chainMetadataResolver, scrapedChains, liveMessageRow],
   );
-  const message = selectLiveMessage(liveMessage, messageList[0] ?? null);
+  const selectedMessage = useMemo(
+    () => selectLiveMessage(liveMessage, messageList[0] ?? null),
+    [liveMessage, messageList],
+  );
+  const message = useRetainedMessage(selectedMessage);
   const isMessageFound = !!message;
   const isDelivered = message?.status === MessageStatus.Delivered;
   const poll = useCallback(() => {
@@ -539,8 +544,10 @@ export function selectLiveMessage<M extends MessageStub>(
   canonicalMessage: M | null,
 ) {
   if (!liveMessage) return canonicalMessage;
-  if (!canonicalMessage || liveMessage.status !== canonicalMessage.status) return liveMessage;
-  return canonicalMessage;
+  if (!canonicalMessage) return liveMessage;
+  return liveMessage.status !== canonicalMessage.status
+    ? preserveMessageTransactionFields(liveMessage, canonicalMessage)
+    : preserveMessageTransactionFields(canonicalMessage, liveMessage);
 }
 
 function mergeMessageLists(
