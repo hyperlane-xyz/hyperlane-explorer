@@ -1,9 +1,12 @@
 import { isAddress } from '@hyperlane-xyz/utils';
 
+import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
+
+export const PROVISIONAL_QUERY_KEY = 'provisional';
 
 /**
  * ========================
@@ -59,6 +62,7 @@ export function buildMessageQuery(
   const query = `
   query ($identifier: bytea!)${cached ? ' @cached(ttl: 5)' : ''} {
     message_view(
+      confirmations: 0,
       where: {send_occurred_at: {_is_null: false}, ${whereClause}},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
@@ -136,12 +140,31 @@ export function buildMessageSearchQuery(
 
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
-  const queries = whereClauses.map(
-    (whereClause, i) =>
-      `q${i}: message_view(
+  // Raw dispatch IDs and canonical message IDs use different sequences.
+  // Fetch the provisional overlay separately so canonical pagination cannot
+  // push fresh dispatches below the LIMIT or use their IDs as history cursors.
+  const selections = whereClauses.map((whereClause, i) => ({
+    alias: `q${i}`,
+    whereClause,
+    provisional: false,
+  }));
+  if (!cursor) {
+    selections.push({
+      alias: PROVISIONAL_QUERY_KEY,
+      // OR is cheap over the small provisional set and avoids repeating the
+      // projection once per identifier field (or exceeding GraphQL limits).
+      whereClause: whereClauses.length > 1 ? `{_or: [${whereClauses.join(',')}]}` : whereClauses[0],
+      provisional: true,
+    });
+  }
+  const queries = selections.map(
+    ({ alias, whereClause, provisional }) =>
+      `${alias}: message_view(
+    ${provisional ? 'confirmations: 0,' : ''}
     where: {
       _and: [
         {send_occurred_at: {_is_null: false}},
+        ${provisional ? '{is_provisional: {_eq: true}},' : ''}
         ${originDomainWhereClause}
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
@@ -151,8 +174,8 @@ export function buildMessageSearchQuery(
         ${whereClause}
       ]
     },
-    order_by: {id: ${orderDirection.toLowerCase()}},
-    limit: ${limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
+    order_by: ${provisional ? '[{send_occurred_at: desc}, {id: desc}]' : `{id: ${orderDirection.toLowerCase()}}`},
+    limit: ${provisional ? LIVE_MESSAGE_LIMIT : limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,

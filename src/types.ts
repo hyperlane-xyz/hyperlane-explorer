@@ -10,6 +10,7 @@ export enum MessageStatus {
 }
 
 export interface MessageTxStub {
+  blockNumber?: number;
   timestamp: number;
   hash: string;
   from?: Address;

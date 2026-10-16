@@ -10,6 +10,7 @@ import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import {
   MessageIdentifierType,
+  PROVISIONAL_QUERY_KEY,
   type MessagePageCursor,
   buildMessageQuery,
   buildMessageSearchQuery,
@@ -73,7 +74,13 @@ export function getRawMessageIds(
   queryLimit: number,
   ascending: boolean,
 ): string[] {
-  return [...new Set(Object.values(data ?? {}).flatMap((rows) => rows.map(({ id }) => String(id))))]
+  return [
+    ...new Set(
+      Object.entries(data ?? {})
+        .filter(([alias]) => alias !== PROVISIONAL_QUERY_KEY)
+        .flatMap(([, rows]) => rows.map(({ id }) => String(id))),
+    ),
+  ]
     .sort((a, b) => {
       const aId = BigInt(a);
       const bId = BigInt(b);
@@ -334,7 +341,8 @@ export function useMessageSearchQuery(
     dbStatusFilter,
     warpAddresses,
     {
-      cached: shouldUseMessageQueryCache(explorerConnectionState),
+      // A reload must not reuse a snapshot from before a provisional event.
+      cached: !!cursorValue && shouldUseMessageQueryCache(explorerConnectionState),
       ...cursor,
     },
   );

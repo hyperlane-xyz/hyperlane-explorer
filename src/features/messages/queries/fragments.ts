@@ -11,10 +11,12 @@ export const messageStubFragment = `
   sender
   recipient
   is_delivered
+  is_provisional
   send_occurred_at
   delivery_occurred_at
   delivery_latency
   origin_chain_id
+  origin_block_height
   origin_domain_id
   origin_tx_id
   origin_tx_hash
@@ -32,7 +34,6 @@ export const messageStubFragment = `
 export const messageDetailsFragment = `
 ${messageStubFragment}
   origin_block_hash
-  origin_block_height
   origin_block_id
   origin_mailbox
   origin_tx_cumulative_gas_used
@@ -67,6 +68,8 @@ ${messageStubFragment}
  * ====================================
  */
 export interface MessageStubEntry {
+  is_provisional?: boolean;
+  origin_block_height?: number | string;
   live_confirmations?: number;
   live_domain?: number;
   live_height?: string;

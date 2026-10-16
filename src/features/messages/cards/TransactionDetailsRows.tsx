@@ -6,6 +6,7 @@ import { formatTxHash } from '../../../utils/addresses';
 import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
 import { getBlockExplorerAddressUrl, getBlockExplorerTxUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
+import type { ConfirmationProgress } from '../useConfirmationProgress';
 import { KeyValueRow } from './KeyValueRow';
 
 type TransactionResolver = Pick<ChainMetadataResolver, 'tryGetChainMetadata' | 'tryGetChainName'>;
@@ -16,15 +17,19 @@ export function TransactionDetailsRows({
   transaction,
   blur,
   resolver,
+  confirmationProgress,
 }: {
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
   resolver: TransactionResolver;
+  confirmationProgress?: ConfirmationProgress | null;
 }) {
   const { hash, from, timestamp } = transaction;
   const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
+  const showConfirmations = confirmationProgress && confirmationProgress.required > 0;
+  const labelWidth = showConfirmations ? 'w-28' : 'w-16';
 
   const formattedHash = formatTxHash(hash, domainId, resolver);
   const txExplorerLink =
@@ -38,10 +43,15 @@ export function TransactionDetailsRows({
 
   return (
     <>
-      <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
+      <KeyValueRow
+        label="Chain:"
+        labelWidth={labelWidth}
+        display={chainDescription}
+        blurValue={blur}
+      />
       <KeyValueRow
         label="Tx:"
-        labelWidth="w-16"
+        labelWidth={labelWidth}
         display={formattedHash}
         showCopy={true}
         blurValue={blur}
@@ -51,7 +61,7 @@ export function TransactionDetailsRows({
       {from && (
         <KeyValueRow
           label="From:"
-          labelWidth="w-16"
+          labelWidth={labelWidth}
           display={from}
           showCopy={true}
           blurValue={blur}
@@ -62,7 +72,7 @@ export function TransactionDetailsRows({
       {!!timestamp && (
         <KeyValueRow
           label="Time:"
-          labelWidth="w-16"
+          labelWidth={labelWidth}
           display={getHumanReadableTimeString(timestamp)}
           subDisplay={`(${getDateTimeString(timestamp)})`}
           blurValue={blur}
@@ -71,8 +81,27 @@ export function TransactionDetailsRows({
       {blockNumber !== undefined && (
         <KeyValueRow
           label="Block:"
-          labelWidth="w-16"
+          labelWidth={labelWidth}
           display={blockNumber.toString()}
+          blurValue={blur}
+        />
+      )}
+      {showConfirmations && (
+        <KeyValueRow
+          label="Confirmations:"
+          labelWidth={labelWidth}
+          display={
+            confirmationProgress.current === null
+              ? 'Waiting for block data'
+              : `${confirmationProgress.current} / ${confirmationProgress.required}`
+          }
+          subDisplay={
+            confirmationProgress.current === null ||
+            confirmationProgress.current < confirmationProgress.required
+              ? 'Confirming'
+              : 'Confirmed'
+          }
+          tooltip="Observed origin-chain head minus the dispatch block. No time-based estimates."
           blurValue={blur}
         />
       )}

@@ -2,7 +2,12 @@ import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMe
 
 import { MessageStatus } from '../../../types';
 import type { MessageEntry, MessageStubEntry } from './fragments';
-import { parseMessageEntry, parseMessageStubEntry } from './parse';
+import {
+  parseBlockNumber,
+  parseMessageEntry,
+  parseMessageStubEntry,
+  parseMessageStubResult,
+} from './parse';
 
 describe('parseMessageStubEntry', () => {
   it('keeps provisional dispatches without transaction address enrichment', () => {
@@ -60,12 +65,77 @@ describe('parseMessageStubEntry', () => {
   });
 
   it('marks zero-confirmation live rows as provisional', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
+    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
+      ...messageEntry,
       live_confirmations: 0,
     });
 
-    expect(message?.isProvisional).toBe(true);
+    expect(message).toMatchObject({
+      isProvisional: true,
+      origin: { blockNumber: 1 },
+    });
+  });
+
+  it('tracks origin confirmations for provisional delivery', () => {
+    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
+      ...messageEntry,
+      delivery_occurred_at: '2026-10-09T12:01:00',
+      destination_block_height: 50,
+      destination_tx_hash: '\\x08',
+      is_delivered: true,
+      live_confirmations: 0,
+    });
+
+    expect(message).toMatchObject({
+      origin: { blockNumber: 1 },
+    });
+  });
+
+  it('preserves confirmation state and origin height in a GraphQL reload', () => {
+    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
+      ...messageStubEntry,
+      is_provisional: true,
+      origin_block_height: '123',
+    });
+    expect(message).toMatchObject({ isProvisional: true, origin: { blockNumber: 123 } });
+  });
+
+  it('keeps the provisional snapshot when the same message appears in the canonical page', () => {
+    const messages = parseMessageStubResult(
+      createChainMetadataResolver({}),
+      [],
+      {
+        q0: [{ ...messageStubEntry, is_provisional: false }],
+        provisional: [
+          {
+            ...messageStubEntry,
+            is_provisional: true,
+            is_delivered: true,
+            origin_block_height: '123',
+          },
+        ],
+      },
+      'DESC',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      isProvisional: true,
+      status: MessageStatus.Delivered,
+      origin: { blockNumber: 123 },
+    });
+  });
+
+  it('does not deduplicate different message hashes with colliding raw and canonical IDs', () => {
+    const messages = parseMessageStubResult(
+      createChainMetadataResolver({}),
+      [],
+      {
+        q0: [messageStubEntry],
+        provisional: [{ ...messageStubEntry, msg_id: '\\xabcdef', is_provisional: true }],
+      },
+      'DESC',
+    );
+    expect(messages).toHaveLength(2);
   });
 
   it('keeps partial destination data when full enrichment is incomplete', () => {
@@ -83,6 +153,18 @@ describe('parseMessageStubEntry', () => {
       timestamp: Date.parse('2026-10-09T12:01:00Z'),
       to: undefined,
     });
+  });
+});
+
+describe('parseBlockNumber', () => {
+  it('accepts numeric websocket heights', () => {
+    expect(parseBlockNumber(100)).toBe(100);
+    expect(parseBlockNumber('100')).toBe(100);
+  });
+
+  it('rejects unsafe heights', () => {
+    expect(parseBlockNumber('-1')).toBeUndefined();
+    expect(parseBlockNumber('9007199254740992')).toBeUndefined();
   });
 });
 

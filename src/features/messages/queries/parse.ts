@@ -97,10 +97,9 @@ function parseMessageStub(
     const isPiMsg =
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
       isPiChain(chainMetadataResolver, scrapedChains, m.destination_domain_id);
-
     return {
       status: getMessageStatus(m),
-      isProvisional: m.live_confirmations === 0,
+      isProvisional: m.is_provisional ?? m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,
@@ -112,6 +111,7 @@ function parseMessageStub(
       destinationDomainId: m.destination_domain_id,
       body,
       origin: {
+        blockNumber: parseBlockNumber(m.origin_block_height),
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
         from: parseOptionalAddress(m.origin_tx_sender, originMetadata),
@@ -198,6 +198,13 @@ function parseTimestampString(t: string) {
   return new Date(asUtc).getTime();
 }
 
+export function parseBlockNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return value;
+  if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]*)$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
 function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry & {
   delivery_occurred_at: string;
   destination_tx_hash: string;
@@ -257,7 +264,7 @@ function getMessageStatus(m: MessageEntry | MessageStubEntry) {
 function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
   const map = new Map();
   for (const item of messages) {
-    map.set(item.id, item);
+    map.set(item.msgId.toLowerCase(), item);
   }
   return Array.from(map.values());
 }

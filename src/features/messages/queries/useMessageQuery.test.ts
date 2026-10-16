@@ -162,6 +162,15 @@ describe('messageMatchesSearchFilters', () => {
 });
 
 describe('message query caching', () => {
+  it('requests zero-confirmation message snapshots', () => {
+    expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain(
+      'confirmations: 0',
+    );
+    expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain(
+      'confirmations: 0',
+    );
+  });
+
   it('caches by default', () => {
     expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain('@cached');
     expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain('@cached');
@@ -188,6 +197,55 @@ describe('message query caching', () => {
 });
 
 describe('message pagination', () => {
+  it('fetches a separate provisional snapshot only on the first page', () => {
+    const first = buildMessageSearchQuery('', null, null, null, null, 51, true).query;
+    expect(first).toContain('provisional: message_view(');
+    expect(first).toContain('{is_provisional: {_eq: true}}');
+    expect(first).toContain('order_by: [{send_occurred_at: desc}, {id: desc}]');
+    expect(first).toContain('limit: 500');
+    const next = buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], {
+      after: '100',
+    }).query;
+    expect(next).not.toContain('provisional:');
+    expect(next).not.toContain('confirmations: 0');
+  });
+
+  it('retains provisional reload rows with smaller IDs without changing the canonical cursor', () => {
+    const canonical = Array.from({ length: 51 }, (_, index) =>
+      makeStub({
+        id: String(165017135 - index),
+        msgId: `0x${String(index).padStart(64, '0')}`,
+        origin: { ...makeStub().origin, timestamp: 100 - index },
+      }),
+    );
+    const provisional = makeStub({
+      id: '143447027',
+      msgId: '0x' + 'ff'.repeat(32),
+      isProvisional: true,
+      origin: { ...makeStub().origin, timestamp: 200, blockNumber: 26203787 },
+    });
+    const ids = getRawMessageIds({ q0: canonical, provisional: [provisional] }, 51, false);
+    expect(ids).not.toContain(provisional.id);
+    const page = getMessagePage([provisional, ...canonical], ids, 51);
+    expect(page.messages[0]).toEqual(provisional);
+    expect(page.messages).toHaveLength(51);
+    expect(page.continuationCursor).toBe(canonical[49].id);
+  });
+
+  it('uses one provisional selection across all identifier search fields', () => {
+    const { query } = buildMessageSearchQuery(
+      '0x' + 'ab'.repeat(32),
+      null,
+      null,
+      null,
+      null,
+      51,
+      true,
+    );
+    expect(query.match(/provisional: message_view/g)).toHaveLength(1);
+    expect(query).toContain('{_or: [');
+  });
+
   it('adds a cursor to the GraphQL query', () => {
     const result = buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], {
       after: '100',

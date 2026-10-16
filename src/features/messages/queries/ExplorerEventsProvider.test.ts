@@ -4,6 +4,7 @@ import { act, createElement, useContext } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import {
+  ExplorerBlockHeadsContext,
   ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
@@ -75,7 +76,7 @@ describe('Explorer events routes', () => {
     });
     expect(sockets).toHaveLength(1);
     expect(sockets[0].url).toBe(
-      'wss://explorer-api.hyperlane.xyz/messages?confirmations=0&domains=1',
+      'wss://explorer-api.hyperlane.xyz/messages?blocks=true&confirmations=0&domains=1',
     );
 
     await act(async () => {
@@ -130,7 +131,7 @@ describe('Explorer events routes', () => {
     await act(async () => {
       root.render(createElement(ExplorerEventsProvider, null, createElement('div')));
     });
-    expect(sockets[0]?.url).toBe('wss://explorer-api.hyperlane.xyz/messages');
+    expect(sockets[0]?.url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=true');
 
     await act(async () => root.unmount());
     global.WebSocket = originalWebSocket;
@@ -138,6 +139,26 @@ describe('Explorer events routes', () => {
 });
 
 describe('parseExplorerEvent', () => {
+  it('accepts exact block heights and rejects malformed blocks', () => {
+    const block = {
+      type: 'block',
+      domain: 1,
+      height: '103',
+      headHeight: '105',
+      hash: `0x${'ab'.repeat(32)}`,
+    };
+    expect(parseExplorerEvent(JSON.stringify(block))).toEqual(block);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const invalid of [
+      { domain: -1 },
+      { height: '1.5' },
+      { headHeight: '102' },
+      { headHeight: '9007199254740993' },
+      { hash: '0xabc' },
+    ])
+      expect(parseExplorerEvent(JSON.stringify({ ...block, ...invalid }))).toBeNull();
+    warn.mockRestore();
+  });
   it('accepts the proxy numeric-string ID format', () => {
     const data = makeProxyMessage();
     expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toEqual({
@@ -215,7 +236,7 @@ describe('parseExplorerEvent', () => {
 describe('withConfirmations', () => {
   it('requests the zero-confirmation frontier for every scraped domain', () => {
     expect(withConfirmations('wss://api.example/messages?token=abc', [1, 10, 42161])).toBe(
-      'wss://api.example/messages?token=abc&confirmations=0&domains=1%2C10%2C42161',
+      'wss://api.example/messages?token=abc&blocks=true&confirmations=0&domains=1%2C10%2C42161',
     );
   });
 });
@@ -314,6 +335,51 @@ function EventState() {
   const context = useContext(ExplorerEventsContext);
   return createElement('div', null, `${context?.messageRows.length}:${context?.rollbackVersion}`);
 }
+
+it('updates block heads without a message, accepts reorgs, and clears heads on disconnect', async () => {
+  const originalWebSocket = global.WebSocket;
+  const sockets: FakeWebSocket[] = [];
+  global.WebSocket = class extends FakeWebSocket {
+    constructor(url: string) {
+      super(url);
+      sockets.push(this);
+    }
+  } as unknown as typeof WebSocket;
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  function BlockState() {
+    const heads = useContext(ExplorerBlockHeadsContext);
+    return createElement('div', null, heads.get(1)?.headHeight ?? 'unknown');
+  }
+  try {
+    await act(async () =>
+      root.render(
+        createElement(ExplorerEventsProvider, { domains: [1] }, createElement(BlockState)),
+      ),
+    );
+    for (const height of ['103', '104', '102']) {
+      await act(async () =>
+        sockets[0].onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'block',
+              domain: 1,
+              height,
+              headHeight: height,
+              hash: `0x${'ab'.repeat(32)}`,
+            }),
+          }),
+        ),
+      );
+      expect(container.textContent).toBe(height);
+    }
+    await act(async () => sockets[0].onclose?.(new CloseEvent('close')));
+    expect(container.textContent).toBe('unknown');
+  } finally {
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+  }
+});
 
 class FakeWebSocket {
   closed = false;

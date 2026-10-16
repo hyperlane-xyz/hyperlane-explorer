@@ -22,6 +22,10 @@ import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoadi
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
+import {
+  isWaitingForOriginConfirmations,
+  useConfirmationProgress,
+} from './useConfirmationProgress';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const ContentDetailsCard = dynamic(
@@ -98,7 +102,10 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     !baseIsMessageFound && !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
   const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
   const message = activeRuntimeState?.message || baseMessage;
+  const confirmationProgress = useConfirmationProgress(message, chainMetadataResolver);
   const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
+  const isOriginConfirming =
+    isMessageFound && isWaitingForOriginConfirmations(message, confirmationProgress);
   const isFetching =
     isGraphQlFetching ||
     !!activeRuntimeState?.isFetching ||
@@ -176,6 +183,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         <StatusHeader
           messageStatus={status}
           isProvisional={isProvisional}
+          isOriginConfirming={isOriginConfirming}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
@@ -187,6 +195,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           chainName={originChainName}
           domainId={originDomainId}
           transaction={origin}
+          confirmationProgress={confirmationProgress}
           blur={blur}
         />
         <Suspense
@@ -198,6 +207,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
               transaction={destination}
               blur={blur}
               isLiveDetailsPending={isFetching}
+              isOriginConfirming={isOriginConfirming}
             />
           }
         >
@@ -210,6 +220,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
             isGraphQlMessageFound={isGraphQlMessageFound}
             destinationChainName={destinationChainName}
             blur={blur}
+            isOriginConfirming={isOriginConfirming}
             warpRouteDetails={warpRouteDetails}
             onStateChange={handleRuntimeStateChange}
           />
@@ -278,6 +289,7 @@ function hasCompleteMessageDetails(message?: Message | MessageStub | null): mess
 function StatusHeader({
   messageStatus,
   isProvisional,
+  isOriginConfirming,
   isMessageFound,
   isFetching,
   isError,
@@ -285,6 +297,7 @@ function StatusHeader({
 }: {
   messageStatus: MessageStatus;
   isProvisional?: boolean;
+  isOriginConfirming: boolean;
   isMessageFound: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -294,7 +307,9 @@ function StatusHeader({
   if (isFetching) {
     text = 'Loading message';
   } else if (isMessageFound) {
-    text = `Status: ${toTitleCase(messageStatus)}${isProvisional ? ' (0 confirmations)' : ''}`;
+    text = isOriginConfirming
+      ? 'Status: Confirming on origin'
+      : `Status: ${toTitleCase(messageStatus)}${isProvisional && messageStatus === MessageStatus.Delivered ? ' (provisional)' : ''}`;
   } else if (isError) {
     text = 'Error finding message';
   } else {
