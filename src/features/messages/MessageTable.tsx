@@ -112,7 +112,8 @@ export function MessageTable({
       .filter(
         (message) =>
           previousStatuses.get(message.id) === MessageStatus.Pending &&
-          message.status === MessageStatus.Delivered,
+          message.status === MessageStatus.Delivered &&
+          !message.isProvisional,
       )
       .map((message) => message.id);
     if (!newlyDeliveredIds.length) return;
@@ -164,7 +165,7 @@ export function MessageTable({
           const isDelivered = deliveredMessageIds.has(m.id);
           return (
             <tr
-              key={`message-${m.id}`}
+              key={m.msgId}
               className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
                 isFetching && 'blur-xs'
               } ${
@@ -367,7 +368,11 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         onNavigateIntent={primeDetailPage}
       >
         {statusIcon && (
-          <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
+          <span
+            className="flex items-center justify-center"
+            data-tooltip-id="root-tooltip"
+            data-tooltip-content={statusTitle}
+          >
             {statusIcon}
           </span>
         )}

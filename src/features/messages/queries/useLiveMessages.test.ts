@@ -3,6 +3,7 @@ import {
   filterLatestMessageRows,
   selectSubscribedMessageRow,
   shouldRefreshAfterReconnect,
+  shouldRefreshAfterRollback,
 } from './useLiveMessages';
 
 describe('filterLatestMessageRows', () => {
@@ -35,6 +36,16 @@ describe('shouldRefreshAfterReconnect', () => {
 
   it('does not refresh disabled consumers', () => {
     expect(shouldRefreshAfterReconnect(false, 'disconnected', 'connected')).toBe(false);
+  });
+});
+
+describe('shouldRefreshAfterRollback', () => {
+  it('refreshes enabled consumers when the rollback version changes', () => {
+    expect(shouldRefreshAfterRollback(true, 1, 2)).toBe(true);
+  });
+
+  it('does not refresh disabled consumers', () => {
+    expect(shouldRefreshAfterRollback(false, 1, 2)).toBe(false);
   });
 });
 

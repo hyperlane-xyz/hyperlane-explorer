@@ -24,7 +24,9 @@ jest.mock('../../../components/layout/SectionCard', () => ({
   SectionCard: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../store', () => ({
-  useMultiProvider: () => ({ tryGetChainMetadata: () => undefined }),
+  useMultiProvider: () => ({
+    tryGetChainMetadata: (domain: number) => (domain === 1 ? {} : undefined),
+  }),
 }));
 jest.mock('../collateral/useCollateralStatus', () => ({
   useCollateralStatus: () => ({ status: 'unknown' }),
@@ -82,3 +84,59 @@ it('shows a route halt warning before missing chain metadata', async () => {
   expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   await act(async () => root.unmount());
 });
+
+it('waits for origin confirmations before inspecting delivery, then shows normal delivery progress', async () => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const render = async (isOriginConfirming: boolean) =>
+    act(async () =>
+      root.render(
+        <DestinationTransactionCard
+          chainName="ethereum"
+          domainId={1}
+          status={MessageStatus.Pending}
+          isStatusFetching={isOriginConfirming}
+          isOriginConfirming={isOriginConfirming}
+          blur={false}
+        />,
+      ),
+    );
+  try {
+    await render(true);
+    expect(container.textContent).toContain('Waiting for origin confirmations.');
+    expect(container.textContent).not.toContain('Delivery to destination chain still in progress.');
+    await render(false);
+    expect(container.textContent).not.toContain('Waiting for origin confirmations.');
+    expect(container.textContent).toContain('Delivery to destination chain still in progress.');
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it.each([undefined, { hash: '0x01', timestamp: 1 }])(
+  'keeps observed deliveries out of the confirmation state, even without indexed transaction details',
+  async (transaction) => {
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    try {
+      await act(async () =>
+        root.render(
+          <DestinationTransactionCard
+            chainName="ethereum"
+            domainId={1}
+            status={MessageStatus.Delivered}
+            transaction={transaction}
+            isStatusFetching={false}
+            isOriginConfirming={true}
+            blur={false}
+          />,
+        ),
+      );
+      expect(container.textContent).not.toContain('Waiting for origin confirmations.');
+      expect(container.textContent).not.toContain('Delivery status is currently unknown.');
+      if (!transaction) expect(container.textContent).toContain('Message delivered.');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  },
+);

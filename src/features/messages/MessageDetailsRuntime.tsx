@@ -38,6 +38,7 @@ interface Props {
   isGraphQlMessageFound: boolean;
   destinationChainName: string;
   blur: boolean;
+  isOriginConfirming: boolean;
   warpRouteDetails?: WarpRouteDetails;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
@@ -51,6 +52,7 @@ export function MessageDetailsRuntime({
   isGraphQlMessageFound,
   destinationChainName,
   blur,
+  isOriginConfirming,
   warpRouteDetails,
   onStateChange,
 }: Props) {
@@ -117,6 +119,7 @@ export function MessageDetailsRuntime({
         transaction={message?.destination}
         debugResult={debugResult}
         isStatusFetching={isDeliveryStatusFetching}
+        isOriginConfirming={isOriginConfirming}
         isPiMsg={message?.isPiMsg}
         blur={blur}
         message={message || queriedMessage}

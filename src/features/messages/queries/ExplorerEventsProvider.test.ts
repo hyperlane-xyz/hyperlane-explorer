@@ -1,13 +1,19 @@
 /** @jest-environment jsdom */
 
-import { act, createElement } from 'react';
+import { act, createElement, useContext } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import {
+  ExplorerBlockHeadsContext,
+  ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
+  partitionExplorerDomains,
+  reconcileMessageRowsAfterRollback,
   shouldEnableExplorerEvents,
+  withConfirmations,
 } from './ExplorerEventsProvider';
+import type { MessageEntry } from './fragments';
 
 const reactTestGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -50,15 +56,142 @@ describe('Explorer events routes', () => {
     await act(async () => root.unmount());
     global.WebSocket = originalWebSocket;
   });
+
+  it('connects at zero confirmations and drops a rolled-back origin', async () => {
+    const originalWebSocket = global.WebSocket;
+    const sockets: FakeWebSocket[] = [];
+    global.WebSocket = class extends FakeWebSocket {
+      constructor(url: string) {
+        super(url);
+        sockets.push(this);
+      }
+    } as unknown as typeof WebSocket;
+    const container = document.createElement('div');
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        createElement(ExplorerEventsProvider, { domains: [1] }, createElement(EventState)),
+      );
+    });
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0].url).toBe(
+      'wss://explorer-api.hyperlane.xyz/messages?blocks=true&confirmations=0&domains=1',
+    );
+
+    await act(async () => {
+      sockets[0].onmessage?.({
+        data: JSON.stringify({ data: makeProxyMessage(), type: 'message_upsert' }),
+      } as MessageEvent);
+    });
+    expect(container.textContent).toBe('1:0');
+
+    await act(async () => {
+      sockets[0].onmessage?.({
+        data: JSON.stringify({
+          confirmations: 0,
+          domain: 1,
+          fromHeight: '100',
+          toHeight: '99',
+          type: 'rollback',
+        }),
+      } as MessageEvent);
+    });
+    expect(container.textContent).toBe('1:0');
+
+    await act(async () => {
+      sockets[0].onmessage?.({
+        data: JSON.stringify({
+          confirmations: 0,
+          domain: 173,
+          fromHeight: '100',
+          toHeight: '99',
+          type: 'rollback',
+        }),
+      } as MessageEvent);
+    });
+    expect(container.textContent).toBe('0:1');
+    expect(sockets[0].closed).toBe(false);
+
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+  });
+
+  it('keeps canonical live updates while domain metadata is unavailable', async () => {
+    const originalWebSocket = global.WebSocket;
+    const sockets: FakeWebSocket[] = [];
+    global.WebSocket = class extends FakeWebSocket {
+      constructor(url: string) {
+        super(url);
+        sockets.push(this);
+      }
+    } as unknown as typeof WebSocket;
+    const root = createRoot(document.createElement('div'));
+
+    await act(async () => {
+      root.render(createElement(ExplorerEventsProvider, null, createElement('div')));
+    });
+    expect(sockets[0]?.url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=true');
+
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+  });
 });
 
 describe('parseExplorerEvent', () => {
+  it('accepts exact block heights and rejects malformed blocks', () => {
+    const block = {
+      type: 'block',
+      domain: 1,
+      height: '103',
+      headHeight: '105',
+      hash: `0x${'ab'.repeat(32)}`,
+    };
+    expect(parseExplorerEvent(JSON.stringify(block))).toEqual(block);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const invalid of [
+      { domain: -1 },
+      { height: '1.5' },
+      { headHeight: '102' },
+      { headHeight: '9007199254740993' },
+      { hash: '0xabc' },
+    ])
+      expect(parseExplorerEvent(JSON.stringify({ ...block, ...invalid }))).toBeNull();
+    warn.mockRestore();
+  });
   it('accepts the proxy numeric-string ID format', () => {
     const data = makeProxyMessage();
     expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toEqual({
       type: 'message_upsert',
       data,
     });
+  });
+
+  it('accepts provisional upserts without transaction address enrichment', () => {
+    const data = {
+      ...makeProxyMessage(),
+      origin_tx_recipient: null,
+      origin_tx_sender: null,
+    };
+    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toEqual({
+      type: 'message_upsert',
+      data,
+    });
+  });
+
+  it('keeps provisional event provenance', () => {
+    const data = makeProxyMessage();
+    expect(
+      parseExplorerEvent(
+        JSON.stringify({
+          confirmations: 0,
+          data,
+          domain: 173,
+          height: '100',
+          type: 'message_upsert',
+        }),
+      ),
+    ).toEqual({ confirmations: 0, data, domain: 173, height: '100', type: 'message_upsert' });
   });
 
   it('rejects malformed message upserts', () => {
@@ -69,6 +202,110 @@ describe('parseExplorerEvent', () => {
     ).toBeNull();
     expect(warn).toHaveBeenCalledTimes(2);
     warn.mockRestore();
+  });
+
+  it('accepts a zero-confirmation rollback', () => {
+    const rollback = {
+      type: 'rollback',
+      confirmations: 0,
+      domain: 1,
+      fromHeight: '100',
+      toHeight: '99',
+    };
+    expect(parseExplorerEvent(JSON.stringify(rollback))).toEqual(rollback);
+  });
+
+  it('rejects malformed rollback events', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(
+      parseExplorerEvent(
+        JSON.stringify({
+          type: 'rollback',
+          confirmations: 1,
+          domain: 1,
+          fromHeight: '100',
+          toHeight: '99',
+        }),
+      ),
+    ).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+});
+
+describe('withConfirmations', () => {
+  it('requests the zero-confirmation frontier for every scraped domain', () => {
+    expect(withConfirmations('wss://api.example/messages?token=abc', [1, 10, 42161])).toBe(
+      'wss://api.example/messages?token=abc&blocks=true&confirmations=0&domains=1%2C10%2C42161',
+    );
+  });
+});
+
+describe('partitionExplorerDomains', () => {
+  it('deduplicates valid signed-int domains and separates invalid values', () => {
+    expect(partitionExplorerDomains([10, 1, 10, -1, 0x80000000, Number.NaN])).toEqual({
+      domainIds: [1, 10],
+      invalidDomainIds: [-1, 0x80000000, Number.NaN],
+    });
+  });
+});
+
+describe('reconcileMessageRowsAfterRollback', () => {
+  it('preserves the same list when a rollback does not affect it', () => {
+    const rows = [makeMessageRow()];
+    expect(
+      reconcileMessageRowsAfterRollback(rows, {
+        confirmations: 0,
+        domain: 1,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toBe(rows);
+  });
+
+  it('drops reverted origins and keeps unrelated provisional rows', () => {
+    const reverted = makeMessageRow();
+    const unrelated = makeMessageRow({ msg_id: '\\xunrelated', origin_domain_id: 10 });
+
+    expect(
+      reconcileMessageRowsAfterRollback([reverted, unrelated], {
+        confirmations: 0,
+        domain: 173,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toEqual([unrelated]);
+  });
+
+  it('reverts only delivery state when the destination block rolls back', () => {
+    const message = makeMessageRow({
+      delivery_occurred_at: '2026-08-21 07:54:28',
+      destination_block_height: 100,
+      destination_tx_hash: '\\xdestination-hash',
+      destination_tx_recipient: '\\xdestination-recipient',
+      destination_tx_sender: '\\xdestination-sender',
+      is_delivered: true,
+    });
+
+    expect(
+      reconcileMessageRowsAfterRollback([message], {
+        confirmations: 0,
+        domain: 56,
+        fromHeight: '100',
+        toHeight: '99',
+        type: 'rollback',
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        delivery_occurred_at: null,
+        destination_tx_hash: null,
+        destination_tx_recipient: null,
+        destination_tx_sender: null,
+        is_delivered: false,
+      }),
+    ]);
   });
 });
 
@@ -82,9 +319,78 @@ function makeProxyMessage() {
     is_delivered: false,
     send_occurred_at: '2026-08-21 07:53:28',
     origin_domain_id: 173,
+    origin_block_height: 100,
     origin_tx_hash: '\\xorigin-hash',
     origin_tx_sender: '\\xorigin-sender',
     origin_tx_recipient: '\\xorigin-recipient',
     destination_domain_id: 56,
   };
+}
+
+function makeMessageRow(overrides: Record<string, unknown> = {}) {
+  return { ...makeProxyMessage(), ...overrides } as unknown as MessageEntry;
+}
+
+function EventState() {
+  const context = useContext(ExplorerEventsContext);
+  return createElement('div', null, `${context?.messageRows.length}:${context?.rollbackVersion}`);
+}
+
+it('updates block heads without a message, accepts reorgs, and clears heads on disconnect', async () => {
+  const originalWebSocket = global.WebSocket;
+  const sockets: FakeWebSocket[] = [];
+  global.WebSocket = class extends FakeWebSocket {
+    constructor(url: string) {
+      super(url);
+      sockets.push(this);
+    }
+  } as unknown as typeof WebSocket;
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  function BlockState() {
+    const heads = useContext(ExplorerBlockHeadsContext);
+    return createElement('div', null, heads.get(1)?.headHeight ?? 'unknown');
+  }
+  try {
+    await act(async () =>
+      root.render(
+        createElement(ExplorerEventsProvider, { domains: [1] }, createElement(BlockState)),
+      ),
+    );
+    for (const height of ['103', '104', '102']) {
+      await act(async () =>
+        sockets[0].onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'block',
+              domain: 1,
+              height,
+              headHeight: height,
+              hash: `0x${'ab'.repeat(32)}`,
+            }),
+          }),
+        ),
+      );
+      expect(container.textContent).toBe(height);
+    }
+    await act(async () => sockets[0].onclose?.(new CloseEvent('close')));
+    expect(container.textContent).toBe('unknown');
+  } finally {
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+  }
+});
+
+class FakeWebSocket {
+  closed = false;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onopen: ((event: Event) => void) | null = null;
+
+  constructor(readonly url: string) {}
+
+  close() {
+    this.closed = true;
+  }
 }

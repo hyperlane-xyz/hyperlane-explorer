@@ -92,14 +92,14 @@ function parseMessageStub(
   try {
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
-    const body = postgresByteaToString(m.message_body ?? '');
+    const body = m.message_body ? postgresByteaToString(m.message_body) : '0x';
 
     const isPiMsg =
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
       isPiChain(chainMetadataResolver, scrapedChains, m.destination_domain_id);
-
     return {
       status: getMessageStatus(m),
+      isProvisional: m.is_provisional ?? m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,
@@ -111,17 +111,18 @@ function parseMessageStub(
       destinationDomainId: m.destination_domain_id,
       body,
       origin: {
+        blockNumber: parseBlockNumber(m.origin_block_height),
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
-        from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
-        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
+        from: parseOptionalAddress(m.origin_tx_sender, originMetadata),
+        to: parseOptionalAddress(m.origin_tx_recipient, originMetadata),
       },
-      destination: m.is_delivered
+      destination: hasDestinationTransaction(m)
         ? {
-            timestamp: parseTimestampString(m.delivery_occurred_at!),
-            hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
-            from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
-            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
+            timestamp: parseTimestampString(m.delivery_occurred_at),
+            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
+            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
+            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -163,22 +164,25 @@ function parseMessage(
         maxFeePerGas: m.origin_tx_max_fee_per_gas,
         maxPriorityPerGas: m.origin_tx_max_priority_fee_per_gas,
       },
-      destination: stub.destination
+      destination: hasCompleteDestinationTransaction(m)
         ? {
-            ...stub.destination,
-            blockHash: postgresByteaToString(m.destination_block_hash!),
-            blockNumber: m.destination_block_height!,
-            mailbox: postgresByteaToAddress(m.destination_mailbox!, destinationMetadata),
-            nonce: m.destination_tx_nonce!,
-            gasLimit: m.destination_tx_gas_limit!,
-            gasPrice: m.destination_tx_gas_price!,
-            effectiveGasPrice: m.destination_tx_effective_gas_price!,
-            gasUsed: m.destination_tx_gas_used!,
-            cumulativeGasUsed: m.destination_tx_cumulative_gas_used!,
-            maxFeePerGas: m.destination_tx_max_fee_per_gas!,
-            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas!,
+            timestamp: parseTimestampString(m.delivery_occurred_at),
+            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
+            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
+            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
+            blockHash: postgresByteaToString(m.destination_block_hash),
+            blockNumber: m.destination_block_height,
+            mailbox: postgresByteaToAddress(m.destination_mailbox, destinationMetadata),
+            nonce: m.destination_tx_nonce,
+            gasLimit: m.destination_tx_gas_limit,
+            gasPrice: m.destination_tx_gas_price,
+            effectiveGasPrice: m.destination_tx_effective_gas_price,
+            gasUsed: m.destination_tx_gas_used,
+            cumulativeGasUsed: m.destination_tx_cumulative_gas_used,
+            maxFeePerGas: m.destination_tx_max_fee_per_gas,
+            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas,
           }
-        : undefined,
+        : stub.destination,
       totalGasAmount: m.total_gas_amount.toString(),
       totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
@@ -194,6 +198,60 @@ function parseTimestampString(t: string) {
   return new Date(asUtc).getTime();
 }
 
+export function parseBlockNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return value;
+  if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]*)$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry & {
+  delivery_occurred_at: string;
+  destination_tx_hash: string;
+} {
+  return Boolean(m.delivery_occurred_at && m.destination_tx_hash);
+}
+
+type CompleteDestinationEntry = MessageEntry & {
+  delivery_occurred_at: string;
+  destination_block_hash: string;
+  destination_block_height: number;
+  destination_tx_hash: string;
+  destination_tx_cumulative_gas_used: number;
+  destination_tx_effective_gas_price: number;
+  destination_tx_gas_limit: number;
+  destination_tx_gas_price: number;
+  destination_tx_gas_used: number;
+  destination_tx_max_fee_per_gas: number;
+  destination_tx_max_priority_fee_per_gas: number;
+  destination_tx_nonce: number;
+};
+
+function hasCompleteDestinationTransaction(m: MessageEntry): m is CompleteDestinationEntry {
+  return (
+    hasDestinationTransaction(m) &&
+    Boolean(m.destination_block_hash && m.destination_mailbox) &&
+    [
+      m.destination_block_height,
+      m.destination_tx_cumulative_gas_used,
+      m.destination_tx_effective_gas_price,
+      m.destination_tx_gas_limit,
+      m.destination_tx_gas_price,
+      m.destination_tx_gas_used,
+      m.destination_tx_max_fee_per_gas,
+      m.destination_tx_max_priority_fee_per_gas,
+      m.destination_tx_nonce,
+    ].every((value) => value !== null)
+  );
+}
+
+function parseOptionalAddress(
+  value: string | null,
+  metadata: Parameters<typeof postgresByteaToAddress>[1],
+) {
+  return value ? postgresByteaToAddress(value, metadata) : undefined;
+}
+
 function getMessageStatus(m: MessageEntry | MessageStubEntry) {
   if (m.is_delivered) {
     return MessageStatus.Delivered;
@@ -206,7 +264,7 @@ function getMessageStatus(m: MessageEntry | MessageStubEntry) {
 function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
   const map = new Map();
   for (const item of messages) {
-    map.set(item.id, item);
+    map.set(item.msgId.toLowerCase(), item);
   }
   return Array.from(map.values());
 }

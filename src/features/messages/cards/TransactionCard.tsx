@@ -35,6 +35,7 @@ export function DestinationTransactionCard({
   transaction,
   debugResult,
   isStatusFetching,
+  isOriginConfirming = false,
   isPiMsg,
   blur,
   message,
@@ -46,6 +47,7 @@ export function DestinationTransactionCard({
   transaction?: MessageTx | MessageTxStub;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
+  isOriginConfirming?: boolean;
   isPiMsg?: boolean;
   blur: boolean;
   message?: Message | MessageStub;
@@ -75,6 +77,27 @@ export function DestinationTransactionCard({
           />
         )}
       </>
+    );
+  } else if (status === MessageStatus.Delivered) {
+    content = (
+      <DeliveryStatus>
+        <div>Message delivered.</div>
+        <div className="mt-2 text-sm font-light text-gray-500">
+          Transaction details are still being indexed.
+        </div>
+      </DeliveryStatus>
+    );
+  } else if (isOriginConfirming && !pause) {
+    content = (
+      <DeliveryStatus>
+        <div>Waiting for origin confirmations.</div>
+        <div className="mt-2 text-sm font-light text-gray-500">
+          Delivery can proceed once the origin confirmation threshold is reached.
+        </div>
+        <div className="mt-6 flex items-center justify-center">
+          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        </div>
+      </DeliveryStatus>
     );
   } else if (!debugResult && isStatusFetching) {
     content = (

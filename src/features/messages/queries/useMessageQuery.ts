@@ -10,6 +10,7 @@ import { useVisibleInterval } from '../../../utils/useVisibleInterval';
 import { useScrapedChains, useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import {
   MessageIdentifierType,
+  PROVISIONAL_QUERY_KEY,
   type MessagePageCursor,
   buildMessageQuery,
   buildMessageSearchQuery,
@@ -26,9 +27,11 @@ import {
 import {
   type ExplorerConnectionState,
   useExplorerConnectionState,
+  useExplorerReconciliationRefresh,
   useLatestMessageRows,
   useMessageRowSubscription,
 } from './useLiveMessages';
+import { preserveMessageTransactionFields, useRetainedMessage } from './useRetainedMessage';
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
@@ -43,12 +46,19 @@ export function getMessagePage(
   rawIds: string[],
   queryLimit: number,
 ) {
-  const pageMessages = filteredMessages.slice(0, MESSAGE_PAGE_SIZE);
+  const rawIdIndexes = new Map(rawIds.map((id, index) => [id, index]));
+  const canonicalMessages = filteredMessages
+    .filter((message) => rawIdIndexes.has(message.id))
+    .sort((a, b) => rawIdIndexes.get(a.id)! - rawIdIndexes.get(b.id)!);
+  const canonicalPage = canonicalMessages.slice(0, MESSAGE_PAGE_SIZE);
+  const liveOnlyMessages = filteredMessages.filter((message) => !rawIdIndexes.has(message.id));
+  const pageMessages = [...canonicalPage, ...liveOnlyMessages];
+  const canonicalPageBoundary = canonicalPage.at(-1)?.id;
   const continuationCursor =
-    filteredMessages.length > MESSAGE_PAGE_SIZE
-      ? pageMessages[pageMessages.length - 1]?.id || null
+    canonicalMessages.length > MESSAGE_PAGE_SIZE
+      ? (canonicalPageBoundary ?? null)
       : rawIds.length === queryLimit
-        ? rawIds.at(-1) || null
+        ? (rawIds.at(-1) ?? null)
         : null;
   const messages = pageMessages.sort(
     (a, b) => b.origin.timestamp - a.origin.timestamp || compareMessageIdsDescending(a, b),
@@ -65,7 +75,13 @@ export function getRawMessageIds(
   queryLimit: number,
   ascending: boolean,
 ): string[] {
-  return [...new Set(Object.values(data ?? {}).flatMap((rows) => rows.map(({ id }) => String(id))))]
+  return [
+    ...new Set(
+      Object.entries(data ?? {})
+        .filter(([alias]) => alias !== PROVISIONAL_QUERY_KEY)
+        .flatMap(([, rows]) => rows.map(({ id }) => String(id))),
+    ),
+  ]
     .sort((a, b) => {
       const aId = BigInt(a);
       const bId = BigInt(b);
@@ -97,12 +113,19 @@ export function shouldUseMessageQueryCache(connectionState: ExplorerConnectionSt
   return connectionState !== 'connected';
 }
 
-export function shouldPollMessageSearch(
+export function shouldPollMessageSearch(isFirstPage = true) {
+  // The websocket is an edge-triggered overlay, not a complete message log.
+  // Reconcile the first page in case an event is delayed, dropped, or missed
+  // while connecting.
+  return isFirstPage;
+}
+
+export function shouldPollMessageDetails(
   isLiveConnected: boolean,
-  hasFilters: boolean,
-  isFirstPage = true,
+  isDelivered: boolean,
+  isProvisional: boolean,
 ) {
-  return isFirstPage && (!isLiveConnected || hasFilters);
+  return isProvisional || (!isLiveConnected && !isDelivered);
 }
 
 export function shouldResetToFirstMessagePage(
@@ -172,19 +195,17 @@ export function messageMatchesSearchFilters(
 export function getMessageCandidates(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
-  queryLimit: number,
   filters: MessageSearchFilters,
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
   ascending = false,
+  orderBySendTime = true,
 ): MessageStub[] {
-  return mergeMessageLists(liveMessages, queryMessages, ascending)
-    .filter(
-      (message) =>
-        messageMatchesSearchFilters(message, filters) &&
-        (!warpRouteDomainAddresses.length ||
-          messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
-    )
-    .slice(0, queryLimit);
+  return mergeMessageLists(liveMessages, queryMessages, ascending, orderBySendTime).filter(
+    (message) =>
+      messageMatchesSearchFilters(message, filters) &&
+      (!warpRouteDomainAddresses.length ||
+        messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
+  );
 }
 
 function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
@@ -301,15 +322,6 @@ export function useMessageSearchQuery(
 
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : MESSAGE_PAGE_SIZE + 1;
   const liveSearchEnabled = isSearchMetadataReady && isValidInput;
-  const hasFilters = !!(
-    hasInput ||
-    originChainNameFilter ||
-    destinationChainNameFilter ||
-    startTimeFilter ||
-    endTimeFilter ||
-    statusFilter !== 'all' ||
-    warpRouteAddresses.length > 0
-  );
   const searchDomainIds = useMemo(() => {
     const selectedDomainIds = [
       originDomainId,
@@ -330,7 +342,8 @@ export function useMessageSearchQuery(
     dbStatusFilter,
     warpAddresses,
     {
-      cached: shouldUseMessageQueryCache(explorerConnectionState),
+      // A reload must not reuse a snapshot from before a provisional event.
+      cached: !!cursorValue && shouldUseMessageQueryCache(explorerConnectionState),
       ...cursor,
     },
   );
@@ -357,11 +370,12 @@ export function useMessageSearchQuery(
     }
     reexecuteQuery({ requestPolicy: 'network-only' });
   }, [isSearchMetadataReady, isValidInput, query, reexecuteQuery, retrySearchMetadata]);
-  const { connected: isLiveConnected, messageRows: liveMessageRows } = useLatestMessageRows(
+  const { messageRows: liveMessageRows } = useLatestMessageRows(
     liveSearchEnabled && !cursorValue,
     searchDomainIds,
     refresh,
   );
+  useExplorerReconciliationRefresh(liveSearchEnabled && !!cursorValue, refresh);
 
   // Parse results
   const unfilteredMessageList = useMemo(
@@ -385,14 +399,13 @@ export function useMessageSearchQuery(
         .filter((message): message is MessageStub => !!message),
     [chainMetadataResolver, scrapedChains, liveMessageRows],
   );
-  // Filter before limiting so unrelated live rows cannot evict query matches.
+  // Filter before pagination so unrelated live rows cannot evict query matches.
   // Raw query metadata controls cursor continuation.
   const candidateMessageList = useMemo(
     () =>
       getMessageCandidates(
         liveMessageList,
         unfilteredMessageList,
-        queryLimit,
         {
           searchInput: sanitizedInput,
           originDomainId: isValidOrigin ? originDomainId : null,
@@ -403,6 +416,7 @@ export function useMessageSearchQuery(
         },
         warpRouteDomainAddresses,
         isBeforeQuery,
+        !cursorValue,
       ),
     [
       destDomainId,
@@ -411,8 +425,8 @@ export function useMessageSearchQuery(
       isValidDestination,
       isValidOrigin,
       liveMessageList,
+      cursorValue,
       originDomainId,
-      queryLimit,
       sanitizedInput,
       startTimeFilter,
       statusFilter,
@@ -438,8 +452,8 @@ export function useMessageSearchQuery(
   );
 
   const poll = useCallback(() => {
-    if (shouldPollMessageSearch(isLiveConnected, hasFilters, !cursorValue)) refresh();
-  }, [cursorValue, hasFilters, isLiveConnected, refresh]);
+    if (shouldPollMessageSearch(!cursorValue)) refresh();
+  }, [cursorValue, refresh]);
   useVisibleInterval(poll, SEARCH_AUTO_REFRESH_DELAY);
 
   return {
@@ -502,12 +516,18 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
         : null,
     [chainMetadataResolver, scrapedChains, liveMessageRow],
   );
-  const message = liveMessage ?? messageList[0] ?? null;
+  const selectedMessage = useMemo(
+    () => selectLiveMessage(liveMessage, messageList[0] ?? null),
+    [liveMessage, messageList],
+  );
+  const message = useRetainedMessage(selectedMessage);
   const isMessageFound = !!message;
   const isDelivered = message?.status === MessageStatus.Delivered;
   const poll = useCallback(() => {
-    if (!isLiveConnected && !isDelivered) refresh();
-  }, [isDelivered, isLiveConnected, refresh]);
+    if (shouldPollMessageDetails(isLiveConnected, isDelivered, !!message?.isProvisional)) {
+      refresh();
+    }
+  }, [isDelivered, isLiveConnected, message?.isProvisional, refresh]);
   useVisibleInterval(poll, MSG_AUTO_REFRESH_DELAY);
 
   return {
@@ -519,16 +539,42 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
   };
 }
 
+export function selectLiveMessage<M extends MessageStub>(
+  liveMessage: M | null,
+  canonicalMessage: M | null,
+) {
+  if (!liveMessage) return canonicalMessage;
+  if (!canonicalMessage) return liveMessage;
+  return liveMessage.status !== canonicalMessage.status
+    ? preserveMessageTransactionFields(liveMessage, canonicalMessage)
+    : preserveMessageTransactionFields(canonicalMessage, liveMessage);
+}
+
 function mergeMessageLists(
   liveMessages: MessageStub[],
   queryMessages: MessageStub[],
   ascending = false,
+  orderBySendTime = true,
 ): MessageStub[] {
   const messagesById = new Map(
     queryMessages.map((message) => [message.msgId.toLowerCase(), message]),
   );
-  liveMessages.forEach((message) => messagesById.set(message.msgId.toLowerCase(), message));
-  return [...messagesById.values()].sort((a, b) =>
-    ascending ? compareMessageIdsDescending(b, a) : compareMessageIdsDescending(a, b),
-  );
+  liveMessages.forEach((message) => {
+    const key = message.msgId.toLowerCase();
+    const canonicalMessage = messagesById.get(key);
+    messagesById.set(
+      key,
+      canonicalMessage
+        ? message.status === canonicalMessage.status
+          ? canonicalMessage
+          : { ...message, id: canonicalMessage.id }
+        : message,
+    );
+  });
+  return [...messagesById.values()].sort((a, b) => {
+    if (orderBySendTime) {
+      return b.origin.timestamp - a.origin.timestamp || compareMessageIdsDescending(a, b);
+    }
+    return ascending ? compareMessageIdsDescending(b, a) : compareMessageIdsDescending(a, b);
+  });
 }

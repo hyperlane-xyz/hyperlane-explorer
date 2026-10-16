@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 
+import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import { config } from '../../../consts/config';
 import { logger } from '../../../utils/logger';
 import type { MessageEntry } from './fragments';
@@ -16,20 +17,45 @@ import type { MessageEntry } from './fragments';
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 65_000;
-const MAX_RETAINED_MESSAGES = 500;
+const EMPTY_DOMAINS: number[] = [];
 
-type MessageUpsert = { data: MessageEntry; type: 'message_upsert' };
-type MessageListener = (message: MessageEntry) => void;
+type MessageUpsert = {
+  confirmations?: number;
+  data: MessageEntry;
+  domain?: number;
+  height?: string;
+  type: 'message_upsert';
+};
+export type Rollback = {
+  confirmations: number;
+  domain: number;
+  fromHeight: string;
+  toHeight: string;
+  type: 'rollback';
+};
+export type ExplorerBlock = {
+  type: 'block';
+  domain: number;
+  height: string;
+  hash: string;
+  headHeight: string;
+};
+type MessageListener = (message: MessageEntry | null) => void;
 
 export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected' | 'unavailable';
 
 export interface ExplorerEventsContextValue {
   connectionState: ExplorerConnectionState;
   messageRows: MessageEntry[];
+  rollbackVersion: number;
   subscribe: (messageId: string, listener: MessageListener) => () => void;
 }
 
 export const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
+// Block updates should not rerender message-query subscribers.
+export const ExplorerBlockHeadsContext = createContext<ReadonlyMap<number, ExplorerBlock>>(
+  new Map(),
+);
 
 export function shouldEnableExplorerEvents(pathName: string) {
   return (
@@ -39,11 +65,19 @@ export function shouldEnableExplorerEvents(pathName: string) {
 
 export function ExplorerEventsProvider({
   children,
+  domains = EMPTY_DOMAINS,
   enabled = true,
-}: PropsWithChildren<{ enabled?: boolean }>) {
+}: PropsWithChildren<{ domains?: number[]; enabled?: boolean }>) {
   const [connectionState, setConnectionState] = useState<ExplorerConnectionState>('unavailable');
   const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
+  const [rollbackVersion, setRollbackVersion] = useState(0);
+  const [blockHeads, setBlockHeads] = useState<ReadonlyMap<number, ExplorerBlock>>(new Map());
+  const { domainIds, invalidDomainIds } = useMemo(
+    () => partitionExplorerDomains(domains),
+    [domains],
+  );
   const listenersRef = useRef<Map<string, Set<MessageListener>>>(new Map());
+  const messageRowsRef = useRef<MessageEntry[]>([]);
 
   const subscribe = useCallback((messageId: string, listener: MessageListener) => {
     const normalizedId = normalizeId(messageId);
@@ -59,8 +93,16 @@ export function ExplorerEventsProvider({
   }, []);
 
   useEffect(() => {
+    if (invalidDomainIds.length) {
+      logger.error('Ignoring invalid Explorer websocket domains', invalidDomainIds);
+    }
+  }, [invalidDomainIds]);
+
+  useEffect(() => {
+    setBlockHeads(new Map());
     if (!enabled || !config.wsUrl) {
       setConnectionState('unavailable');
+      messageRowsRef.current = [];
       setMessageRows([]);
       return;
     }
@@ -75,6 +117,8 @@ export function ExplorerEventsProvider({
     const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
       setConnectionState('disconnected');
+      setBlockHeads(new Map());
+      messageRowsRef.current = [];
       setMessageRows([]);
       reconnectTimer = setTimeout(() => {
         reconnectTimer = undefined;
@@ -101,7 +145,7 @@ export function ExplorerEventsProvider({
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(config.wsUrl);
+        socket = new WebSocket(withConfirmations(config.wsUrl, domainIds));
       } catch (error) {
         logger.error('Could not create Explorer live message websocket', error);
         scheduleReconnect();
@@ -117,17 +161,43 @@ export function ExplorerEventsProvider({
         if (message?.type === 'ready') {
           reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
           setConnectionState('connected');
+        } else if (message?.type === 'block') {
+          setBlockHeads((heads) => new Map(heads).set(message.domain, message));
         } else if (message?.type === 'message_upsert') {
-          const normalizedId = normalizeId(message.data.msg_id);
+          const messageRow = {
+            ...message.data,
+            live_confirmations: message.confirmations,
+            live_domain: message.domain,
+            live_height: message.height,
+          };
+          const normalizedId = normalizeId(messageRow.msg_id);
           if (normalizedId) {
-            listenersRef.current.get(normalizedId)?.forEach((listener) => listener(message.data));
+            listenersRef.current.get(normalizedId)?.forEach((listener) => listener(messageRow));
           }
-          setMessageRows((rows) =>
-            [message.data, ...rows.filter((row) => row.msg_id !== message.data.msg_id)].slice(
-              0,
-              MAX_RETAINED_MESSAGES,
-            ),
+          const nextRows = [
+            messageRow,
+            ...messageRowsRef.current.filter((row) => row.msg_id !== messageRow.msg_id),
+          ].slice(0, LIVE_MESSAGE_LIMIT);
+          messageRowsRef.current = nextRows;
+          setMessageRows(nextRows);
+        } else if (message?.type === 'rollback') {
+          const rows = messageRowsRef.current;
+          const nextRows = reconcileMessageRowsAfterRollback(rows, message);
+          if (nextRows === rows) return;
+          const nextRowsById = new Map(
+            nextRows.map((row) => [normalizeId(row.msg_id), row] as const),
           );
+          rows.forEach((row) => {
+            const normalizedId = normalizeId(row.msg_id);
+            const nextRow = nextRowsById.get(normalizedId);
+            if (!normalizedId || nextRow === row) return;
+            listenersRef.current
+              .get(normalizedId)
+              ?.forEach((listener) => listener(nextRow ?? null));
+          });
+          messageRowsRef.current = nextRows;
+          setMessageRows(nextRows);
+          setRollbackVersion((version) => version + 1);
         }
       };
       socket.onerror = () => {
@@ -150,56 +220,195 @@ export function ExplorerEventsProvider({
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };
-  }, [enabled]);
+  }, [domainIds, enabled]);
 
   const value = useMemo(
-    () => ({ connectionState, messageRows, subscribe }),
-    [connectionState, messageRows, subscribe],
+    () => ({ connectionState, messageRows, rollbackVersion, subscribe }),
+    [connectionState, messageRows, rollbackVersion, subscribe],
   );
 
-  return createElement(ExplorerEventsContext.Provider, { value }, children);
+  return createElement(
+    ExplorerEventsContext.Provider,
+    { value },
+    createElement(ExplorerBlockHeadsContext.Provider, { value: blockHeads }, children),
+  );
 }
 
 export function parseExplorerEvent(
   data: unknown,
-): MessageUpsert | { type: 'heartbeat' | 'ready' } | null {
+): MessageUpsert | Rollback | ExplorerBlock | { type: 'heartbeat' | 'ready' } | null {
   if (typeof data !== 'string') return null;
   try {
-    const message = JSON.parse(data) as { data?: unknown; type?: unknown };
+    const message = JSON.parse(data) as Record<string, unknown>;
     if (message.type === 'ready' || message.type === 'heartbeat') return { type: message.type };
+    if (message.type === 'block') {
+      if (
+        typeof message.domain !== 'number' ||
+        !Number.isInteger(message.domain) ||
+        message.domain < 0 ||
+        message.domain > 0xffffffff ||
+        !isHeight(message.height) ||
+        !isHeight(message.headHeight) ||
+        !Number.isSafeInteger(Number(message.headHeight)) ||
+        BigInt(message.headHeight) < BigInt(message.height) ||
+        typeof message.hash !== 'string' ||
+        !/^0x[\da-fA-F]{64}$/.test(message.hash)
+      ) {
+        logger.warn('Ignoring invalid Explorer block payload');
+        return null;
+      }
+      return {
+        type: 'block',
+        domain: message.domain,
+        height: message.height,
+        hash: message.hash,
+        headHeight: message.headHeight,
+      };
+    }
+    if (message.type === 'rollback') {
+      if (!isRollback(message)) {
+        logger.warn('Ignoring invalid Explorer rollback payload');
+        return null;
+      }
+      return message;
+    }
     if (message.type !== 'message_upsert') return null;
-    if (!isMessageEntry(message.data)) {
+    if (!isMessageEntry(message.data) || !isMessageUpsertEnvelope(message)) {
       logger.warn('Ignoring invalid Explorer live message payload');
       return null;
     }
-    return { data: message.data, type: 'message_upsert' };
+    return {
+      ...(message.confirmations === undefined ? {} : { confirmations: message.confirmations }),
+      data: message.data,
+      ...(message.domain === undefined ? {} : { domain: message.domain }),
+      ...(message.height === undefined ? {} : { height: message.height }),
+      type: 'message_upsert',
+    };
   } catch (error) {
     logger.warn('Ignoring invalid Explorer live message event', error);
     return null;
   }
 }
 
-function isMessageEntry(value: unknown): value is MessageEntry {
-  if (!value || typeof value !== 'object') return false;
-  const entry = value as Record<string, unknown>;
-  const requiredStrings = [
-    'msg_id',
-    'sender',
-    'recipient',
-    'send_occurred_at',
-    'origin_tx_hash',
-    'origin_tx_sender',
-    'origin_tx_recipient',
-  ];
+function isMessageUpsertEnvelope(value: Record<string, unknown>): value is Record<
+  string,
+  unknown
+> & {
+  confirmations?: number;
+  domain?: number;
+  height?: string;
+} {
   return (
-    requiredStrings.every((field) => typeof entry[field] === 'string') &&
-    (typeof entry.id === 'string' || typeof entry.id === 'number') &&
-    typeof entry.nonce === 'number' &&
-    typeof entry.origin_domain_id === 'number' &&
-    typeof entry.destination_domain_id === 'number' &&
-    typeof entry.is_delivered === 'boolean' &&
-    !Number.isNaN(Date.parse(entry.send_occurred_at as string))
+    (value.confirmations === undefined ||
+      (typeof value.confirmations === 'number' &&
+        Number.isSafeInteger(value.confirmations) &&
+        value.confirmations >= 0)) &&
+    (value.domain === undefined ||
+      (typeof value.domain === 'number' &&
+        Number.isSafeInteger(value.domain) &&
+        value.domain >= 0)) &&
+    (value.height === undefined || isHeight(value.height))
   );
+}
+
+export function withConfirmations(wsUrl: string, domains: number[]) {
+  const url = new URL(wsUrl);
+  url.searchParams.set('blocks', 'true');
+  if (domains.length) {
+    url.searchParams.set('confirmations', '0');
+    url.searchParams.set('domains', domains.join(','));
+  }
+  return url.toString();
+}
+
+export function partitionExplorerDomains(domains: number[]) {
+  const uniqueDomains = [...new Set(domains)];
+  return {
+    domainIds: uniqueDomains
+      .filter((domain) => Number.isSafeInteger(domain) && domain >= 0 && domain <= 0x7fffffff)
+      .sort((a, b) => a - b),
+    invalidDomainIds: uniqueDomains.filter(
+      (domain) => !Number.isSafeInteger(domain) || domain < 0 || domain > 0x7fffffff,
+    ),
+  };
+}
+
+export function reconcileMessageRowsAfterRollback(messageRows: MessageEntry[], rollback: Rollback) {
+  const toHeight = BigInt(rollback.toHeight);
+  let changed = false;
+  const nextRows = messageRows.flatMap((row) => {
+    if (
+      row.origin_domain_id === rollback.domain &&
+      isHeightAbove(row.origin_block_height, toHeight)
+    ) {
+      changed = true;
+      return [];
+    }
+    if (
+      row.destination_domain_id !== rollback.domain ||
+      !isHeightAbove(row.destination_block_height, toHeight)
+    ) {
+      return [row];
+    }
+    changed = true;
+    return [
+      {
+        ...row,
+        delivery_occurred_at: null,
+        destination_tx_hash: null,
+        destination_tx_recipient: null,
+        destination_tx_sender: null,
+        is_delivered: false,
+      },
+    ];
+  });
+  return changed ? nextRows : messageRows;
+}
+
+function isHeightAbove(value: unknown, height: bigint) {
+  return (
+    (typeof value === 'number' && Number.isSafeInteger(value) && BigInt(value) > height) ||
+    (typeof value === 'string' && isHeight(value) && BigInt(value) > height)
+  );
+}
+
+function isRollback(value: unknown): value is Rollback {
+  if (!isRecord(value)) return false;
+  const domain = value.domain;
+  return (
+    value.confirmations === 0 &&
+    typeof domain === 'number' &&
+    Number.isSafeInteger(domain) &&
+    domain >= 0 &&
+    isHeight(value.fromHeight) &&
+    isHeight(value.toHeight) &&
+    BigInt(value.toHeight) < BigInt(value.fromHeight)
+  );
+}
+
+function isHeight(value: unknown): value is string {
+  return typeof value === 'string' && /^(?:0|[1-9][0-9]*)$/.test(value);
+}
+
+function isMessageEntry(value: unknown): value is MessageEntry {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.msg_id === 'string' &&
+    typeof value.sender === 'string' &&
+    typeof value.recipient === 'string' &&
+    typeof value.send_occurred_at === 'string' &&
+    typeof value.origin_tx_hash === 'string' &&
+    (typeof value.id === 'string' || typeof value.id === 'number') &&
+    typeof value.nonce === 'number' &&
+    typeof value.origin_domain_id === 'number' &&
+    typeof value.destination_domain_id === 'number' &&
+    typeof value.is_delivered === 'boolean' &&
+    !Number.isNaN(Date.parse(value.send_occurred_at))
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
 }
 
 function normalizeId(value: unknown) {
