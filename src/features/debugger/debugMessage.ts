@@ -21,7 +21,6 @@ import {
 // https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/scripts/debug-message.ts
 import { BigNumber, utils as ethersUtils, providers } from 'ethers';
 
-import { debugIgnoredChains } from '../../consts/config';
 import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
@@ -181,17 +180,16 @@ async function debugMessageDelivery(
     return { gasEstimate: deliveryGasEst.toString(), calldataDetails };
   } catch (err: any) {
     logger.info('Estimate gas call failed:', err);
-    const errorReason = extractReasonString(err);
+    const { reason: errorReason, isKnownRevert } = extractReasonString(err);
     logger.debug(errorReason);
 
-    if (debugIgnoredChains.includes(destName)) {
-      return {
-        status: null,
-        description: '',
-        calldataDetails,
-      };
-    }
-
+    // When the error carries no recognizable ethers revert reason, it may be a
+    // gas-estimation quirk (e.g. ZKSync-era chains like Treasure) rather than a
+    // genuine `handle` revert. The former `debugIgnoredChains` blacklist hid
+    // those *and* every real failure. We no longer blacklist the chain; instead
+    // we still run the specific checks below (proxy / bytecode / ICA) so normal
+    // EVM chains keep their precise diagnostics, and only surface the
+    // "unable to verify" caveat as the final fallback for unrecognized errors.
     const proxyImplementationContract = await tryGetProxyImplementationContract(
       destProvider,
       recipient,
@@ -224,6 +222,19 @@ async function debugMessageDelivery(
         description: `ICA call ${icaDebugResult.failedCallIndex + 1} of ${icaDebugResult.totalCalls} cannot be executed. ${icaDebugResult.errorReason}`,
         calldataDetails,
         icaDetails: icaDebugResult,
+      };
+    }
+
+    if (!isKnownRevert) {
+      // No recognizable revert reason and none of the specific checks above
+      // applied: the gas-estimation call was rejected by the chain in a way we
+      // can't attribute to a delivery failure (a known limitation on some
+      // ZKSync-based chains). Surface it explicitly rather than silently
+      // reporting success or hiding the chain.
+      return {
+        status: MessageDebugStatus.HandleCallFailure,
+        description: `Unable to verify delivery on ${destName}: the gas estimation call was rejected by the chain (a known limitation on some ZKSync-based chains — not necessarily a delivery failure). ${errorReason}`,
+        calldataDetails,
       };
     }
 
@@ -490,22 +501,22 @@ export async function tryCheckIcaCall(
     logger.debug(`No call error found for call from ${icaAddress} to ${destinationAddress}`);
     return null;
   } catch (err) {
-    const errorReason = extractReasonString(err);
-    logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, errorReason);
-    return errorReason;
+    const { reason } = extractReasonString(err);
+    logger.debug(`Call error found from ${icaAddress} to ${destinationAddress}`, reason);
+    return reason;
   }
 }
 
-function extractReasonString(rawError: any) {
+export function extractReasonString(rawError: any): { reason: string; isKnownRevert: boolean } {
   const errorString = errorToString(rawError, 1000);
   const ethersReasonRegex = /reason="(.*?)"/gm;
   const matches = ethersReasonRegex.exec(errorString);
   if (matches && matches.length >= 2) {
-    return `Failure reason: ${matches[1]}`;
+    return { reason: `Failure reason: ${matches[1]}`, isKnownRevert: true };
   } else {
     logger.warn('Cannot extract reason string in tx error msg:', errorString);
     // TODO handle more cases here as needed
-    return `Failure reason: ${trimToLength(errorString, 250)}`;
+    return { reason: `Failure reason: ${trimToLength(errorString, 250)}`, isKnownRevert: false };
   }
 }
 
