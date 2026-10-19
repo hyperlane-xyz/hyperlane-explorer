@@ -13,6 +13,7 @@ import {
   formatOtherPayments,
   formatRawUnits,
   formatUsd,
+  getDeliveryCostDecimals,
   getOtherPayments,
   hasNonNativePayments,
   NATIVE_ASSET_ID,
@@ -65,6 +66,7 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
   const destDecimals = destMetadata?.nativeToken?.decimals || 18;
   const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
+  const deliveryCostDecimals = getDeliveryCostDecimals(destMetadata?.protocol, destDecimals);
 
   const { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr } =
     useMemo(() => {
@@ -146,12 +148,14 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       ? new BigNumber(deliveryGasUsed).times(deliveryEffectiveGasPrice)
       : null;
   const deliveryCostFormatted = !isNullish(deliveryCostWei)
-    ? fromWei(deliveryCostWei.toString(), destDecimals).toString()
+    ? fromWei(deliveryCostWei.toString(), deliveryCostDecimals).toString()
     : null;
   const deliveryCostUsdFormatted =
     !isNullish(deliveryCostWei) && !isNullish(destUsdPrice)
       ? formatUsd(
-          new BigNumber(fromWei(deliveryCostWei.toString(), destDecimals)).times(destUsdPrice),
+          new BigNumber(fromWei(deliveryCostWei.toString(), deliveryCostDecimals)).times(
+            destUsdPrice,
+          ),
         )
       : null;
 
