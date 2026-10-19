@@ -1,10 +1,12 @@
 import { toTitleCase, trimToLength } from '@hyperlane-xyz/utils';
 import { ChevronIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
+import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
@@ -16,6 +18,10 @@ import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
 import { WarpTransferDetailsCard } from '../messages/cards/WarpTransferDetailsCard';
 import { isIcaMessage } from '../messages/ica';
 import { parseWarpRouteMessageDetails } from '../messages/utils';
+
+const AeroVoterDetailsCard = dynamic(() =>
+  import('../messages/cards/AeroVoterDetailsCard').then((mod) => mod.AeroVoterDetailsCard),
+);
 
 interface Props {
   message: Message;
@@ -174,6 +180,9 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
           {/* Content Details - only show if no decoded content (warp/ICA) */}
           {messageType === 'generic' && (
             <ContentDetailsCard message={messageWithDeliveryStatus} blur={false} />
+          )}
+          {isAeroVoterMessage(messageWithDeliveryStatus) && (
+            <AeroVoterDetailsCard message={messageWithDeliveryStatus} blur={false} />
           )}
         </div>
       )}
