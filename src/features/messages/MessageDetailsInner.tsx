@@ -28,6 +28,9 @@ const ContentDetailsCard = dynamic(
   () => import('./cards/ContentDetailsCard').then((mod) => mod.ContentDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
 );
+const AeroVoterDetailsCard = dynamic(() =>
+  import('./cards/AeroVoterDetailsCard').then((mod) => mod.AeroVoterDetailsCard),
+);
 const IsmDetailsCard = dynamic(
   () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
   {
@@ -227,6 +230,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           blur={blur}
         />
         <ContentDetailsCard message={message} blur={blur} />
+        <AeroVoterDetailsCard message={message} blur={blur} />
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}

@@ -10,6 +10,7 @@ import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
 import { getChainDisplayName } from '../chains/utils';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { AeroVoterDetailsCard } from '../messages/cards/AeroVoterDetailsCard';
 import { ContentDetailsCard } from '../messages/cards/ContentDetailsCard';
 import { IcaDetailsCard } from '../messages/cards/IcaDetailsCard';
 import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
@@ -175,6 +176,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
           {messageType === 'generic' && (
             <ContentDetailsCard message={messageWithDeliveryStatus} blur={false} />
           )}
+          <AeroVoterDetailsCard message={messageWithDeliveryStatus} blur={false} />
         </div>
       )}
     </div>
