@@ -50,7 +50,7 @@ export function AeroVoterDetailsCard({
             />
           </div>
           <p className="text-xs text-gray-500">
-            Amounts are shown in raw base units. Times below are Unix seconds.
+            Amounts are shown in raw base units. Copy timestamps to get Unix seconds.
           </p>
           <DecodedFields fields={decoded.payload} />
           <details>
@@ -82,7 +82,18 @@ function DecodedFields({ fields }: { fields: AeroVoterFields }) {
             <KeyValueRow
               label={`${fieldLabels[name] ?? name}:`}
               labelWidth="w-36 sm:w-48"
-              display={typeof value === 'boolean' ? (value ? 'True' : 'False') : value}
+              display={
+                typeof value === 'boolean'
+                  ? value
+                    ? 'True'
+                    : 'False'
+                  : name === 'stakeEnd' && fields.isPermanent === true
+                    ? 'Permanent'
+                    : name === 'expiry' || name === 'stakeEnd'
+                      ? getDateTimeString(Number(value) * 1000)
+                      : value
+              }
+              copyValue={String(value)}
               showCopy
               allowZeroish
             />

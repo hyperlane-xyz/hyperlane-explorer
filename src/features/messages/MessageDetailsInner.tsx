@@ -6,6 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react
 import { toast } from 'react-toastify';
 
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
+import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
@@ -230,7 +231,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
           blur={blur}
         />
         <ContentDetailsCard message={message} blur={blur} />
-        <AeroVoterDetailsCard message={message} blur={blur} />
+        {isAeroVoterMessage(message) && <AeroVoterDetailsCard message={message} blur={blur} />}
         <GasDetailsCard
           message={message}
           igpPayments={debugResult?.gasDetails?.contractToPayments}

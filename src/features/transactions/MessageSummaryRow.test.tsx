@@ -32,6 +32,7 @@ jest.mock('../chains/utils', () => ({
 jest.mock('../deliveryStatus/useMessageDeliveryStatus', () => ({
   useMessageDeliveryStatus: jest.fn(),
 }));
+jest.mock('../messages/cards/AeroVoterDetailsCard', () => ({ AeroVoterDetailsCard: () => null }));
 jest.mock('../messages/cards/ContentDetailsCard', () => ({ ContentDetailsCard: () => null }));
 jest.mock('../messages/cards/IcaDetailsCard', () => ({
   IcaDetailsCard: ({

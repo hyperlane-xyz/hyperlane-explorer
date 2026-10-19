@@ -2,6 +2,7 @@ import { AbiCoder } from '@ethersproject/abi';
 import { BigNumber } from '@ethersproject/bignumber';
 import { z } from 'zod';
 
+import { AERO_VOTER_ROOT_DOMAIN, isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { logger } from '../../utils/logger';
 
 export enum AeroVoterMessageType {
@@ -35,20 +36,6 @@ export interface AeroVoterMessage {
   recipient: string;
   body: string;
 }
-
-// Aero V3 staging voter adapters, matching the relayer's metadex_staging topology.
-const routes = [
-  {
-    leafDomain: 10,
-    rootAdapter: '504e81562dafe4efe87a4b3025f805eb0e9c5c15',
-    leafAdapter: '1733cd126a227066963e9b636ad49898d1224741',
-  },
-  {
-    leafDomain: 42161,
-    rootAdapter: 'afb6d2686b85c795e1b9324d4cbbed269d7f01a8',
-    leafAdapter: 'aaa49bd49a9be1eae5534eb35fc2c346afd7ca49',
-  },
-];
 
 const uint = z
   .union([z.instanceof(BigNumber), z.number().int().nonnegative()])
@@ -136,22 +123,6 @@ const definitions = {
 const messageTypeSchema = z.enum(AeroVoterMessageType);
 const coder = new AbiCoder();
 
-export function isAeroVoterMessage(message: AeroVoterMessage) {
-  const sender = normalizeAdapter(message.sender);
-  const recipient = normalizeAdapter(message.recipient);
-  return routes.some(
-    (route) =>
-      (message.originDomainId === 8453 &&
-        message.destinationDomainId === route.leafDomain &&
-        sender === route.rootAdapter &&
-        recipient === route.leafAdapter) ||
-      (message.originDomainId === route.leafDomain &&
-        message.destinationDomainId === 8453 &&
-        sender === route.leafAdapter &&
-        recipient === route.rootAdapter),
-  );
-}
-
 export function decodeAeroVoterMessage(
   message: AeroVoterMessage,
 ): DecodedAeroVoterMessage | { error: string } | null {
@@ -167,7 +138,7 @@ export function decodeAeroVoterMessage(
     const isReturn =
       messageType === AeroVoterMessageType.Redeem ||
       messageType === AeroVoterMessageType.Deallocate;
-    if (isReturn !== (message.destinationDomainId === 8453)) {
+    if (isReturn !== (message.destinationDomainId === AERO_VOTER_ROOT_DOMAIN)) {
       throw new Error('Voter message type does not match the adapter direction');
     }
 
@@ -189,14 +160,9 @@ export function decodeAeroVoterMessage(
   } catch (error) {
     logger.warn('Unable to decode Aero V3 voter payload', error);
     return {
-      error: 'Unable to decode this Aero V3 voter payload. Its raw body is available below.',
+      error: 'Unable to decode this Aero V3 voter payload. View its raw body in Message Details.',
     };
   }
-}
-
-function normalizeAdapter(address: string) {
-  const hex = address.toLowerCase().replace(/^0x/, '');
-  return hex.length === 64 && hex.startsWith('0'.repeat(24)) ? hex.slice(24) : hex;
 }
 
 // Ethers tuples are arrays with named properties; Zod objects consume the named fields.
