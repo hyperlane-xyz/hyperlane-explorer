@@ -1,3 +1,4 @@
+import { chainAddresses } from '@hyperlane-xyz/registry';
 import { ProtocolType, addressToBytes32 } from '@hyperlane-xyz/utils';
 import { QueryClient, useQueries, useQuery } from '@tanstack/react-query';
 import { providers, utils } from 'ethers';
@@ -149,6 +150,13 @@ describe('ICA router recognition', () => {
         ],
       }),
     );
+  });
+
+  it('classifies bundled snapshot routers before the runtime registry loads', () => {
+    expect(icaRoutersQueryOptions(mockRegistry, 'base').placeholderData).toEqual([
+      chainAddresses.base.interchainAccountRouter,
+    ]);
+    expect(icaRoutersQueryOptions(mockRegistry, undefined).placeholderData).toBeUndefined();
   });
 
   it('separates registry cache entries by source', () => {

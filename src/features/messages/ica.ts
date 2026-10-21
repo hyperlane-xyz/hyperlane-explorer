@@ -56,16 +56,21 @@ export function getIcaAccountConfig(
     : decoded;
 }
 
+const bundledChainAddresses: Record<string, Record<string, unknown> | undefined> = chainAddresses;
+
+function getIcaRouters(addresses: Record<string, unknown> | null | undefined): string[] {
+  return [addresses?.interchainAccountRouter, addresses?.interchainAccountRouterV3].filter(
+    (address): address is string => typeof address === 'string',
+  );
+}
+
 // Resolve both generations from the configured runtime registry. The published
 // registry snapshot can predate V3 deployments.
 export async function fetchIcaRouters(
   registry: Pick<IRegistry, 'getChainAddresses'>,
   chainName: string,
 ): Promise<string[]> {
-  const addresses = await registry.getChainAddresses(chainName);
-  return [addresses?.interchainAccountRouter, addresses?.interchainAccountRouterV3].filter(
-    (address): address is string => typeof address === 'string',
-  );
+  return getIcaRouters(await registry.getChainAddresses(chainName));
 }
 
 export function icaRoutersQueryOptions(
@@ -75,6 +80,8 @@ export function icaRoutersQueryOptions(
   return queryOptions({
     queryKey: ['icaRouters', registry.getUri(), chainName],
     queryFn: () => (chainName ? fetchIcaRouters(registry, chainName) : []),
+    // Classify snapshot routers on first render; the runtime fetch adds newer ones.
+    placeholderData: chainName ? getIcaRouters(bundledChainAddresses[chainName]) : undefined,
     enabled: !!chainName,
     staleTime: 5 * 60 * 1000,
   });

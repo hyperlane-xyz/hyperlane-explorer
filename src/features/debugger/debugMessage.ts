@@ -428,10 +428,18 @@ async function tryDebugIcaMsg(
   if (!isEVMLike(multiProvider.tryGetProtocol(destinationDomainId) ?? ProtocolType.Unknown)) {
     return null;
   }
-  const [originRouters, destinationRouters] = await Promise.all([
-    fetchIcaRouters(registry, multiProvider.getChainName(originDomainId)),
-    fetchIcaRouters(registry, multiProvider.getChainName(destinationDomainId)),
-  ]);
+  // Runs while reporting a handle failure, so a registry error must not replace that result.
+  let originRouters: string[];
+  let destinationRouters: string[];
+  try {
+    [originRouters, destinationRouters] = await Promise.all([
+      fetchIcaRouters(registry, multiProvider.getChainName(originDomainId)),
+      fetchIcaRouters(registry, multiProvider.getChainName(destinationDomainId)),
+    ]);
+  } catch (error) {
+    logger.warn('Failed to fetch ICA routers, skipping ICA debug', error);
+    return null;
+  }
   if (!isIcaMessage({ sender, recipient }, originRouters, destinationRouters)) return null;
 
   const decodedBody = decodeIcaBody(body);
