@@ -15,6 +15,7 @@ import { MessageDebugResult } from '../../debugger/types';
 import {
   decodeIcaBody,
   IcaMessageType,
+  getIcaAccountConfig,
   useCcipReadIsmUrls,
   useIcaAddress,
   useRelatedIcaMessage,
@@ -188,13 +189,15 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
     msgId,
     decodeResult?.commitment,
     decodeResult?.messageType,
+    message,
   );
 
   // For REVEAL messages, derive owner/ism/salt from the related COMMITMENT message
   // For CALLS/COMMITMENT messages, use the decoded data directly
-  const displayOwner = decodeResult?.owner || relatedDecoded?.owner || '';
-  const displayIsm = decodeResult?.ism || relatedDecoded?.ism || '';
-  const displaySalt = decodeResult?.salt || relatedDecoded?.salt || '';
+  const accountConfig = getIcaAccountConfig(decodeResult, relatedDecoded);
+  const displayOwner = accountConfig?.owner ?? '';
+  const displayIsm = accountConfig?.ism ?? '';
+  const displaySalt = accountConfig?.salt ?? '';
   const saltAddress = useMemo(() => extractAddressFromSalt(displaySalt), [displaySalt]);
 
   // Fetch the derived ICA address
@@ -209,6 +212,8 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
     displayOwner || undefined,
     displayIsm || undefined,
     displaySalt || undefined,
+    sender,
+    recipient,
   );
 
   // For REVEAL messages, fetch the CCIP Read ISM address and URLs from the destination chain
@@ -216,7 +221,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
     data: ccipReadData,
     isFetching: isCcipFetching,
     isError: isCcipError,
-  } = useCcipReadIsmUrls(destinationChainName, messageBytes, decodeResult?.messageType);
+  } = useCcipReadIsmUrls(destinationChainName, messageBytes, decodeResult?.messageType, recipient);
 
   // Combine calls from message body (CALLS type) or from reveal metadata (REVEAL type)
   const displayCalls = useMemo(() => {

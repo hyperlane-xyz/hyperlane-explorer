@@ -70,7 +70,7 @@ jest.mock('../messages/cards/TransactionCard', () => ({
 jest.mock('../messages/cards/WarpTransferDetailsCard', () => ({
   WarpTransferDetailsCard: () => null,
 }));
-jest.mock('../messages/ica', () => ({ isIcaMessage: () => true }));
+jest.mock('../messages/ica', () => ({ useIsIcaMessage: () => true }));
 jest.mock('../messages/utils', () => ({ parseWarpRouteMessageDetails: () => undefined }));
 
 const mockUseMessageDeliveryStatus = jest.mocked(useMessageDeliveryStatus);

@@ -112,6 +112,8 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const isIcaMsg = useIsIcaMessage({
     sender: message.sender,
     recipient: message.recipient,
+    originDomainId: message.originDomainId,
+    destinationDomainId: message.destinationDomainId,
   });
   const debugResult = activeRuntimeState?.debugResult;
   const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
