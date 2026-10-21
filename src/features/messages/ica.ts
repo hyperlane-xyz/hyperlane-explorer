@@ -64,6 +64,10 @@ function getIcaRouters(addresses: Record<string, unknown> | null | undefined): s
   );
 }
 
+export function getBundledIcaRouters(chainName: string | undefined): string[] {
+  return chainName ? getIcaRouters(bundledChainAddresses[chainName]) : [];
+}
+
 // Resolve both generations from the configured runtime registry. The published
 // registry snapshot can predate V3 deployments.
 export async function fetchIcaRouters(
@@ -80,8 +84,6 @@ export function icaRoutersQueryOptions(
   return queryOptions({
     queryKey: ['icaRouters', registry.getUri(), chainName],
     queryFn: () => (chainName ? fetchIcaRouters(registry, chainName) : []),
-    // Classify snapshot routers on first render; the runtime fetch adds newer ones.
-    placeholderData: chainName ? getIcaRouters(bundledChainAddresses[chainName]) : undefined,
     enabled: !!chainName,
     staleTime: 5 * 60 * 1000,
   });
@@ -122,13 +124,20 @@ export function useIsIcaMessage({
 }): boolean {
   const registry = useRegistry();
   const resolver = useChainMetadataResolver();
+  const originChain = resolver.tryGetChainName(originDomainId) ?? undefined;
+  const destinationChain = resolver.tryGetChainName(destinationDomainId) ?? undefined;
   const [origin, destination] = useQueries({
     queries: [
-      icaRoutersQueryOptions(registry, resolver.tryGetChainName(originDomainId) ?? undefined),
-      icaRoutersQueryOptions(registry, resolver.tryGetChainName(destinationDomainId) ?? undefined),
+      icaRoutersQueryOptions(registry, originChain),
+      icaRoutersQueryOptions(registry, destinationChain),
     ],
   });
-  return isIcaMessage({ sender, recipient }, origin.data ?? [], destination.data ?? []);
+  // Use snapshot routers while loading or after a registry error; runtime data adds newer ones.
+  return isIcaMessage(
+    { sender, recipient },
+    origin.data ?? getBundledIcaRouters(originChain),
+    destination.data ?? getBundledIcaRouters(destinationChain),
+  );
 }
 
 /**

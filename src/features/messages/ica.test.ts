@@ -7,6 +7,7 @@ import { MessageStatus, type MessageStub } from '../../types';
 import {
   decodeIcaBody,
   fetchIcaRouters,
+  getBundledIcaRouters,
   getIcaAccountConfig,
   icaRoutersQueryOptions,
   IcaMessageType,
@@ -152,11 +153,23 @@ describe('ICA router recognition', () => {
     );
   });
 
-  it('classifies bundled snapshot routers before the runtime registry loads', () => {
-    expect(icaRoutersQueryOptions(mockRegistry, 'base').placeholderData).toEqual([
-      chainAddresses.base.interchainAccountRouter,
-    ]);
-    expect(icaRoutersQueryOptions(mockRegistry, undefined).placeholderData).toBeUndefined();
+  it('falls back to bundled routers while loading or after a registry error', () => {
+    const bundled = {
+      base: chainAddresses.base.interchainAccountRouter,
+      arbitrum: chainAddresses.arbitrum.interchainAccountRouter,
+    };
+    jest
+      .mocked(useQueries)
+      .mockReturnValue([{ data: undefined }, { data: undefined, isError: true }]);
+    expect(
+      useIsIcaMessage({
+        sender: bundled.base,
+        recipient: bundled.arbitrum,
+        originDomainId: 8453,
+        destinationDomainId: 42161,
+      }),
+    ).toBe(true);
+    expect(getBundledIcaRouters(undefined)).toEqual([]);
   });
 
   it('separates registry cache entries by source', () => {
