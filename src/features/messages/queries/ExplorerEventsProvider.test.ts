@@ -16,9 +16,11 @@ import {
   ExplorerEventsProvider,
   parseExplorerEvent,
   partitionExplorerDomains,
+  useExplorerBlockValue,
 } from './ExplorerEventsProvider';
 import {
   useExplorerMessageRows,
+  useExplorerRefresh,
   useIsMessageLive,
   useMessageRowSubscription,
 } from './useLiveMessages';
@@ -69,10 +71,11 @@ let sockets: FakeWebSocket[];
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 
-function Probe() {
+function Probe({ observeHead = false }: { observeHead?: boolean }) {
   renders++;
   const { messageRow } = useMessageRowSubscription('0xab', true, refresh, snapshot);
   const rows = useExplorerMessageRows();
+  const head = useExplorerBlockValue(observeHead ? 1 : undefined, (block) => block?.headHeight);
   const message = {
     ...snapshot,
     isProvisional: messageRow?.is_provisional,
@@ -88,13 +91,15 @@ function Probe() {
   return createElement(
     'div',
     null,
-    JSON.stringify({ messageRow, rows, progress, waiting, testnetLive }),
+    JSON.stringify({ messageRow, rows, progress, waiting, testnetLive, head }),
   );
 }
 const state = () => JSON.parse(container.textContent!);
-const render = (domains = [1, 10]) =>
+const render = (domains = [1, 10], observeHead = false) =>
   act(async () => {
-    root.render(createElement(ExplorerEventsProvider, { domains }, createElement(Probe)));
+    root.render(
+      createElement(ExplorerEventsProvider, { domains }, createElement(Probe, { observeHead })),
+    );
   });
 function send(message: unknown, socket = sockets.at(-1)!) {
   socket.onmessage?.(new MessageEvent('message', { data: JSON.stringify(message) }));
@@ -188,6 +193,24 @@ it('applies origin and destination reorgs even after the detail leaves the bound
   expect(refresh).toHaveBeenCalledTimes(4);
 });
 
+it('refreshes the unscoped search only when a rollback changes its rows', async () => {
+  function Search() {
+    useExplorerRefresh(true, refresh);
+    return null;
+  }
+  await act(async () =>
+    root.render(createElement(ExplorerEventsProvider, null, createElement(Search))),
+  );
+  await emit({ type: 'ready' });
+  refresh.mockClear();
+  await emit({ ...rollback, domain: 173 });
+  await emit({ type: 'message_upsert', data: row });
+  await emit({ ...rollback, toHeight: '100' });
+  expect(refresh).not.toHaveBeenCalled();
+  await emit(rollback);
+  expect(refresh).toHaveBeenCalledTimes(1);
+});
+
 it('refreshes snapshot-only details only on their affected chains', async () => {
   await render();
   await emit({ type: 'ready' });
@@ -198,21 +221,27 @@ it('refreshes snapshot-only details only on their affected chains', async () => 
 });
 
 it('clears disconnected state, ignores stale frames, and refreshes after reconnecting', async () => {
-  await render();
+  await render(undefined, true);
   await emit({ type: 'ready' });
   await emit({ type: 'message_upsert', data: row });
   await emit(block);
+  expect(state().head).toBe('105');
   const previous = sockets[0];
   await act(async () => previous.close());
   await emit({ type: 'message_upsert', data: row }, previous);
   await emit({ type: 'ready' }, previous);
   expect(state().messageRow).toBeNull();
+  expect(state().rows).toEqual([]);
+  expect(state().head).toBeUndefined();
   expect(state().progress).toBeNull();
   expect(refresh).toHaveBeenCalledTimes(1);
   await act(async () => jest.advanceTimersByTime(1000));
   expect(sockets).toHaveLength(2);
   await emit({ type: 'ready' });
   expect(refresh).toHaveBeenCalledTimes(2);
+  await act(async () => previous.onopen?.(new Event('open')));
+  await act(async () => jest.advanceTimersByTime(65000));
+  expect(sockets[1].closed).toBe(true);
 });
 
 it('keeps healthy hidden tabs connected and falls back after a rejected negotiation', async () => {
@@ -224,7 +253,9 @@ it('keeps healthy hidden tabs connected and falls back after a rejected negotiat
   await act(async () => jest.advanceTimersByTime(65000));
   expect(sockets[0].closed).toBe(true);
   await act(async () => jest.advanceTimersByTime(1000));
-  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  await emit({ type: 'error', error: 'Unsupported domain' });
+  expect(warn).toHaveBeenCalledWith('Explorer websocket subscription error', 'Unsupported domain');
   await act(async () =>
     sockets[1].onclose?.(
       new CloseEvent('close', {

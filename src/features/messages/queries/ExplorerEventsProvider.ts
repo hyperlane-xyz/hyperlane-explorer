@@ -48,6 +48,7 @@ const eventSchema = z.discriminatedUnion('type', [
   blockSchema,
   rollbackSchema,
   z.object({ type: z.literal('heartbeat') }),
+  z.object({ type: z.literal('error'), error: z.string() }),
   z.object({ type: z.literal('ready'), customDomains: z.array(domain).default([]) }),
   z.object({
     type: z.literal('message_upsert'),
@@ -220,6 +221,8 @@ export function ExplorerEventsProvider({
           reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
           setConnectionState('connected');
           refreshListenersRef.current.forEach((listener) => listener());
+        } else if (message?.type === 'error') {
+          logger.warn('Explorer websocket subscription error', message.error);
         } else if (message?.type === 'block') {
           stream.setState((state) => ({
             blockHeads: { ...state.blockHeads, [message.domain]: message },

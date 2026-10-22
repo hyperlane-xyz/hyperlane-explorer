@@ -187,6 +187,35 @@ it('keeps canonical data when only the provisional selection fails', () => {
 });
 
 describe('message query caching', () => {
+  it('opts details into zero confirmations and limits provisional search to the first page', () => {
+    expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).not.toContain(
+      'confirmations: 0',
+    );
+    expect(
+      buildMessageQuery(MessageIdentifierType.Id, '0x01', 1, false, undefined, {
+        provisional: true,
+      }).query,
+    ).toContain('confirmations: 0');
+    const first = buildMessageSearchQuery(
+      '',
+      null,
+      null,
+      null,
+      null,
+      500,
+      true,
+      [],
+      'pending',
+    ).query;
+    const provisional = first.slice(first.indexOf('provisional:'));
+    expect(provisional).toContain('limit: 50');
+    expect(provisional).toContain('{is_delivered: {_eq: false}}');
+    expect(
+      buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], { after: '100' })
+        .query,
+    ).not.toContain('provisional:');
+  });
+
   it('caches by default', () => {
     expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain('@cached');
     expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain('@cached');
@@ -213,6 +242,20 @@ describe('message query caching', () => {
 });
 
 describe('message pagination', () => {
+  it('admits fresh live rows when canonical ID order differs from timestamp order', () => {
+    const canonical = Array.from({ length: 51 }, (_, i) =>
+      makeStub({
+        id: String(1000 - i),
+        origin: { ...makeStub().origin, timestamp: 1000 - i },
+      }),
+    );
+    canonical[49].origin.timestamp = 1005;
+    const live = makeStub({ id: '2000', origin: { ...makeStub().origin, timestamp: 1001 } });
+    const page = getMessagePage([live, ...canonical], rawMessages(canonical), 51);
+    expect(page.messages).toContainEqual(live);
+    expect(page.continuationCursor).toBe('952');
+  });
+
   it('does not let older buffered rows displace newer canonical history', () => {
     const buffered = Array.from({ length: 101 }, (_, index) => {
       const id = String(1000 - index);

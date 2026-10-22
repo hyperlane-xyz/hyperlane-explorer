@@ -66,10 +66,12 @@ export function getMessagePage(
     .filter((m) => !canonicalIds.has(m.msgId.toLowerCase()))
     .sort((a, b) => b.origin.timestamp - a.origin.timestamp)
     .slice(0, canonicalMessages.length ? MESSAGE_PAGE_SIZE - 1 : MESSAGE_PAGE_SIZE);
-  // A live row only gets a slot if it is newer than the canonical row it displaces.
-  // Old buffered rows outside this query window must not crowd out recent history.
+  // Compare recency by timestamp while preserving canonical ID order for cursors.
+  const canonicalByTime = canonicalMessages
+    .slice(0, MESSAGE_PAGE_SIZE)
+    .sort((a, b) => a.origin.timestamp - b.origin.timestamp);
   const firstOlderLiveRow = liveOnlyMessages.findIndex((message, index) => {
-    const displaced = canonicalMessages[MESSAGE_PAGE_SIZE - 1 - index];
+    const displaced = canonicalByTime[index - (MESSAGE_PAGE_SIZE - canonicalByTime.length)];
     return displaced && message.origin.timestamp < displaced.origin.timestamp;
   });
   if (firstOlderLiveRow >= 0) liveOnlyMessages.length = firstOlderLiveRow;
@@ -449,7 +451,7 @@ export function useMessageSearchQuery(
     continuationCursor,
   );
 
-  // Reconcile the live page: the websocket is an overlay, not a complete log.
+  // Reconcile uncached first-page snapshots: the websocket is not a complete log.
   useVisibleInterval(refresh, cursorValue ? null : SEARCH_AUTO_REFRESH_DELAY);
 
   return {
