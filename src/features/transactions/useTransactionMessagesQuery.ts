@@ -62,17 +62,6 @@ export function useTransactionMessagesQuery(txHash: string) {
   }, [reexecuteQuery, txHash, allDelivered]);
   useVisibleInterval(reExecutor, TX_AUTO_REFRESH_DELAY);
 
-  // Extract common origin transaction info from the first message
-  const originInfo = useMemo(() => {
-    if (!messageList.length) return null;
-    const first = messageList[0];
-    return {
-      chainName: chainMetadataResolver.tryGetChainName(first.originDomainId) || 'Unknown',
-      domainId: first.originDomainId,
-      transaction: first.origin,
-    };
-  }, [messageList, chainMetadataResolver]);
-
   return {
     isFetching,
     isError: !!error,
@@ -80,7 +69,6 @@ export function useTransactionMessagesQuery(txHash: string) {
     hasRun: !!data || !!error,
     isMessagesFound,
     messageList,
-    originInfo,
     refetch: reExecutor,
   };
 }

@@ -13,6 +13,8 @@ import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 const MESSAGE_SEARCH_TIMEOUT = 10_000; // 10s
+// Stable reference so bridge effects don't re-fire on every render while loading
+const EMPTY_MESSAGES: Message[] = [];
 
 // Query 'Permissionless Interoperability (PI)' chains using
 // override chain metadata in store state
@@ -21,12 +23,15 @@ export function usePiChainMessageSearchQuery({
   startTimeFilter,
   endTimeFilter,
   piQueryType,
+  includeScrapedChains = false,
   pause,
 }: {
   sanitizedInput: string;
   startTimeFilter?: number | null;
   endTimeFilter?: number | null;
   piQueryType?: PiQueryType;
+  // Also query scraped chains, e.g. to cover scraper lag
+  includeScrapedChains?: boolean;
   pause: boolean;
 }) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
@@ -40,6 +45,7 @@ export function usePiChainMessageSearchQuery({
       sanitizedInput,
       startTimeFilter,
       endTimeFilter,
+      includeScrapedChains,
       multiProviderVersion,
       registry,
       pause,
@@ -56,7 +62,7 @@ export function usePiChainMessageSearchQuery({
         (c) =>
           c.domainId !== undefined &&
           isEvmChain(multiProvider, c.domainId) &&
-          isPiChain(multiProvider, scrapedChains, c.domainId),
+          (includeScrapedChains || isPiChain(multiProvider, scrapedChains, c.domainId)),
       );
       try {
         const results = await Promise.allSettled(
@@ -80,7 +86,7 @@ export function usePiChainMessageSearchQuery({
     isFetching: isLoading,
     isError,
     hasRun: !!data,
-    messageList: data || [],
+    messageList: data ?? EMPTY_MESSAGES,
     isMessagesFound: !!data?.length,
   };
 }

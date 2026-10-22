@@ -1,27 +1,60 @@
 import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
-import { ReactNode, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
-import { useStore } from '../../metadataStore';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
+import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
 import { MessageSummaryRow } from './MessageSummaryRow';
+import {
+  DEFAULT_TRANSACTION_FALLBACK_STATE,
+  TransactionFallbackState,
+} from './transactionFallbackState';
 import { useTransactionMessageCount } from './useTransactionMessageCount';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
+
+// Loaded on demand to keep ethers and core contracts out of the main chunk
+const TransactionFallbackBridge = dynamic(() =>
+  import('./TransactionFallbackBridge').then((mod) => mod.TransactionFallbackBridge),
+);
 
 interface Props {
   txHash: string;
 }
 
 export function TransactionDetails({ txHash }: Props) {
-  const [allExpanded, setAllExpanded] = useState(false);
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
+  const [fallbackState, setFallbackState] = useState<{
+    txHash: string;
+    value: TransactionFallbackState;
+  }>({ txHash, value: DEFAULT_TRANSACTION_FALLBACK_STATE });
 
-  const { isFetching, isError, error, hasRun, isMessagesFound, messageList, originInfo, refetch } =
-    useTransactionMessagesQuery(txHash);
+  const {
+    isFetching: isDbFetching,
+    isError,
+    error,
+    hasRun: hasDbRun,
+    isMessagesFound: isDbMessagesFound,
+    messageList: dbMessageList,
+    refetch,
+  } = useTransactionMessagesQuery(txHash);
   const txMessageCount = useTransactionMessageCount(txHash);
-  const isMessageListTruncated = txMessageCount > messageList.length;
+
+  // Fall back to RPC when the scraper has no messages for this tx (lag, outage, or unscraped
+  // origin). DB results win once indexed since the DB query keeps polling.
+  const shouldRunFallback = hasDbRun && !isDbMessagesFound;
+  const activeFallbackState =
+    shouldRunFallback && fallbackState.txHash === txHash
+      ? fallbackState.value
+      : DEFAULT_TRANSACTION_FALLBACK_STATE;
+
+  const handleFallbackStateChange = useCallback(
+    (value: TransactionFallbackState) => setFallbackState({ txHash, value }),
+    [txHash],
+  );
 
   useEffect(() => {
     if (!error) return;
@@ -34,8 +67,52 @@ export function TransactionDetails({ txHash }: Props) {
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
+  return (
+    <>
+      {shouldRunFallback && (
+        <TransactionFallbackBridge
+          key={txHash}
+          txHash={txHash}
+          onStateChange={handleFallbackStateChange}
+        />
+      )}
+      <TransactionMessages
+        isFetching={isDbFetching || activeFallbackState.isFetching}
+        hasRun={hasDbRun && (!shouldRunFallback || activeFallbackState.hasRun)}
+        error={error}
+        isError={isError}
+        messageList={isDbMessagesFound ? dbMessageList : activeFallbackState.messageList}
+        txMessageCount={txMessageCount}
+        refetch={refetch}
+      />
+    </>
+  );
+}
+
+function TransactionMessages({
+  isFetching,
+  hasRun,
+  error,
+  isError,
+  messageList,
+  txMessageCount,
+  refetch,
+}: {
+  isFetching: boolean;
+  hasRun: boolean;
+  error?: Error;
+  isError: boolean;
+  messageList: Message[];
+  txMessageCount: number;
+  refetch: () => void;
+}) {
+  const [allExpanded, setAllExpanded] = useState(false);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const isMessageListTruncated = txMessageCount > messageList.length;
+  const originMessage = messageList[0];
+
   // Loading state
-  if (isFetching && !hasRun) {
+  if (!hasRun) {
     return (
       <TransactionStateCard>
         <SpinnerIcon width={40} height={40} />
@@ -44,8 +121,8 @@ export function TransactionDetails({ txHash }: Props) {
     );
   }
 
-  // Error state
-  if (isError) {
+  // Error state, unless the RPC fallback found messages
+  if (isError && !originMessage) {
     return (
       <TransactionStateCard>
         <p className="text-red-500">Error loading transaction</p>
@@ -64,7 +141,7 @@ export function TransactionDetails({ txHash }: Props) {
   }
 
   // Not found state
-  if (hasRun && !isMessagesFound) {
+  if (!originMessage) {
     return (
       <TransactionStateCard>
         <p className="text-gray-700">No messages found</p>
@@ -79,14 +156,12 @@ export function TransactionDetails({ txHash }: Props) {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Origin Transaction Card - reuse existing component */}
-      {originInfo && (
-        <OriginTransactionCard
-          chainName={originInfo.chainName}
-          domainId={originInfo.domainId}
-          transaction={originInfo.transaction}
-          blur={false}
-        />
-      )}
+      <OriginTransactionCard
+        chainName={chainMetadataResolver.tryGetChainName(originMessage.originDomainId) || 'Unknown'}
+        domainId={originMessage.originDomainId}
+        transaction={originMessage.origin}
+        blur={false}
+      />
 
       {/* Messages Section */}
       <Card className="mt-4 space-y-4">

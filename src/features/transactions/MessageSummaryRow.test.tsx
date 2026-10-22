@@ -71,7 +71,10 @@ jest.mock('../messages/cards/WarpTransferDetailsCard', () => ({
   WarpTransferDetailsCard: () => null,
 }));
 jest.mock('../messages/ica', () => ({ useIsIcaMessage: () => true }));
-jest.mock('../messages/utils', () => ({ parseWarpRouteMessageDetails: () => undefined }));
+jest.mock('../messages/utils', () => ({
+  parseWarpRouteMessageDetails: () => undefined,
+  serializeMessage: () => 'serialized',
+}));
 
 const mockUseMessageDeliveryStatus = jest.mocked(useMessageDeliveryStatus);
 
@@ -216,6 +219,27 @@ it('passes live ICA diagnostics to the details card', async () => {
       debugStatus: MessageDebugStatus.IcaCallFailure,
     },
   });
+
+  await act(async () => root.unmount());
+});
+
+it.each([
+  [false, `/message/${pendingMessage.msgId}`],
+  [true, `/message/${pendingMessage.msgId}?data=serialized`],
+])('links to message details with isPiMsg=%s', async (isPiMsg, href) => {
+  mockUseMessageDeliveryStatus.mockReturnValue({
+    messageWithDeliveryStatus: pendingMessage,
+    debugResult: undefined,
+    isDeliveryStatusFetching: false,
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(<MessageSummaryRow message={{ ...pendingMessage, isPiMsg }} index={0} />);
+  });
+
+  expect(container.querySelector('a')?.getAttribute('href')).toBe(href);
 
   await act(async () => root.unmount());
 });

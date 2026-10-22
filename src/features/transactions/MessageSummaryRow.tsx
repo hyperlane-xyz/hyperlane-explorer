@@ -17,7 +17,7 @@ import { IcaDetailsCard } from '../messages/cards/IcaDetailsCard';
 import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
 import { WarpTransferDetailsCard } from '../messages/cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from '../messages/ica';
-import { parseWarpRouteMessageDetails } from '../messages/utils';
+import { parseWarpRouteMessageDetails, serializeMessage } from '../messages/utils';
 
 const AeroVoterDetailsCard = dynamic(() =>
   import('../messages/cards/AeroVoterDetailsCard').then((mod) => mod.AeroVoterDetailsCard),
@@ -95,6 +95,10 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
     : undefined;
 
   const isIcaMsg = messageType === 'ica';
+  // Unindexed RPC messages travel in the URL, matching MessageTable
+  const detailHref = message.isPiMsg
+    ? `/message/${message.msgId}?data=${serializeMessage(message)}`
+    : `/message/${message.msgId}`;
 
   const toggleExpanded = () => {
     setIsExpanded((prev) => !prev);
@@ -134,7 +138,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
           </div>
         </button>
         <Link
-          href={`/message/${message.msgId}`}
+          href={detailHref}
           className="text-primary-600 hover:text-primary-500 shrink-0 text-xs transition-colors"
         >
           Open
