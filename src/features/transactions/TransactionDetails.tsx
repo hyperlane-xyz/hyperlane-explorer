@@ -2,6 +2,7 @@ import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
 import { ReactNode, useEffect, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
+import { useStore } from '../../metadataStore';
 import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
 import { MessageSummaryRow } from './MessageSummaryRow';
@@ -14,6 +15,8 @@ interface Props {
 
 export function TransactionDetails({ txHash }: Props) {
   const [allExpanded, setAllExpanded] = useState(false);
+  const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
+  const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
 
   const { isFetching, isError, error, hasRun, isMessagesFound, messageList, originInfo, refetch } =
     useTransactionMessagesQuery(txHash);
@@ -24,6 +27,12 @@ export function TransactionDetails({ txHash }: Props) {
     if (!error) return;
     logger.error('Error loading transaction messages', error);
   }, [error]);
+
+  // Message rows need the warp route map to classify warp transfers.
+  useEffect(() => {
+    if (isWarpRouteDataLoaded) return;
+    ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
+  }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   // Loading state
   if (isFetching && !hasRun) {
