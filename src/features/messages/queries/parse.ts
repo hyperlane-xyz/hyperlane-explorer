@@ -24,9 +24,8 @@ export function parseMessageStubResult(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
-  idOrder?: 'ASC' | 'DESC',
 ): MessageStub[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStub, idOrder);
+  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStubEntry);
 }
 
 export function parseMessageQueryResult(
@@ -34,48 +33,26 @@ export function parseMessageQueryResult(
   scrapedChains: DomainsEntry[],
   data: MessagesQueryResult | undefined,
 ): Message[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessage);
-}
-
-export function parseMessageStubEntry(
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: DomainsEntry[],
-  data: MessageStubEntry,
-): MessageStub | null {
-  return parseMessageStub(chainMetadataResolver, scrapedChains, data);
-}
-
-export function parseMessageEntry(
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: DomainsEntry[],
-  data: MessageEntry,
-): Message | null {
-  return parseMessage(chainMetadataResolver, scrapedChains, data);
+  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageEntry);
 }
 
 function queryResult<D, M extends MessageStub>(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
-  data: Record<string, D[]> | undefined,
+  data: Record<string, D[] | null> | undefined,
   parseFn: (
     chainMetadataResolver: ChainMetadataResolver,
     scrapedChains: DomainsEntry[],
     data: D,
   ) => M | null,
-  idOrder?: 'ASC' | 'DESC',
 ) {
-  if (!data || !Object.keys(data).length) return [];
-  return deduplicateMessageList(
-    Object.values(data)
-      .flat()
-      .map((d) => parseFn(chainMetadataResolver, scrapedChains, d))
-      .filter((m): m is M => !!m)
-      .sort((a, b) => {
-        if (idOrder === 'ASC') return compareMessageIdsDescending(b, a);
-        if (idOrder === 'DESC') return compareMessageIdsDescending(a, b);
-        return b.origin.timestamp - a.origin.timestamp;
-      }),
-  );
+  const messages = Object.values(data ?? {})
+    .flatMap((rows) => rows ?? [])
+    .map((row) => parseFn(chainMetadataResolver, scrapedChains, row))
+    .filter((message): message is M => !!message);
+  return [
+    ...new Map(messages.map((message) => [message.msgId.toLowerCase(), message])).values(),
+  ].sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
 export function compareMessageIdsDescending(a: MessageStub, b: MessageStub): number {
@@ -84,7 +61,7 @@ export function compareMessageIdsDescending(a: MessageStub, b: MessageStub): num
   return aId === bId ? 0 : aId > bId ? -1 : 1;
 }
 
-function parseMessageStub(
+export function parseMessageStubEntry(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   m: MessageStubEntry,
@@ -98,7 +75,7 @@ function parseMessageStub(
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
       isPiChain(chainMetadataResolver, scrapedChains, m.destination_domain_id);
     return {
-      status: getMessageStatus(m),
+      status: m.is_delivered ? MessageStatus.Delivered : MessageStatus.Pending,
       isProvisional: m.is_provisional ?? m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
@@ -133,13 +110,13 @@ function parseMessageStub(
   }
 }
 
-function parseMessage(
+export function parseMessageEntry(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   m: MessageEntry,
 ): Message | null {
   try {
-    const stub = parseMessageStub(chainMetadataResolver, scrapedChains, m);
+    const stub = parseMessageStubEntry(chainMetadataResolver, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
 
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
@@ -164,25 +141,24 @@ function parseMessage(
         maxFeePerGas: m.origin_tx_max_fee_per_gas,
         maxPriorityPerGas: m.origin_tx_max_priority_fee_per_gas,
       },
-      destination: hasCompleteDestinationTransaction(m)
+      destination: stub.destination
         ? {
-            timestamp: parseTimestampString(m.delivery_occurred_at),
-            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
-            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
-            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
-            blockHash: postgresByteaToString(m.destination_block_hash),
-            blockNumber: m.destination_block_height,
-            mailbox: postgresByteaToAddress(m.destination_mailbox, destinationMetadata),
-            nonce: m.destination_tx_nonce,
-            gasLimit: m.destination_tx_gas_limit,
-            gasPrice: m.destination_tx_gas_price,
-            effectiveGasPrice: m.destination_tx_effective_gas_price,
-            gasUsed: m.destination_tx_gas_used,
-            cumulativeGasUsed: m.destination_tx_cumulative_gas_used,
-            maxFeePerGas: m.destination_tx_max_fee_per_gas,
-            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas,
+            ...stub.destination,
+            blockHash: m.destination_block_hash
+              ? postgresByteaToString(m.destination_block_hash)
+              : undefined,
+            blockNumber: parseBlockNumber(m.destination_block_height),
+            mailbox: parseOptionalAddress(m.destination_mailbox, destinationMetadata),
+            nonce: m.destination_tx_nonce ?? undefined,
+            gasLimit: m.destination_tx_gas_limit ?? undefined,
+            gasPrice: m.destination_tx_gas_price ?? undefined,
+            effectiveGasPrice: m.destination_tx_effective_gas_price ?? undefined,
+            gasUsed: m.destination_tx_gas_used ?? undefined,
+            cumulativeGasUsed: m.destination_tx_cumulative_gas_used ?? undefined,
+            maxFeePerGas: m.destination_tx_max_fee_per_gas ?? undefined,
+            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas ?? undefined,
           }
-        : stub.destination,
+        : undefined,
       totalGasAmount: m.total_gas_amount.toString(),
       totalPayment: m.total_payment.toString(),
       numPayments: m.num_payments,
@@ -212,59 +188,9 @@ function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry &
   return Boolean(m.delivery_occurred_at && m.destination_tx_hash);
 }
 
-type CompleteDestinationEntry = MessageEntry & {
-  delivery_occurred_at: string;
-  destination_block_hash: string;
-  destination_block_height: number;
-  destination_tx_hash: string;
-  destination_tx_cumulative_gas_used: number;
-  destination_tx_effective_gas_price: number;
-  destination_tx_gas_limit: number;
-  destination_tx_gas_price: number;
-  destination_tx_gas_used: number;
-  destination_tx_max_fee_per_gas: number;
-  destination_tx_max_priority_fee_per_gas: number;
-  destination_tx_nonce: number;
-};
-
-function hasCompleteDestinationTransaction(m: MessageEntry): m is CompleteDestinationEntry {
-  return (
-    hasDestinationTransaction(m) &&
-    Boolean(m.destination_block_hash && m.destination_mailbox) &&
-    [
-      m.destination_block_height,
-      m.destination_tx_cumulative_gas_used,
-      m.destination_tx_effective_gas_price,
-      m.destination_tx_gas_limit,
-      m.destination_tx_gas_price,
-      m.destination_tx_gas_used,
-      m.destination_tx_max_fee_per_gas,
-      m.destination_tx_max_priority_fee_per_gas,
-      m.destination_tx_nonce,
-    ].every((value) => value !== null)
-  );
-}
-
 function parseOptionalAddress(
   value: string | null,
   metadata: Parameters<typeof postgresByteaToAddress>[1],
 ) {
   return value ? postgresByteaToAddress(value, metadata) : undefined;
-}
-
-function getMessageStatus(m: MessageEntry | MessageStubEntry) {
-  if (m.is_delivered) {
-    return MessageStatus.Delivered;
-  } else {
-    // TODO consider gas and failure conditions here
-    return MessageStatus.Pending;
-  }
-}
-
-function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
-  const map = new Map();
-  for (const item of messages) {
-    map.set(item.msgId.toLowerCase(), item);
-  }
-  return Array.from(map.values());
 }

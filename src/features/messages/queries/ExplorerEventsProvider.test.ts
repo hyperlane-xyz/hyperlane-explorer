@@ -1,140 +1,190 @@
 /** @jest-environment jsdom */
 
 import { act, createElement, useContext } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 
+import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import {
   ExplorerBlockHeadsContext,
   ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
   partitionExplorerDomains,
-  reconcileMessageRowsAfterRollback,
   shouldEnableExplorerEvents,
   withConfirmations,
 } from './ExplorerEventsProvider';
-import type { MessageEntry } from './fragments';
+import { useMessageRowSubscription } from './useLiveMessages';
 
-const reactTestGlobal = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean;
-};
-
+const reactTestGlobal = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
 beforeAll(() => {
   reactTestGlobal.IS_REACT_ACT_ENVIRONMENT = true;
 });
-
 afterAll(() => {
   delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
 });
 
-describe('Explorer events routes', () => {
-  it('enables live events only where messages consume them', () => {
-    expect(shouldEnableExplorerEvents('/')).toBe(true);
-    expect(shouldEnableExplorerEvents('/message/[messageId]')).toBe(true);
-    expect(shouldEnableExplorerEvents('/tx/[txHash]')).toBe(false);
-    expect(shouldEnableExplorerEvents('/404')).toBe(false);
-  });
-
-  it('does not construct a websocket on a transaction route', async () => {
-    const originalWebSocket = global.WebSocket;
-    const webSocketMock = jest.fn() as unknown as typeof WebSocket;
-    global.WebSocket = webSocketMock;
-    const container = document.createElement('div');
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        createElement(
-          ExplorerEventsProvider,
-          { enabled: shouldEnableExplorerEvents('/tx/[txHash]') },
-          createElement('div'),
-        ),
-      );
-    });
-
-    expect(webSocketMock).not.toHaveBeenCalled();
-    await act(async () => root.unmount());
-    global.WebSocket = originalWebSocket;
-  });
-
-  it('connects at zero confirmations and drops a rolled-back origin', async () => {
-    const originalWebSocket = global.WebSocket;
-    const sockets: FakeWebSocket[] = [];
+describe('Explorer websocket lifecycle', () => {
+  const originalWebSocket = global.WebSocket;
+  let sockets: FakeWebSocket[];
+  let container: HTMLDivElement;
+  let root: Root;
+  const refresh = jest.fn();
+  function Subscriber({ messageId = '0xmessage-id' }: { messageId?: string }) {
+    const { messageRow } = useMessageRowSubscription(messageId, true, refresh);
+    return createElement('div', null, messageRow?.msg_id ?? 'none');
+  }
+  async function render(
+    children = createElement(EventState),
+    props: { domains?: number[]; enabled?: boolean } = {},
+  ) {
+    await act(async () => root.render(createElement(ExplorerEventsProvider, props, children)));
+  }
+  function send(message: unknown, socket = sockets.at(-1)!) {
+    socket.onmessage?.(new MessageEvent('message', { data: JSON.stringify(message) }));
+  }
+  async function emit(message: unknown, socket = sockets.at(-1)!) {
+    await act(async () => send(message, socket));
+  }
+  beforeEach(() => {
+    sockets = [];
+    container = document.createElement('div');
+    root = createRoot(container);
+    refresh.mockClear();
     global.WebSocket = class extends FakeWebSocket {
       constructor(url: string) {
         super(url);
         sockets.push(this);
       }
     } as unknown as typeof WebSocket;
-    const container = document.createElement('div');
-    const root = createRoot(container);
+  });
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    global.WebSocket = originalWebSocket;
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
 
-    await act(async () => {
-      root.render(
-        createElement(ExplorerEventsProvider, { domains: [1] }, createElement(EventState)),
-      );
-    });
-    expect(sockets).toHaveLength(1);
+  it('connects only on routes consuming live messages', async () => {
+    expect(shouldEnableExplorerEvents('/')).toBe(true);
+    expect(shouldEnableExplorerEvents('/message/[messageId]')).toBe(true);
+    expect(shouldEnableExplorerEvents('/404')).toBe(false);
+    await render(undefined, { enabled: shouldEnableExplorerEvents('/tx/[txHash]') });
+    expect(sockets).toHaveLength(0);
+  });
+
+  it('keeps canonical updates available before domains load', async () => {
+    await render();
+    expect(sockets[0].url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=true');
+  });
+
+  it('refreshes on every rollback, including an empty overlay', async () => {
+    await render(undefined, { domains: [1] });
     expect(sockets[0].url).toBe(
       'wss://explorer-api.hyperlane.xyz/messages?blocks=true&confirmations=0&domains=1',
     );
-
-    await act(async () => {
-      sockets[0].onmessage?.({
-        data: JSON.stringify({ data: makeProxyMessage(), type: 'message_upsert' }),
-      } as MessageEvent);
-    });
+    await emit({ type: 'message_upsert', data: makeProxyMessage() });
     expect(container.textContent).toBe('1:0');
-
-    await act(async () => {
-      sockets[0].onmessage?.({
-        data: JSON.stringify({
-          confirmations: 0,
-          domain: 1,
-          fromHeight: '100',
-          toHeight: '99',
-          type: 'rollback',
-        }),
-      } as MessageEvent);
-    });
-    expect(container.textContent).toBe('1:0');
-
-    await act(async () => {
-      sockets[0].onmessage?.({
-        data: JSON.stringify({
-          confirmations: 0,
-          domain: 173,
-          fromHeight: '100',
-          toHeight: '99',
-          type: 'rollback',
-        }),
-      } as MessageEvent);
-    });
-    expect(container.textContent).toBe('0:1');
+    for (const [index, domain] of [1, 173].entries()) {
+      await emit({ type: 'rollback', confirmations: 0, domain, fromHeight: '100', toHeight: '99' });
+      expect(container.textContent).toBe(`0:${index + 1}`);
+    }
     expect(sockets[0].closed).toBe(false);
-
-    await act(async () => root.unmount());
-    global.WebSocket = originalWebSocket;
   });
 
-  it('keeps canonical live updates while domain metadata is unavailable', async () => {
-    const originalWebSocket = global.WebSocket;
-    const sockets: FakeWebSocket[] = [];
-    global.WebSocket = class extends FakeWebSocket {
-      constructor(url: string) {
-        super(url);
-        sockets.push(this);
-      }
-    } as unknown as typeof WebSocket;
-    const root = createRoot(document.createElement('div'));
+  it('replays buffered rows on subscription and clears them on navigation', async () => {
+    await render();
+    await emit({ type: 'ready' });
+    await emit({ type: 'message_upsert', data: makeProxyMessage() });
+    await render(createElement(Subscriber));
+    expect(container.textContent).toBe('\\xmessage-id');
+    expect(refresh).not.toHaveBeenCalled();
+    await render(createElement(Subscriber, { messageId: '0xother' }));
+    expect(container.textContent).toBe('none');
+    await emit({ type: 'message_upsert', data: makeProxyMessage() });
+    expect(container.textContent).toBe('none');
+  });
 
+  it('retains subscribed rows through eviction and clears them on rollback', async () => {
+    await render(createElement(Subscriber));
+    await emit({ type: 'ready' });
+    expect(refresh).toHaveBeenCalledTimes(1);
     await act(async () => {
-      root.render(createElement(ExplorerEventsProvider, null, createElement('div')));
+      send({ type: 'message_upsert', data: makeProxyMessage() });
+      for (let index = 0; index < LIVE_MESSAGE_LIMIT; index++) {
+        send({
+          type: 'message_upsert',
+          data: { ...makeProxyMessage(), msg_id: `\\xother-${index}` },
+        });
+      }
     });
-    expect(sockets[0]?.url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=true');
+    expect(container.textContent).toBe('\\xmessage-id');
+    await emit({
+      type: 'rollback',
+      confirmations: 0,
+      domain: 173,
+      fromHeight: '100',
+      toHeight: '99',
+    });
+    expect(container.textContent).toBe('none');
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
 
+  it('clears disconnected rows, rejects stale frames, and refreshes after reconnecting', async () => {
+    jest.useFakeTimers();
+    await render(createElement(Subscriber));
+    await emit({ type: 'ready' });
+    await emit({ type: 'message_upsert', data: makeProxyMessage() });
+    const previous = sockets[0];
+    await act(async () => previous.close());
+    expect(container.textContent).toBe('none');
+    await emit({ type: 'ready' }, previous);
+    await emit({ type: 'message_upsert', data: makeProxyMessage() }, previous);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await act(async () => jest.advanceTimersByTime(1000));
+    expect(sockets).toHaveLength(2);
+    await emit({ type: 'ready' });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toBe('none');
+    // A delayed open from the old connection must not replace the active watchdog.
+    await act(async () => previous.onopen?.(new Event('open')));
+    await act(async () => jest.advanceTimersByTime(65000));
+    expect(sockets[1].closed).toBe(true);
+  });
+
+  it('tolerates hidden tabs but reconnects when a visible heartbeat expires', async () => {
+    jest.useFakeTimers();
+    const visibility = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    await render();
+    await act(async () => jest.advanceTimersByTime(65000));
+    expect(sockets[0].closed).toBe(false);
+    visibility.mockReturnValue('visible');
+    await act(async () => jest.advanceTimersByTime(65000));
+    expect(sockets[0].closed).toBe(true);
+    await act(async () => jest.advanceTimersByTime(1000));
+    expect(sockets).toHaveLength(2);
     await act(async () => root.unmount());
-    global.WebSocket = originalWebSocket;
+    await act(async () => jest.advanceTimersByTime(130000));
+    expect(sockets).toHaveLength(2);
+  });
+
+  it('updates block heads independently, permits reorgs, and clears on disconnect', async () => {
+    function BlockState() {
+      const heads = useContext(ExplorerBlockHeadsContext);
+      return createElement('div', null, heads.get(1)?.headHeight ?? 'unknown');
+    }
+    await render(createElement(BlockState));
+    for (const height of ['103', '104', '102']) {
+      await emit({
+        type: 'block',
+        domain: 1,
+        height,
+        headHeight: height,
+        hash: `0x${'ab'.repeat(32)}`,
+      });
+      expect(container.textContent).toBe(height);
+    }
+    await act(async () => sockets[0].close());
+    expect(container.textContent).toBe('unknown');
   });
 });
 
@@ -179,7 +229,7 @@ describe('parseExplorerEvent', () => {
     });
   });
 
-  it('keeps provisional event provenance', () => {
+  it('keeps confirmation state without retaining unused envelope fields', () => {
     const data = makeProxyMessage();
     expect(
       parseExplorerEvent(
@@ -191,7 +241,7 @@ describe('parseExplorerEvent', () => {
           type: 'message_upsert',
         }),
       ),
-    ).toEqual({ confirmations: 0, data, domain: 173, height: '100', type: 'message_upsert' });
+    ).toEqual({ confirmations: 0, data, type: 'message_upsert' });
   });
 
   it('rejects malformed message upserts', () => {
@@ -250,65 +300,6 @@ describe('partitionExplorerDomains', () => {
   });
 });
 
-describe('reconcileMessageRowsAfterRollback', () => {
-  it('preserves the same list when a rollback does not affect it', () => {
-    const rows = [makeMessageRow()];
-    expect(
-      reconcileMessageRowsAfterRollback(rows, {
-        confirmations: 0,
-        domain: 1,
-        fromHeight: '100',
-        toHeight: '99',
-        type: 'rollback',
-      }),
-    ).toBe(rows);
-  });
-
-  it('drops reverted origins and keeps unrelated provisional rows', () => {
-    const reverted = makeMessageRow();
-    const unrelated = makeMessageRow({ msg_id: '\\xunrelated', origin_domain_id: 10 });
-
-    expect(
-      reconcileMessageRowsAfterRollback([reverted, unrelated], {
-        confirmations: 0,
-        domain: 173,
-        fromHeight: '100',
-        toHeight: '99',
-        type: 'rollback',
-      }),
-    ).toEqual([unrelated]);
-  });
-
-  it('reverts only delivery state when the destination block rolls back', () => {
-    const message = makeMessageRow({
-      delivery_occurred_at: '2026-08-21 07:54:28',
-      destination_block_height: 100,
-      destination_tx_hash: '\\xdestination-hash',
-      destination_tx_recipient: '\\xdestination-recipient',
-      destination_tx_sender: '\\xdestination-sender',
-      is_delivered: true,
-    });
-
-    expect(
-      reconcileMessageRowsAfterRollback([message], {
-        confirmations: 0,
-        domain: 56,
-        fromHeight: '100',
-        toHeight: '99',
-        type: 'rollback',
-      }),
-    ).toEqual([
-      expect.objectContaining({
-        delivery_occurred_at: null,
-        destination_tx_hash: null,
-        destination_tx_recipient: null,
-        destination_tx_sender: null,
-        is_delivered: false,
-      }),
-    ]);
-  });
-});
-
 function makeProxyMessage() {
   return {
     id: '164316136',
@@ -327,59 +318,10 @@ function makeProxyMessage() {
   };
 }
 
-function makeMessageRow(overrides: Record<string, unknown> = {}) {
-  return { ...makeProxyMessage(), ...overrides } as unknown as MessageEntry;
-}
-
 function EventState() {
   const context = useContext(ExplorerEventsContext);
-  return createElement('div', null, `${context?.messageRows.length}:${context?.rollbackVersion}`);
+  return createElement('div', null, `${context?.messageRows.length}:${context?.revision}`);
 }
-
-it('updates block heads without a message, accepts reorgs, and clears heads on disconnect', async () => {
-  const originalWebSocket = global.WebSocket;
-  const sockets: FakeWebSocket[] = [];
-  global.WebSocket = class extends FakeWebSocket {
-    constructor(url: string) {
-      super(url);
-      sockets.push(this);
-    }
-  } as unknown as typeof WebSocket;
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  function BlockState() {
-    const heads = useContext(ExplorerBlockHeadsContext);
-    return createElement('div', null, heads.get(1)?.headHeight ?? 'unknown');
-  }
-  try {
-    await act(async () =>
-      root.render(
-        createElement(ExplorerEventsProvider, { domains: [1] }, createElement(BlockState)),
-      ),
-    );
-    for (const height of ['103', '104', '102']) {
-      await act(async () =>
-        sockets[0].onmessage?.(
-          new MessageEvent('message', {
-            data: JSON.stringify({
-              type: 'block',
-              domain: 1,
-              height,
-              headHeight: height,
-              hash: `0x${'ab'.repeat(32)}`,
-            }),
-          }),
-        ),
-      );
-      expect(container.textContent).toBe(height);
-    }
-    await act(async () => sockets[0].onclose?.(new CloseEvent('close')));
-    expect(container.textContent).toBe('unknown');
-  } finally {
-    await act(async () => root.unmount());
-    global.WebSocket = originalWebSocket;
-  }
-});
 
 class FakeWebSocket {
   closed = false;
@@ -392,5 +334,6 @@ class FakeWebSocket {
 
   close() {
     this.closed = true;
+    this.onclose?.(new CloseEvent('close'));
   }
 }

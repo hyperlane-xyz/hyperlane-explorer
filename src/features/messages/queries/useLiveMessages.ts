@@ -1,39 +1,33 @@
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { ExplorerConnectionState, ExplorerEventsContext } from './ExplorerEventsProvider';
+import type { MessageStub, MessageTxStub } from '../../../types';
+import { ExplorerEventsContext } from './ExplorerEventsProvider';
 import type { MessageEntry } from './fragments';
 
 export type { ExplorerConnectionState } from './ExplorerEventsProvider';
 
-export function useExplorerConnectionState() {
-  return useExplorerEventsContext().connectionState;
+export function useExplorerEvents() {
+  const context = useContext(ExplorerEventsContext);
+  if (!context) throw new Error('ExplorerEventsProvider is required');
+  return context;
 }
 
-export function useExplorerReconciliationRefresh(enabled: boolean, refresh: () => void) {
-  const { connectionState, rollbackVersion } = useExplorerEventsContext();
-  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
-}
-
-export function useLatestMessageRows(enabled: boolean, domains: number[], refresh: () => void) {
-  const { connectionState, messageRows, rollbackVersion } = useExplorerEventsContext();
-  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
-
-  const filteredRows = useMemo(
-    () => (enabled ? filterLatestMessageRows(messageRows, domains) : []),
-    [domains, enabled, messageRows],
-  );
-
-  return { connected: enabled && connectionState === 'connected', messageRows: filteredRows };
+export function useExplorerRefresh(enabled: boolean, refresh: () => void) {
+  const { revision } = useExplorerEvents();
+  const previousRevision = useRef(revision);
+  const onRefresh = useEffectEvent(refresh);
+  useEffect(() => {
+    if (enabled && previousRevision.current !== revision) onRefresh();
+    previousRevision.current = revision;
+  }, [enabled, revision]);
 }
 
 export function filterLatestMessageRows(messageRows: MessageEntry[], domains: number[]) {
-  return messageRows
-    .filter(
-      (row) =>
-        domains.length === 0 ||
-        (domains.includes(row.origin_domain_id) && domains.includes(row.destination_domain_id)),
-    )
-    .sort((a, b) => b.send_occurred_at.localeCompare(a.send_occurred_at));
+  return messageRows.filter(
+    (row) =>
+      domains.length === 0 ||
+      (domains.includes(row.origin_domain_id) && domains.includes(row.destination_domain_id)),
+  );
 }
 
 export function useMessageRowSubscription(
@@ -41,92 +35,79 @@ export function useMessageRowSubscription(
   enabled: boolean,
   refresh: () => void,
 ) {
-  const { connectionState, messageRows, rollbackVersion, subscribe } = useExplorerEventsContext();
-  useRefreshAfterReconnect(enabled, connectionState, rollbackVersion, refresh);
-  const [retainedMessageRow, setRetainedMessageRow] = useState<MessageEntry | null>(null);
-  const currentMessageRow = enabled
-    ? messageRows.find((row) => normalizeId(row.msg_id) === normalizeId(messageId)) || null
-    : null;
-
+  const { connectionState, subscribe } = useExplorerEvents();
+  useExplorerRefresh(enabled, refresh);
+  const [live, setLive] = useState<{ messageId: string; row: MessageEntry | null }>();
   useEffect(() => {
-    setRetainedMessageRow(null);
     if (!enabled) return;
-    return subscribe(messageId, setRetainedMessageRow);
-  }, [enabled, messageId, rollbackVersion, subscribe]);
+    return subscribe(messageId, (row) => setLive({ messageId, row }));
+  }, [enabled, messageId, subscribe]);
 
-  useEffect(() => {
-    if (connectionState !== 'connected') setRetainedMessageRow(null);
-  }, [connectionState]);
-
-  const messageRow = selectSubscribedMessageRow(
-    currentMessageRow,
-    retainedMessageRow,
-    messageId,
-    connectionState,
-  );
-
-  return { connected: enabled && connectionState === 'connected', messageRow };
+  const connected = enabled && connectionState === 'connected';
+  return {
+    connected,
+    messageRow: connected && live?.messageId === messageId ? live.row : null,
+  };
 }
 
-export function selectSubscribedMessageRow(
-  currentMessageRow: MessageEntry | null,
-  retainedMessageRow: MessageEntry | null,
-  messageId: string,
-  connectionState: ExplorerConnectionState,
-) {
-  if (connectionState !== 'connected') return null;
-  const retainedRowMatches = normalizeId(retainedMessageRow?.msg_id) === normalizeId(messageId);
-  return currentMessageRow ?? (retainedRowMatches ? retainedMessageRow : null);
+/** Retain enrichment across partial updates, never the message's delivery state. */
+export function useRetainedMessage<M extends MessageStub>(message: M | null): M | null {
+  const [snapshot, setSnapshot] = useState({ input: message, retained: message });
+  if (snapshot.input === message) return snapshot.retained;
+
+  const retained = preserveMessageTransactionFields(message, snapshot.retained);
+  setSnapshot({ input: message, retained });
+  return retained;
 }
 
-function useRefreshAfterReconnect(
-  enabled: boolean,
-  connectionState: ExplorerConnectionState,
-  rollbackVersion: number,
-  refresh: () => void,
-) {
-  const refreshRef = useRef(refresh);
-  const previousConnectionState = useRef(connectionState);
-  const previousRollbackVersion = useRef(rollbackVersion);
+export function preserveMessageTransactionFields<M extends MessageStub>(
+  current: M | null,
+  previous: M | null,
+): M | null {
+  if (!current || !previous || current.msgId.toLowerCase() !== previous.msgId.toLowerCase()) {
+    return current;
+  }
 
-  useEffect(() => {
-    refreshRef.current = refresh;
-  }, [refresh]);
+  const origin =
+    current.originDomainId === previous.originDomainId &&
+    current.originChainId === previous.originChainId
+      ? preserveTransactionFields(current.origin, previous.origin)
+      : current.origin;
+  // An absent destination is authoritative (e.g. delivery rollback).
+  const destination =
+    current.destination &&
+    previous.destination &&
+    current.destinationDomainId === previous.destinationDomainId &&
+    current.destinationChainId === previous.destinationChainId
+      ? preserveTransactionFields(current.destination, previous.destination)
+      : current.destination;
 
-  useEffect(() => {
-    if (
-      shouldRefreshAfterReconnect(enabled, previousConnectionState.current, connectionState) ||
-      shouldRefreshAfterRollback(enabled, previousRollbackVersion.current, rollbackVersion)
-    ) {
-      refreshRef.current();
+  return origin === current.origin && destination === current.destination
+    ? current
+    : { ...current, origin, destination };
+}
+
+function preserveTransactionFields<T extends MessageTxStub>(current: T, previous: T): T {
+  if (
+    current.hash !== previous.hash ||
+    (current.blockNumber != null &&
+      previous.blockNumber != null &&
+      String(current.blockNumber) !== String(previous.blockNumber)) ||
+    ('blockHash' in current &&
+      'blockHash' in previous &&
+      current.blockHash != null &&
+      previous.blockHash != null &&
+      current.blockHash !== previous.blockHash)
+  ) {
+    return current;
+  }
+
+  let result = current;
+  for (const key in previous) {
+    if (current[key] == null && previous[key] != null) {
+      if (result === current) result = { ...current };
+      result[key] = previous[key];
     }
-    previousConnectionState.current = connectionState;
-    previousRollbackVersion.current = rollbackVersion;
-  }, [connectionState, enabled, rollbackVersion]);
-}
-
-export function shouldRefreshAfterReconnect(
-  enabled: boolean,
-  previousConnectionState: ExplorerConnectionState,
-  connectionState: ExplorerConnectionState,
-) {
-  return enabled && previousConnectionState !== 'connected' && connectionState === 'connected';
-}
-
-export function shouldRefreshAfterRollback(
-  enabled: boolean,
-  previousRollbackVersion: number,
-  rollbackVersion: number,
-) {
-  return enabled && previousRollbackVersion !== rollbackVersion;
-}
-
-function useExplorerEventsContext() {
-  const context = useContext(ExplorerEventsContext);
-  if (!context) throw new Error('ExplorerEventsProvider is required');
-  return context;
-}
-
-function normalizeId(value: unknown) {
-  return typeof value === 'string' ? value.replace(/^(?:0x|\\x)/, '').toLowerCase() : null;
+  }
+  return result;
 }

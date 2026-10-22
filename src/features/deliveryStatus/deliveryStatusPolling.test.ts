@@ -1,24 +1,16 @@
-import {
-  getDeliveryStatusRefetchInterval,
-  shouldUseDeliveryStatusPolling,
-} from './deliveryStatusPolling';
+import { getDeliveryStatusRefetchInterval } from './deliveryStatusPolling';
 
-describe('shouldUseDeliveryStatusPolling', () => {
-  it('polls PI messages while the websocket is connected', () => {
-    expect(shouldUseDeliveryStatusPolling(true, 'connected')).toBe(true);
-  });
-
-  it('only polls scraped messages when the websocket is down', () => {
-    expect(shouldUseDeliveryStatusPolling(false, 'connected')).toBe(false);
-    expect(shouldUseDeliveryStatusPolling(false, 'connecting')).toBe(true);
-    expect(shouldUseDeliveryStatusPolling(false, 'disconnected')).toBe(true);
-    expect(shouldUseDeliveryStatusPolling(false, 'unavailable')).toBe(true);
-  });
-});
-
-describe('getDeliveryStatusRefetchInterval', () => {
-  it('suppresses only subsequent scraped-message checks while live updates are connected', () => {
-    expect(getDeliveryStatusRefetchInterval(false, false, 'connected')).toBe(false);
-    expect(getDeliveryStatusRefetchInterval(false, false, 'disconnected')).toBe(10_000);
-  });
-});
+it.each([
+  [false, true, 'connected', 10_000],
+  [false, false, 'connected', false],
+  [false, false, 'connecting', 10_000],
+  [false, false, 'disconnected', 10_000],
+  [false, undefined, 'unavailable', 10_000],
+  [true, true, 'connected', false],
+  [true, false, 'disconnected', false],
+] as const)(
+  'delivery polling: delivered=%s, PI=%s, connection=%s',
+  (delivered, pi, state, interval) => {
+    expect(getDeliveryStatusRefetchInterval(delivered, pi, state)).toBe(interval);
+  },
+);

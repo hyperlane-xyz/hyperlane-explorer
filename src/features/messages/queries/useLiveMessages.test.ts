@@ -1,9 +1,14 @@
+/** @jest-environment jsdom */
+
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { MessageStatus, type MessageStub, type MessageTxStub } from '../../../types';
 import type { MessageEntry } from './fragments';
 import {
   filterLatestMessageRows,
-  selectSubscribedMessageRow,
-  shouldRefreshAfterReconnect,
-  shouldRefreshAfterRollback,
+  preserveMessageTransactionFields,
+  useRetainedMessage,
 } from './useLiveMessages';
 
 describe('filterLatestMessageRows', () => {
@@ -25,46 +30,141 @@ describe('filterLatestMessageRows', () => {
   });
 });
 
-describe('shouldRefreshAfterReconnect', () => {
-  it('refreshes when the initial connection becomes ready', () => {
-    expect(shouldRefreshAfterReconnect(true, 'connecting', 'connected')).toBe(true);
-  });
+type Transaction = MessageTxStub & {
+  blockHash?: string | null;
+  gasLimit?: number | null;
+  gasUsed?: number | null;
+  nonce?: number | null;
+};
+type TestMessage = MessageStub & {
+  origin: Transaction;
+  destination?: Transaction;
+  totalPayment?: string;
+  numPayments?: number;
+};
 
-  it('refreshes after reconnecting', () => {
-    expect(shouldRefreshAfterReconnect(true, 'disconnected', 'connected')).toBe(true);
-  });
+const transaction: Transaction = {
+  hash: '0x01',
+  from: '0x11',
+  to: '0x22',
+  timestamp: 100,
+  blockNumber: 10,
+  blockHash: '0xaa',
+  gasLimit: 1000,
+  gasUsed: 500,
+  nonce: 5,
+};
+const enriched: TestMessage = {
+  id: '1',
+  msgId: '0xab',
+  status: MessageStatus.Delivered,
+  isProvisional: true,
+  nonce: 1,
+  sender: '0x33',
+  recipient: '0x44',
+  originChainId: 1,
+  originDomainId: 1,
+  destinationChainId: 2,
+  destinationDomainId: 2,
+  origin: transaction,
+  destination: { ...transaction, hash: '0x02' },
+  body: '0x',
+  totalPayment: '100',
+  numPayments: 1,
+};
+const partial: TestMessage = {
+  ...enriched,
+  origin: { hash: transaction.hash, timestamp: 100, gasLimit: null },
+  destination: { hash: '0x02', timestamp: 100 },
+};
 
-  it('does not refresh disabled consumers', () => {
-    expect(shouldRefreshAfterReconnect(false, 'disconnected', 'connected')).toBe(false);
+it('retains missing transaction enrichment on both sides without mutating inputs', () => {
+  const result = preserveMessageTransactionFields(partial, enriched);
+  expect(result?.origin).toEqual(enriched.origin);
+  expect(result?.destination).toEqual(enriched.destination);
+  expect(partial.origin.from).toBeUndefined();
+  expect(partial.origin.gasLimit).toBeNull();
+});
+
+it('prefers current values, including zero, and keeps message-level state authoritative', () => {
+  const current = {
+    ...partial,
+    isProvisional: false,
+    totalPayment: '0',
+    numPayments: 0,
+    origin: { ...partial.origin, from: '0x55', timestamp: 0, nonce: 0, gasUsed: 0 },
+  };
+  expect(preserveMessageTransactionFields(current, enriched)).toMatchObject({
+    isProvisional: false,
+    totalPayment: '0',
+    numPayments: 0,
+    origin: { from: '0x55', timestamp: 0, nonce: 0, gasUsed: 0, to: transaction.to },
   });
 });
 
-describe('shouldRefreshAfterRollback', () => {
-  it('refreshes enabled consumers when the rollback version changes', () => {
-    expect(shouldRefreshAfterRollback(true, 1, 2)).toBe(true);
-  });
-
-  it('does not refresh disabled consumers', () => {
-    expect(shouldRefreshAfterRollback(false, 1, 2)).toBe(false);
-  });
+it.each([
+  { msgId: '0xcd' },
+  { originDomainId: 3, destinationDomainId: 4 },
+  { originChainId: 3, destinationChainId: 4 },
+  {
+    origin: { ...partial.origin, hash: '0x03' },
+    destination: { ...partial.destination, hash: '0x04', timestamp: 100 },
+  },
+  {
+    origin: { ...partial.origin, blockNumber: 11 },
+    destination: { hash: '0x02', timestamp: 100, blockNumber: 11 },
+  },
+  {
+    origin: { ...partial.origin, blockHash: '0xbb' },
+    destination: { hash: '0x02', timestamp: 100, blockHash: '0xbb' },
+  },
+])('does not carry enrichment across identity or block changes: %j', (change) => {
+  const current = { ...partial, ...change };
+  expect(preserveMessageTransactionFields(current, enriched)).toBe(current);
 });
 
-describe('selectSubscribedMessageRow', () => {
-  it('retains a subscribed upsert after it leaves the bounded list overlay', () => {
-    const delivered = { msg_id: '\\xabc' } as MessageEntry;
+it('does not restore a rolled-back destination or a removed message', () => {
+  const rollback = { ...partial, status: MessageStatus.Pending, destination: undefined };
+  const result = preserveMessageTransactionFields(rollback, enriched);
+  expect(result?.status).toBe(MessageStatus.Pending);
+  expect(result?.destination).toBeUndefined();
+  expect(result?.origin).toEqual(enriched.origin);
+  expect(preserveMessageTransactionFields(null, enriched)).toBeNull();
+});
 
-    expect(selectSubscribedMessageRow(null, delivered, '0xabc', 'connected')).toBe(delivered);
-  });
+it('keeps references stable when no enrichment is missing', () => {
+  expect(preserveMessageTransactionFields(enriched, partial)).toBe(enriched);
+  expect(preserveMessageTransactionFields(enriched, null)).toBe(enriched);
+});
 
-  it('does not retain a row from a previous subscription', () => {
-    const delivered = { msg_id: '\\xabc' } as MessageEntry;
-
-    expect(selectSubscribedMessageRow(null, delivered, '0xdef', 'connected')).toBeNull();
-  });
-
-  it('drops a retained row while disconnected so GraphQL can become authoritative', () => {
-    const pending = { msg_id: '\\xabc' } as MessageEntry;
-
-    expect(selectSubscribedMessageRow(null, pending, '0xabc', 'disconnected')).toBeNull();
-  });
+it('retains enrichment over consecutive updates and clears it on removal or navigation', async () => {
+  const testGlobal: typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean } = globalThis;
+  testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  function View({ message }: { message: TestMessage | null }) {
+    return createElement('div', null, JSON.stringify(useRetainedMessage(message)));
+  }
+  async function render(message: TestMessage | null) {
+    await act(async () => root.render(createElement(View, { message })));
+  }
+  try {
+    await render(enriched);
+    await render(partial);
+    expect(JSON.parse(container.textContent ?? '')).toEqual(enriched);
+    await render({ ...partial, isProvisional: false });
+    expect(JSON.parse(container.textContent ?? '')).toEqual({ ...enriched, isProvisional: false });
+    await render({ ...partial, status: MessageStatus.Pending, destination: undefined });
+    expect(JSON.parse(container.textContent ?? '')).not.toHaveProperty('destination');
+    await render(null);
+    expect(container.textContent).toBe('null');
+    await render(partial);
+    expect(JSON.parse(container.textContent ?? '')).toEqual(partial);
+    await render(enriched);
+    await render({ ...partial, msgId: '0xcd' });
+    expect(JSON.parse(container.textContent ?? '')).toEqual({ ...partial, msgId: '0xcd' });
+  } finally {
+    await act(async () => root.unmount());
+    delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+  }
 });

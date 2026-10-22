@@ -2,19 +2,19 @@ import { MessageStatus, MessageStub } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { parseMessageCursor } from '../MessageSearch';
 import { MessageIdentifierType, buildMessageQuery, buildMessageSearchQuery } from './build';
+import { stringToPostgresBytea } from './encoding';
 import { compareMessageIdsDescending } from './parse';
 import {
   doesQueryResultMatchRequest,
   getMessageCandidates,
   getMessagePage,
-  getRawMessageIds,
+  getRawMessageRows,
   getSearchMetadataState,
   getMessageSearchDomainIds,
   messageMatchesSearchFilters,
   messageMatchesWarpRoute,
   selectLiveMessage,
   shouldPollMessageDetails,
-  shouldPollMessageSearch,
   shouldResetToFirstMessagePage,
   shouldUseMessageQueryCache,
 } from './useMessageQuery';
@@ -42,7 +42,10 @@ function makeStub(overrides: Partial<MessageStub> = {}): MessageStub {
   return {
     status: MessageStatus.Delivered,
     id: 'db-id',
-    msgId: '0x' + 'ab'.repeat(32),
+    msgId:
+      overrides.id && /^\d+$/.test(overrides.id)
+        ? '0x' + BigInt(overrides.id).toString(16).padStart(64, '0')
+        : '0x' + 'ab'.repeat(32),
     nonce: 0,
     sender: ROUTER_A,
     recipient: ROUTER_B,
@@ -54,6 +57,13 @@ function makeStub(overrides: Partial<MessageStub> = {}): MessageStub {
     body: '0x',
     ...overrides,
   };
+}
+
+function rawMessages(messages: Array<{ id: string; msgId?: string }>) {
+  return messages.map(({ id, msgId = makeStub({ id }).msgId }) => ({
+    id,
+    msg_id: stringToPostgresBytea(msgId),
+  }));
 }
 
 describe('messageMatchesWarpRoute', () => {
@@ -197,6 +207,58 @@ describe('message query caching', () => {
 });
 
 describe('message pagination', () => {
+  it.each([false, true])(
+    'keeps combined canonical searches bounded (ascending=%s)',
+    (ascending) => {
+      const canonical = Array.from({ length: 102 }, (_, index) =>
+        makeStub({ id: String(200 - index) }),
+      );
+      const rows = getRawMessageRows(
+        { q0: rawMessages(canonical.slice(0, 51)), q1: rawMessages(canonical.slice(51)) },
+        ascending,
+      );
+      const page = getMessagePage(canonical, rows, 51);
+      const expected = ascending ? canonical.slice(-50) : canonical.slice(0, 50);
+      expect(page.messages).toEqual(expected);
+      expect(page.continuationCursor).toBe(ascending ? '148' : '151');
+    },
+  );
+
+  it('keeps canonical pagination when another snapshot alias is unavailable', () => {
+    const canonical = makeStub({ id: '100' });
+    const rows = getRawMessageRows({ q0: rawMessages([canonical]), provisional: null }, false);
+    expect(getMessagePage([canonical], rows, 1).continuationCursor).toBe('100');
+  });
+
+  it('keeps colliding provisional IDs outside the canonical page and cursor', () => {
+    const canonical = Array.from({ length: 51 }, (_, index) =>
+      makeStub({ id: String(100 - index) }),
+    );
+    const provisional = makeStub({
+      id: '51',
+      msgId: '0x' + 'ff'.repeat(32),
+      isProvisional: true,
+    });
+    const rawRows = getRawMessageRows({ q0: rawMessages(canonical) }, false);
+    const page = getMessagePage([provisional, ...canonical], rawRows, 51);
+
+    expect(page.messages).toContainEqual(canonical[49]);
+    expect(page.messages).toContainEqual(provisional);
+    expect(page.messages).not.toContainEqual(canonical[50]);
+    expect(page.messages).toHaveLength(51);
+    expect(page.continuationCursor).toBe('51');
+  });
+
+  it('uses the canonical ID when a provisional snapshot updates the same message', () => {
+    const canonical = makeStub({ id: '100', status: MessageStatus.Pending });
+    const provisional = { ...canonical, id: '10', status: MessageStatus.Delivered };
+    const rawRows = getRawMessageRows({ q0: rawMessages([canonical]) }, false);
+    const page = getMessagePage([provisional], rawRows, 1);
+
+    expect(page.messages).toEqual([{ ...provisional, id: canonical.id }]);
+    expect(page.continuationCursor).toBe(canonical.id);
+  });
+
   it('fetches a separate provisional snapshot only on the first page', () => {
     const first = buildMessageSearchQuery('', null, null, null, null, 51, true).query;
     expect(first).toContain('provisional: message_view(');
@@ -224,8 +286,11 @@ describe('message pagination', () => {
       isProvisional: true,
       origin: { ...makeStub().origin, timestamp: 200, blockNumber: 26203787 },
     });
-    const ids = getRawMessageIds({ q0: canonical, provisional: [provisional] }, 51, false);
-    expect(ids).not.toContain(provisional.id);
+    const ids = getRawMessageRows(
+      { q0: rawMessages(canonical), provisional: rawMessages([provisional]) },
+      false,
+    );
+    expect(ids.map(({ id }) => String(id))).not.toContain(provisional.id);
     const page = getMessagePage([provisional, ...canonical], ids, 51);
     expect(page.messages[0]).toEqual(provisional);
     expect(page.messages).toHaveLength(51);
@@ -280,7 +345,7 @@ describe('message pagination', () => {
     );
     const filtered = candidates.filter((_, index) => index % 10 === 0);
 
-    const rawIds = getRawMessageIds({ q0: candidates }, 51, false);
+    const rawIds = getRawMessageRows({ q0: rawMessages(candidates) }, false);
     expect(getMessagePage(filtered, rawIds, 51)).toEqual({
       messages: filtered,
       continuationCursor: '50',
@@ -293,7 +358,11 @@ describe('message pagination', () => {
       makeStub({ id: String(100 - index) }),
     );
 
-    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, false), 51);
+    const page = getMessagePage(
+      messages,
+      getRawMessageRows({ q0: rawMessages(messages) }, false),
+      51,
+    );
     expect(page.messages).toHaveLength(50);
     expect(page.continuationCursor).toBe('51');
   });
@@ -311,7 +380,7 @@ describe('message pagination', () => {
       msgId: '0x' + 'ff'.repeat(32),
       origin: { ...makeStub().origin, timestamp: 200 },
     });
-    const rawIds = getRawMessageIds({ q0: queryMessages }, 50, false);
+    const rawIds = getRawMessageRows({ q0: rawMessages(queryMessages) }, false);
     const page = getMessagePage([provisionalMessage, ...queryMessages], rawIds, 50);
 
     expect(page.continuationCursor).toBe('51');
@@ -326,7 +395,11 @@ describe('message pagination', () => {
         origin: { ...makeStub().origin, timestamp: id === '109' ? 0 : Number(id) },
       });
     });
-    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, false), 51);
+    const page = getMessagePage(
+      messages,
+      getRawMessageRows({ q0: rawMessages(messages) }, false),
+      51,
+    );
 
     expect(page.messages.map(({ id }) => id)).toContain('109');
     expect(page.messages.map(({ id }) => id)).not.toContain('60');
@@ -336,7 +409,11 @@ describe('message pagination', () => {
   it('selects the nearest ascending page and displays it descending', () => {
     const messages = Array.from({ length: 51 }, (_, index) => makeStub({ id: String(51 + index) }));
 
-    const page = getMessagePage(messages, getRawMessageIds({ q0: messages }, 51, true), 51);
+    const page = getMessagePage(
+      messages,
+      getRawMessageRows({ q0: rawMessages(messages) }, true),
+      51,
+    );
     expect(page.continuationCursor).toBe('100');
     expect(page.reverseCursor).toBe('51');
     expect(page.messages.map(({ id }) => id)).toEqual(
@@ -351,7 +428,7 @@ describe('message pagination', () => {
       makeStub({ id: '12', origin: { ...makeStub().origin, timestamp: 200 } }),
     ];
 
-    const rawIds = getRawMessageIds({ q0: messages }, 4, false);
+    const rawIds = getRawMessageRows({ q0: rawMessages(messages) }, false);
     expect(getMessagePage(messages, rawIds, 4).messages.map(({ id }) => id)).toEqual([
       '11',
       '12',
@@ -363,13 +440,17 @@ describe('message pagination', () => {
     const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
     const parsedRows = rawRows.slice(0, 50).map(({ id }) => makeStub({ id }));
 
-    const page = getMessagePage(parsedRows, getRawMessageIds({ q0: rawRows }, 51, false), 51);
+    const page = getMessagePage(
+      parsedRows,
+      getRawMessageRows({ q0: rawMessages(rawRows) }, false),
+      51,
+    );
     expect(page.continuationCursor).toBe('50');
   });
 
   it('exposes continuation when a full raw page has no filtered matches', () => {
     const rawRows = Array.from({ length: 51 }, (_, index) => ({ id: String(100 - index) }));
-    const page = getMessagePage([], getRawMessageIds({ q0: rawRows }, 51, false), 51);
+    const page = getMessagePage([], getRawMessageRows({ q0: rawMessages(rawRows) }, false), 51);
 
     expect(page.messages).toEqual([]);
     expect(page.continuationCursor).toBe('50');
@@ -397,7 +478,7 @@ describe('message pagination', () => {
     expect(candidates.map(({ id }) => id)).toEqual(['100']);
   });
 
-  it('orders first-page live and query rows by send time before limiting', () => {
+  it('merges live and query rows before pagination', () => {
     const olderLiveMessage = makeStub({
       id: '200',
       msgId: '0x' + 'aa'.repeat(32),
@@ -423,7 +504,11 @@ describe('message pagination', () => {
       [],
     );
 
-    expect(candidates.map(({ id }) => id)).toEqual(['100', '200']);
+    const rawRows = getRawMessageRows({ q0: rawMessages([newerQueryMessage]) }, false);
+    expect(getMessagePage(candidates, rawRows, 51).messages.map(({ id }) => id)).toEqual([
+      '100',
+      '200',
+    ]);
   });
 
   it('lets delivered live state replace a stale pending query row before filtering', () => {
@@ -447,11 +532,12 @@ describe('message pagination', () => {
     expect(candidates).toEqual([]);
   });
 
-  it('keeps the canonical database ID when live state replaces a query row', () => {
+  it('keeps the canonical database ID when displaying live state over a query row', () => {
     const msgId = '0x' + 'aa'.repeat(32);
+    const canonical = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
     const candidates = getMessageCandidates(
       [makeStub({ id: '10', msgId, status: MessageStatus.Delivered })],
-      [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
+      [canonical],
       {
         searchInput: '',
         originDomainId: null,
@@ -463,7 +549,10 @@ describe('message pagination', () => {
       [],
     );
 
-    expect(candidates).toEqual([expect.objectContaining({ id: '100', status: 'delivered' })]);
+    const rawRows = getRawMessageRows({ q0: rawMessages([canonical]) }, false);
+    expect(getMessagePage(candidates, rawRows, 51).messages).toEqual([
+      expect.objectContaining({ id: '100', status: 'delivered' }),
+    ]);
   });
 
   it('keeps a delivery provisional until the query also reports it delivered', () => {
@@ -519,16 +608,6 @@ describe('message pagination', () => {
       '10',
       '9',
     ]);
-  });
-});
-
-describe('message search polling', () => {
-  it('reconciles the current page even while live updates are connected', () => {
-    expect(shouldPollMessageSearch()).toBe(true);
-  });
-
-  it('keeps older pages stable', () => {
-    expect(shouldPollMessageSearch(false)).toBe(false);
   });
 });
 

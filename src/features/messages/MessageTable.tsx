@@ -368,11 +368,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         onNavigateIntent={primeDetailPage}
       >
         {statusIcon && (
-          <span
-            className="flex items-center justify-center"
-            data-tooltip-id="root-tooltip"
-            data-tooltip-content={statusTitle}
-          >
+          <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
             {statusIcon}
           </span>
         )}

@@ -71,9 +71,7 @@ export interface MessageStubEntry {
   is_provisional?: boolean;
   origin_block_height?: number | string;
   live_confirmations?: number;
-  live_domain?: number;
-  live_height?: string;
-  id: number; // database id, not message id
+  id: number | string; // database id, not message id
   msg_id: string; // binary e.g. \\x123
   nonce: number;
   sender: string; // binary e.g. \\x123
@@ -127,5 +125,5 @@ export interface MessageEntry extends MessageStubEntry {
   num_payments: number;
 }
 
-export type MessagesStubQueryResult = Record<string, MessageStubEntry[]>;
-export type MessagesQueryResult = Record<string, MessageEntry[]>;
+export type MessagesStubQueryResult = Record<string, MessageStubEntry[] | null>;
+export type MessagesQueryResult = Record<string, MessageEntry[] | null>;

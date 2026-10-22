@@ -10,6 +10,17 @@ import {
 } from './parse';
 
 describe('parseMessageStubEntry', () => {
+  it('keeps canonical results when the provisional snapshot is unavailable', () => {
+    const error = jest.spyOn(console, 'error');
+    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
+      q0: [messageStubEntry],
+      provisional: null,
+    });
+    expect(messages).toHaveLength(1);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('keeps provisional dispatches without transaction address enrichment', () => {
     const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
       ...messageStubEntry,
@@ -101,22 +112,17 @@ describe('parseMessageStubEntry', () => {
   });
 
   it('keeps the provisional snapshot when the same message appears in the canonical page', () => {
-    const messages = parseMessageStubResult(
-      createChainMetadataResolver({}),
-      [],
-      {
-        q0: [{ ...messageStubEntry, is_provisional: false }],
-        provisional: [
-          {
-            ...messageStubEntry,
-            is_provisional: true,
-            is_delivered: true,
-            origin_block_height: '123',
-          },
-        ],
-      },
-      'DESC',
-    );
+    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
+      q0: [{ ...messageStubEntry, is_provisional: false }],
+      provisional: [
+        {
+          ...messageStubEntry,
+          is_provisional: true,
+          is_delivered: true,
+          origin_block_height: '123',
+        },
+      ],
+    });
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
       isProvisional: true,
@@ -126,15 +132,10 @@ describe('parseMessageStubEntry', () => {
   });
 
   it('does not deduplicate different message hashes with colliding raw and canonical IDs', () => {
-    const messages = parseMessageStubResult(
-      createChainMetadataResolver({}),
-      [],
-      {
-        q0: [messageStubEntry],
-        provisional: [{ ...messageStubEntry, msg_id: '\\xabcdef', is_provisional: true }],
-      },
-      'DESC',
-    );
+    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
+      q0: [messageStubEntry],
+      provisional: [{ ...messageStubEntry, msg_id: '\\xabcdef', is_provisional: true }],
+    });
     expect(messages).toHaveLength(2);
   });
 
@@ -147,11 +148,36 @@ describe('parseMessageStubEntry', () => {
       is_delivered: true,
     });
 
-    expect(message?.destination).toEqual({
+    expect(message?.destination).toMatchObject({
       from: undefined,
       hash: '0x08',
       timestamp: Date.parse('2026-10-09T12:01:00Z'),
       to: undefined,
+    });
+    expect(message?.destination?.blockNumber).toBeUndefined();
+  });
+
+  it('preserves block and gas details when legacy fee fields are absent', () => {
+    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
+      ...messageEntry,
+      is_delivered: true,
+      delivery_occurred_at: '2026-10-09T12:01:00',
+      destination_tx_hash: '\\x08',
+      destination_block_hash: '\\x09',
+      destination_block_height: 50,
+      destination_tx_gas_used: 21000,
+      destination_tx_effective_gas_price: 2,
+      destination_tx_max_fee_per_gas: null,
+      destination_tx_max_priority_fee_per_gas: null,
+    });
+
+    expect(message?.destination).toMatchObject({
+      blockHash: '0x09',
+      blockNumber: 50,
+      gasUsed: 21000,
+      effectiveGasPrice: 2,
+      maxFeePerGas: undefined,
+      maxPriorityPerGas: undefined,
     });
   });
 });

@@ -22,8 +22,6 @@ const EMPTY_DOMAINS: number[] = [];
 type MessageUpsert = {
   confirmations?: number;
   data: MessageEntry;
-  domain?: number;
-  height?: string;
   type: 'message_upsert';
 };
 export type Rollback = {
@@ -47,7 +45,7 @@ export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected
 export interface ExplorerEventsContextValue {
   connectionState: ExplorerConnectionState;
   messageRows: MessageEntry[];
-  rollbackVersion: number;
+  revision: number;
   subscribe: (messageId: string, listener: MessageListener) => () => void;
 }
 
@@ -70,26 +68,33 @@ export function ExplorerEventsProvider({
 }: PropsWithChildren<{ domains?: number[]; enabled?: boolean }>) {
   const [connectionState, setConnectionState] = useState<ExplorerConnectionState>('unavailable');
   const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
-  const [rollbackVersion, setRollbackVersion] = useState(0);
+  const [revision, setRevision] = useState(0);
   const [blockHeads, setBlockHeads] = useState<ReadonlyMap<number, ExplorerBlock>>(new Map());
   const { domainIds, invalidDomainIds } = useMemo(
     () => partitionExplorerDomains(domains),
     [domains],
   );
-  const listenersRef = useRef<Map<string, Set<MessageListener>>>(new Map());
+  const listenersRef = useRef(new Set<MessageListener>());
   const messageRowsRef = useRef<MessageEntry[]>([]);
 
   const subscribe = useCallback((messageId: string, listener: MessageListener) => {
     const normalizedId = normalizeId(messageId);
-    if (!normalizedId) return () => undefined;
-
-    const listeners = listenersRef.current.get(normalizedId) ?? new Set();
-    listeners.add(listener);
-    listenersRef.current.set(normalizedId, listeners);
-    return () => {
-      listeners.delete(listener);
-      if (!listeners.size) listenersRef.current.delete(normalizedId);
+    const onMessage: MessageListener = (row) => {
+      if (!row || normalizeId(row.msg_id) === normalizedId) listener(row);
     };
+    listenersRef.current.add(onMessage);
+    onMessage(
+      messageRowsRef.current.find((row) => normalizeId(row.msg_id) === normalizedId) ?? null,
+    );
+    return () => {
+      listenersRef.current.delete(onMessage);
+    };
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    messageRowsRef.current = [];
+    setMessageRows([]);
+    listenersRef.current.forEach((listener) => listener(null));
   }, []);
 
   useEffect(() => {
@@ -99,11 +104,10 @@ export function ExplorerEventsProvider({
   }, [invalidDomainIds]);
 
   useEffect(() => {
+    clearMessages();
     setBlockHeads(new Map());
     if (!enabled || !config.wsUrl) {
       setConnectionState('unavailable');
-      messageRowsRef.current = [];
-      setMessageRows([]);
       return;
     }
 
@@ -116,10 +120,11 @@ export function ExplorerEventsProvider({
 
     const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
+      ws = undefined;
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
       setConnectionState('disconnected');
       setBlockHeads(new Map());
-      messageRowsRef.current = [];
-      setMessageRows([]);
+      clearMessages();
       reconnectTimer = setTimeout(() => {
         reconnectTimer = undefined;
         connect();
@@ -153,7 +158,9 @@ export function ExplorerEventsProvider({
       }
       ws = socket;
       watchHeartbeat(socket);
-      socket.onopen = () => watchHeartbeat(socket);
+      socket.onopen = () => {
+        if (ws === socket) watchHeartbeat(socket);
+      };
       socket.onmessage = ({ data }) => {
         if (ws !== socket) return;
         watchHeartbeat(socket);
@@ -161,19 +168,15 @@ export function ExplorerEventsProvider({
         if (message?.type === 'ready') {
           reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
           setConnectionState('connected');
+          setRevision((version) => version + 1);
         } else if (message?.type === 'block') {
           setBlockHeads((heads) => new Map(heads).set(message.domain, message));
         } else if (message?.type === 'message_upsert') {
           const messageRow = {
             ...message.data,
             live_confirmations: message.confirmations,
-            live_domain: message.domain,
-            live_height: message.height,
           };
-          const normalizedId = normalizeId(messageRow.msg_id);
-          if (normalizedId) {
-            listenersRef.current.get(normalizedId)?.forEach((listener) => listener(messageRow));
-          }
+          listenersRef.current.forEach((listener) => listener(messageRow));
           const nextRows = [
             messageRow,
             ...messageRowsRef.current.filter((row) => row.msg_id !== messageRow.msg_id),
@@ -181,23 +184,10 @@ export function ExplorerEventsProvider({
           messageRowsRef.current = nextRows;
           setMessageRows(nextRows);
         } else if (message?.type === 'rollback') {
-          const rows = messageRowsRef.current;
-          const nextRows = reconcileMessageRowsAfterRollback(rows, message);
-          if (nextRows === rows) return;
-          const nextRowsById = new Map(
-            nextRows.map((row) => [normalizeId(row.msg_id), row] as const),
-          );
-          rows.forEach((row) => {
-            const normalizedId = normalizeId(row.msg_id);
-            const nextRow = nextRowsById.get(normalizedId);
-            if (!normalizedId || nextRow === row) return;
-            listenersRef.current
-              .get(normalizedId)
-              ?.forEach((listener) => listener(nextRow ?? null));
-          });
-          messageRowsRef.current = nextRows;
-          setMessageRows(nextRows);
-          setRollbackVersion((version) => version + 1);
+          // Affected messages may exist only in a snapshot or retained subscription.
+          // Invalidate every consumer, even when the bounded overlay is empty.
+          clearMessages();
+          setRevision((version) => version + 1);
         }
       };
       socket.onerror = () => {
@@ -208,7 +198,6 @@ export function ExplorerEventsProvider({
       };
       socket.onclose = () => {
         if (closed || ws !== socket) return;
-        if (heartbeatTimer) clearTimeout(heartbeatTimer);
         scheduleReconnect();
       };
     };
@@ -219,12 +208,13 @@ export function ExplorerEventsProvider({
       if (heartbeatTimer) clearTimeout(heartbeatTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
+      ws = undefined;
     };
-  }, [domainIds, enabled]);
+  }, [domainIds, enabled, clearMessages]);
 
   const value = useMemo(
-    () => ({ connectionState, messageRows, rollbackVersion, subscribe }),
-    [connectionState, messageRows, rollbackVersion, subscribe],
+    () => ({ connectionState, messageRows, revision, subscribe }),
+    [connectionState, messageRows, revision, subscribe],
   );
 
   return createElement(
@@ -280,8 +270,6 @@ export function parseExplorerEvent(
     return {
       ...(message.confirmations === undefined ? {} : { confirmations: message.confirmations }),
       data: message.data,
-      ...(message.domain === undefined ? {} : { domain: message.domain }),
-      ...(message.height === undefined ? {} : { height: message.height }),
       type: 'message_upsert',
     };
   } catch (error) {
@@ -290,14 +278,9 @@ export function parseExplorerEvent(
   }
 }
 
-function isMessageUpsertEnvelope(value: Record<string, unknown>): value is Record<
-  string,
-  unknown
-> & {
-  confirmations?: number;
-  domain?: number;
-  height?: string;
-} {
+function isMessageUpsertEnvelope(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & Pick<MessageUpsert, 'confirmations'> {
   return (
     (value.confirmations === undefined ||
       (typeof value.confirmations === 'number' &&
@@ -331,45 +314,6 @@ export function partitionExplorerDomains(domains: number[]) {
       (domain) => !Number.isSafeInteger(domain) || domain < 0 || domain > 0x7fffffff,
     ),
   };
-}
-
-export function reconcileMessageRowsAfterRollback(messageRows: MessageEntry[], rollback: Rollback) {
-  const toHeight = BigInt(rollback.toHeight);
-  let changed = false;
-  const nextRows = messageRows.flatMap((row) => {
-    if (
-      row.origin_domain_id === rollback.domain &&
-      isHeightAbove(row.origin_block_height, toHeight)
-    ) {
-      changed = true;
-      return [];
-    }
-    if (
-      row.destination_domain_id !== rollback.domain ||
-      !isHeightAbove(row.destination_block_height, toHeight)
-    ) {
-      return [row];
-    }
-    changed = true;
-    return [
-      {
-        ...row,
-        delivery_occurred_at: null,
-        destination_tx_hash: null,
-        destination_tx_recipient: null,
-        destination_tx_sender: null,
-        is_delivered: false,
-      },
-    ];
-  });
-  return changed ? nextRows : messageRows;
-}
-
-function isHeightAbove(value: unknown, height: bigint) {
-  return (
-    (typeof value === 'number' && Number.isSafeInteger(value) && BigInt(value) > height) ||
-    (typeof value === 'string' && isHeight(value) && BigInt(value) > height)
-  );
 }
 
 function isRollback(value: unknown): value is Rollback {

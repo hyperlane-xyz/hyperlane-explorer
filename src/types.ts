@@ -49,10 +49,10 @@ export interface MessageStub {
   body: string;
 }
 
-export interface Message extends Omit<MessageStub, 'destination'> {
+export interface Message extends MessageStub {
   decodedBody?: string;
   origin: MessageTx;
-  destination?: MessageTx | MessageTxStub;
+  destination?: MessageTxStub & Partial<MessageTx>;
   totalGasAmount?: string;
   totalPayment?: string;
   numPayments?: number;
