@@ -1,43 +1,36 @@
 /** @jest-environment jsdom */
 
-import { act, useEffect } from 'react';
+import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CombinedError } from 'urql';
 
 import { Message } from '../../types';
+import { usePiChainMessageSearchQuery } from '../messages/pi-queries/usePiChainMessageQuery';
 import { TransactionDetails } from './TransactionDetails';
-import {
-  DEFAULT_TRANSACTION_FALLBACK_STATE,
-  TransactionFallbackState,
-} from './transactionFallbackState';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
 
 const mockStore = {
   ensureWarpRouteData: jest.fn(() => Promise.resolve()),
   isWarpRouteDataLoaded: false,
 };
-const mockBridgeRender = jest.fn();
-let mockFallbackState: TransactionFallbackState = DEFAULT_TRANSACTION_FALLBACK_STATE;
+const mockProviderState = { multiProvider: {} as object | undefined, initFailed: false };
 
 jest.mock('@hyperlane-xyz/widgets', () => ({ SpinnerIcon: () => null, Tooltip: () => null }));
-jest.mock('next/dynamic', () => ({
-  __esModule: true,
-  default: () =>
-    function MockFallbackBridge({
-      onStateChange,
-    }: {
-      onStateChange: (state: TransactionFallbackState) => void;
-    }) {
-      mockBridgeRender();
-      useEffect(() => onStateChange(mockFallbackState), [onStateChange]);
-      return null;
-    },
-}));
 jest.mock('../../metadataStore', () => ({
   useChainMetadataResolver: () => ({ tryGetChainName: () => 'ethereum' }),
   useStore: (selector: (state: typeof mockStore) => unknown) => selector(mockStore),
 }));
+jest.mock('../../store', () => ({
+  useReadyMultiProvider: () => mockProviderState.multiProvider,
+  useMultiProviderInitFailed: () => mockProviderState.initFailed,
+}));
 jest.mock('../messages/cards/OriginTransactionCard', () => ({ OriginTransactionCard: () => null }));
+jest.mock('../messages/pi-queries/fetchPiChainMessages', () => ({
+  PiQueryType: { TxHash: 'txHash' },
+}));
+jest.mock('../messages/pi-queries/usePiChainMessageQuery', () => ({
+  usePiChainMessageSearchQuery: jest.fn(),
+}));
 jest.mock('./MessageSummaryRow', () => ({
   MessageSummaryRow: ({ message }: { message: Message }) => (
     <div data-testid="message-row" data-msg-id={message.msgId} />
@@ -47,6 +40,7 @@ jest.mock('./useTransactionMessageCount', () => ({ useTransactionMessageCount: (
 jest.mock('./useTransactionMessagesQuery', () => ({ useTransactionMessagesQuery: jest.fn() }));
 
 const mockUseTransactionMessagesQuery = jest.mocked(useTransactionMessagesQuery);
+const mockUsePiChainMessageSearchQuery = jest.mocked(usePiChainMessageSearchQuery);
 
 const reactTestGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -59,6 +53,8 @@ beforeAll(() => {
 afterAll(() => {
   delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
 });
+
+const txHash = `0x${'1'.repeat(64)}`;
 
 function message(msgId: string, nonce: number) {
   return { msgId, nonce, originDomainId: 1, origin: {} } as Message;
@@ -76,24 +72,39 @@ function mockDbQuery(messageList: Message[], error?: CombinedError) {
   });
 }
 
-function render() {
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  act(() => root.render(<TransactionDetails txHash={`0x${'1'.repeat(64)}`} />));
+function mockFallbackQuery(messageList?: Message[]) {
+  mockUsePiChainMessageSearchQuery.mockReturnValue({
+    isFetching: !messageList,
+    isError: false,
+    hasRun: !!messageList,
+    messageList: messageList ?? [],
+    isMessagesFound: !!messageList?.length,
+  });
+}
+
+function getView(container: HTMLElement) {
   const rowIds = Array.from(container.querySelectorAll('[data-testid="message-row"]')).map((row) =>
     row.getAttribute('data-msg-id'),
   );
-  const text = container.textContent;
+  return { rowIds, text: container.textContent };
+}
+
+function render() {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  act(() => root.render(<TransactionDetails txHash={txHash} />));
+  const view = getView(container);
   act(() => root.unmount());
-  return { rowIds, text };
+  return view;
 }
 
 describe('TransactionDetails', () => {
   beforeEach(() => {
     mockStore.ensureWarpRouteData.mockClear();
-    mockBridgeRender.mockClear();
-    mockFallbackState = DEFAULT_TRANSACTION_FALLBACK_STATE;
+    mockProviderState.multiProvider = {};
+    mockProviderState.initFailed = false;
     mockDbQuery([message('0xdb', 0)]);
+    mockFallbackQuery([]);
   });
 
   it('loads warp route data so message rows can classify warp transfers', () => {
@@ -108,27 +119,52 @@ describe('TransactionDetails', () => {
     expect(mockStore.ensureWarpRouteData).not.toHaveBeenCalled();
   });
 
-  it('renders DB messages without running the RPC fallback', () => {
+  it('renders DB messages with the RPC fallback paused', () => {
     const { rowIds } = render();
     expect(rowIds).toEqual(['0xdb']);
-    expect(mockBridgeRender).not.toHaveBeenCalled();
+    expect(mockUsePiChainMessageSearchQuery).toHaveBeenLastCalledWith({
+      sanitizedInput: txHash,
+      piQueryType: 'txHash',
+      includeScrapedChains: true,
+      pause: true,
+    });
   });
 
-  it('renders RPC fallback messages when the DB has none', () => {
+  it('renders RPC fallback messages sorted by nonce when the DB has none', () => {
     mockDbQuery([]);
-    mockFallbackState = {
-      hasRun: true,
-      isFetching: false,
-      messageList: [message('0xa', 0), message('0xb', 1)],
-    };
+    mockFallbackQuery([message('0xb', 1), message('0xa', 0)]);
     const { rowIds } = render();
-    expect(mockBridgeRender).toHaveBeenCalled();
+    expect(mockUsePiChainMessageSearchQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pause: false }),
+    );
     expect(rowIds).toEqual(['0xa', '0xb']);
+  });
+
+  it('replaces RPC fallback rows with DB rows once indexed', () => {
+    mockDbQuery([]);
+    mockFallbackQuery([message('0xa', 0)]);
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    act(() => root.render(<TransactionDetails txHash={txHash} />));
+    expect(getView(container).rowIds).toEqual(['0xa']);
+
+    mockDbQuery([message('0xdb', 0)]);
+    act(() => root.render(<TransactionDetails txHash={txHash} />));
+    expect(getView(container).rowIds).toEqual(['0xdb']);
+    act(() => root.unmount());
   });
 
   it('shows the spinner while the RPC fallback is fetching', () => {
     mockDbQuery([]);
-    mockFallbackState = { ...DEFAULT_TRANSACTION_FALLBACK_STATE, isFetching: true };
+    mockFallbackQuery();
+    const { text } = render();
+    expect(text).toContain('Loading transaction messages...');
+    expect(text).not.toContain('No messages found');
+  });
+
+  it('shows the spinner while the provider is pending', () => {
+    mockDbQuery([]);
+    mockProviderState.multiProvider = undefined;
     const { text } = render();
     expect(text).toContain('Loading transaction messages...');
     expect(text).not.toContain('No messages found');
@@ -136,14 +172,21 @@ describe('TransactionDetails', () => {
 
   it('shows not found once the RPC fallback finds nothing', () => {
     mockDbQuery([]);
-    mockFallbackState = { ...DEFAULT_TRANSACTION_FALLBACK_STATE, hasRun: true };
+    const { text } = render();
+    expect(text).toContain('No messages found');
+  });
+
+  it('shows not found when the provider fails to init', () => {
+    mockDbQuery([]);
+    mockProviderState.multiProvider = undefined;
+    mockProviderState.initFailed = true;
     const { text } = render();
     expect(text).toContain('No messages found');
   });
 
   it('prefers RPC fallback messages over a DB error', () => {
     mockDbQuery([], new CombinedError({ networkError: new Error('scraper down') }));
-    mockFallbackState = { hasRun: true, isFetching: false, messageList: [message('0xa', 0)] };
+    mockFallbackQuery([message('0xa', 0)]);
     const { rowIds, text } = render();
     expect(rowIds).toEqual(['0xa']);
     expect(text).not.toContain('Error loading transaction');

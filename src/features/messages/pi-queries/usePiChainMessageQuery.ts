@@ -7,7 +7,7 @@ import { useMultiProviderVersion, useReadyMultiProvider, useRegistry } from '../
 import { Message } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
-import { isEvmChain, isPiChain } from '../../chains/utils';
+import { isPiSearchChain } from '../../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
@@ -45,6 +45,7 @@ export function usePiChainMessageSearchQuery({
       sanitizedInput,
       startTimeFilter,
       endTimeFilter,
+      piQueryType,
       includeScrapedChains,
       multiProviderVersion,
       registry,
@@ -61,8 +62,7 @@ export function usePiChainMessageSearchQuery({
       const piChains = allChains.filter(
         (c) =>
           c.domainId !== undefined &&
-          isEvmChain(multiProvider, c.domainId) &&
-          (includeScrapedChains || isPiChain(multiProvider, scrapedChains, c.domainId)),
+          isPiSearchChain(multiProvider, scrapedChains, c.domainId, includeScrapedChains),
       );
       try {
         const results = await Promise.allSettled(

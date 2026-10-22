@@ -330,7 +330,13 @@ async function tryFetchIgpGasPayments(
     multiProvider.getEthersV5Provider(domainId),
   );
   const filter = igp.filters.GasPayment(message.msgId);
-  const matchedEvents = (await igp.queryFilter(filter)) || [];
+  // Payments can't precede the dispatch, so bound the range to keep public RPCs happy
+  const matchedEvents = await igp.queryFilter(filter, message.origin.blockNumber).catch((error) => {
+    // Gas info is optional, so don't drop the message when the RPC rejects the log query
+    logger.warn(`Error fetching IGP payments for msg ${message.msgId} on ${name}`, error);
+    return null;
+  });
+  if (!matchedEvents) return message;
   logger.debug(`Found ${matchedEvents.length} payments to IGP for msg ${message.msgId}`);
   let totalGasAmount = BigNumber.from(0);
   let totalPayment = BigNumber.from(0);

@@ -96,9 +96,8 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
   const isIcaMsg = messageType === 'ica';
   // Unindexed RPC messages travel in the URL, matching MessageTable
-  const detailHref = message.isPiMsg
-    ? `/message/${message.msgId}?data=${serializeMessage(message)}`
-    : `/message/${message.msgId}`;
+  const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
+  const detailHref = `/message/${message.msgId}${base64 ? `?data=${base64}` : ''}`;
 
   const toggleExpanded = () => {
     setIsExpanded((prev) => !prev);

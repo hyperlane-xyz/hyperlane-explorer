@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { Message, MessageStatus } from '../../types';
 import { MessageDebugStatus, type MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { serializeMessage } from '../messages/utils';
 import { MessageSummaryRow } from './MessageSummaryRow';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -73,7 +74,7 @@ jest.mock('../messages/cards/WarpTransferDetailsCard', () => ({
 jest.mock('../messages/ica', () => ({ useIsIcaMessage: () => true }));
 jest.mock('../messages/utils', () => ({
   parseWarpRouteMessageDetails: () => undefined,
-  serializeMessage: () => 'serialized',
+  serializeMessage: jest.fn(() => 'serialized'),
 }));
 
 const mockUseMessageDeliveryStatus = jest.mocked(useMessageDeliveryStatus);
@@ -224,9 +225,11 @@ it('passes live ICA diagnostics to the details card', async () => {
 });
 
 it.each([
-  [false, `/message/${pendingMessage.msgId}`],
-  [true, `/message/${pendingMessage.msgId}?data=serialized`],
-])('links to message details with isPiMsg=%s', async (isPiMsg, href) => {
+  [false, 'serialized', `/message/${pendingMessage.msgId}`],
+  [true, 'serialized', `/message/${pendingMessage.msgId}?data=serialized`],
+  [true, undefined, `/message/${pendingMessage.msgId}`],
+])('links to message details with isPiMsg=%s, data=%s', async (isPiMsg, data, href) => {
+  jest.mocked(serializeMessage).mockReturnValue(data);
   mockUseMessageDeliveryStatus.mockReturnValue({
     messageWithDeliveryStatus: pendingMessage,
     debugResult: undefined,
