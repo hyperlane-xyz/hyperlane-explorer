@@ -1,4 +1,4 @@
-import { fromWei, isNullish, shortenAddress } from '@hyperlane-xyz/utils';
+import { fromWei, isNullish, ProtocolType, shortenAddress } from '@hyperlane-xyz/utils';
 import BigNumber from 'bignumber.js';
 
 import { IgpPayment, IgpPaymentDenom, IgpPaymentDenomKind } from '../igpPayments';
@@ -19,6 +19,21 @@ export interface PaymentAsset {
 }
 
 export const NATIVE_ASSET_ID = 'native';
+
+// The scraper scales Sealevel and Cosmos fees to 18 decimals before deriving the
+// effective gas price, so their delivery cost is not in native token units.
+const ATTO_SCALED_FEE_PROTOCOLS = new Set<ProtocolType>([
+  ProtocolType.Sealevel,
+  ProtocolType.Cosmos,
+  ProtocolType.CosmosNative,
+]);
+
+export function getDeliveryCostDecimals(
+  protocol: ProtocolType | undefined,
+  nativeDecimals: number,
+): number {
+  return protocol && ATTO_SCALED_FEE_PROTOCOLS.has(protocol) ? 18 : nativeDecimals;
+}
 const AMBIGUOUS_ASSET_ID = 'ambiguous';
 const AMBIGUOUS_ASSET_SYMBOL = 'unknown token';
 

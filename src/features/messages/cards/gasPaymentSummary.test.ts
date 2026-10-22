@@ -1,3 +1,4 @@
+import { ProtocolType } from '@hyperlane-xyz/utils';
 import BigNumber from 'bignumber.js';
 
 import { IgpPayment, IgpPaymentDenom, IgpPaymentDenomKind } from '../igpPayments';
@@ -7,6 +8,7 @@ import {
   formatPaymentUsd,
   formatRawUnits,
   formatUsd,
+  getDeliveryCostDecimals,
   getOtherPayments,
   hasNonNativePayments,
   NATIVE_ASSET_ID,
@@ -354,5 +356,19 @@ describe('formatOtherPayments', () => {
     expect(formatOtherPayments({ count: 2, rawAmount: undefined })).toBe(
       '2 payments (unit unknown)',
     );
+  });
+});
+
+describe('getDeliveryCostDecimals', () => {
+  it('uses 18 decimals for protocols whose fees the scraper stores in atto units', () => {
+    expect(getDeliveryCostDecimals(ProtocolType.Sealevel, 9)).toBe(18);
+    expect(getDeliveryCostDecimals(ProtocolType.Cosmos, 6)).toBe(18);
+    expect(getDeliveryCostDecimals(ProtocolType.CosmosNative, 6)).toBe(18);
+  });
+
+  it('uses native decimals for other protocols', () => {
+    expect(getDeliveryCostDecimals(ProtocolType.Ethereum, 18)).toBe(18);
+    expect(getDeliveryCostDecimals(ProtocolType.Tron, 6)).toBe(6);
+    expect(getDeliveryCostDecimals(undefined, 18)).toBe(18);
   });
 });

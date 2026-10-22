@@ -1,5 +1,4 @@
-import { chainAddresses } from '@hyperlane-xyz/registry';
-import type { ChainMap } from '@hyperlane-xyz/sdk';
+import { chainAddresses, type IRegistry } from '@hyperlane-xyz/registry';
 import {
   ProtocolType,
   addressToBytes32,
@@ -7,13 +6,13 @@ import {
   isEVMLike,
   strip0x,
 } from '@hyperlane-xyz/utils';
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import { BigNumber, Contract, providers, utils } from 'ethers';
 import { useMemo } from 'react';
 import { useQuery as useUrqlQuery } from 'urql';
 
 import { useChainMetadataResolver } from '../../metadataStore';
-import { useReadyMultiProvider, useRegistry } from '../../store';
+import { useMultiProviderVersion, useReadyMultiProvider, useRegistry } from '../../store';
 import { IcaCall } from '../../types';
 import { logger } from '../../utils/logger';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
@@ -45,26 +44,52 @@ export interface DecodedIcaMessage {
   commitment?: string; // Only present for COMMITMENT type
 }
 
-// Build a map of chainName -> ICA router address from the registry
-function buildIcaRouterAddressMap(): ChainMap<Address> {
-  const map: ChainMap<Address> = {};
-
-  for (const [chainName, addresses] of Object.entries(chainAddresses)) {
-    const icaRouter = (addresses as Record<string, string>).interchainAccountRouter;
-    if (icaRouter) {
-      map[chainName] = icaRouter;
-    }
-  }
-
-  return map;
+// REVEAL carries the verification ISM, not the ISM used to derive the ICA.
+export function getIcaAccountConfig(
+  decoded: DecodedIcaMessage | null,
+  related: DecodedIcaMessage | undefined,
+) {
+  return decoded?.messageType === IcaMessageType.REVEAL
+    ? related?.messageType === IcaMessageType.COMMITMENT
+      ? related
+      : undefined
+    : decoded;
 }
 
-// Cached ICA router address map built at module load time
-const ICA_ROUTER_MAP = buildIcaRouterAddressMap();
+const bundledChainAddresses: Record<string, Record<string, unknown> | undefined> = chainAddresses;
 
-// Normalize to bytes32 hex so registry entries (EVM-style 0x hex) and
-// resolved message addresses (e.g. base58 for Tron) compare equal when they
-// represent the same on-chain contract.
+function getIcaRouters(addresses: Record<string, unknown> | null | undefined): string[] {
+  return [addresses?.interchainAccountRouter, addresses?.interchainAccountRouterV3].filter(
+    (address): address is string => typeof address === 'string',
+  );
+}
+
+export function getBundledIcaRouters(chainName: string | undefined): string[] {
+  return chainName ? getIcaRouters(bundledChainAddresses[chainName]) : [];
+}
+
+// Resolve both generations from the configured runtime registry. The published
+// registry snapshot can predate V3 deployments.
+export async function fetchIcaRouters(
+  registry: Pick<IRegistry, 'getChainAddresses'>,
+  chainName: string,
+): Promise<string[]> {
+  return getIcaRouters(await registry.getChainAddresses(chainName));
+}
+
+export function icaRoutersQueryOptions(
+  registry: Pick<IRegistry, 'getUri' | 'getChainAddresses'>,
+  chainName: string | undefined,
+) {
+  return queryOptions({
+    queryKey: ['icaRouters', registry.getUri(), chainName],
+    queryFn: () => (chainName ? fetchIcaRouters(registry, chainName) : []),
+    enabled: !!chainName,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Canonicalize EVM, bytes32, and Tron representations before comparing.
 function toCanonicalBytes32(addr: Address): string | null {
   if (!addr) return null;
   try {
@@ -74,68 +99,45 @@ function toCanonicalBytes32(addr: Address): string | null {
   }
 }
 
-// Get all known ICA router addresses, canonicalized to bytes32 hex
-function getIcaRouterBytes32Set(): Set<string> {
-  const set = new Set<string>();
-  for (const addr of Object.values(ICA_ROUTER_MAP)) {
-    const canonical = toCanonicalBytes32(addr);
-    if (canonical) set.add(canonical);
-  }
-  return set;
+export function isIcaMessage(
+  { sender, recipient }: { sender: Address; recipient: Address },
+  originRouters: string[],
+  destinationRouters: string[],
+): boolean {
+  const matches = (address: string, routers: string[]) => {
+    const canonical = toCanonicalBytes32(address);
+    return canonical !== null && routers.some((router) => toCanonicalBytes32(router) === canonical);
+  };
+  return matches(sender, originRouters) && matches(recipient, destinationRouters);
 }
 
-/**
- * Check if an address is a known ICA router
- */
-export function isAddressIcaRouter(addr: Address): boolean {
-  if (!addr) return false;
-  try {
-    const canonical = toCanonicalBytes32(addr);
-    if (!canonical) return false;
-    return getIcaRouterBytes32Set().has(canonical);
-  } catch (error) {
-    logger.warn('Error checking if address is ICA router', error, addr);
-    return false;
-  }
-}
-
-/**
- * Check if a message is an ICA message by verifying both sender and recipient
- * are known ICA router addresses
- */
-export function isIcaMessage({
-  sender,
-  recipient,
-}: {
-  sender: Address;
-  recipient: Address;
-}): boolean {
-  const isSenderIca = isAddressIcaRouter(sender);
-  const isRecipIca = isAddressIcaRouter(recipient);
-
-  if (isSenderIca && isRecipIca) return true;
-
-  if (isSenderIca && !isRecipIca) {
-    logger.warn('Msg sender is ICA router but not recipient', sender, recipient);
-  }
-  if (!isSenderIca && isRecipIca) {
-    logger.warn('Msg recipient is ICA router but not sender', recipient, sender);
-  }
-
-  return false;
-}
-
-/**
- * React hook to check if a message is an ICA message
- */
 export function useIsIcaMessage({
   sender,
   recipient,
+  originDomainId,
+  destinationDomainId,
 }: {
   sender: Address;
   recipient: Address;
+  originDomainId: number;
+  destinationDomainId: number;
 }): boolean {
-  return useMemo(() => isIcaMessage({ sender, recipient }), [sender, recipient]);
+  const registry = useRegistry();
+  const resolver = useChainMetadataResolver();
+  const originChain = resolver.tryGetChainName(originDomainId) ?? undefined;
+  const destinationChain = resolver.tryGetChainName(destinationDomainId) ?? undefined;
+  const [origin, destination] = useQueries({
+    queries: [
+      icaRoutersQueryOptions(registry, originChain),
+      icaRoutersQueryOptions(registry, destinationChain),
+    ],
+  });
+  // Use snapshot routers while loading or after a registry error; runtime data adds newer ones.
+  return isIcaMessage(
+    { sender, recipient },
+    origin.data ?? getBundledIcaRouters(originChain),
+    destination.data ?? getBundledIcaRouters(destinationChain),
+  );
 }
 
 /**
@@ -159,7 +161,7 @@ export function useIsIcaMessage({
  *
  * REVEAL message:
  * - Byte 0: MessageType.REVEAL (0x02)
- * - Bytes 1-33: ICA ISM (bytes32)
+ * - Bytes 1-33: Reveal verification ISM (bytes32), separate from the ICA ISM
  * - Bytes 33-65: Commitment (bytes32)
  */
 export function decodeIcaBody(body: string): DecodedIcaMessage | null {
@@ -261,13 +263,6 @@ export function decodeIcaBody(body: string): DecodedIcaMessage | null {
 }
 
 /**
- * Get the ICA router address for a given chain
- */
-export function getIcaRouterAddress(chainName: string): Address | undefined {
-  return ICA_ROUTER_MAP[chainName];
-}
-
-/**
  * Compute the ICA address for a given owner on the destination chain.
  * This is a non-hook version for use in non-React contexts like the debugger.
  *
@@ -292,7 +287,10 @@ export async function computeIcaAddress(
   try {
     // eslint-disable-next-line camelcase
     const { InterchainAccountRouter__factory } = await import('@hyperlane-xyz/core');
-    const router = InterchainAccountRouter__factory.connect(destRouter, destProvider);
+    const router = InterchainAccountRouter__factory.connect(
+      bytes32ToAddress(addressToBytes32(destRouter)),
+      destProvider,
+    );
 
     // Use zero address for ISM if not specified (will use default ISM)
     const ismAddress = ism || '0x0000000000000000000000000000000000000000';
@@ -652,13 +650,19 @@ export function useIcaAddress(
   owner: Address | undefined,
   ism: Address | undefined,
   salt: string | undefined,
+  originRouter: Address,
+  destinationRouter: Address,
 ) {
   const multiProvider = useReadyMultiProvider();
+  const providerVersion = useMultiProviderVersion();
   const chainMetadataResolver = useChainMetadataResolver();
 
   return useQuery({
     queryKey: [
       'icaAddress',
+      originRouter,
+      destinationRouter,
+      providerVersion,
       originChainName,
       destinationChainName,
       owner,
@@ -679,15 +683,6 @@ export function useIcaAddress(
         return null;
       }
 
-      // Get the ICA router addresses for both chains
-      const originRouter = getIcaRouterAddress(originChainName);
-      const destRouter = getIcaRouterAddress(destinationChainName);
-
-      if (!originRouter || !destRouter) {
-        logger.debug('ICA router not found for chains', originChainName, destinationChainName);
-        return null;
-      }
-
       const provider = multiProvider.getEthersV5Provider(destinationChainName);
       const originDomainId = multiProvider.getDomainId(originChainName);
 
@@ -695,12 +690,13 @@ export function useIcaAddress(
         originDomainId,
         owner,
         originRouter,
-        destRouter,
+        destinationRouter,
         ism,
         salt,
         provider,
       );
     },
+    enabled: !!multiProvider && !!originChainName && !!destinationChainName && !!owner,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -760,12 +756,22 @@ export function useCcipReadIsmUrls(
   destinationChainName: string | undefined,
   messageBytes: string | undefined,
   messageType: IcaMessageType | undefined,
+  destinationRouter: Address,
 ) {
   const multiProvider = useReadyMultiProvider();
+  const providerVersion = useMultiProviderVersion();
   const chainMetadataResolver = useChainMetadataResolver();
 
   return useQuery({
-    queryKey: ['ccipReadIsmUrls', destinationChainName, messageBytes, messageType, !!multiProvider],
+    queryKey: [
+      'ccipReadIsmUrls',
+      destinationChainName,
+      destinationRouter,
+      messageBytes,
+      messageType,
+      providerVersion,
+      !!multiProvider,
+    ],
     queryFn: async () => {
       if (
         !destinationChainName ||
@@ -782,18 +788,15 @@ export function useCcipReadIsmUrls(
       try {
         const provider = multiProvider.getEthersV5Provider(destinationChainName);
 
-        // Get the ICA Router address for the destination chain
-        const icaRouterAddress = getIcaRouterAddress(destinationChainName);
-        if (!icaRouterAddress) {
-          logger.debug('ICA router not found for chain', destinationChainName);
-          return null;
-        }
-
         // Call route(message) on the ICA Router to get the ISM address for this message
         const routerInterface = new utils.Interface([
           'function route(bytes calldata _message) view returns (address)',
         ]);
-        const routerContract = new Contract(icaRouterAddress, routerInterface, provider);
+        const routerContract = new Contract(
+          bytes32ToAddress(addressToBytes32(destinationRouter)),
+          routerInterface,
+          provider,
+        );
         const ismAddress = await routerContract.route(messageBytes);
 
         if (!ismAddress || ismAddress === '0x0000000000000000000000000000000000000000') {
@@ -812,7 +815,11 @@ export function useCcipReadIsmUrls(
       }
     },
     retry: false,
-    enabled: messageType === IcaMessageType.REVEAL && !!destinationChainName && !!messageBytes,
+    enabled:
+      !!multiProvider &&
+      messageType === IcaMessageType.REVEAL &&
+      !!destinationChainName &&
+      !!messageBytes,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -830,6 +837,7 @@ export function useRelatedIcaMessage(
   currentMsgId: string | undefined,
   currentCommitment: string | undefined,
   currentMessageType: IcaMessageType | undefined,
+  routing: { sender: Address; recipient: Address; destinationDomainId: number },
 ) {
   const { scrapedDomains } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
@@ -903,7 +911,14 @@ export function useRelatedIcaMessage(
     // Find the related message by matching commitment hash
     for (const msg of messages) {
       // Skip the current message
-      if (msg.msgId === currentMsgId) continue;
+      if (
+        msg.msgId === currentMsgId ||
+        msg.originDomainId !== originDomainId ||
+        msg.destinationDomainId !== routing.destinationDomainId ||
+        toCanonicalBytes32(msg.sender) !== toCanonicalBytes32(routing.sender) ||
+        toCanonicalBytes32(msg.recipient) !== toCanonicalBytes32(routing.recipient)
+      )
+        continue;
 
       // Decode the message to check if it's the related COMMITMENT/REVEAL
       const decoded = decodeIcaBody(msg.body);
@@ -937,6 +952,10 @@ export function useRelatedIcaMessage(
     currentMsgId,
     currentCommitment,
     currentMessageType,
+    originDomainId,
+    routing.sender,
+    routing.recipient,
+    routing.destinationDomainId,
   ]);
 
   return {

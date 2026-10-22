@@ -32,6 +32,7 @@ jest.mock('../chains/utils', () => ({
 jest.mock('../deliveryStatus/useMessageDeliveryStatus', () => ({
   useMessageDeliveryStatus: jest.fn(),
 }));
+jest.mock('../messages/cards/AeroVoterDetailsCard', () => ({ AeroVoterDetailsCard: () => null }));
 jest.mock('../messages/cards/ContentDetailsCard', () => ({ ContentDetailsCard: () => null }));
 jest.mock('../messages/cards/IcaDetailsCard', () => ({
   IcaDetailsCard: ({
@@ -69,7 +70,7 @@ jest.mock('../messages/cards/TransactionCard', () => ({
 jest.mock('../messages/cards/WarpTransferDetailsCard', () => ({
   WarpTransferDetailsCard: () => null,
 }));
-jest.mock('../messages/ica', () => ({ isIcaMessage: () => true }));
+jest.mock('../messages/ica', () => ({ useIsIcaMessage: () => true }));
 jest.mock('../messages/utils', () => ({ parseWarpRouteMessageDetails: () => undefined }));
 
 const mockUseMessageDeliveryStatus = jest.mocked(useMessageDeliveryStatus);
