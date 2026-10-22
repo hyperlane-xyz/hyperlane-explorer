@@ -123,15 +123,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     destinationDomainId: message.destinationDomainId,
   });
   const debugResult = activeRuntimeState?.debugResult;
-  const {
-    status,
-    originDomainId,
-    destinationDomainId,
-    origin,
-    destination,
-    isPiMsg,
-    isProvisional,
-  } = message;
+  const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
   const duration = destination?.timestamp
     ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
     : undefined;
@@ -188,7 +180,6 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
         </div>
         <StatusHeader
           messageStatus={status}
-          isProvisional={isProvisional}
           isOriginConfirming={isOriginConfirming}
           isMessageFound={isMessageFound}
           isFetching={isFetching}
@@ -295,7 +286,6 @@ function hasCompleteMessageDetails(message?: Message | MessageStub | null): mess
 
 function StatusHeader({
   messageStatus,
-  isProvisional,
   isOriginConfirming,
   isMessageFound,
   isFetching,
@@ -303,7 +293,6 @@ function StatusHeader({
   duration,
 }: {
   messageStatus: MessageStatus;
-  isProvisional?: boolean;
   isOriginConfirming: boolean;
   isMessageFound: boolean;
   isFetching: boolean;
@@ -316,7 +305,7 @@ function StatusHeader({
   } else if (isMessageFound) {
     text = isOriginConfirming
       ? 'Status: Confirming on origin'
-      : `Status: ${toTitleCase(messageStatus)}${isProvisional && messageStatus === MessageStatus.Delivered ? ' (provisional)' : ''}`;
+      : `Status: ${toTitleCase(messageStatus)}`;
   } else if (isError) {
     text = 'Error finding message';
   } else {
@@ -330,7 +319,7 @@ function StatusHeader({
         <SpinnerIcon width={20} height={20} color={Color.white} />
       </div>
     );
-  } else if (isMessageFound && messageStatus === MessageStatus.Delivered && !isProvisional) {
+  } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
     icon = <CheckmarkIcon width={24} height={24} color={Color.white} />;
   } else {
     icon = null;
