@@ -49,9 +49,9 @@ export function useTransactionMessagesQuery(txHash: string) {
 
   const isMessagesFound = messageList.length > 0;
 
-  // Check if all messages are delivered
+  // Check if all messages are delivered. Provisional rows can still roll back, so keep polling.
   const allDelivered = useMemo(
-    () => messageList.length > 0 && messageList.every((m) => m.destination),
+    () => messageList.length > 0 && messageList.every((m) => m.destination && !m.isProvisional),
     [messageList],
   );
 
