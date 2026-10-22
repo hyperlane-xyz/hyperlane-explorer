@@ -1,7 +1,8 @@
 import { eqAddress, isAddress } from '@hyperlane-xyz/utils';
-import { useCallback, useMemo } from 'react';
-import { createRequest, useQuery } from 'urql';
+import { useCallback, useEffect, useMemo } from 'react';
+import { createRequest, useQuery, type CombinedError } from 'urql';
 
+import { MESSAGE_PAGE_SIZE } from '../../../consts/api';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageStatusFilter, MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
@@ -20,7 +21,7 @@ import {
   postgresByteaToString,
   searchValueToPostgresBytea,
 } from './encoding';
-import { MessagesQueryResult, MessagesStubQueryResult, MessageStubEntry } from './fragments';
+import { MessageDetailsQueryResult, MessagesStubQueryResult, MessageStubEntry } from './fragments';
 import {
   compareMessageIdsDescending,
   parseMessageEntry,
@@ -31,6 +32,7 @@ import {
 import {
   type ExplorerConnectionState,
   useExplorerEvents,
+  useExplorerMessageRows,
   useExplorerRefresh,
   filterLatestMessageRows,
   useMessageRowSubscription,
@@ -40,7 +42,6 @@ import {
 
 const SEARCH_AUTO_REFRESH_DELAY = 15_000;
 const MSG_AUTO_REFRESH_DELAY = 10_000;
-const MESSAGE_PAGE_SIZE = 50;
 
 // Larger batch size for pending filter since most messages are delivered quickly,
 // so we need to fetch more to find pending ones.
@@ -61,12 +62,15 @@ export function getMessagePage(
     const message = candidatesByHash.get(hash);
     return message ? [message.id === id ? message : { ...message, id }] : [];
   });
-  const canonicalPage = canonicalMessages.slice(0, MESSAGE_PAGE_SIZE);
-  const liveOnlyMessages = filteredMessages.filter((m) => !canonicalIds.has(m.msgId.toLowerCase()));
+  const liveOnlyMessages = filteredMessages
+    .filter((m) => !canonicalIds.has(m.msgId.toLowerCase()))
+    .sort((a, b) => b.origin.timestamp - a.origin.timestamp)
+    .slice(0, canonicalMessages.length ? MESSAGE_PAGE_SIZE - 1 : MESSAGE_PAGE_SIZE);
+  const canonicalPage = canonicalMessages.slice(0, MESSAGE_PAGE_SIZE - liveOnlyMessages.length);
   const pageMessages = [...canonicalPage, ...liveOnlyMessages];
   const canonicalPageBoundary = canonicalPage.at(-1)?.id;
   const continuationCursor =
-    canonicalMessages.length > MESSAGE_PAGE_SIZE
+    canonicalMessages.length > canonicalPage.length
       ? (canonicalPageBoundary ?? null)
       : rawRows.length >= queryLimit
         ? String(rawRows[queryLimit - 1].id)
@@ -97,6 +101,15 @@ export function getRawMessageRows(
     const descending = aId === bId ? 0 : aId > bId ? -1 : 1;
     return ascending ? -descending : descending;
   });
+}
+
+export function isMessageSearchError(error: CombinedError | undefined, hasData: boolean) {
+  return (
+    !!error &&
+    (!hasData ||
+      !!error.networkError ||
+      error.graphQLErrors.some((issue) => issue.path?.[0] !== PROVISIONAL_QUERY_KEY))
+  );
 }
 
 export function isValidSearchQuery(input: string) {
@@ -253,8 +266,7 @@ export function useMessageSearchQuery(
     hasRun: hasSearchMetadataRun,
     retry: retrySearchMetadata,
   } = useScrapedChains(chainMetadataResolver);
-  const { connectionState: explorerConnectionState, messageRows: liveMessageRows } =
-    useExplorerEvents();
+  const liveMessageRows = useExplorerMessageRows();
   const mainnetDomainIds = useMemo(
     () =>
       Object.values(chains)
@@ -318,7 +330,6 @@ export function useMessageSearchQuery(
   // is_delivered=false is slow (no index on absence of delivered_message record).
   // Instead, we fetch more messages and filter client-side.
   const isPendingFilter = statusFilter === 'pending';
-  const dbStatusFilter = isPendingFilter ? 'all' : statusFilter;
 
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : MESSAGE_PAGE_SIZE + 1;
   const liveSearchEnabled = isSearchMetadataReady && isValidInput;
@@ -339,13 +350,9 @@ export function useMessageSearchQuery(
     queryLimit,
     true,
     searchDomainIds,
-    dbStatusFilter,
+    statusFilter,
     warpAddresses,
-    {
-      // A reload must not reuse a snapshot from before a provisional event.
-      cached: !!cursorValue && shouldUseMessageQueryCache(explorerConnectionState),
-      ...cursor,
-    },
+    cursor,
   );
 
   // Execute query
@@ -356,6 +363,11 @@ export function useMessageSearchQuery(
     requestPolicy: 'cache-and-network',
   });
   const { data, fetching, error } = result;
+  useEffect(() => {
+    if (error && !isMessageSearchError(error, !!data)) {
+      logger.warn('Provisional message snapshot unavailable; showing canonical results', error);
+    }
+  }, [data, error]);
   const hasCurrentQueryResult =
     !!data &&
     doesQueryResultMatchRequest(createRequest(query, variables).key, result.operation?.key);
@@ -438,7 +450,7 @@ export function useMessageSearchQuery(
     isValidOrigin,
     isValidDestination,
     isFetching,
-    isError: isSearchMetadataError || !!error,
+    isError: isSearchMetadataError || isMessageSearchError(error, !!data),
     hasRun,
     isMessagesFound,
     messageList: paginatedMessageList,
@@ -461,16 +473,17 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     1,
     false,
     undefined,
-    { cached: shouldUseMessageQueryCache(explorerConnectionState) },
+    { cached: shouldUseMessageQueryCache(explorerConnectionState), provisional: true },
   );
 
   // Execute query
-  const [{ data, fetching: isFetching, error }, reexecuteQuery] = useQuery<MessagesQueryResult>({
-    query,
-    variables,
-    pause,
-    requestPolicy: 'cache-and-network',
-  });
+  const [{ data, fetching: isFetching, error }, reexecuteQuery] =
+    useQuery<MessageDetailsQueryResult>({
+      query,
+      variables,
+      pause,
+      requestPolicy: 'cache-and-network',
+    });
 
   // Parse results
   const messageList = useMemo(
@@ -485,6 +498,7 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
     messageId,
     !pause,
     refresh,
+    messageList[0],
   );
   const liveMessage = useMemo(
     () =>
@@ -525,9 +539,20 @@ export function selectLiveMessage<M extends MessageStub>(
   if (!liveMessage) return canonicalMessage;
   if (!canonicalMessage) return liveMessage;
   // Bound the overlay's authority: missed rollbacks must yield to polled snapshots.
-  return !liveMessageExpired && liveMessage.status !== canonicalMessage.status
-    ? preserveMessageTransactionFields(liveMessage, canonicalMessage)
-    : preserveMessageTransactionFields(canonicalMessage, liveMessage);
+  if (liveMessageExpired || liveMessage.status === canonicalMessage.status) {
+    return preserveMessageTransactionFields(canonicalMessage, liveMessage);
+  }
+  const selected = preserveMessageTransactionFields(liveMessage, canonicalMessage)!;
+  const sameOrigin =
+    selected.originDomainId === canonicalMessage.originDomainId &&
+    selected.origin.hash === canonicalMessage.origin.hash &&
+    selected.origin.blockNumber === canonicalMessage.origin.blockNumber &&
+    (!('blockHash' in selected.origin) ||
+      !('blockHash' in canonicalMessage.origin) ||
+      selected.origin.blockHash === canonicalMessage.origin.blockHash);
+  return sameOrigin && canonicalMessage.isOriginProvisional === false
+    ? { ...selected, isOriginProvisional: false }
+    : selected;
 }
 
 function isLiveMessageExpired(message: MessageStub | null) {

@@ -29,7 +29,7 @@ export function TransactionDetailsRows({
   const { hash, from, timestamp } = transaction;
   const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
   const showConfirmations = confirmationProgress && confirmationProgress.required > 0;
-  const labelWidth = showConfirmations ? 'w-28' : 'w-16';
+  const labelWidth = 'w-28';
 
   const formattedHash = formatTxHash(hash, domainId, resolver);
   const txExplorerLink =

@@ -15,7 +15,6 @@ export async function fetchMessageForOG(messageId: string): Promise<MessageOGDat
   const query = `
     query ($identifier: bytea!) @cached(ttl: 5) {
       message_view(
-        confirmations: 0,
         where: {msg_id: {_eq: $identifier}},
         limit: 1
       ) {

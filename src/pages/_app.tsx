@@ -114,6 +114,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
       <UrqlProvider value={urqlClient}>
         <ExplorerEventsProvider
           domains={scrapedDomainIds}
+          blocks={router.pathname.startsWith('/message/')}
           enabled={shouldEnableExplorerEvents(router.pathname)}
         >
           <AppLayout pathName={router.pathname}>

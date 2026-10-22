@@ -70,8 +70,7 @@ it.each([
     const root = createRoot(container);
     const testGlobal: typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean } = globalThis;
     testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
-    const watching = jest.fn();
-    const heads = createExplorerBlockHeads(watching);
+    const heads = createExplorerBlockHeads();
     async function render() {
       await act(async () =>
         root.render(
@@ -110,17 +109,18 @@ it.each([
       expect(fetch).not.toHaveBeenCalled();
       message.status = MessageStatus.Delivered;
       await render();
-      expect(watching).toHaveBeenLastCalledWith(true);
       await act(async () => head(domain, 103));
       expect(container.textContent).toBe(`pending:3 / ${required}`);
       await act(async () => head(domain, 100 + required));
       expect(container.textContent).toBe(`pending:${required} / ${required}`);
+      const cappedRenders = renders;
+      await act(async () => head(domain, 101 + required));
+      expect(renders).toBe(cappedRenders);
       message.isProvisional = false;
       await render();
       const canonicalRenders = renders;
       await act(async () => head(domain, 120));
       expect(renders).toBe(canonicalRenders);
-      expect(watching).toHaveBeenLastCalledWith(false);
     } finally {
       await act(async () => root.unmount());
       delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
@@ -151,6 +151,12 @@ describe('isWaitingForOriginConfirmations', () => {
     expect(isWaitingForOriginConfirmations(pending, { current: 14, required: 15 })).toBe(true);
     expect(isWaitingForOriginConfirmations(pending, { current: 15, required: 15 })).toBe(false);
     expect(isWaitingForOriginConfirmations(pending, { current: 0, required: 0 })).toBe(false);
+  });
+
+  it('does not hold old dispatches with provisional payment updates', () => {
+    expect(isWaitingForOriginConfirmations({ ...pending, isOriginProvisional: false }, null)).toBe(
+      false,
+    );
   });
 
   it('does not hold delivered or canonical messages for confirmations', () => {

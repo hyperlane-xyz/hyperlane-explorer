@@ -46,15 +46,6 @@ async function fetchCollateralBalance(
       return undefined;
     }
 
-    if (chainMetadata.protocol !== ProtocolType.Ethereum) {
-      logger.debug('Skipping collateral check for non-EVM chain', {
-        chain: destinationToken.chainName,
-        protocol: chainMetadata.protocol,
-        token: destinationToken.symbol,
-      });
-      return undefined;
-    }
-
     // Verify we can get a provider for this chain
     try {
       multiProvider.tryGetProvider(destinationToken.chainName);

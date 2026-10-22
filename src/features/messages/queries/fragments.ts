@@ -128,3 +128,8 @@ export interface MessageEntry extends MessageStubEntry {
 
 export type MessagesStubQueryResult = Record<string, MessageStubEntry[] | null>;
 export type MessagesQueryResult = Record<string, MessageEntry[] | null>;
+
+export interface MessageDetailsQueryResult {
+  canonical?: Array<Pick<MessageEntry, 'msg_id' | 'origin_tx_hash' | 'origin_block_hash'>> | null;
+  message_view?: MessageEntry[] | null;
+}

@@ -87,7 +87,19 @@ export function DestinationTransactionCard({
         </div>
       </DeliveryStatus>
     );
-  } else if (isOriginConfirming && !pause) {
+  } else if (pause) {
+    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
+  } else if (
+    status === MessageStatus.Pending &&
+    collateralInfo.status === CollateralStatus.Insufficient
+  ) {
+    content = (
+      <InsufficientCollateralWarning
+        warpRouteDetails={warpRouteDetails}
+        collateralInfo={collateralInfo}
+      />
+    );
+  } else if (isOriginConfirming) {
     content = (
       <DeliveryStatus>
         <div>Waiting for origin confirmations.</div>
@@ -134,8 +146,6 @@ export function DestinationTransactionCard({
         )}
       </>
     );
-  } else if (pause) {
-    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
   } else if (!hasChainConfig) {
     content = (
       <>

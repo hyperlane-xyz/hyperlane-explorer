@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
+import { getMessagePause } from '../../consts/pausedRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
@@ -109,7 +110,9 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
   const confirmationProgress = useConfirmationProgress(message, chainMetadataResolver);
   const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
   const isOriginConfirming =
-    isMessageFound && isWaitingForOriginConfirmations(message, confirmationProgress);
+    isMessageFound &&
+    !getMessagePause(message) &&
+    isWaitingForOriginConfirmations(message, confirmationProgress);
   const isFetching =
     isGraphQlFetching ||
     !!activeRuntimeState?.isFetching ||

@@ -8,6 +8,7 @@ import { isPiChain } from '../../chains/utils';
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
 import {
   MessageEntry,
+  MessageDetailsQueryResult,
   MessagesQueryResult,
   MessagesStubQueryResult,
   MessageStubEntry,
@@ -31,15 +32,26 @@ export function parseMessageStubResult(
 export function parseMessageQueryResult(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
-  data: MessagesQueryResult | undefined,
+  data: MessagesQueryResult | MessageDetailsQueryResult | undefined,
 ): Message[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageEntry);
+  const { canonical, ...entries } = data ?? {};
+  return queryResult(chainMetadataResolver, scrapedChains, entries, (resolver, chains, row) => {
+    const message = parseMessageEntry(resolver, chains, row);
+    if (!message) return null;
+    const originConfirmed = canonical?.some(
+      (confirmed) =>
+        confirmed.msg_id === row.msg_id &&
+        confirmed.origin_tx_hash === row.origin_tx_hash &&
+        confirmed.origin_block_hash === row.origin_block_hash,
+    );
+    return { ...message, isOriginProvisional: !!message.isProvisional && !originConfirmed };
+  });
 }
 
 function queryResult<D, M extends MessageStub>(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
-  data: Record<string, D[] | null> | undefined,
+  data: Record<string, D[] | null | undefined> | undefined,
   parseFn: (
     chainMetadataResolver: ChainMetadataResolver,
     scrapedChains: DomainsEntry[],
@@ -78,6 +90,12 @@ export function parseMessageStubEntry(
       status: m.is_delivered ? MessageStatus.Delivered : MessageStatus.Pending,
       isProvisional: m.is_provisional ?? m.live_confirmations === 0,
       liveReceivedAt: m.live_received_at,
+      isOriginProvisional:
+        m.is_provisional === false
+          ? false
+          : m.live_received_at === undefined
+            ? undefined
+            : m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,

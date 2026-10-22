@@ -9,7 +9,7 @@ import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
-import { useExplorerEvents } from '../messages/queries/useLiveMessages';
+import { useIsMessageLive } from '../messages/queries/useLiveMessages';
 import { getDeliveryStatusRefetchInterval } from './deliveryStatusPolling';
 
 export function useMessageDeliveryStatus({
@@ -23,12 +23,13 @@ export function useMessageDeliveryStatus({
   const multiProvider = useReadyMultiProvider();
   const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
-  const { connectionState: explorerConnectionState } = useExplorerEvents();
+  const isMessageLive = useIsMessageLive(message);
+  const queryMessage = { ...message, liveReceivedAt: undefined };
 
   const { data, error, isFetching } = useQuery({
     queryKey: [
       'messageDeliveryStatus',
-      message,
+      queryMessage,
       multiProviderVersion,
       registry,
       chainMetadataOverrides,
@@ -79,7 +80,7 @@ export function useMessageDeliveryStatus({
       getDeliveryStatusRefetchInterval(
         query.state.data?.message.status === MessageStatus.Delivered,
         message.isPiMsg,
-        explorerConnectionState,
+        isMessageLive ? 'connected' : 'disconnected',
       ),
     enabled: enabled && !!multiProvider,
   });

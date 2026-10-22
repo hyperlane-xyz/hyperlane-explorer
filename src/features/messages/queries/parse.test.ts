@@ -5,6 +5,7 @@ import type { MessageEntry, MessageStubEntry } from './fragments';
 import {
   parseBlockNumber,
   parseMessageEntry,
+  parseMessageQueryResult,
   parseMessageStubEntry,
   parseMessageStubResult,
 } from './parse';
@@ -19,6 +20,20 @@ describe('parseMessageStubEntry', () => {
     expect(messages).toHaveLength(1);
     expect(error).not.toHaveBeenCalled();
     error.mockRestore();
+  });
+
+  it('distinguishes a confirmed dispatch from later provisional payment updates', () => {
+    const parse = (canonical: MessageEntry[]) =>
+      parseMessageQueryResult(createChainMetadataResolver({}), [], {
+        canonical,
+        message_view: [{ ...messageEntry, is_provisional: true }],
+      })[0];
+    expect(parse([messageEntry])).toMatchObject({
+      isProvisional: true,
+      isOriginProvisional: false,
+    });
+    expect(parse([]).isOriginProvisional).toBe(true);
+    expect(parse([{ ...messageEntry, origin_block_hash: '\\xff' }]).isOriginProvisional).toBe(true);
   });
 
   it('keeps provisional dispatches without transaction address enrichment', () => {
@@ -88,6 +103,17 @@ describe('parseMessageStubEntry', () => {
       liveReceivedAt: 1234,
       origin: { blockNumber: 1 },
     });
+  });
+
+  it('honors an authoritative canonical flag over a live confirmation envelope', () => {
+    expect(
+      parseMessageEntry(createChainMetadataResolver({}), [], {
+        ...messageEntry,
+        is_provisional: false,
+        live_confirmations: 0,
+        live_received_at: 1,
+      }),
+    ).toMatchObject({ isProvisional: false, isOriginProvisional: false });
   });
 
   it('tracks origin confirmations for provisional delivery', () => {

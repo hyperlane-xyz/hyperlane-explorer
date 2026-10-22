@@ -1,7 +1,7 @@
-import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useContext, useEffect, useEffectEvent, useState } from 'react';
 
 import type { MessageStub, MessageTxStub } from '../../../types';
-import { ExplorerEventsContext } from './ExplorerEventsProvider';
+import { ExplorerEventsContext, ExplorerMessageRowsContext } from './ExplorerEventsProvider';
 import type { MessageEntry } from './fragments';
 
 export type { ExplorerConnectionState } from './ExplorerEventsProvider';
@@ -12,14 +12,37 @@ export function useExplorerEvents() {
   return context;
 }
 
-export function useExplorerRefresh(enabled: boolean, refresh: () => void) {
-  const { revision } = useExplorerEvents();
-  const previousRevision = useRef(revision);
-  const onRefresh = useEffectEvent(refresh);
+export function useExplorerMessageRows() {
+  return useContext(ExplorerMessageRowsContext);
+}
+
+export function isExplorerMessageCovered(
+  domainIds: number[],
+  message?: Pick<MessageStub, 'originDomainId' | 'destinationDomainId'>,
+) {
+  return (
+    !domainIds.length ||
+    (!!message &&
+      (domainIds.includes(message.originDomainId >>> 0) ||
+        domainIds.includes(message.destinationDomainId >>> 0)))
+  );
+}
+
+export function useIsMessageLive(message: MessageStub) {
+  const { connectionState, domainIds } = useExplorerEvents();
+  return connectionState === 'connected' && isExplorerMessageCovered(domainIds, message);
+}
+
+export function useExplorerRefresh(enabled: boolean, refresh: () => void, domains?: number[]) {
+  const { subscribeRefresh } = useExplorerEvents();
+  const onRefresh = useEffectEvent((domain?: number) => {
+    if (domain === undefined || !domains?.length || domains.some((id) => id >>> 0 === domain))
+      refresh();
+  });
   useEffect(() => {
-    if (enabled && previousRevision.current !== revision) onRefresh();
-    previousRevision.current = revision;
-  }, [enabled, revision]);
+    if (!enabled) return;
+    return subscribeRefresh((domain) => onRefresh(domain));
+  }, [enabled, subscribeRefresh]);
 }
 
 export function filterLatestMessageRows(messageRows: MessageEntry[], domains: number[]) {
@@ -34,19 +57,37 @@ export function useMessageRowSubscription(
   messageId: string,
   enabled: boolean,
   refresh: () => void,
+  message?: MessageStub,
 ) {
-  const { connectionState, subscribe } = useExplorerEvents();
-  useExplorerRefresh(enabled, refresh);
+  const { connectionState, domainIds, subscribe } = useExplorerEvents();
+  const origin = message?.originDomainId;
+  const destination = message?.destinationDomainId;
+  useExplorerRefresh(
+    enabled,
+    refresh,
+    origin === undefined || destination === undefined ? undefined : [origin, destination],
+  );
   const [live, setLive] = useState<{ messageId: string; row: MessageEntry | null }>();
   useEffect(() => {
     if (!enabled) return;
-    return subscribe(messageId, (row) => setLive({ messageId, row }));
-  }, [enabled, messageId, subscribe]);
+    return subscribe(
+      messageId,
+      (row) => setLive({ messageId, row }),
+      origin === undefined || destination === undefined ? [] : [origin, destination],
+    );
+  }, [enabled, messageId, subscribe, origin, destination]);
 
-  const connected = enabled && connectionState === 'connected';
+  const row = live?.messageId === messageId ? live.row : null;
+  const coveredMessage = row
+    ? { originDomainId: row.origin_domain_id, destinationDomainId: row.destination_domain_id }
+    : message;
+  const connected =
+    enabled &&
+    connectionState === 'connected' &&
+    isExplorerMessageCovered(domainIds, coveredMessage);
   return {
     connected,
-    messageRow: connected && live?.messageId === messageId ? live.row : null,
+    messageRow: connected ? row : null,
   };
 }
 

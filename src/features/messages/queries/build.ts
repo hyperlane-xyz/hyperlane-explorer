@@ -1,6 +1,6 @@
 import { isAddress } from '@hyperlane-xyz/utils';
 
-import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
+import { MESSAGE_PAGE_SIZE } from '../../../consts/api';
 import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
@@ -37,7 +37,7 @@ export function buildMessageQuery(
   limit: number,
   useStub = false,
   orderBy?: string,
-  { cached = true }: { cached?: boolean } = {},
+  { cached = true, provisional = false }: { cached?: boolean; provisional?: boolean } = {},
 ) {
   const field = {
     [MessageIdentifierType.Id]: 'msg_id',
@@ -51,11 +51,19 @@ export function buildMessageQuery(
   if (typeof field !== 'string') throw new Error(`Invalid id type: ${idType}`);
   const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
+  const where = `{send_occurred_at: {_is_null: false}, ${field}: {_eq: $identifier}}`;
   const query = `
   query ($identifier: bytea!)${cached ? ' @cached(ttl: 5)' : ''} {
+    ${
+      provisional
+        ? `canonical: message_view(where: ${where}, limit: ${limit}) {
+      msg_id origin_tx_hash origin_block_hash
+    }`
+        : ''
+    }
     message_view(
-      confirmations: 0,
-      where: {send_occurred_at: {_is_null: false}, ${field}: {_eq: $identifier}},
+      ${provisional ? 'confirmations: 0,' : ''}
+      where: ${where},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
     ) {
@@ -156,12 +164,13 @@ export function buildMessageSearchQuery(
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
         ${statusFilter === 'delivered' ? '{is_delivered: {_eq: true}},' : ''}
+        ${provisional && statusFilter === 'pending' ? '{is_delivered: {_eq: false}},' : ''}
         ${warpAddressesBytea.length ? '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},' : ''}
         ${whereClause}
       ]
     },
     order_by: ${provisional ? '[{send_occurred_at: desc}, {id: desc}]' : `{id: ${orderDirection.toLowerCase()}}`},
-    limit: ${provisional ? LIVE_MESSAGE_LIMIT : limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
+    limit: ${provisional ? Math.min(limit, MESSAGE_PAGE_SIZE) : limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,

@@ -1,7 +1,7 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 
 import { MessageStatus, type MessageStub } from '../../types';
-import { useExplorerBlockHead } from './queries/ExplorerEventsProvider';
+import { useExplorerBlockValue } from './queries/ExplorerEventsProvider';
 
 export interface ConfirmationProgress {
   current: number | null;
@@ -9,12 +9,12 @@ export interface ConfirmationProgress {
 }
 
 export function isWaitingForOriginConfirmations(
-  message: Pick<MessageStub, 'isProvisional' | 'status'>,
+  message: Pick<MessageStub, 'isProvisional' | 'isOriginProvisional' | 'status'>,
   progress?: ConfirmationProgress | null,
 ) {
   return (
     message.status === MessageStatus.Pending &&
-    !!message.isProvisional &&
+    !!(message.isOriginProvisional ?? message.isProvisional) &&
     (!progress || progress.current === null || progress.current < progress.required)
   );
 }
@@ -23,22 +23,20 @@ export function useConfirmationProgress(
   message: MessageStub,
   chainMetadataResolver: ChainMetadataResolver,
 ): ConfirmationProgress | null {
-  const tracking = message.isProvisional;
+  const tracking = message.isOriginProvisional ?? message.isProvisional;
   const required = tracking
     ? getRequiredConfirmations(
         chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks,
       )
     : undefined;
-  const head = useExplorerBlockHead(required ? message.originDomainId : undefined);
-  if (required === undefined) return null;
-  return {
-    required,
-    current: calculateConfirmationCount(
+  const current = useExplorerBlockValue(required ? message.originDomainId : undefined, (head) =>
+    calculateConfirmationCount(
       message.origin.blockNumber,
       head ? Number(head.headHeight) : undefined,
-      required,
+      required ?? 0,
     ),
-  };
+  );
+  return required === undefined ? null : { required, current };
 }
 
 export function calculateConfirmationCount(

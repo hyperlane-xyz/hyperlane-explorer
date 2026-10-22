@@ -4,6 +4,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../../types';
+import { CollateralStatus } from '../collateral/types';
+import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { DestinationTransactionCard } from './TransactionCard';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -29,12 +31,12 @@ jest.mock('../../../store', () => ({
   }),
 }));
 jest.mock('../collateral/useCollateralStatus', () => ({
-  useCollateralStatus: () => ({ status: 'unknown' }),
+  useCollateralStatus: jest.fn(() => ({ status: 'unknown' })),
 }));
 jest.mock('./CodeBlock', () => ({ LabelAndCodeBlock: () => null }));
 jest.mock('./CollateralCards', () => ({
   ActiveRebalanceModal: () => null,
-  InsufficientCollateralWarning: () => null,
+  InsufficientCollateralWarning: () => <div>Insufficient collateral</div>,
 }));
 jest.mock('./TransactionDetailsRows', () => ({ TransactionDetailsRows: () => null }));
 
@@ -66,7 +68,8 @@ it('shows a route halt warning before missing chain metadata', async () => {
         chainName="unknown"
         domainId={message.destinationDomainId}
         status={MessageStatus.Pending}
-        isStatusFetching={false}
+        isStatusFetching={true}
+        isOriginConfirming={true}
         blur={false}
         message={message}
       />,
@@ -140,3 +143,29 @@ it.each([undefined, { hash: '0x01', timestamp: 1 }])(
     }
   },
 );
+
+it('shows insufficient collateral while origin confirmations are still pending', async () => {
+  const collateral = jest.mocked(useCollateralStatus);
+  collateral.mockReturnValue({ status: CollateralStatus.Insufficient });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <DestinationTransactionCard
+          chainName="ethereum"
+          domainId={1}
+          status={MessageStatus.Pending}
+          isStatusFetching={false}
+          isOriginConfirming={true}
+          blur={false}
+        />,
+      ),
+    );
+    expect(container.textContent).toContain('Insufficient collateral');
+    expect(container.textContent).not.toContain('Waiting for origin confirmations');
+  } finally {
+    collateral.mockReturnValue({ status: CollateralStatus.Unknown });
+    await act(async () => root.unmount());
+  }
+});

@@ -7,9 +7,19 @@ import { MessageStatus, type MessageStub, type MessageTxStub } from '../../../ty
 import type { MessageEntry } from './fragments';
 import {
   filterLatestMessageRows,
+  isExplorerMessageCovered,
   preserveMessageTransactionFields,
   useRetainedMessage,
 } from './useLiveMessages';
+
+it('only suppresses polling for messages covered by the negotiated domain filter', () => {
+  const testnet = { originDomainId: 84532, destinationDomainId: 11155111 };
+  expect(isExplorerMessageCovered([1, 10], testnet)).toBe(false);
+  expect(isExplorerMessageCovered([84532], testnet)).toBe(true);
+  expect(isExplorerMessageCovered([11155111], testnet)).toBe(true);
+  expect(isExplorerMessageCovered([], testnet)).toBe(true);
+  expect(isExplorerMessageCovered([1])).toBe(false);
+});
 
 describe('filterLatestMessageRows', () => {
   it('excludes a testnet upsert from a mainnet-scoped pending search', () => {
