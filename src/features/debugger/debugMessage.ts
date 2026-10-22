@@ -27,7 +27,13 @@ import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { getMailboxAddress } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
-import { computeIcaAddress, decodeIcaBody, IcaMessageType, isIcaMessage } from '../messages/ica';
+import {
+  computeIcaAddress,
+  decodeIcaBody,
+  fetchIcaRouters,
+  IcaMessageType,
+  isIcaMessage,
+} from '../messages/ica';
 import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
@@ -93,6 +99,7 @@ export async function debugMessage(
     destName,
     destDomain,
     multiProvider,
+    registry,
   );
   if (deliveryResult.status && deliveryResult.description) return deliveryResult;
   else details.calldataDetails = deliveryResult.calldataDetails;
@@ -157,6 +164,7 @@ async function debugMessageDelivery(
   destName: string,
   destDomain: DomainId,
   multiProvider: MultiProtocolProvider,
+  registry: IRegistry,
 ) {
   const recipientContract = MessageRecipientFactory.connect(recipient, destProvider);
   const handleCalldata = recipientContract.interface.encodeFunctionData('handle', [
@@ -217,6 +225,7 @@ async function debugMessageDelivery(
       destDomain,
       multiProvider,
       destProvider,
+      registry,
     );
     if (icaDebugResult) {
       return {
@@ -414,12 +423,24 @@ async function tryDebugIcaMsg(
   destinationDomainId: DomainId,
   multiProvider: MultiProtocolProvider,
   destinationProvider: Provider,
+  registry: IRegistry,
 ): Promise<IcaDebugResult | null> {
   if (!isEVMLike(multiProvider.tryGetProtocol(destinationDomainId) ?? ProtocolType.Unknown)) {
     return null;
   }
-  if (!isIcaMessage({ sender, recipient })) return null;
-  logger.debug('Message is for an ICA');
+  // Runs while reporting a handle failure, so a registry error must not replace that result.
+  let originRouters: string[];
+  let destinationRouters: string[];
+  try {
+    [originRouters, destinationRouters] = await Promise.all([
+      fetchIcaRouters(registry, multiProvider.getChainName(originDomainId)),
+      fetchIcaRouters(registry, multiProvider.getChainName(destinationDomainId)),
+    ]);
+  } catch (error) {
+    logger.warn('Failed to fetch ICA routers, skipping ICA debug', error);
+    return null;
+  }
+  if (!isIcaMessage({ sender, recipient }, originRouters, destinationRouters)) return null;
 
   const decodedBody = decodeIcaBody(body);
   if (!decodedBody) return null;

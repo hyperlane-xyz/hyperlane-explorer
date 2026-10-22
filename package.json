@@ -17,7 +17,7 @@
     "@ethersproject/web": "^5.8.0",
     "@headlessui/react": "^2.2.10",
     "@hyperlane-xyz/core": "12.0.0",
-    "@hyperlane-xyz/registry": "25.3.0",
+    "@hyperlane-xyz/registry": "26.2.0",
     "@hyperlane-xyz/sdk": "40.0.0",
     "@hyperlane-xyz/utils": "40.0.0",
     "@hyperlane-xyz/widgets": "40.0.0",
