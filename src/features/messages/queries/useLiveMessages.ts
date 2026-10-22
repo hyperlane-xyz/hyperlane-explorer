@@ -1,7 +1,8 @@
 import { useContext, useEffect, useEffectEvent, useState } from 'react';
+import { useStore } from 'zustand';
 
 import type { MessageStub, MessageTxStub } from '../../../types';
-import { ExplorerEventsContext, ExplorerMessageRowsContext } from './ExplorerEventsProvider';
+import { ExplorerEventsContext, ExplorerStreamContext } from './ExplorerEventsProvider';
 import type { MessageEntry } from './fragments';
 
 export type { ExplorerConnectionState } from './ExplorerEventsProvider';
@@ -13,7 +14,7 @@ export function useExplorerEvents() {
 }
 
 export function useExplorerMessageRows() {
-  return useContext(ExplorerMessageRowsContext);
+  return useStore(useContext(ExplorerStreamContext), (state) => state.messageRows);
 }
 
 export function isExplorerMessageCovered(
@@ -46,10 +47,11 @@ export function useExplorerRefresh(enabled: boolean, refresh: () => void, domain
 }
 
 export function filterLatestMessageRows(messageRows: MessageEntry[], domains: number[]) {
+  const domainIds = new Set(domains.map((domain) => domain >>> 0));
   return messageRows.filter(
     (row) =>
-      domains.length === 0 ||
-      (domains.includes(row.origin_domain_id) && domains.includes(row.destination_domain_id)),
+      domainIds.size === 0 ||
+      (domainIds.has(row.origin_domain_id >>> 0) && domainIds.has(row.destination_domain_id >>> 0)),
   );
 }
 

@@ -90,19 +90,17 @@ export function DestinationTransactionPreviewCard({
       icon={<Tooltip id={tooltipId} content={transactionHelpText.destination} />}
     >
       <div className="space-y-2">
-        <KeyValueRow label="Chain:" labelWidth="w-16" display={chainDescription} blurValue={blur} />
+        <KeyValueRow label="Chain:" labelWidth="w-28" display={chainDescription} blurValue={blur} />
         <KeyValueRow
           label="Status:"
-          labelWidth="w-16"
+          labelWidth="w-28"
           display={isOriginConfirming ? 'Waiting for origin confirmations' : toTitleCase(status)}
           blurValue={blur}
         />
         <div className="pt-2 text-sm font-light text-gray-500">
-          {isOriginConfirming
-            ? 'Delivery can proceed once the origin confirmation threshold is reached.'
-            : isLiveDetailsPending
-              ? 'Loading live delivery details...'
-              : 'Waiting for live delivery details.'}
+          {isLiveDetailsPending
+            ? 'Loading live delivery details...'
+            : 'Waiting for live delivery details.'}
         </div>
       </div>
     </SectionCard>

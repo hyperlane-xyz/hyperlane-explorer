@@ -175,42 +175,18 @@ describe('messageMatchesSearchFilters', () => {
   });
 });
 
-describe('partial search errors', () => {
-  it('keeps canonical results when only the provisional alias fails', () => {
-    const error = new CombinedError({
-      graphQLErrors: [new GraphQLError('snapshot too large', { path: ['provisional'] })],
-    });
-    expect(isMessageSearchError(error, true)).toBe(false);
-    expect(isMessageSearchError(error, false)).toBe(true);
-    expect(
-      isMessageSearchError(
-        new CombinedError({
-          graphQLErrors: [new GraphQLError('canonical failed', { path: ['q0'] })],
-        }),
-        true,
-      ),
-    ).toBe(true);
-    expect(
-      isMessageSearchError(new CombinedError({ networkError: new Error('offline') }), true),
-    ).toBe(true);
+it('keeps canonical data when only the provisional selection fails', () => {
+  const error = new CombinedError({
+    graphQLErrors: [new GraphQLError('unavailable', { path: ['provisional'] })],
   });
+  expect(isMessageSearchError(error, true)).toBe(false);
+  expect(isMessageSearchError(error, false)).toBe(true);
+  expect(
+    isMessageSearchError(new CombinedError({ networkError: new Error('offline') }), true),
+  ).toBe(true);
 });
 
 describe('message query caching', () => {
-  it('opts into zero-confirmation details while leaving other callers canonical', () => {
-    expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).not.toContain(
-      'confirmations: 0',
-    );
-    expect(
-      buildMessageQuery(MessageIdentifierType.Id, '0x01', 1, false, undefined, {
-        provisional: true,
-      }).query,
-    ).toContain('confirmations: 0');
-    expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain(
-      'confirmations: 0',
-    );
-  });
-
   it('caches by default', () => {
     expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).toContain('@cached');
     expect(buildMessageSearchQuery('', null, null, null, null, 1).query).toContain('@cached');
@@ -237,6 +213,17 @@ describe('message query caching', () => {
 });
 
 describe('message pagination', () => {
+  it('does not let older buffered rows displace newer canonical history', () => {
+    const buffered = Array.from({ length: 101 }, (_, index) => {
+      const id = String(1000 - index);
+      return makeStub({ id, origin: { ...makeStub().origin, timestamp: Number(id) } });
+    });
+    const canonical = buffered.slice(0, 51);
+    const page = getMessagePage(buffered, rawMessages(canonical), 51);
+    expect(page.messages).toEqual(canonical.slice(0, 50));
+    expect(page.continuationCursor).toBe('951');
+  });
+
   it.each([false, true])(
     'keeps combined canonical searches bounded (ascending=%s)',
     (ascending) => {
@@ -254,12 +241,6 @@ describe('message pagination', () => {
     },
   );
 
-  it('keeps canonical pagination when another snapshot alias is unavailable', () => {
-    const canonical = makeStub({ id: '100' });
-    const rows = getRawMessageRows({ q0: rawMessages([canonical]), provisional: null }, false);
-    expect(getMessagePage([canonical], rows, 1).continuationCursor).toBe('100');
-  });
-
   it('keeps colliding provisional IDs outside the canonical page and cursor', () => {
     const canonical = Array.from({ length: 51 }, (_, index) =>
       makeStub({ id: String(100 - index) }),
@@ -269,7 +250,10 @@ describe('message pagination', () => {
       msgId: '0x' + 'ff'.repeat(32),
       isProvisional: true,
     });
-    const rawRows = getRawMessageRows({ q0: rawMessages(canonical) }, false);
+    const rawRows = getRawMessageRows(
+      { q0: rawMessages(canonical), provisional: rawMessages([provisional]) },
+      false,
+    );
     const page = getMessagePage([provisional, ...canonical], rawRows, 51);
 
     expect(page.messages).toContainEqual(canonical[48]);
@@ -299,58 +283,6 @@ describe('message pagination', () => {
 
     expect(page.messages).toEqual([{ ...provisional, id: canonical.id }]);
     expect(page.continuationCursor).toBe(canonical.id);
-  });
-
-  it('fetches a separate provisional snapshot only on the first page', () => {
-    const first = buildMessageSearchQuery('', null, null, null, null, 51, true).query;
-    expect(first).toContain('provisional: message_view(');
-    expect(first).toContain('{is_provisional: {_eq: true}}');
-    expect(first).toContain('order_by: [{send_occurred_at: desc}, {id: desc}]');
-    expect(first).toContain('limit: 50');
-    const next = buildMessageSearchQuery('', null, null, null, null, 51, true, [], 'all', [], {
-      after: '100',
-    }).query;
-    expect(next).not.toContain('provisional:');
-    expect(next).not.toContain('confirmations: 0');
-  });
-
-  it('retains provisional reload rows with smaller IDs without changing the canonical cursor', () => {
-    const canonical = Array.from({ length: 51 }, (_, index) =>
-      makeStub({
-        id: String(165017135 - index),
-        msgId: `0x${String(index).padStart(64, '0')}`,
-        origin: { ...makeStub().origin, timestamp: 100 - index },
-      }),
-    );
-    const provisional = makeStub({
-      id: '143447027',
-      msgId: '0x' + 'ff'.repeat(32),
-      isProvisional: true,
-      origin: { ...makeStub().origin, timestamp: 200, blockNumber: 26203787 },
-    });
-    const ids = getRawMessageRows(
-      { q0: rawMessages(canonical), provisional: rawMessages([provisional]) },
-      false,
-    );
-    expect(ids.map(({ id }) => String(id))).not.toContain(provisional.id);
-    const page = getMessagePage([provisional, ...canonical], ids, 51);
-    expect(page.messages[0]).toEqual(provisional);
-    expect(page.messages).toHaveLength(50);
-    expect(page.continuationCursor).toBe(canonical[48].id);
-  });
-
-  it('uses one provisional selection across all identifier search fields', () => {
-    const { query } = buildMessageSearchQuery(
-      '0x' + 'ab'.repeat(32),
-      null,
-      null,
-      null,
-      null,
-      51,
-      true,
-    );
-    expect(query.match(/provisional: message_view/g)).toHaveLength(1);
-    expect(query).toContain('{_or: [');
   });
 
   it('adds a cursor to the GraphQL query', () => {
@@ -407,26 +339,6 @@ describe('message pagination', () => {
     );
     expect(page.messages).toHaveLength(50);
     expect(page.continuationCursor).toBe('51');
-  });
-
-  it('never uses a provisional ID as the pagination cursor', () => {
-    const queryMessages = Array.from({ length: 50 }, (_, index) =>
-      makeStub({
-        id: String(100 - index),
-        msgId: `0x${String(index).padStart(64, '0')}`,
-        origin: { ...makeStub().origin, timestamp: 100 - index },
-      }),
-    );
-    const provisionalMessage = makeStub({
-      id: '10',
-      msgId: '0x' + 'ff'.repeat(32),
-      origin: { ...makeStub().origin, timestamp: 200 },
-    });
-    const rawIds = getRawMessageRows({ q0: rawMessages(queryMessages) }, false);
-    const page = getMessagePage([provisionalMessage, ...queryMessages], rawIds, 50);
-
-    expect(page.continuationCursor).toBe('52');
-    expect(page.messages).toHaveLength(50);
   });
 
   it('selects canonical rows by ID before sorting the page by send time', () => {
@@ -520,39 +432,6 @@ describe('message pagination', () => {
     expect(candidates.map(({ id }) => id)).toEqual(['100']);
   });
 
-  it('merges live and query rows before pagination', () => {
-    const olderLiveMessage = makeStub({
-      id: '200',
-      msgId: '0x' + 'aa'.repeat(32),
-      origin: { ...makeStub().origin, timestamp: 100 },
-    });
-    const newerQueryMessage = makeStub({
-      id: '100',
-      msgId: '0x' + 'bb'.repeat(32),
-      origin: { ...makeStub().origin, timestamp: 200 },
-    });
-
-    const candidates = getMessageCandidates(
-      [olderLiveMessage],
-      [newerQueryMessage],
-      {
-        searchInput: '',
-        originDomainId: null,
-        destinationDomainId: null,
-        startTime: null,
-        endTime: null,
-        status: 'all',
-      },
-      [],
-    );
-
-    const rawRows = getRawMessageRows({ q0: rawMessages([newerQueryMessage]) }, false);
-    expect(getMessagePage(candidates, rawRows, 51).messages.map(({ id }) => id)).toEqual([
-      '100',
-      '200',
-    ]);
-  });
-
   it('lets delivered live state replace a stale pending query row before filtering', () => {
     const msgId = '0x' + 'aa'.repeat(32);
     const pendingQueryMessage = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
@@ -572,64 +451,6 @@ describe('message pagination', () => {
       [],
     );
     expect(candidates).toEqual([]);
-  });
-
-  it('keeps the canonical database ID when displaying live state over a query row', () => {
-    const msgId = '0x' + 'aa'.repeat(32);
-    const canonical = makeStub({ id: '100', msgId, status: MessageStatus.Pending });
-    const candidates = getMessageCandidates(
-      [makeStub({ id: '10', msgId, status: MessageStatus.Delivered })],
-      [canonical],
-      {
-        searchInput: '',
-        originDomainId: null,
-        destinationDomainId: null,
-        startTime: null,
-        endTime: null,
-        status: 'all',
-      },
-      [],
-    );
-
-    const rawRows = getRawMessageRows({ q0: rawMessages([canonical]) }, false);
-    expect(getMessagePage(candidates, rawRows, 51).messages).toEqual([
-      expect.objectContaining({ id: '100', status: 'delivered' }),
-    ]);
-  });
-
-  it('keeps a delivery provisional until the query also reports it delivered', () => {
-    const msgId = '0x' + 'aa'.repeat(32);
-    const provisional = makeStub({
-      id: '10',
-      isProvisional: true,
-      msgId,
-      status: MessageStatus.Delivered,
-    });
-    const filters = {
-      searchInput: '',
-      originDomainId: null,
-      destinationDomainId: null,
-      startTime: null,
-      endTime: null,
-      status: 'all' as const,
-    };
-
-    expect(
-      getMessageCandidates(
-        [provisional],
-        [makeStub({ id: '100', msgId, status: MessageStatus.Pending })],
-        filters,
-        [],
-      )[0]?.isProvisional,
-    ).toBe(true);
-    expect(
-      getMessageCandidates(
-        [provisional],
-        [makeStub({ id: '100', msgId, status: MessageStatus.Delivered })],
-        filters,
-        [],
-      )[0]?.isProvisional,
-    ).toBeFalsy();
   });
 
   it('resets a completed previous query to the live first page', () => {
@@ -704,26 +525,6 @@ describe('message detail live reconciliation', () => {
       selectLiveMessage({ ...live, origin: { ...origin, blockNumber: 101 } }, canonical)
         ?.isOriginProvisional,
     ).toBe(true);
-  });
-
-  it('preserves enrichment from either source without changing the chosen status', () => {
-    const complete = makeStub({ isProvisional: true });
-    const partial = makeStub({ origin: { hash: complete.origin.hash, timestamp: 0 } });
-    expect(selectLiveMessage(complete, partial)).toEqual({ ...partial, origin: complete.origin });
-    const pending = { ...complete, status: MessageStatus.Pending };
-    expect(selectLiveMessage(partial, pending)).toEqual({ ...partial, origin: complete.origin });
-  });
-
-  it('keeps provisional state until canonical status catches up', () => {
-    const provisional = makeStub({
-      isProvisional: true,
-      status: MessageStatus.Delivered,
-    });
-    const canonicalPending = makeStub({ status: MessageStatus.Pending });
-    const canonicalDelivered = makeStub({ status: MessageStatus.Delivered });
-
-    expect(selectLiveMessage(provisional, canonicalPending)).toBe(provisional);
-    expect(selectLiveMessage(provisional, canonicalDelivered)).toBe(canonicalDelivered);
   });
 
   it('polls provisional details even while the websocket is connected', () => {

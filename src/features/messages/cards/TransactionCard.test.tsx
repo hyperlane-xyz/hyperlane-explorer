@@ -4,8 +4,6 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../../types';
-import { CollateralStatus } from '../collateral/types';
-import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { DestinationTransactionCard } from './TransactionCard';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -26,17 +24,15 @@ jest.mock('../../../components/layout/SectionCard', () => ({
   SectionCard: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../store', () => ({
-  useMultiProvider: () => ({
-    tryGetChainMetadata: (domain: number) => (domain === 1 ? {} : undefined),
-  }),
+  useMultiProvider: () => ({ tryGetChainMetadata: () => undefined }),
 }));
 jest.mock('../collateral/useCollateralStatus', () => ({
-  useCollateralStatus: jest.fn(() => ({ status: 'unknown' })),
+  useCollateralStatus: () => ({ status: 'unknown' }),
 }));
 jest.mock('./CodeBlock', () => ({ LabelAndCodeBlock: () => null }));
 jest.mock('./CollateralCards', () => ({
   ActiveRebalanceModal: () => null,
-  InsufficientCollateralWarning: () => <div>Insufficient collateral</div>,
+  InsufficientCollateralWarning: () => null,
 }));
 jest.mock('./TransactionDetailsRows', () => ({ TransactionDetailsRows: () => null }));
 
@@ -86,86 +82,4 @@ it('shows a route halt warning before missing chain metadata', async () => {
   expect(link?.getAttribute('target')).toBe('_blank');
   expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   await act(async () => root.unmount());
-});
-
-it('waits for origin confirmations before inspecting delivery, then shows normal delivery progress', async () => {
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  const render = async (isOriginConfirming: boolean) =>
-    act(async () =>
-      root.render(
-        <DestinationTransactionCard
-          chainName="ethereum"
-          domainId={1}
-          status={MessageStatus.Pending}
-          isStatusFetching={isOriginConfirming}
-          isOriginConfirming={isOriginConfirming}
-          blur={false}
-        />,
-      ),
-    );
-  try {
-    await render(true);
-    expect(container.textContent).toContain('Waiting for origin confirmations.');
-    expect(container.textContent).not.toContain('Delivery to destination chain still in progress.');
-    await render(false);
-    expect(container.textContent).not.toContain('Waiting for origin confirmations.');
-    expect(container.textContent).toContain('Delivery to destination chain still in progress.');
-  } finally {
-    await act(async () => root.unmount());
-  }
-});
-
-it.each([undefined, { hash: '0x01', timestamp: 1 }])(
-  'keeps observed deliveries out of the confirmation state, even without indexed transaction details',
-  async (transaction) => {
-    const container = document.createElement('div');
-    const root = createRoot(container);
-    try {
-      await act(async () =>
-        root.render(
-          <DestinationTransactionCard
-            chainName="ethereum"
-            domainId={1}
-            status={MessageStatus.Delivered}
-            transaction={transaction}
-            isStatusFetching={false}
-            isOriginConfirming={true}
-            blur={false}
-          />,
-        ),
-      );
-      expect(container.textContent).not.toContain('Waiting for origin confirmations.');
-      expect(container.textContent).not.toContain('Delivery status is currently unknown.');
-      if (!transaction) expect(container.textContent).toContain('Message delivered.');
-    } finally {
-      await act(async () => root.unmount());
-    }
-  },
-);
-
-it('shows insufficient collateral while origin confirmations are still pending', async () => {
-  const collateral = jest.mocked(useCollateralStatus);
-  collateral.mockReturnValue({ status: CollateralStatus.Insufficient });
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  try {
-    await act(async () =>
-      root.render(
-        <DestinationTransactionCard
-          chainName="ethereum"
-          domainId={1}
-          status={MessageStatus.Pending}
-          isStatusFetching={false}
-          isOriginConfirming={true}
-          blur={false}
-        />,
-      ),
-    );
-    expect(container.textContent).toContain('Insufficient collateral');
-    expect(container.textContent).not.toContain('Waiting for origin confirmations');
-  } finally {
-    collateral.mockReturnValue({ status: CollateralStatus.Unknown });
-    await act(async () => root.unmount());
-  }
 });

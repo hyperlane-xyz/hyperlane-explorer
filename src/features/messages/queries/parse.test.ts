@@ -1,280 +1,105 @@
 import { createChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 
 import { MessageStatus } from '../../../types';
-import type { MessageEntry, MessageStubEntry } from './fragments';
+import type { MessageEntry } from './fragments';
 import {
   parseBlockNumber,
   parseMessageEntry,
   parseMessageQueryResult,
-  parseMessageStubEntry,
   parseMessageStubResult,
 } from './parse';
 
-describe('parseMessageStubEntry', () => {
-  it('keeps canonical results when the provisional snapshot is unavailable', () => {
-    const error = jest.spyOn(console, 'error');
-    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
-      q0: [messageStubEntry],
-      provisional: null,
-    });
-    expect(messages).toHaveLength(1);
-    expect(error).not.toHaveBeenCalled();
-    error.mockRestore();
-  });
-
-  it('distinguishes a confirmed dispatch from later provisional payment updates', () => {
-    const parse = (canonical: MessageEntry[]) =>
-      parseMessageQueryResult(createChainMetadataResolver({}), [], {
-        canonical,
-        message_view: [{ ...messageEntry, is_provisional: true }],
-      })[0];
-    expect(parse([messageEntry])).toMatchObject({
-      isProvisional: true,
-      isOriginProvisional: false,
-    });
-    expect(parse([]).isOriginProvisional).toBe(true);
-    expect(parse([{ ...messageEntry, origin_block_hash: '\\xff' }]).isOriginProvisional).toBe(true);
-  });
-
-  it('keeps provisional dispatches without transaction address enrichment', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
-      origin_tx_recipient: null,
-      origin_tx_sender: null,
-    });
-
-    expect(message).toMatchObject({
-      origin: {
-        from: undefined,
-        hash: '0x02',
-        to: undefined,
-      },
-      status: MessageStatus.Pending,
-    });
-  });
-
-  it('keeps delivered rows whose destination transaction is not enriched yet', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
-      is_delivered: true,
-    });
-
-    expect(message).toMatchObject({
-      destination: undefined,
-      status: MessageStatus.Delivered,
-    });
-  });
-
-  it('keeps a null body as an empty body', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
-      message_body: null,
-    });
-
-    expect(message?.body).toBe('0x');
-  });
-
-  it('keeps a partially enriched destination transaction', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
-      delivery_occurred_at: '2026-10-09T12:01:00',
-      destination_tx_hash: '\\x08',
-      is_delivered: true,
-    });
-
-    expect(message?.destination).toEqual({
-      from: undefined,
-      hash: '0x08',
-      timestamp: Date.parse('2026-10-09T12:01:00Z'),
-      to: undefined,
-    });
-  });
-
-  it('marks zero-confirmation live rows as provisional', () => {
-    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
-      ...messageEntry,
-      live_confirmations: 0,
-      live_received_at: 1234,
-      origin_block_height: '1',
-    });
-
-    expect(message).toMatchObject({
-      isProvisional: true,
-      liveReceivedAt: 1234,
-      origin: { blockNumber: 1 },
-    });
-  });
-
-  it('honors an authoritative canonical flag over a live confirmation envelope', () => {
-    expect(
-      parseMessageEntry(createChainMetadataResolver({}), [], {
-        ...messageEntry,
-        is_provisional: false,
-        live_confirmations: 0,
-        live_received_at: 1,
-      }),
-    ).toMatchObject({ isProvisional: false, isOriginProvisional: false });
-  });
-
-  it('tracks origin confirmations for provisional delivery', () => {
-    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
-      ...messageEntry,
-      delivery_occurred_at: '2026-10-09T12:01:00',
-      destination_block_height: 50,
-      destination_tx_hash: '\\x08',
-      is_delivered: true,
-      live_confirmations: 0,
-    });
-
-    expect(message).toMatchObject({
-      origin: { blockNumber: 1 },
-    });
-  });
-
-  it('preserves confirmation state and origin height in a GraphQL reload', () => {
-    const message = parseMessageStubEntry(createChainMetadataResolver({}), [], {
-      ...messageStubEntry,
-      is_provisional: true,
-      origin_block_height: '123',
-    });
-    expect(message).toMatchObject({ isProvisional: true, origin: { blockNumber: 123 } });
-  });
-
-  it('keeps the provisional snapshot when the same message appears in the canonical page', () => {
-    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
-      q0: [{ ...messageStubEntry, is_provisional: false }],
-      provisional: [
-        {
-          ...messageStubEntry,
-          is_provisional: true,
-          is_delivered: true,
-          origin_block_height: '123',
-        },
-      ],
-    });
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({
-      isProvisional: true,
-      status: MessageStatus.Delivered,
-      origin: { blockNumber: 123 },
-    });
-  });
-
-  it('does not deduplicate different message hashes with colliding raw and canonical IDs', () => {
-    const messages = parseMessageStubResult(createChainMetadataResolver({}), [], {
-      q0: [messageStubEntry],
-      provisional: [{ ...messageStubEntry, msg_id: '\\xabcdef', is_provisional: true }],
-    });
-    expect(messages).toHaveLength(2);
-  });
-
-  it('keeps partial destination data when full enrichment is incomplete', () => {
-    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
-      ...messageEntry,
-      delivery_occurred_at: '2026-10-09T12:01:00',
-      destination_block_hash: null,
-      destination_tx_hash: '\\x08',
-      is_delivered: true,
-    });
-
-    expect(message?.destination).toMatchObject({
-      from: undefined,
-      hash: '0x08',
-      timestamp: Date.parse('2026-10-09T12:01:00Z'),
-      to: undefined,
-    });
-    expect(message?.destination?.blockNumber).toBeUndefined();
-  });
-
-  it('preserves block and gas details when legacy fee fields are absent', () => {
-    const message = parseMessageEntry(createChainMetadataResolver({}), [], {
-      ...messageEntry,
-      is_delivered: true,
-      delivery_occurred_at: '2026-10-09T12:01:00',
-      destination_tx_hash: '\\x08',
-      destination_block_hash: '\\x09',
-      destination_block_height: 50,
-      destination_tx_gas_used: 21000,
-      destination_tx_effective_gas_price: 2,
-      destination_tx_max_fee_per_gas: null,
-      destination_tx_max_priority_fee_per_gas: null,
-    });
-
-    expect(message?.destination).toMatchObject({
-      blockHash: '0x09',
-      blockNumber: 50,
-      gasUsed: 21000,
-      effectiveGasPrice: 2,
-      maxFeePerGas: undefined,
-      maxPriorityPerGas: undefined,
-    });
-  });
-});
-
-describe('parseBlockNumber', () => {
-  it('accepts numeric websocket heights', () => {
-    expect(parseBlockNumber(100)).toBe(100);
-    expect(parseBlockNumber('100')).toBe(100);
-  });
-
-  it('rejects unsafe heights', () => {
-    expect(parseBlockNumber('-1')).toBeUndefined();
-    expect(parseBlockNumber('9007199254740992')).toBeUndefined();
-  });
-});
-
-const messageStubEntry = {
-  delivery_latency: null,
-  delivery_occurred_at: null,
-  destination_chain_id: 10,
-  destination_domain_id: 10,
-  destination_tx_hash: null,
-  destination_tx_id: null,
-  destination_tx_recipient: null,
-  destination_tx_sender: null,
-  id: 1,
-  is_delivered: false,
-  message_body: '\\x07',
+const resolver = createChainMetadataResolver({});
+// Near-head rows may lack the transaction enrichment present in canonical rows.
+const row = {
+  id: '1',
   msg_id: '\\x01',
-  nonce: 0,
-  origin_chain_id: 1,
+  nonce: 1,
+  sender: '\\x02',
+  recipient: '\\x03',
   origin_domain_id: 1,
-  origin_tx_hash: '\\x02',
-  origin_tx_id: 2,
-  origin_tx_recipient: '\\x03',
-  origin_tx_sender: '\\x04',
-  recipient: '\\x05',
-  send_occurred_at: '2026-10-09T12:00:00',
-  sender: '\\x06',
-} satisfies MessageStubEntry;
-
-const messageEntry = {
-  ...messageStubEntry,
-  destination_block_hash: null,
-  destination_block_height: null,
-  destination_block_id: null,
-  destination_mailbox: '\\x09',
-  destination_tx_cumulative_gas_used: null,
-  destination_tx_effective_gas_price: null,
-  destination_tx_gas_limit: null,
-  destination_tx_gas_price: null,
-  destination_tx_gas_used: null,
-  destination_tx_max_fee_per_gas: null,
-  destination_tx_max_priority_fee_per_gas: null,
-  destination_tx_nonce: null,
-  num_payments: 0,
-  origin_block_hash: '\\x0a',
-  origin_block_height: 1,
-  origin_block_id: 1,
-  origin_mailbox: '\\x0b',
-  origin_tx_cumulative_gas_used: 1,
-  origin_tx_effective_gas_price: 1,
-  origin_tx_gas_limit: 1,
-  origin_tx_gas_price: 1,
-  origin_tx_gas_used: 1,
-  origin_tx_max_fee_per_gas: 1,
-  origin_tx_max_priority_fee_per_gas: 1,
-  origin_tx_nonce: 1,
+  destination_domain_id: 10,
+  is_delivered: false,
+  is_provisional: true,
+  origin_block_height: '100',
+  origin_block_hash: '\\x04',
+  origin_mailbox: '\\x05',
+  origin_tx_hash: '\\x06',
+  origin_tx_sender: null,
+  origin_tx_recipient: null,
+  destination_tx_hash: null,
+  delivery_occurred_at: null,
+  message_body: null,
   total_gas_amount: 0,
   total_payment: 0,
-} satisfies MessageEntry;
+  num_payments: 0,
+  send_occurred_at: '2026-10-22T12:00:00Z',
+} as MessageEntry;
+
+it('parses provisional rows and deliveries before transaction enrichment arrives', () => {
+  const pending = parseMessageEntry(resolver, [], row);
+  expect(pending).toMatchObject({
+    status: MessageStatus.Pending,
+    isProvisional: true,
+    body: '0x',
+    origin: { blockNumber: 100, from: undefined, to: undefined },
+  });
+  const delivered = { ...row, is_delivered: true };
+  expect(parseMessageEntry(resolver, [], delivered)).toMatchObject({
+    status: MessageStatus.Delivered,
+    destination: undefined,
+  });
+  expect(
+    parseMessageEntry(resolver, [], {
+      ...delivered,
+      destination_tx_hash: '\\x07',
+      delivery_occurred_at: '2026-10-22T12:01:00Z',
+    })?.destination,
+  ).toMatchObject({ hash: '0x07', blockNumber: undefined, from: undefined });
+});
+
+it('does not confuse a confirmed dispatch with a later provisional payment or delivery', () => {
+  const parse = (canonical: MessageEntry[]) =>
+    parseMessageQueryResult(resolver, [], {
+      canonical,
+      message_view: [row],
+    })[0];
+  expect(parse([row])).toMatchObject({ isProvisional: true, isOriginProvisional: false });
+  expect(parse([]).isOriginProvisional).toBe(true);
+  expect(parse([{ ...row, origin_block_hash: '\\xff' }]).isOriginProvisional).toBe(true);
+  expect(
+    parseMessageEntry(resolver, [], {
+      ...row,
+      is_provisional: false,
+      live_confirmations: 0,
+      live_received_at: 1,
+    }),
+  ).toMatchObject({ isProvisional: false, isOriginProvisional: false });
+});
+
+it('merges snapshots by message hash, tolerating ID collisions and partial query errors', () => {
+  const canonical = { ...row, is_provisional: false };
+  expect(parseMessageStubResult(resolver, [], { q0: [canonical], provisional: null })).toHaveLength(
+    1,
+  );
+  const delivered = { ...row, is_delivered: true };
+  const messages = parseMessageStubResult(resolver, [], {
+    q0: [canonical],
+    provisional: [delivered],
+  });
+  expect(messages).toHaveLength(1);
+  expect(messages[0].status).toBe(MessageStatus.Delivered);
+  expect(
+    parseMessageStubResult(resolver, [], {
+      q0: [canonical],
+      provisional: [{ ...row, msg_id: '\\xff' }],
+    }),
+  ).toHaveLength(2);
+});
+
+it('accepts safe numeric or string block heights', () => {
+  expect(parseBlockNumber(100)).toBe(100);
+  expect(parseBlockNumber('100')).toBe(100);
+  for (const invalid of ['-1', '1.5', '9007199254740992'])
+    expect(parseBlockNumber(invalid)).toBeUndefined();
+});

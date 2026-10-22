@@ -66,6 +66,13 @@ export function getMessagePage(
     .filter((m) => !canonicalIds.has(m.msgId.toLowerCase()))
     .sort((a, b) => b.origin.timestamp - a.origin.timestamp)
     .slice(0, canonicalMessages.length ? MESSAGE_PAGE_SIZE - 1 : MESSAGE_PAGE_SIZE);
+  // A live row only gets a slot if it is newer than the canonical row it displaces.
+  // Old buffered rows outside this query window must not crowd out recent history.
+  const firstOlderLiveRow = liveOnlyMessages.findIndex((message, index) => {
+    const displaced = canonicalMessages[MESSAGE_PAGE_SIZE - 1 - index];
+    return displaced && message.origin.timestamp < displaced.origin.timestamp;
+  });
+  if (firstOlderLiveRow >= 0) liveOnlyMessages.length = firstOlderLiveRow;
   const canonicalPage = canonicalMessages.slice(0, MESSAGE_PAGE_SIZE - liveOnlyMessages.length);
   const pageMessages = [...canonicalPage, ...liveOnlyMessages];
   const canonicalPageBoundary = canonicalPage.at(-1)?.id;
@@ -352,7 +359,7 @@ export function useMessageSearchQuery(
     searchDomainIds,
     statusFilter,
     warpAddresses,
-    cursor,
+    { ...cursor, cached: !!cursorValue },
   );
 
   // Execute query
