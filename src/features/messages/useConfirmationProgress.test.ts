@@ -17,102 +17,116 @@ import {
   useConfirmationProgress,
 } from './useConfirmationProgress';
 
-it('advances only from streamed origin heads and returns to confirming after a reorg', async () => {
-  // SDK imports require encoding globals absent from jsdom.
-  const fetch = jest.fn(() => {
-    throw new Error('Unexpected RPC polling');
-  });
-  Object.assign(globalThis, { TextDecoder, TextEncoder, fetch });
-  const { createChainMetadataResolver } =
-    await import('@hyperlane-xyz/sdk/metadata/ChainMetadataResolver');
-  const { ProtocolType } = await import('@hyperlane-xyz/utils');
-  const resolver = createChainMetadataResolver({
-    ethereum: {
-      name: 'ethereum',
-      chainId: 1,
-      protocol: ProtocolType.Ethereum,
-      rpcUrls: [{ http: 'https://unused.example' }],
-      blocks: { confirmations: 2, reorgPeriod: 15 },
-    },
-  });
-  const message: MessageStub = {
-    id: '1',
-    msgId: '0x01',
-    nonce: 1,
-    sender: '0x01',
-    recipient: '0x02',
-    body: '0x',
-    status: MessageStatus.Pending,
-    isProvisional: true,
-    originChainId: 1,
-    originDomainId: 1,
-    destinationChainId: 2,
-    destinationDomainId: 2,
-    origin: { blockNumber: 100, timestamp: 0, hash: '0x01' },
-  };
-  let renders = 0;
-  function Progress() {
-    renders++;
-    const progress = useConfirmationProgress(message, resolver);
-    return createElement(
-      'div',
-      null,
-      `${isWaitingForOriginConfirmations(message, progress) ? 'confirming' : 'pending'}:${progress?.current ?? '?'} / ${progress?.required}`,
-    );
-  }
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  const testGlobal: typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean } = globalThis;
-  testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
-  const watching = jest.fn();
-  const heads = createExplorerBlockHeads(watching);
-  async function render() {
-    await act(async () =>
-      root.render(
-        createElement(
-          ExplorerBlockHeadsContext.Provider,
-          { value: heads },
-          createElement(Progress),
-        ),
-      ),
-    );
-  }
-  function head(domain: number, height: number) {
-    heads.set({
-      type: 'block',
-      domain,
-      height: String(height),
-      headHeight: String(height),
-      hash: `0x${'01'.repeat(32)}`,
+it.each([
+  ['ethereum', 1, 15],
+  ['base', 8453, 10],
+  ['optimism', 10, 10],
+])(
+  '%s confirmations follow origin heads independently of delivery',
+  async (chain, domain, required) => {
+    // SDK imports require encoding globals absent from jsdom.
+    const fetch = jest.fn(() => {
+      throw new Error('Unexpected RPC polling');
     });
-  }
-  try {
-    await render();
-    expect(container.textContent).toBe('confirming:? / 15');
-    const initialRenders = renders;
-    await act(async () => head(2, 200));
-    expect(renders).toBe(initialRenders);
-    expect(container.textContent).toBe('confirming:? / 15');
-    await act(async () => head(1, 103));
-    expect(container.textContent).toBe('confirming:3 / 15');
-    await act(async () => head(1, 115));
-    expect(container.textContent).toBe('pending:15 / 15');
-    await act(async () => head(1, 114));
-    expect(container.textContent).toBe('confirming:14 / 15');
-    await act(async () => heads.clear());
-    expect(container.textContent).toBe('confirming:? / 15');
-    expect(fetch).not.toHaveBeenCalled();
-    message.status = MessageStatus.Delivered;
-    await render();
-    const deliveredRenders = renders;
-    await act(async () => head(1, 120));
-    expect(renders).toBe(deliveredRenders);
-    expect(watching).toHaveBeenLastCalledWith(false);
-  } finally {
-    await act(async () => root.unmount());
-    delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
-  }
-});
+    Object.assign(globalThis, { TextDecoder, TextEncoder, fetch });
+    const { createChainMetadataResolver } =
+      await import('@hyperlane-xyz/sdk/metadata/ChainMetadataResolver');
+    const { ProtocolType } = await import('@hyperlane-xyz/utils');
+    const resolver = createChainMetadataResolver({
+      [chain]: {
+        name: chain,
+        chainId: domain,
+        protocol: ProtocolType.Ethereum,
+        rpcUrls: [{ http: 'https://unused.example' }],
+        blocks: { confirmations: 2, reorgPeriod: required },
+      },
+    });
+    const message: MessageStub = {
+      id: '1',
+      msgId: '0x01',
+      nonce: 1,
+      sender: '0x01',
+      recipient: '0x02',
+      body: '0x',
+      status: MessageStatus.Pending,
+      isProvisional: true,
+      originChainId: domain,
+      originDomainId: domain,
+      destinationChainId: 2,
+      destinationDomainId: 2,
+      origin: { blockNumber: 100, timestamp: 0, hash: '0x01' },
+    };
+    let renders = 0;
+    function Progress() {
+      renders++;
+      const progress = useConfirmationProgress(message, resolver);
+      return createElement(
+        'div',
+        null,
+        `${isWaitingForOriginConfirmations(message, progress) ? 'confirming' : 'pending'}:${progress?.current ?? '?'} / ${progress?.required}`,
+      );
+    }
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    const testGlobal: typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean } = globalThis;
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+    const watching = jest.fn();
+    const heads = createExplorerBlockHeads(watching);
+    async function render() {
+      await act(async () =>
+        root.render(
+          createElement(
+            ExplorerBlockHeadsContext.Provider,
+            { value: heads },
+            createElement(Progress),
+          ),
+        ),
+      );
+    }
+    function head(domain: number, height: number) {
+      heads.set({
+        type: 'block',
+        domain,
+        height: String(height),
+        headHeight: String(height),
+        hash: `0x${'01'.repeat(32)}`,
+      });
+    }
+    try {
+      await render();
+      expect(container.textContent).toBe(`confirming:? / ${required}`);
+      const initialRenders = renders;
+      await act(async () => head(2, 200));
+      expect(renders).toBe(initialRenders);
+      expect(container.textContent).toBe(`confirming:? / ${required}`);
+      await act(async () => head(domain, 103));
+      expect(container.textContent).toBe(`confirming:3 / ${required}`);
+      await act(async () => head(domain, 100 + required));
+      expect(container.textContent).toBe(`pending:${required} / ${required}`);
+      await act(async () => head(domain, 99 + required));
+      expect(container.textContent).toBe(`confirming:${required - 1} / ${required}`);
+      await act(async () => heads.clear());
+      expect(container.textContent).toBe(`confirming:? / ${required}`);
+      expect(fetch).not.toHaveBeenCalled();
+      message.status = MessageStatus.Delivered;
+      await render();
+      expect(watching).toHaveBeenLastCalledWith(true);
+      await act(async () => head(domain, 103));
+      expect(container.textContent).toBe(`pending:3 / ${required}`);
+      await act(async () => head(domain, 100 + required));
+      expect(container.textContent).toBe(`pending:${required} / ${required}`);
+      message.isProvisional = false;
+      await render();
+      const canonicalRenders = renders;
+      await act(async () => head(domain, 120));
+      expect(renders).toBe(canonicalRenders);
+      expect(watching).toHaveBeenLastCalledWith(false);
+    } finally {
+      await act(async () => root.unmount());
+      delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    }
+  },
+);
 
 describe('calculateConfirmationCount', () => {
   it('tracks blocks after inclusion and caps at the required confirmations', () => {

@@ -23,7 +23,7 @@ export function useConfirmationProgress(
   message: MessageStub,
   chainMetadataResolver: ChainMetadataResolver,
 ): ConfirmationProgress | null {
-  const tracking = message.isProvisional && message.status === MessageStatus.Pending;
+  const tracking = message.isProvisional;
   const required = tracking
     ? getRequiredConfirmations(
         chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks,
