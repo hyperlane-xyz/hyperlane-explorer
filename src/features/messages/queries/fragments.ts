@@ -71,6 +71,7 @@ export interface MessageStubEntry {
   is_provisional?: boolean;
   origin_block_height?: number | string;
   live_confirmations?: number;
+  live_received_at?: number;
   id: number | string; // database id, not message id
   msg_id: string; // binary e.g. \\x123
   nonce: number;
@@ -97,7 +98,7 @@ export interface MessageStubEntry {
 
 export interface MessageEntry extends MessageStubEntry {
   origin_block_hash: string; // binary e.g. \\x123
-  origin_block_height: number;
+  origin_block_height: number | string;
   origin_block_id: number; // database id
   origin_mailbox: string; // binary e.g. \\x123
   origin_tx_cumulative_gas_used: number;

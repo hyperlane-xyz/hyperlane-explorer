@@ -3,10 +3,12 @@ import {
   createContext,
   createElement,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
 
 import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
@@ -50,10 +52,47 @@ export interface ExplorerEventsContextValue {
 }
 
 export const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
-// Block updates should not rerender message-query subscribers.
-export const ExplorerBlockHeadsContext = createContext<ReadonlyMap<number, ExplorerBlock>>(
-  new Map(),
-);
+export function createExplorerBlockHeads(onWatchingChange = (_watching: boolean) => {}) {
+  const heads = new Map<number, ExplorerBlock>();
+  const listeners = new Map<number, Set<() => void>>();
+  return {
+    get: (domain: number) => heads.get(domain),
+    set(block: ExplorerBlock) {
+      heads.set(block.domain, block);
+      listeners.get(block.domain)?.forEach((listener) => listener());
+    },
+    clear() {
+      heads.clear();
+      listeners.forEach((subscribers) => subscribers.forEach((listener) => listener()));
+    },
+    subscribe(domain: number, listener: () => void) {
+      const subscribers = listeners.get(domain) ?? new Set();
+      subscribers.add(listener);
+      listeners.set(domain, subscribers);
+      onWatchingChange(true);
+      return () => {
+        subscribers.delete(listener);
+        if (!subscribers.size) listeners.delete(domain);
+        onWatchingChange(listeners.size > 0);
+      };
+    },
+  };
+}
+
+export const ExplorerBlockHeadsContext = createContext(createExplorerBlockHeads());
+
+export function useExplorerBlockHead(domain?: number) {
+  const heads = useContext(ExplorerBlockHeadsContext);
+  const subscribe = useCallback(
+    (listener: () => void) => (domain === undefined ? () => {} : heads.subscribe(domain, listener)),
+    [domain, heads],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => (domain === undefined ? undefined : heads.get(domain)),
+    () => undefined,
+  );
+}
 
 export function shouldEnableExplorerEvents(pathName: string) {
   return (
@@ -69,7 +108,8 @@ export function ExplorerEventsProvider({
   const [connectionState, setConnectionState] = useState<ExplorerConnectionState>('unavailable');
   const [messageRows, setMessageRows] = useState<MessageEntry[]>([]);
   const [revision, setRevision] = useState(0);
-  const [blockHeads, setBlockHeads] = useState<ReadonlyMap<number, ExplorerBlock>>(new Map());
+  const [blocksEnabled, setBlocksEnabled] = useState(false);
+  const [blockHeads] = useState(() => createExplorerBlockHeads(setBlocksEnabled));
   const { domainIds, invalidDomainIds } = useMemo(
     () => partitionExplorerDomains(domains),
     [domains],
@@ -105,13 +145,18 @@ export function ExplorerEventsProvider({
 
   useEffect(() => {
     clearMessages();
-    setBlockHeads(new Map());
+    setConnectionState('connecting');
+  }, [domainIds, enabled, clearMessages]);
+
+  useEffect(() => {
+    blockHeads.clear();
     if (!enabled || !config.wsUrl) {
       setConnectionState('unavailable');
       return;
     }
 
-    setConnectionState('connecting');
+    // Changing block subscriptions must not discard the active message overlay.
+    setConnectionState((state) => (state === 'connected' ? state : 'connecting'));
     let closed = false;
     let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
     let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
@@ -123,7 +168,7 @@ export function ExplorerEventsProvider({
       ws = undefined;
       if (heartbeatTimer) clearTimeout(heartbeatTimer);
       setConnectionState('disconnected');
-      setBlockHeads(new Map());
+      blockHeads.clear();
       clearMessages();
       reconnectTimer = setTimeout(() => {
         reconnectTimer = undefined;
@@ -150,7 +195,7 @@ export function ExplorerEventsProvider({
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(withConfirmations(config.wsUrl, domainIds));
+        socket = new WebSocket(withConfirmations(config.wsUrl, domainIds, blocksEnabled));
       } catch (error) {
         logger.error('Could not create Explorer live message websocket', error);
         scheduleReconnect();
@@ -170,11 +215,12 @@ export function ExplorerEventsProvider({
           setConnectionState('connected');
           setRevision((version) => version + 1);
         } else if (message?.type === 'block') {
-          setBlockHeads((heads) => new Map(heads).set(message.domain, message));
+          blockHeads.set(message);
         } else if (message?.type === 'message_upsert') {
           const messageRow = {
             ...message.data,
             live_confirmations: message.confirmations,
+            live_received_at: Date.now(),
           };
           listenersRef.current.forEach((listener) => listener(messageRow));
           const nextRows = [
@@ -210,7 +256,7 @@ export function ExplorerEventsProvider({
       ws?.close();
       ws = undefined;
     };
-  }, [domainIds, enabled, clearMessages]);
+  }, [domainIds, enabled, clearMessages, blockHeads, blocksEnabled]);
 
   const value = useMemo(
     () => ({ connectionState, messageRows, revision, subscribe }),
@@ -294,9 +340,9 @@ function isMessageUpsertEnvelope(
   );
 }
 
-export function withConfirmations(wsUrl: string, domains: number[]) {
+export function withConfirmations(wsUrl: string, domains: number[], blocks = false) {
   const url = new URL(wsUrl);
-  url.searchParams.set('blocks', 'true');
+  url.searchParams.set('blocks', String(blocks));
   if (domains.length) {
     url.searchParams.set('confirmations', '0');
     url.searchParams.set('domains', domains.join(','));
@@ -342,12 +388,27 @@ function isMessageEntry(value: unknown): value is MessageEntry {
     typeof value.recipient === 'string' &&
     typeof value.send_occurred_at === 'string' &&
     typeof value.origin_tx_hash === 'string' &&
+    typeof value.origin_block_hash === 'string' &&
+    typeof value.origin_mailbox === 'string' &&
+    (typeof value.origin_block_height === 'number' || isHeight(value.origin_block_height)) &&
+    Number.isSafeInteger(Number(value.origin_block_height)) &&
+    Number(value.origin_block_height) >= 0 &&
+    isNumeric(value.total_gas_amount) &&
+    isNumeric(value.total_payment) &&
+    isNumeric(value.num_payments) &&
     (typeof value.id === 'string' || typeof value.id === 'number') &&
     typeof value.nonce === 'number' &&
     typeof value.origin_domain_id === 'number' &&
     typeof value.destination_domain_id === 'number' &&
     typeof value.is_delivered === 'boolean' &&
     !Number.isNaN(Date.parse(value.send_occurred_at))
+  );
+}
+
+function isNumeric(value: unknown) {
+  return (
+    (typeof value === 'number' && Number.isFinite(value)) ||
+    (typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value))
   );
 }
 

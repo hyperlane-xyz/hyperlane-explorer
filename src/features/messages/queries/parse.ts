@@ -77,6 +77,7 @@ export function parseMessageStubEntry(
     return {
       status: m.is_delivered ? MessageStatus.Delivered : MessageStatus.Pending,
       isProvisional: m.is_provisional ?? m.live_confirmations === 0,
+      liveReceivedAt: m.live_received_at,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,
@@ -118,6 +119,8 @@ export function parseMessageEntry(
   try {
     const stub = parseMessageStubEntry(chainMetadataResolver, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
+    const originBlockNumber = parseBlockNumber(m.origin_block_height);
+    if (originBlockNumber === undefined) throw new Error('Origin block number required');
 
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
@@ -130,7 +133,7 @@ export function parseMessageEntry(
       origin: {
         ...stub.origin,
         blockHash: postgresByteaToString(m.origin_block_hash),
-        blockNumber: m.origin_block_height,
+        blockNumber: originBlockNumber,
         mailbox: postgresByteaToAddress(m.origin_mailbox, originMetadata),
         nonce: m.origin_tx_nonce,
         gasLimit: m.origin_tx_gas_limit,

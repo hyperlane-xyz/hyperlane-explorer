@@ -6,7 +6,10 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../types';
-import { ExplorerBlockHeadsContext, type ExplorerBlock } from './queries/ExplorerEventsProvider';
+import {
+  ExplorerBlockHeadsContext,
+  createExplorerBlockHeads,
+} from './queries/ExplorerEventsProvider';
 import {
   calculateConfirmationCount,
   isWaitingForOriginConfirmations,
@@ -47,7 +50,9 @@ it('advances only from streamed origin heads and returns to confirming after a r
     destinationDomainId: 2,
     origin: { blockNumber: 100, timestamp: 0, hash: '0x01' },
   };
+  let renders = 0;
   function Progress() {
+    renders++;
     const progress = useConfirmationProgress(message, resolver);
     return createElement(
       'div',
@@ -59,20 +64,21 @@ it('advances only from streamed origin heads and returns to confirming after a r
   const root = createRoot(container);
   const testGlobal: typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean } = globalThis;
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
-  const heads = new Map<number, ExplorerBlock>();
+  const watching = jest.fn();
+  const heads = createExplorerBlockHeads(watching);
   async function render() {
     await act(async () =>
       root.render(
         createElement(
           ExplorerBlockHeadsContext.Provider,
-          { value: new Map(heads) },
+          { value: heads },
           createElement(Progress),
         ),
       ),
     );
   }
   function head(domain: number, height: number) {
-    heads.set(domain, {
+    heads.set({
       type: 'block',
       domain,
       height: String(height),
@@ -83,22 +89,25 @@ it('advances only from streamed origin heads and returns to confirming after a r
   try {
     await render();
     expect(container.textContent).toBe('confirming:? / 15');
-    head(2, 200);
-    await render();
+    const initialRenders = renders;
+    await act(async () => head(2, 200));
+    expect(renders).toBe(initialRenders);
     expect(container.textContent).toBe('confirming:? / 15');
-    head(1, 103);
-    await render();
+    await act(async () => head(1, 103));
     expect(container.textContent).toBe('confirming:3 / 15');
-    head(1, 115);
-    await render();
+    await act(async () => head(1, 115));
     expect(container.textContent).toBe('pending:15 / 15');
-    head(1, 114);
-    await render();
+    await act(async () => head(1, 114));
     expect(container.textContent).toBe('confirming:14 / 15');
-    heads.clear();
-    await render();
+    await act(async () => heads.clear());
     expect(container.textContent).toBe('confirming:? / 15');
     expect(fetch).not.toHaveBeenCalled();
+    message.status = MessageStatus.Delivered;
+    await render();
+    const deliveredRenders = renders;
+    await act(async () => head(1, 120));
+    expect(renders).toBe(deliveredRenders);
+    expect(watching).toHaveBeenLastCalledWith(false);
   } finally {
     await act(async () => root.unmount());
     delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
@@ -135,6 +144,10 @@ describe('isWaitingForOriginConfirmations', () => {
       false,
     );
     expect(isWaitingForOriginConfirmations({ ...pending, isProvisional: false })).toBe(false);
+    expect(isWaitingForOriginConfirmations({ ...pending, status: MessageStatus.Failing })).toBe(
+      false,
+    );
+    expect(isWaitingForOriginConfirmations(pending, null)).toBe(true);
   });
 });
 
@@ -143,8 +156,10 @@ describe('getRequiredConfirmations', () => {
     expect(getRequiredConfirmations({ confirmations: 2, reorgPeriod: 15 })).toBe(15);
   });
 
-  it('treats finalized chains as immediately final', () => {
-    expect(getRequiredConfirmations({ confirmations: 2, reorgPeriod: 'finalized' })).toBe(0);
+  it('does not invent a block count for finalized tags', () => {
+    expect(
+      getRequiredConfirmations({ confirmations: 2, reorgPeriod: 'finalized' }),
+    ).toBeUndefined();
   });
 
   it('does not invent a block count for other block tags', () => {

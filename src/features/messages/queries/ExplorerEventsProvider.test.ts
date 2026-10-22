@@ -1,11 +1,11 @@
 /** @jest-environment jsdom */
 
-import { act, createElement, useContext } from 'react';
+import { act, createElement, useContext, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import {
-  ExplorerBlockHeadsContext,
+  useExplorerBlockHead,
   ExplorerEventsContext,
   ExplorerEventsProvider,
   parseExplorerEvent,
@@ -34,7 +34,7 @@ describe('Explorer websocket lifecycle', () => {
     return createElement('div', null, messageRow?.msg_id ?? 'none');
   }
   async function render(
-    children = createElement(EventState),
+    children: ReactNode = createElement(EventState),
     props: { domains?: number[]; enabled?: boolean } = {},
   ) {
     await act(async () => root.render(createElement(ExplorerEventsProvider, props, children)));
@@ -74,13 +74,13 @@ describe('Explorer websocket lifecycle', () => {
 
   it('keeps canonical updates available before domains load', async () => {
     await render();
-    expect(sockets[0].url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=true');
+    expect(sockets[0].url).toBe('wss://explorer-api.hyperlane.xyz/messages?blocks=false');
   });
 
   it('refreshes on every rollback, including an empty overlay', async () => {
     await render(undefined, { domains: [1] });
     expect(sockets[0].url).toBe(
-      'wss://explorer-api.hyperlane.xyz/messages?blocks=true&confirmations=0&domains=1',
+      'wss://explorer-api.hyperlane.xyz/messages?blocks=false&confirmations=0&domains=1',
     );
     await emit({ type: 'message_upsert', data: makeProxyMessage() });
     expect(container.textContent).toBe('1:0');
@@ -169,10 +169,11 @@ describe('Explorer websocket lifecycle', () => {
 
   it('updates block heads independently, permits reorgs, and clears on disconnect', async () => {
     function BlockState() {
-      const heads = useContext(ExplorerBlockHeadsContext);
-      return createElement('div', null, heads.get(1)?.headHeight ?? 'unknown');
+      const head = useExplorerBlockHead(1);
+      return createElement('div', null, head?.headHeight ?? 'unknown');
     }
     await render(createElement(BlockState));
+    expect(sockets.at(-1)!.url).toContain('blocks=true');
     for (const height of ['103', '104', '102']) {
       await emit({
         type: 'block',
@@ -183,8 +184,26 @@ describe('Explorer websocket lifecycle', () => {
       });
       expect(container.textContent).toBe(height);
     }
-    await act(async () => sockets[0].close());
+    await act(async () => sockets.at(-1)!.close());
     expect(container.textContent).toBe('unknown');
+    await render();
+    expect(sockets.at(-1)!.url).toContain('blocks=false');
+  });
+
+  it('retains live messages while enabling and disabling block updates', async () => {
+    function Detail({ tracking }: { tracking: boolean }) {
+      useExplorerBlockHead(tracking ? 173 : undefined);
+      return createElement(Subscriber);
+    }
+    await render(createElement(Detail, { tracking: false }));
+    await emit({ type: 'ready' });
+    await emit({ type: 'message_upsert', data: makeProxyMessage(), confirmations: 0 });
+    await render(createElement(Detail, { tracking: true }));
+    expect(container.textContent).toBe('\\xmessage-id');
+    expect(sockets.at(-1)!.url).toContain('blocks=true');
+    await render(createElement(Detail, { tracking: false }));
+    expect(container.textContent).toBe('\\xmessage-id');
+    expect(sockets.at(-1)!.url).toContain('blocks=false');
   });
 });
 
@@ -254,6 +273,23 @@ describe('parseExplorerEvent', () => {
     warn.mockRestore();
   });
 
+  it('rejects incomplete detail rows but accepts numeric strings and nullable enrichment', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const field of [
+      'origin_block_hash',
+      'origin_mailbox',
+      'total_gas_amount',
+      'total_payment',
+    ]) {
+      const data: Record<string, unknown> = makeProxyMessage();
+      delete data[field];
+      expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toBeNull();
+    }
+    const data = { ...makeProxyMessage(), origin_block_height: '100', origin_tx_gas_used: null };
+    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).not.toBeNull();
+    warn.mockRestore();
+  });
+
   it('accepts a zero-confirmation rollback', () => {
     const rollback = {
       type: 'rollback',
@@ -285,7 +321,7 @@ describe('parseExplorerEvent', () => {
 
 describe('withConfirmations', () => {
   it('requests the zero-confirmation frontier for every scraped domain', () => {
-    expect(withConfirmations('wss://api.example/messages?token=abc', [1, 10, 42161])).toBe(
+    expect(withConfirmations('wss://api.example/messages?token=abc', [1, 10, 42161], true)).toBe(
       'wss://api.example/messages?token=abc&blocks=true&confirmations=0&domains=1%2C10%2C42161',
     );
   });
@@ -311,6 +347,11 @@ function makeProxyMessage() {
     send_occurred_at: '2026-08-21 07:53:28',
     origin_domain_id: 173,
     origin_block_height: 100,
+    origin_block_hash: '\\xorigin-block',
+    origin_mailbox: '\\xmailbox',
+    total_gas_amount: '0',
+    total_payment: '0',
+    num_payments: '0',
     origin_tx_hash: '\\xorigin-hash',
     origin_tx_sender: '\\xorigin-sender',
     origin_tx_recipient: '\\xorigin-recipient',

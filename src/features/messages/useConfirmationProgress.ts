@@ -1,8 +1,7 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import { useContext } from 'react';
 
 import { MessageStatus, type MessageStub } from '../../types';
-import { ExplorerBlockHeadsContext } from './queries/ExplorerEventsProvider';
+import { useExplorerBlockHead } from './queries/ExplorerEventsProvider';
 
 export interface ConfirmationProgress {
   current: number | null;
@@ -14,7 +13,7 @@ export function isWaitingForOriginConfirmations(
   progress?: ConfirmationProgress | null,
 ) {
   return (
-    message.status !== MessageStatus.Delivered &&
+    message.status === MessageStatus.Pending &&
     !!message.isProvisional &&
     (!progress || progress.current === null || progress.current < progress.required)
   );
@@ -24,13 +23,14 @@ export function useConfirmationProgress(
   message: MessageStub,
   chainMetadataResolver: ChainMetadataResolver,
 ): ConfirmationProgress | null {
-  const blockHeads = useContext(ExplorerBlockHeadsContext);
-  if (!message.isProvisional || message.status === MessageStatus.Delivered) return null;
-  const required = getRequiredConfirmations(
-    chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks,
-  );
+  const tracking = message.isProvisional && message.status === MessageStatus.Pending;
+  const required = tracking
+    ? getRequiredConfirmations(
+        chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks,
+      )
+    : undefined;
+  const head = useExplorerBlockHead(required ? message.originDomainId : undefined);
   if (required === undefined) return null;
-  const head = blockHeads.get(message.originDomainId);
   return {
     required,
     current: calculateConfirmationCount(
@@ -56,7 +56,6 @@ export function getRequiredConfirmations(blocks?: {
   reorgPeriod?: number | string;
 }) {
   if (typeof blocks?.reorgPeriod === 'number') return blocks.reorgPeriod;
-  if (blocks?.reorgPeriod === 'finalized') return 0;
   if (typeof blocks?.reorgPeriod === 'string') return undefined;
   return blocks?.confirmations;
 }

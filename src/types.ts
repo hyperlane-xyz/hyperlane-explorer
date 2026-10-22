@@ -34,6 +34,7 @@ export interface MessageTx extends MessageTxStub {
 export interface MessageStub {
   status: MessageStatus;
   isProvisional?: boolean;
+  liveReceivedAt?: number;
   id: string; // Database id
   msgId: string; // Message hash
   nonce: number; // formerly leafIndex

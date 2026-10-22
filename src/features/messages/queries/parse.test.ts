@@ -79,10 +79,13 @@ describe('parseMessageStubEntry', () => {
     const message = parseMessageEntry(createChainMetadataResolver({}), [], {
       ...messageEntry,
       live_confirmations: 0,
+      live_received_at: 1234,
+      origin_block_height: '1',
     });
 
     expect(message).toMatchObject({
       isProvisional: true,
+      liveReceivedAt: 1234,
       origin: { blockNumber: 1 },
     });
   });

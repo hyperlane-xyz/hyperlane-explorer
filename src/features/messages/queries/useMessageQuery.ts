@@ -400,34 +400,18 @@ export function useMessageSearchQuery(
   );
   // Filter before pagination so unrelated live rows cannot evict query matches.
   // Raw query metadata controls cursor continuation.
-  const candidateMessageList = useMemo(
-    () =>
-      getMessageCandidates(
-        liveMessageList,
-        unfilteredMessageList,
-        {
-          searchInput: sanitizedInput,
-          originDomainId: isValidOrigin ? originDomainId : null,
-          destinationDomainId: isValidDestination ? destDomainId : null,
-          startTime: startTimeFilter,
-          endTime: endTimeFilter,
-          status: statusFilter,
-        },
-        warpRouteDomainAddresses,
-      ),
-    [
-      destDomainId,
-      endTimeFilter,
-      isValidDestination,
-      isValidOrigin,
-      liveMessageList,
-      originDomainId,
-      sanitizedInput,
-      startTimeFilter,
-      statusFilter,
-      unfilteredMessageList,
-      warpRouteDomainAddresses,
-    ],
+  const candidateMessageList = getMessageCandidates(
+    liveMessageList,
+    unfilteredMessageList,
+    {
+      searchInput: sanitizedInput,
+      originDomainId: isValidOrigin ? originDomainId : null,
+      destinationDomainId: isValidDestination ? destDomainId : null,
+      startTime: startTimeFilter,
+      endTime: endTimeFilter,
+      status: statusFilter,
+    },
+    warpRouteDomainAddresses,
   );
 
   const {
@@ -509,9 +493,10 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
         : null,
     [chainMetadataResolver, scrapedChains, liveMessageRow],
   );
+  const liveMessageExpired = isLiveMessageExpired(liveMessage);
   const selectedMessage = useMemo(
-    () => selectLiveMessage(liveMessage, messageList[0] ?? null),
-    [liveMessage, messageList],
+    () => selectLiveMessage(liveMessage, messageList[0] ?? null, liveMessageExpired),
+    [liveMessage, messageList, liveMessageExpired],
   );
   const message = useRetainedMessage(selectedMessage);
   const isMessageFound = !!message;
@@ -535,12 +520,18 @@ export function useMessageQuery({ messageId, pause }: { messageId: string; pause
 export function selectLiveMessage<M extends MessageStub>(
   liveMessage: M | null,
   canonicalMessage: M | null,
+  liveMessageExpired = isLiveMessageExpired(liveMessage),
 ) {
   if (!liveMessage) return canonicalMessage;
   if (!canonicalMessage) return liveMessage;
-  return liveMessage.status !== canonicalMessage.status
+  // Bound the overlay's authority: missed rollbacks must yield to polled snapshots.
+  return !liveMessageExpired && liveMessage.status !== canonicalMessage.status
     ? preserveMessageTransactionFields(liveMessage, canonicalMessage)
     : preserveMessageTransactionFields(canonicalMessage, liveMessage);
+}
+
+function isLiveMessageExpired(message: MessageStub | null) {
+  return message?.liveReceivedAt !== undefined && Date.now() - message.liveReceivedAt >= 30_000;
 }
 
 function mergeMessageLists(

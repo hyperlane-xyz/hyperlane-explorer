@@ -612,6 +612,35 @@ describe('message pagination', () => {
 });
 
 describe('message detail live reconciliation', () => {
+  it('lets polled snapshots correct an expired live delivery after a missed rollback', () => {
+    const pending = makeStub({ status: MessageStatus.Pending, destination: undefined });
+    const live = makeStub({
+      status: MessageStatus.Delivered,
+      isProvisional: true,
+      liveReceivedAt: Date.now(),
+      destination: { hash: '0xdelivery', timestamp: 100 },
+    });
+    expect(selectLiveMessage(live, pending)?.status).toBe(MessageStatus.Delivered);
+    const stale = { ...live, liveReceivedAt: Date.now() - 30_001 };
+    expect(selectLiveMessage(stale, pending)).toEqual(pending);
+    expect(selectLiveMessage(stale, null)).toBe(stale);
+    expect(
+      getMessageCandidates(
+        [stale],
+        [pending],
+        {
+          searchInput: '',
+          originDomainId: null,
+          destinationDomainId: null,
+          startTime: null,
+          endTime: null,
+          status: 'pending',
+        },
+        [],
+      ),
+    ).toEqual([pending]);
+  });
+
   it('preserves enrichment from either source without changing the chosen status', () => {
     const complete = makeStub({ isProvisional: true });
     const partial = makeStub({ origin: { hash: complete.origin.hash, timestamp: 0 } });
