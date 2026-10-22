@@ -13,7 +13,7 @@ import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 const MESSAGE_SEARCH_TIMEOUT = 10_000; // 10s
-// Stable reference so bridge effects don't re-fire on every render while loading
+// Stable reference so consumer memos and effects don't re-run on every render while loading
 const EMPTY_MESSAGES: Message[] = [];
 
 // Query 'Permissionless Interoperability (PI)' chains using
