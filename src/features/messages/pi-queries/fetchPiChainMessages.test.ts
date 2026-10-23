@@ -32,6 +32,7 @@ const encodedMessage = formatMessage(
   '0x48656c6c6f21',
 );
 const msgId = messageId(encodedMessage);
+const igpAddress = chainAddresses.sepolia.interchainGasPaymaster;
 
 const dispatchEvent = mailbox.encodeEventLog(mailbox.getEvent('Dispatch'), [
   senderAddress,
@@ -103,21 +104,50 @@ describe('fetchMessagesFromPiChain', () => {
   it('returns no messages for invalid input', async () => {
     await expect(fetch({ input: 'invalidInput' })).resolves.toEqual([]);
   });
+
+  it('sums IGP payments from the dispatch block', async () => {
+    const provider = createProvider();
+    await expect(
+      fetch({ input: txHash }, provider, { interchainGasPaymaster: igpAddress }),
+    ).resolves.toEqual([
+      { ...expectedMessage, totalGasAmount: '0', totalPayment: '0', numPayments: 0 },
+    ]);
+    expect(provider.getLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ address: igpAddress, fromBlock: blockNumber }),
+    );
+  });
+
+  it('keeps the message when the IGP payment query fails', async () => {
+    const provider = createProvider();
+    jest.mocked(provider.getLogs).mockRejectedValue(new Error('block range too large'));
+    await expect(
+      fetch({ input: txHash }, provider, { interchainGasPaymaster: igpAddress }),
+    ).resolves.toEqual([expectedMessage]);
+  });
 });
 
-function fetch(query: { input: string; fromBlock?: number }) {
-  const provider = createProvider();
+function fetch(
+  query: { input: string; fromBlock?: number },
+  provider = createProvider(),
+  config: Partial<ChainMetadata<{ interchainGasPaymaster: string }>> = {},
+) {
   const multiProvider = {
     getChainId: () => sepoliaConfig.chainId,
     getEthersV5Provider: () => provider,
     tryGetChainId: () => destinationDomain,
   } as unknown as ExplorerMultiProvider;
 
-  return fetchMessagesFromPiChain(sepoliaConfig, query, multiProvider, {} as IRegistry);
+  return fetchMessagesFromPiChain(
+    { ...sepoliaConfig, ...config },
+    query,
+    multiProvider,
+    {} as IRegistry,
+  );
 }
 
 function createProvider() {
   return {
+    _isProvider: true,
     getBlock: jest.fn(async () => ({ timestamp })),
     getBlockNumber: jest.fn(async () => blockNumber),
     getLogs: jest.fn(async (filter: providers.Filter) => {

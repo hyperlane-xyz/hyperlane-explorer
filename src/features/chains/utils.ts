@@ -55,3 +55,16 @@ export function isEvmChain(
   const protocol = chainMetadataResolver.tryGetProtocol(domainId);
   return protocol === ProtocolType.Ethereum;
 }
+
+// Chains to search over RPC: unscraped EVM chains, or all EVM chains to cover scraper gaps
+export function isPiSearchChain(
+  chainMetadataResolver: Pick<ChainMetadataResolver, 'tryGetChainName' | 'tryGetProtocol'>,
+  scrapedChains: DomainsEntry[],
+  domainId: DomainId,
+  includeScrapedChains: boolean,
+) {
+  return (
+    isEvmChain(chainMetadataResolver, domainId) &&
+    (includeScrapedChains || isPiChain(chainMetadataResolver, scrapedChains, domainId))
+  );
+}
