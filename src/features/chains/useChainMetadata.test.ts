@@ -58,6 +58,15 @@ describe('filterQueryParamChainMetadata', () => {
     expect(accepted).toEqual({});
   });
 
+  it('rejects a URL chain overriding a known chain under its own name and domainId', () => {
+    const linked = [chain('ethereum', 1, 'attacker'), chain('newchain', 5000)];
+
+    const accepted = filterQueryParamChainMetadata(linked, {}, { ethereum: chain('ethereum', 1) });
+
+    expect(accepted.ethereum).toBeUndefined();
+    expect(accepted.newchain).toEqual(linked[1]);
+  });
+
   it('rejects a duplicate domainId within the URL', () => {
     const accepted = filterQueryParamChainMetadata(
       [chain('first', 5000), chain('second', 5000)],

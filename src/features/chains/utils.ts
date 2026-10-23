@@ -9,12 +9,12 @@ import { DomainsEntry } from './queries/fragments';
 export async function getMailboxAddress(
   chainName: string,
   overrideChainMetadata: ChainMap<Partial<ChainMetadata<{ mailbox?: string }>>>,
-  registry: IRegistry,
+  registry: Pick<IRegistry, 'getChainAddresses'>,
 ) {
-  if (overrideChainMetadata[chainName]?.mailbox) return overrideChainMetadata[chainName].mailbox;
+  // Registry addresses win; overrides only supply mailboxes for custom chains.
   const addresses = await registry.getChainAddresses(chainName);
   if (addresses?.mailbox) return addresses.mailbox;
-  else return undefined;
+  return overrideChainMetadata[chainName]?.mailbox;
 }
 
 export function getChainDisplayName(
