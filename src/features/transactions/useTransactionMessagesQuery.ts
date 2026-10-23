@@ -28,6 +28,8 @@ export function useTransactionMessagesQuery(txHash: string) {
         TX_QUERY_LIMIT,
         false,
         'nonce: asc',
+        // Include unconfirmed dispatches so fresh txs show before canonical indexing
+        { provisional: true },
       ),
     [txHash],
   );

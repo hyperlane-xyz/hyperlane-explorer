@@ -55,16 +55,19 @@ jest.mock('../messages/cards/TransactionCard', () => ({
     status,
     transaction,
     isStatusFetching,
+    isOriginConfirming,
   }: {
     status: MessageStatus;
     transaction?: Message['destination'];
     isStatusFetching: boolean;
+    isOriginConfirming: boolean;
   }) => (
     <div
       data-testid="destination-transaction"
       data-status={status}
       data-tx-hash={transaction?.hash}
       data-fetching={isStatusFetching}
+      data-origin-confirming={isOriginConfirming}
     />
   ),
 }));
@@ -243,6 +246,30 @@ it.each([
   });
 
   expect(container.querySelector('a')?.getAttribute('href')).toBe(href);
+
+  await act(async () => root.unmount());
+});
+
+it('shows unconfirmed pending dispatches as confirming', async () => {
+  const provisionalMessage = { ...pendingMessage, isProvisional: true, isOriginProvisional: true };
+  mockUseMessageDeliveryStatus.mockReturnValue({
+    messageWithDeliveryStatus: provisionalMessage,
+    debugResult: undefined,
+    isDeliveryStatusFetching: false,
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(<MessageSummaryRow message={provisionalMessage} index={0} forceExpanded />);
+  });
+
+  expect(container.textContent).toContain('Confirming');
+  expect(
+    container
+      .querySelector('[data-testid="destination-transaction"]')
+      ?.getAttribute('data-origin-confirming'),
+  ).toBe('true');
 
   await act(async () => root.unmount());
 });

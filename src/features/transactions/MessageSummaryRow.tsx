@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
+import { getMessagePause } from '../../consts/pausedRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Message, MessageStatus } from '../../types';
 import { getHumanReadableDuration } from '../../utils/time';
@@ -17,6 +18,7 @@ import { IcaDetailsCard } from '../messages/cards/IcaDetailsCard';
 import { DestinationTransactionCard } from '../messages/cards/TransactionCard';
 import { WarpTransferDetailsCard } from '../messages/cards/WarpTransferDetailsCard';
 import { useIsIcaMessage } from '../messages/ica';
+import { isWaitingForOriginConfirmations } from '../messages/useConfirmationProgress';
 import { parseWarpRouteMessageDetails, serializeMessage } from '../messages/utils';
 
 const AeroVoterDetailsCard = dynamic(() =>
@@ -43,6 +45,10 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
 
   // Prefer live delivery state when the scraper has not indexed a destination transaction yet.
   const { status, originDomainId, destinationDomainId, destination } = messageWithDeliveryStatus;
+  // No block heads on this page, so any unconfirmed pending dispatch reads as confirming
+  const isOriginConfirming =
+    !getMessagePause(messageWithDeliveryStatus) &&
+    isWaitingForOriginConfirmations(messageWithDeliveryStatus);
 
   const isIca = useIsIcaMessage(messageWithDeliveryStatus);
 
@@ -127,7 +133,11 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
             </div>
           </div>
           <div className="ml-3 flex shrink-0 items-center gap-3">
-            <StatusBadge status={status} duration={duration} />
+            <StatusBadge
+              status={status}
+              duration={duration}
+              isOriginConfirming={isOriginConfirming}
+            />
             <ChevronIcon
               width={18}
               height={18}
@@ -153,6 +163,7 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
             domainId={destinationDomainId}
             status={status}
             transaction={destination}
+            isOriginConfirming={isOriginConfirming}
             debugResult={debugResult}
             isStatusFetching={isDeliveryStatusFetching}
             blur={false}
@@ -191,7 +202,15 @@ export function MessageSummaryRow({ message, index, forceExpanded }: Props) {
   );
 }
 
-function StatusBadge({ status, duration }: { status: MessageStatus; duration?: string }) {
+function StatusBadge({
+  status,
+  duration,
+  isOriginConfirming,
+}: {
+  status: MessageStatus;
+  duration?: string;
+  isOriginConfirming: boolean;
+}) {
   if (status === MessageStatus.Delivered) {
     return (
       <div className="flex items-center gap-1.5 rounded bg-green-100 px-2.5 py-1 text-green-700">
@@ -212,7 +231,9 @@ function StatusBadge({ status, duration }: { status: MessageStatus; duration?: s
   return (
     <div className="flex items-center gap-1.5 rounded bg-amber-100 px-2.5 py-1 text-amber-700">
       <SpinnerIcon width={14} height={14} color="currentColor" />
-      <span className="text-xs font-medium">{toTitleCase(status)}</span>
+      <span className="text-xs font-medium">
+        {isOriginConfirming ? 'Confirming' : toTitleCase(status)}
+      </span>
     </div>
   );
 }
