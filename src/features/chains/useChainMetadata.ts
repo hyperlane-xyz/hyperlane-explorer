@@ -30,6 +30,15 @@ export function filterQueryParamChainMetadata(
     // A URL must never add fields or array entries to an existing saved choice.
     if (persistedOverrides[chainMetadata.name] || acc[chainMetadata.name]) return acc;
 
+    // A URL may only add new chains. It must never rewrite a known chain's
+    // RPCs, explorers, protocol or other fields.
+    if (knownChainMetadata[chainMetadata.name]) {
+      logger.error(
+        `Ignoring URL chain "${chainMetadata.name}": URL metadata cannot override a known chain`,
+      );
+      return acc;
+    }
+
     const owner = claimedDomainIds.get(chainMetadata.domainId);
     if (owner !== undefined && owner !== chainMetadata.name) {
       logger.error(
