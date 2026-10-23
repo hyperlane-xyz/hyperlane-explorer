@@ -5,7 +5,7 @@ import type {
 } from '@hyperlane-xyz/sdk/token/adapters/EvmTokenAdapter';
 import { TokenStandard } from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { ProtocolType, toWei } from '@hyperlane-xyz/utils';
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
 import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
@@ -41,15 +41,6 @@ async function fetchCollateralBalance(
     if (!chainMetadata) {
       logger.warn('Chain not configured in multiProvider', {
         chain: destinationToken.chainName,
-        token: destinationToken.symbol,
-      });
-      return undefined;
-    }
-
-    if (chainMetadata.protocol !== ProtocolType.Ethereum) {
-      logger.debug('Skipping collateral check for non-EVM chain', {
-        chain: destinationToken.chainName,
-        protocol: chainMetadata.protocol,
         token: destinationToken.symbol,
       });
       return undefined;
@@ -155,6 +146,14 @@ export function useCollateralStatus(
       return false;
     }
 
+    // This balance check uses EVM adapters; other protocols remain unknown.
+    if (
+      multiProvider?.tryGetChainMetadata(warpRouteDetails.destinationToken.chainName)?.protocol !==
+      ProtocolType.Ethereum
+    ) {
+      return false;
+    }
+
     // Skip CCTP routes - they use Circle's burn/mint mechanism, not traditional collateral
     if (isCctpRoute(warpRouteDetails.destinationToken.addressOrDenom)) {
       return false;
@@ -165,7 +164,7 @@ export function useCollateralStatus(
     // we need to check collateral balance as it can run low
     const destStandard = warpRouteDetails.destinationToken.standard;
     return isCollateralRoute(destStandard);
-  }, [message, warpRouteDetails]);
+  }, [message, warpRouteDetails, multiProvider]);
 
   const destinationToken = useMemo(() => {
     if (!warpRouteDetails || !shouldCheck) {
@@ -194,11 +193,10 @@ export function useCollateralStatus(
     // multiProvider is stable from store and doesn't need to be in the key
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey,
-    queryFn: () => {
-      if (!destinationToken || !multiProvider) return Promise.resolve(undefined);
-      return fetchCollateralBalance(destinationToken, multiProvider);
-    },
-    enabled: !!destinationToken && shouldCheck && !!multiProvider,
+    queryFn:
+      destinationToken && multiProvider
+        ? async () => (await fetchCollateralBalance(destinationToken, multiProvider)) ?? null
+        : skipToken,
     refetchInterval: COLLATERAL_REFETCH_INTERVAL,
     staleTime: COLLATERAL_STALE_TIME,
   });
@@ -219,7 +217,7 @@ export function useCollateralStatus(
     return { status: CollateralStatus.Checking };
   }
 
-  if (collateralBalance === undefined) {
+  if (collateralBalance == null) {
     return { status: CollateralStatus.Unknown };
   }
 

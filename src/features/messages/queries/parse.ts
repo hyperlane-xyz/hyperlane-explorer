@@ -8,6 +8,7 @@ import { isPiChain } from '../../chains/utils';
 import { postgresByteaToAddress, postgresByteaToString, postgresByteaToTxHash } from './encoding';
 import {
   MessageEntry,
+  MessageDetailsQueryResult,
   MessagesQueryResult,
   MessagesStubQueryResult,
   MessageStubEntry,
@@ -24,58 +25,46 @@ export function parseMessageStubResult(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   data: MessagesStubQueryResult | undefined,
-  idOrder?: 'ASC' | 'DESC',
 ): MessageStub[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStub, idOrder);
+  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessageStubEntry);
 }
 
 export function parseMessageQueryResult(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
-  data: MessagesQueryResult | undefined,
+  data: MessagesQueryResult | MessageDetailsQueryResult | undefined,
 ): Message[] {
-  return queryResult(chainMetadataResolver, scrapedChains, data, parseMessage);
-}
-
-export function parseMessageStubEntry(
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: DomainsEntry[],
-  data: MessageStubEntry,
-): MessageStub | null {
-  return parseMessageStub(chainMetadataResolver, scrapedChains, data);
-}
-
-export function parseMessageEntry(
-  chainMetadataResolver: ChainMetadataResolver,
-  scrapedChains: DomainsEntry[],
-  data: MessageEntry,
-): Message | null {
-  return parseMessage(chainMetadataResolver, scrapedChains, data);
+  const { canonical, ...entries } = data ?? {};
+  return queryResult(chainMetadataResolver, scrapedChains, entries, (resolver, chains, row) => {
+    const message = parseMessageEntry(resolver, chains, row);
+    if (!message) return null;
+    const originConfirmed = canonical?.some(
+      (confirmed) =>
+        confirmed.msg_id === row.msg_id &&
+        confirmed.origin_tx_hash === row.origin_tx_hash &&
+        confirmed.origin_block_hash === row.origin_block_hash,
+    );
+    return { ...message, isOriginProvisional: !!message.isProvisional && !originConfirmed };
+  });
 }
 
 function queryResult<D, M extends MessageStub>(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
-  data: Record<string, D[]> | undefined,
+  data: Record<string, D[] | null | undefined> | undefined,
   parseFn: (
     chainMetadataResolver: ChainMetadataResolver,
     scrapedChains: DomainsEntry[],
     data: D,
   ) => M | null,
-  idOrder?: 'ASC' | 'DESC',
 ) {
-  if (!data || !Object.keys(data).length) return [];
-  return deduplicateMessageList(
-    Object.values(data)
-      .flat()
-      .map((d) => parseFn(chainMetadataResolver, scrapedChains, d))
-      .filter((m): m is M => !!m)
-      .sort((a, b) => {
-        if (idOrder === 'ASC') return compareMessageIdsDescending(b, a);
-        if (idOrder === 'DESC') return compareMessageIdsDescending(a, b);
-        return b.origin.timestamp - a.origin.timestamp;
-      }),
-  );
+  const messages = Object.values(data ?? {})
+    .flatMap((rows) => rows ?? [])
+    .map((row) => parseFn(chainMetadataResolver, scrapedChains, row))
+    .filter((message): message is M => !!message);
+  return [
+    ...new Map(messages.map((message) => [message.msgId.toLowerCase(), message])).values(),
+  ].sort((a, b) => b.origin.timestamp - a.origin.timestamp);
 }
 
 export function compareMessageIdsDescending(a: MessageStub, b: MessageStub): number {
@@ -84,7 +73,7 @@ export function compareMessageIdsDescending(a: MessageStub, b: MessageStub): num
   return aId === bId ? 0 : aId > bId ? -1 : 1;
 }
 
-function parseMessageStub(
+export function parseMessageStubEntry(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   m: MessageStubEntry,
@@ -92,14 +81,21 @@ function parseMessageStub(
   try {
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
-    const body = postgresByteaToString(m.message_body ?? '');
+    const body = m.message_body ? postgresByteaToString(m.message_body) : '0x';
 
     const isPiMsg =
       isPiChain(chainMetadataResolver, scrapedChains, m.origin_domain_id) ||
       isPiChain(chainMetadataResolver, scrapedChains, m.destination_domain_id);
-
     return {
-      status: getMessageStatus(m),
+      status: m.is_delivered ? MessageStatus.Delivered : MessageStatus.Pending,
+      isProvisional: m.is_provisional ?? m.live_confirmations === 0,
+      liveReceivedAt: m.live_received_at,
+      isOriginProvisional:
+        m.is_provisional === false
+          ? false
+          : m.live_received_at === undefined
+            ? undefined
+            : m.live_confirmations === 0,
       id: m.id.toString(),
       msgId: postgresByteaToString(m.msg_id),
       nonce: m.nonce,
@@ -111,17 +107,18 @@ function parseMessageStub(
       destinationDomainId: m.destination_domain_id,
       body,
       origin: {
+        blockNumber: parseBlockNumber(m.origin_block_height),
         timestamp: parseTimestampString(m.send_occurred_at),
         hash: postgresByteaToTxHash(m.origin_tx_hash, originMetadata),
-        from: postgresByteaToAddress(m.origin_tx_sender, originMetadata),
-        to: postgresByteaToAddress(m.origin_tx_recipient, originMetadata),
+        from: parseOptionalAddress(m.origin_tx_sender, originMetadata),
+        to: parseOptionalAddress(m.origin_tx_recipient, originMetadata),
       },
-      destination: m.is_delivered
+      destination: hasDestinationTransaction(m)
         ? {
-            timestamp: parseTimestampString(m.delivery_occurred_at!),
-            hash: postgresByteaToTxHash(m.destination_tx_hash!, destinationMetadata),
-            from: postgresByteaToAddress(m.destination_tx_sender!, destinationMetadata),
-            to: postgresByteaToAddress(m.destination_tx_recipient!, destinationMetadata),
+            timestamp: parseTimestampString(m.delivery_occurred_at),
+            hash: postgresByteaToTxHash(m.destination_tx_hash, destinationMetadata),
+            from: parseOptionalAddress(m.destination_tx_sender, destinationMetadata),
+            to: parseOptionalAddress(m.destination_tx_recipient, destinationMetadata),
           }
         : undefined,
       isPiMsg,
@@ -132,14 +129,16 @@ function parseMessageStub(
   }
 }
 
-function parseMessage(
+export function parseMessageEntry(
   chainMetadataResolver: ChainMetadataResolver,
   scrapedChains: DomainsEntry[],
   m: MessageEntry,
 ): Message | null {
   try {
-    const stub = parseMessageStub(chainMetadataResolver, scrapedChains, m);
+    const stub = parseMessageStubEntry(chainMetadataResolver, scrapedChains, m);
     if (!stub) throw new Error('Message stub required');
+    const originBlockNumber = parseBlockNumber(m.origin_block_height);
+    if (originBlockNumber === undefined) throw new Error('Origin block number required');
 
     const originMetadata = chainMetadataResolver.tryGetChainMetadata(m.origin_domain_id);
     const destinationMetadata = chainMetadataResolver.tryGetChainMetadata(m.destination_domain_id);
@@ -152,7 +151,7 @@ function parseMessage(
       origin: {
         ...stub.origin,
         blockHash: postgresByteaToString(m.origin_block_hash),
-        blockNumber: m.origin_block_height,
+        blockNumber: originBlockNumber,
         mailbox: postgresByteaToAddress(m.origin_mailbox, originMetadata),
         nonce: m.origin_tx_nonce,
         gasLimit: m.origin_tx_gas_limit,
@@ -166,17 +165,19 @@ function parseMessage(
       destination: stub.destination
         ? {
             ...stub.destination,
-            blockHash: postgresByteaToString(m.destination_block_hash!),
-            blockNumber: m.destination_block_height!,
-            mailbox: postgresByteaToAddress(m.destination_mailbox!, destinationMetadata),
-            nonce: m.destination_tx_nonce!,
-            gasLimit: m.destination_tx_gas_limit!,
-            gasPrice: m.destination_tx_gas_price!,
-            effectiveGasPrice: m.destination_tx_effective_gas_price!,
-            gasUsed: m.destination_tx_gas_used!,
-            cumulativeGasUsed: m.destination_tx_cumulative_gas_used!,
-            maxFeePerGas: m.destination_tx_max_fee_per_gas!,
-            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas!,
+            blockHash: m.destination_block_hash
+              ? postgresByteaToString(m.destination_block_hash)
+              : undefined,
+            blockNumber: parseBlockNumber(m.destination_block_height),
+            mailbox: parseOptionalAddress(m.destination_mailbox, destinationMetadata),
+            nonce: m.destination_tx_nonce ?? undefined,
+            gasLimit: m.destination_tx_gas_limit ?? undefined,
+            gasPrice: m.destination_tx_gas_price ?? undefined,
+            effectiveGasPrice: m.destination_tx_effective_gas_price ?? undefined,
+            gasUsed: m.destination_tx_gas_used ?? undefined,
+            cumulativeGasUsed: m.destination_tx_cumulative_gas_used ?? undefined,
+            maxFeePerGas: m.destination_tx_max_fee_per_gas ?? undefined,
+            maxPriorityPerGas: m.destination_tx_max_priority_fee_per_gas ?? undefined,
           }
         : undefined,
       totalGasAmount: m.total_gas_amount.toString(),
@@ -194,19 +195,23 @@ function parseTimestampString(t: string) {
   return new Date(asUtc).getTime();
 }
 
-function getMessageStatus(m: MessageEntry | MessageStubEntry) {
-  if (m.is_delivered) {
-    return MessageStatus.Delivered;
-  } else {
-    // TODO consider gas and failure conditions here
-    return MessageStatus.Pending;
-  }
+export function parseBlockNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return value;
+  if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]*)$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
 }
 
-function deduplicateMessageList<M extends MessageStub>(messages: Array<M>): Array<M> {
-  const map = new Map();
-  for (const item of messages) {
-    map.set(item.id, item);
-  }
-  return Array.from(map.values());
+function hasDestinationTransaction(m: MessageStubEntry): m is MessageStubEntry & {
+  delivery_occurred_at: string;
+  destination_tx_hash: string;
+} {
+  return Boolean(m.delivery_occurred_at && m.destination_tx_hash);
+}
+
+function parseOptionalAddress(
+  value: string | null,
+  metadata: Parameters<typeof postgresByteaToAddress>[1],
+) {
+  return value ? postgresByteaToAddress(value, metadata) : undefined;
 }

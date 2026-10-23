@@ -79,8 +79,8 @@ export function MessageTable({
   }, [backgroundPrefetchKey, messageList, router]);
 
   useEffect(() => {
-    const currentIds = new Set(messageList.map((message) => message.id));
-    const currentStatuses = new Map(messageList.map((message) => [message.id, message.status]));
+    const currentIds = new Set(messageList.map((message) => message.msgId));
+    const currentStatuses = new Map(messageList.map((message) => [message.msgId, message.status]));
     const previousIds = previousMessageIds.current;
     const previousStatuses = previousMessageStatuses.current;
     previousMessageIds.current = currentIds;
@@ -111,10 +111,10 @@ export function MessageTable({
     const newlyDeliveredIds = messageList
       .filter(
         (message) =>
-          previousStatuses.get(message.id) === MessageStatus.Pending &&
+          previousStatuses.get(message.msgId) === MessageStatus.Pending &&
           message.status === MessageStatus.Delivered,
       )
-      .map((message) => message.id);
+      .map((message) => message.msgId);
     if (!newlyDeliveredIds.length) return;
 
     setDeliveredMessageIds((ids) => new Set([...ids, ...newlyDeliveredIds]));
@@ -160,11 +160,11 @@ export function MessageTable({
       </thead>
       <tbody>
         {messageList.map((m) => {
-          const isInserted = insertedMessageIds.has(m.id);
-          const isDelivered = deliveredMessageIds.has(m.id);
+          const isInserted = insertedMessageIds.has(m.msgId);
+          const isDelivered = deliveredMessageIds.has(m.msgId);
           return (
             <tr
-              key={`message-${m.id}`}
+              key={m.msgId}
               className={`border-primary-50 hover:bg-accent-50 active:bg-accent-100 relative cursor-pointer border-b last:border-0 ${
                 isFetching && 'blur-xs'
               } ${

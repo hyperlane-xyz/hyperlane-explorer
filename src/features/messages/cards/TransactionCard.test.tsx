@@ -64,7 +64,8 @@ it('shows a route halt warning before missing chain metadata', async () => {
         chainName="unknown"
         domainId={message.destinationDomainId}
         status={MessageStatus.Pending}
-        isStatusFetching={false}
+        isStatusFetching={true}
+        isOriginConfirming={true}
         blur={false}
         message={message}
       />,

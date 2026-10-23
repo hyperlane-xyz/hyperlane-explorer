@@ -10,10 +10,11 @@ export enum MessageStatus {
 }
 
 export interface MessageTxStub {
+  blockNumber?: number;
   timestamp: number;
   hash: string;
-  from: Address;
-  to: Address;
+  from?: Address;
+  to?: Address;
 }
 
 export interface MessageTx extends MessageTxStub {
@@ -32,6 +33,9 @@ export interface MessageTx extends MessageTxStub {
 
 export interface MessageStub {
   status: MessageStatus;
+  isProvisional?: boolean;
+  isOriginProvisional?: boolean;
+  liveReceivedAt?: number;
   id: string; // Database id
   msgId: string; // Message hash
   nonce: number; // formerly leafIndex
@@ -50,7 +54,7 @@ export interface MessageStub {
 export interface Message extends MessageStub {
   decodedBody?: string;
   origin: MessageTx;
-  destination?: MessageTx;
+  destination?: MessageTxStub & Partial<MessageTx>;
   totalGasAmount?: string;
   totalPayment?: string;
   numPayments?: number;
