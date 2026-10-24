@@ -26,9 +26,13 @@ Failures are uncached and PNG previews remain available. All subprocess argument
 are fixed filters and temporary paths, with no user-supplied shell commands.
 
 The build copies the platform FFmpeg executable into `.generated/ffmpeg`. The
-installer is a build dependency; the Next output trace includes only the single
-copied executable and the local logo/font. `pnpm dev` and `pnpm test` also prepare
-the executable. Temporary rendering files are removed after each request.
+installer is a build dependency; the Next output trace includes the copied
+executable, local logo/font, and dynamically loaded Node image renderer. Renderer
+assets are traced through resolved pnpm paths to avoid files beneath symlinks.
+`pnpm dev` and `pnpm test` also prepare the executable. The video function requests
+3008 MB on legacy Vercel compute for the CPU-intensive rasterization and encoding;
+other functions retain the project's allocation. Temporary rendering files are
+removed after each request.
 Nothing in the browser executes or downloads the encoder.
 
 ## Verification
