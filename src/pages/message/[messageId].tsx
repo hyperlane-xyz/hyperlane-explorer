@@ -64,11 +64,20 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
     ? `${host}/api/og?messageId=${ogData.messageId}`
     : `${host}/images/og-preview.png`;
   const ogUrl = ogData ? `${host}/message/${ogData.messageId}` : host;
+  const ogVideo = ogData
+    ? `${host}/api/og-video?messageId=${ogData.messageId}`
+    : `${host}/og-video/home.mp4`;
 
   if (!messageId || typeof messageId !== 'string') {
     return (
       <>
-        <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
+        <OGHead
+          title={ogTitle}
+          description={ogDescription}
+          url={ogUrl}
+          image={ogImage}
+          video={ogVideo}
+        />
         <MessageDetailsLoading />
       </>
     );
@@ -76,7 +85,13 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
 
   return (
     <>
-      <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
+      <OGHead
+        title={ogTitle}
+        description={ogDescription}
+        url={ogUrl}
+        image={ogImage}
+        video={ogVideo}
+      />
       <MessageDetailsPage messageId={messageId} message={message} />
     </>
   );

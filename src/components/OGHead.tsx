@@ -13,6 +13,8 @@ interface OGHeadProps {
   description?: string;
   url?: string;
   image?: string;
+  imageAlt?: string;
+  video?: string;
 }
 
 /**
@@ -24,6 +26,8 @@ export function OGHead({
   description = APP_DESCRIPTION,
   url,
   image,
+  imageAlt = description,
+  video,
 }: OGHeadProps) {
   return (
     <Head>
@@ -33,10 +37,11 @@ export function OGHead({
       {/* Open Graph */}
       {url && <meta key="og:url" property="og:url" content={url} />}
       <meta key="og:title" property="og:title" content={title} />
-      <meta key="og:type" property="og:type" content="website" />
+      <meta key="og:site_name" property="og:site_name" content={APP_NAME} />
       {image && (
         <>
           <meta key="og:image" property="og:image" content={image} />
+          <meta key="og:image:alt" property="og:image:alt" content={imageAlt} />
           <meta key="og:image:width" property="og:image:width" content={String(OG_IMAGE_WIDTH)} />
           <meta
             key="og:image:height"
@@ -53,6 +58,23 @@ export function OGHead({
       <meta key="twitter:title" name="twitter:title" content={title} />
       <meta key="twitter:description" name="twitter:description" content={description} />
       {image && <meta key="twitter:image" name="twitter:image" content={image} />}
+      {image && <meta key="twitter:image:alt" name="twitter:image:alt" content={imageAlt} />}
+
+      {/* Discord uses the last layout tag; keep video type after the Twitter image card. */}
+      <meta key="og:type" property="og:type" content={video ? 'video.other' : 'website'} />
+      {video && (
+        <>
+          <meta key="og:video" property="og:video" content={video} />
+          <meta key="og:video:secure_url" property="og:video:secure_url" content={video} />
+          <meta key="og:video:type" property="og:video:type" content="video/mp4" />
+          <meta key="og:video:width" property="og:video:width" content={String(OG_IMAGE_WIDTH)} />
+          <meta
+            key="og:video:height"
+            property="og:video:height"
+            content={String(OG_IMAGE_HEIGHT)}
+          />
+        </>
+      )}
     </Head>
   );
 }
