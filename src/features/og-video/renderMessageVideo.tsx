@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { ImageResponse } from '@vercel/og';
+import sharp from 'sharp';
 
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../consts/appMetadata';
 import { links } from '../../consts/links';
@@ -15,6 +16,9 @@ import { fetchDomainNames, fetchMessageForOG } from '../messages/queries/serverF
 import { encodeVideo } from './encodeVideo';
 import { MessageVideoCard, type VideoMessage } from './MessageVideoCard';
 import { getWarpTransferDetails, sanitizeSymbol } from './warpTransfer';
+
+// Trace Next's optional native rasterizer and bound its per-image worker pool.
+sharp.concurrency(1);
 
 async function loadAssets() {
   const logo = `data:image/svg+xml;base64,${await readFile(

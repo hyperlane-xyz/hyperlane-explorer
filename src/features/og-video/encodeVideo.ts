@@ -17,7 +17,7 @@ export async function encodeVideo(frames: Frames, timeout = 8000): Promise<Buffe
     const first = join(temp, 'first.png');
     const output = join(temp, 'video.mp4');
     await writeFile(first, frames.first);
-    const inputs = ['-loop', '1', '-framerate', '24', '-i', first];
+    const inputs = ['-loop', '1', '-framerate', '24', '-threads', '1', '-i', first];
     let filter: string;
     if (frames.kind === 'home') {
       // A slow, seamless camera movement over the actual homepage artwork.
@@ -32,12 +32,16 @@ export async function encodeVideo(frames: Frames, timeout = 8000): Promise<Buffe
         '1',
         '-framerate',
         '24',
+        '-threads',
+        '1',
         '-i',
         last,
         '-loop',
         '1',
         '-framerate',
         '24',
+        '-threads',
+        '1',
         '-i',
         packet,
       );
@@ -68,7 +72,7 @@ export async function encodeVideo(frames: Frames, timeout = 8000): Promise<Buffe
         '-c:v',
         'libx264',
         '-preset',
-        'veryfast',
+        'ultrafast',
         '-threads',
         '2',
         '-profile:v',
