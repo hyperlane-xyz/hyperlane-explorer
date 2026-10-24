@@ -37,6 +37,7 @@ npm-debug.log*
 *.tsbuildinfo
 public/fonts/
 public/og-video/
+.generated/
 
 .opencode
 .sisyphus

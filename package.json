@@ -15,7 +15,6 @@
     "@ethersproject/providers": "^5.8.0",
     "@ethersproject/transactions": "^5.8.0",
     "@ethersproject/web": "^5.8.0",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@headlessui/react": "^2.2.10",
     "@hyperlane-xyz/core": "12.0.0",
     "@hyperlane-xyz/registry": "26.2.0",
@@ -43,6 +42,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.3",
     "@types/range-parser": "^1.2.7",
@@ -75,13 +75,15 @@
   "scripts": {
     "clean": "rm -rf dist cache .next",
     "prebuild": "node scripts/fetch-fonts.mjs && pnpm run generate:og-video",
-    "generate:og-video": "tsx scripts/generate-og-video.ts",
+    "generate:og-video": "node scripts/prepare-og-video.mjs && tsx scripts/generate-og-video.ts",
     "fetch-fonts": "node --env-file=.env.local scripts/fetch-fonts.mjs",
+    "predev": "node scripts/prepare-og-video.mjs",
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc",
     "lint": "oxlint ./src",
     "start": "next start",
+    "pretest": "node scripts/prepare-og-video.mjs",
     "test": "jest",
     "format": "oxfmt ./src"
   },

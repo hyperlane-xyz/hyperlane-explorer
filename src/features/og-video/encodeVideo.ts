@@ -4,8 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-import ffmpeg from '@ffmpeg-installer/ffmpeg';
-
 const run = promisify(execFile);
 
 type Frames =
@@ -49,7 +47,7 @@ export async function encodeVideo(frames: Frames, timeout = 8000): Promise<Buffe
       filter = `${card}[card][2:v]overlay=x='${x}':y=296${delivered ? ":enable='lt(t,3)'" : ''}[video]`;
     }
     await run(
-      ffmpeg.path,
+      join(process.cwd(), '.generated/ffmpeg'),
       [
         '-hide_banner',
         '-loglevel',

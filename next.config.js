@@ -78,12 +78,11 @@ const nextConfig = {
     },
   },
 
-  serverExternalPackages: ['@provablehq/wasm', '@provablehq/sdk', '@ffmpeg-installer/ffmpeg'],
+  serverExternalPackages: ['@provablehq/wasm', '@provablehq/sdk'],
 
   outputFileTracingIncludes: {
     '/api/og-video': [
-      './node_modules/.pnpm/@ffmpeg-installer+*/node_modules/@ffmpeg-installer/*/ffmpeg',
-      './node_modules/.pnpm/@ffmpeg-installer+*/node_modules/@ffmpeg-installer/*/package.json',
+      './.generated/ffmpeg',
       './public/images/hyperlane-explorer-logo.svg',
       './public/fonts/PPFraktionMono-Regular.ttf',
     ],

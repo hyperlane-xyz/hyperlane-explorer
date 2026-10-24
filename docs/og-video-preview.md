@@ -25,9 +25,11 @@ Two concurrent encoders per instance are allowed; duplicate IDs share a render.
 Failures are uncached and PNG previews remain available. All subprocess arguments
 are fixed filters and temporary paths, with no user-supplied shell commands.
 
-FFmpeg is a server-only dependency. The Next output trace explicitly includes its
-platform binary and the local logo/font; temporary files are removed after each
-render. Nothing in the browser executes or downloads the encoder.
+The build copies the platform FFmpeg executable into `.generated/ffmpeg`. The
+installer is a build dependency; the Next output trace includes only the single
+copied executable and the local logo/font. `pnpm dev` and `pnpm test` also prepare
+the executable. Temporary rendering files are removed after each request.
+Nothing in the browser executes or downloads the encoder.
 
 ## Verification
 
