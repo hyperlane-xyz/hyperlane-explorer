@@ -1,20 +1,29 @@
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../consts/appMetadata';
+import type { MessageOGData } from '../messages/queries/serverFetch';
 
-export type VideoPreviewStatus = 'delivered' | 'pending';
-
-interface Props {
-  status: VideoPreviewStatus;
-  /** Seconds into a five-second illustrative replay. */
-  time: number;
-  logo: string;
+export interface VideoMessage extends Pick<
+  MessageOGData,
+  'msgId' | 'status' | 'timestamp' | 'deliveryLatency'
+> {
+  origin: { name: string; logo: string };
+  destination: { name: string; logo: string };
+  transfer: { amount: string; symbol: string } | null;
 }
 
-/** Deterministic frames for the build-time renderer; no RPCs or browser animation. */
-export function MessageVideoCard({ status, time, logo }: Props) {
-  const delivered = status === 'delivered';
+interface Props {
+  message: VideoMessage;
+  /** Seconds into a five-second replay of the recorded message. */
+  time: number;
+  logo: string;
+  showPacket?: boolean;
+}
+
+/** Server-rendered keyframes; FFmpeg animates the packet between them. */
+export function MessageVideoCard({ message, time, logo, showPacket = true }: Props) {
+  const delivered = message.status === 'Delivered';
   const progress = Math.min(1, Math.max(0, (time - 0.6) / 2.4));
   const arrived = delivered && progress === 1;
-  const packetX = delivered ? 350 + progress * 500 : 350 + ((time * 0.28) % 1) * 425;
+  const packetX = delivered ? 350 + progress * 500 : 350 + ((time / 2.5) % 1) * 425;
   const destinationColor = arrived ? '#53e6ad' : '#c38bff';
 
   return (
@@ -89,7 +98,7 @@ export function MessageVideoCard({ status, time, logo }: Props) {
             background: delivered ? '#53e6ad' : '#f7c66b',
           }}
         />
-        {delivered ? 'Delivered' : 'Pending'}
+        {message.status}
       </div>
       <div
         style={{
@@ -103,8 +112,17 @@ export function MessageVideoCard({ status, time, logo }: Props) {
           gap: 18,
         }}
       >
-        <span style={{ fontSize: 70, letterSpacing: -3 }}>1,250.00</span>
-        <span style={{ fontSize: 30, color: '#c6b1dd' }}>USDC</span>
+        <span
+          style={{
+            fontSize: message.transfer ? Math.min(70, 650 / message.transfer.amount.length) : 48,
+            letterSpacing: -2,
+          }}
+        >
+          {message.transfer?.amount ?? 'Interchain message'}
+        </span>
+        {message.transfer && (
+          <span style={{ fontSize: 30, color: '#c6b1dd' }}>{message.transfer.symbol}</span>
+        )}
       </div>
       <div
         style={{
@@ -126,23 +144,37 @@ export function MessageVideoCard({ status, time, logo }: Props) {
           background: 'linear-gradient(90deg, #567bff, #d093ff)',
         }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          top: 320,
-          left: packetX - 8,
-          display: 'flex',
-          width: 18,
-          height: 18,
-          borderRadius: 4,
-          background: arrived ? '#53e6ad' : '#e1bbff',
-          boxShadow: `0 0 26px ${arrived ? '#53e6ad' : '#b26bff'}`,
-          transform: 'rotate(45deg)',
-          opacity: arrived ? 0 : 1,
-        }}
+      {showPacket && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 320,
+            left: packetX - 8,
+            display: 'flex',
+            width: 18,
+            height: 18,
+            borderRadius: 4,
+            background: arrived ? '#53e6ad' : '#e1bbff',
+            boxShadow: `0 0 26px ${arrived ? '#53e6ad' : '#b26bff'}`,
+            transform: 'rotate(45deg)',
+            opacity: arrived ? 0 : 1,
+          }}
+        />
+      )}
+      <ChainNode
+        x={254}
+        name={message.origin.name}
+        logo={message.origin.logo}
+        label="FROM"
+        color="#7995ff"
       />
-      <ChainNode x={254} name="Base" label="FROM" color="#7995ff" ethereum={false} />
-      <ChainNode x={946} name="Ethereum" label="TO" color={destinationColor} ethereum />
+      <ChainNode
+        x={946}
+        name={message.destination.name}
+        logo={message.destination.logo}
+        label="TO"
+        color={destinationColor}
+      />
       <div
         style={{
           position: 'absolute',
@@ -156,7 +188,13 @@ export function MessageVideoCard({ status, time, logo }: Props) {
           color: arrived ? '#53e6ad' : '#b391cf',
         }}
       >
-        {arrived ? 'RECEIVED ON ETHEREUM' : delivered ? 'MESSAGE REPLAY' : 'AWAITING DELIVERY'}
+        {arrived
+          ? 'RECEIVED AT DESTINATION'
+          : delivered
+            ? 'MESSAGE REPLAY'
+            : message.status === 'Pending'
+              ? 'AWAITING DELIVERY'
+              : 'STATUS UNAVAILABLE'}
       </div>
       <div
         style={{
@@ -173,13 +211,33 @@ export function MessageVideoCard({ status, time, logo }: Props) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           <span style={{ fontSize: 15, letterSpacing: 2, color: '#a98bbf' }}>
-            {delivered ? 'DELIVERY TIME' : 'DESTINATION'}
+            {delivered && message.deliveryLatency ? 'DELIVERY TIME' : 'DESTINATION'}
           </span>
           <span style={{ fontSize: 27 }}>
-            {delivered ? '24 seconds' : 'Waiting for confirmation'}
+            {delivered
+              ? (message.deliveryLatency ?? 'Delivered')
+              : message.status === 'Pending'
+                ? 'Awaiting delivery'
+                : 'Unknown'}
           </span>
         </div>
-        <span style={{ fontSize: 16, color: '#a98bbf' }}>ILLUSTRATIVE TRANSFER</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 9,
+            alignItems: 'flex-end',
+            color: '#a98bbf',
+            fontSize: 16,
+          }}
+        >
+          <span>
+            {message.msgId.slice(0, 10)}...{message.msgId.slice(-8)}
+          </span>
+          <span>
+            {new Date(message.timestamp).toISOString().slice(0, 16).replace('T', ' ')} UTC
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -190,13 +248,13 @@ function ChainNode({
   name,
   label,
   color,
-  ethereum,
+  logo,
 }: {
   x: number;
   name: string;
   label: string;
   color: string;
-  ethereum: boolean;
+  logo: string;
 }) {
   return (
     <div
@@ -226,19 +284,21 @@ function ChainNode({
           boxShadow: `0 0 40px ${color}25`,
         }}
       >
-        {ethereum ? (
-          <svg width="32" height="50" viewBox="0 0 32 50">
-            <path d="M16 0 0 26 16 35 32 26Z M0 29 16 50 32 29 16 38Z" fill={color} />
-            <path d="M16 0 16 35 32 26Z M16 38 16 50 32 29Z" fill="#ffffff" opacity="0.3" />
-          </svg>
-        ) : (
-          <svg width="46" height="46" viewBox="0 0 46 46">
-            <circle cx="23" cy="23" r="23" fill="#2055ff" />
-            <path d="M3 23H27" stroke="white" strokeWidth="4" />
-          </svg>
-        )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            background: '#f8f8ff',
+          }}
+        >
+          <img src={logo} width={46} height={46} />
+        </div>
       </div>
-      <span style={{ fontSize: 25, marginTop: 17 }}>{name}</span>
+      <span style={{ fontSize: Math.min(25, 320 / name.length), marginTop: 17 }}>{name}</span>
     </div>
   );
 }

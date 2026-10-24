@@ -255,9 +255,11 @@ export function parseChainMetadataYaml(yamlStr: string): Map<string, ChainDispla
 /**
  * Fetch and parse chain metadata from the registry
  */
-export async function fetchChainMetadata(): Promise<Map<string, ChainDisplayNames>> {
+export async function fetchChainMetadata(
+  signal?: AbortSignal,
+): Promise<Map<string, ChainDisplayNames>> {
   try {
-    const response = await fetch(`${links.imgPath}/chains/metadata.yaml`);
+    const response = await fetch(`${links.imgPath}/chains/metadata.yaml`, { signal });
     if (!response.ok) return new Map();
 
     const yaml = await response.text();
@@ -374,9 +376,11 @@ export function parseWarpRouteConfigYaml(yamlStr: string): WarpRouteMap {
 /**
  * Fetch and parse warp route configs from the registry
  */
-export async function fetchWarpRouteMap(): Promise<WarpRouteMap> {
+export async function fetchWarpRouteMap(signal?: AbortSignal): Promise<WarpRouteMap> {
   try {
-    const response = await fetch(`${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`);
+    const response = await fetch(`${links.imgPath}/deployments/warp_routes/warpRouteConfigs.yaml`, {
+      signal,
+    });
     if (!response.ok) return new Map();
 
     const yaml = await response.text();
