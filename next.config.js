@@ -83,6 +83,8 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/og-video': [
       './.generated/ffmpeg',
+      // Next loads the Node image renderer dynamically; Turbopack's trace omits it.
+      './node_modules/next/dist/compiled/@vercel/og/**/*',
       './public/images/hyperlane-explorer-logo.svg',
       './public/fonts/PPFraktionMono-Regular.ttf',
     ],
