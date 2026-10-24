@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 
 const { version } = require('./package.json');
+const { dirname, relative } = require('node:path');
+
+const nextPackageDirectory = relative(__dirname, dirname(require.resolve('next/package.json')));
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -84,7 +87,7 @@ const nextConfig = {
     '/api/og-video': [
       './.generated/ffmpeg',
       // Next loads the Node image renderer dynamically; Turbopack's trace omits it.
-      './node_modules/next/dist/compiled/@vercel/og/**/*',
+      `${nextPackageDirectory}/dist/compiled/@vercel/og/**/*`,
       './public/images/hyperlane-explorer-logo.svg',
       './public/fonts/PPFraktionMono-Regular.ttf',
     ],
