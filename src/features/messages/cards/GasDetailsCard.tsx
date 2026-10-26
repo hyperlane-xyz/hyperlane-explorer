@@ -66,7 +66,11 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
   const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
   const destDecimals = destMetadata?.nativeToken?.decimals || 18;
   const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
-  const deliveryCostDecimals = getDeliveryCostDecimals(destMetadata?.protocol, destDecimals);
+  const deliveryCostDecimals = getDeliveryCostDecimals(
+    destMetadata?.protocol,
+    destDecimals,
+    destMetadata?.name,
+  );
 
   const { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr } =
     useMemo(() => {

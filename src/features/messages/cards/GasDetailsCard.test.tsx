@@ -1,3 +1,4 @@
+import { ProtocolType } from '@hyperlane-xyz/utils';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { Message, MessageStatus, type MessageStub } from '../../../types';
@@ -10,17 +11,24 @@ jest.mock('@hyperlane-xyz/widgets', () => ({
   CopyButton: () => null,
   Tooltip: () => null,
 }));
+function mockChainMetadata(domain: number) {
+  return {
+    name: domain === 4217 ? 'tempo' : 'base',
+    protocol: ProtocolType.Ethereum,
+    nativeToken:
+      domain === 4217 ? { symbol: 'pathUSD', decimals: 6 } : { symbol: 'ETH', decimals: 18 },
+    gasCurrencyCoinGeckoId: domain === 4217 ? 'usd-coin' : 'ethereum',
+  };
+}
+
 jest.mock('../../../metadataStore', () => ({
   useChainMetadataResolver: () => ({
-    tryGetChainMetadata: () => ({
-      nativeToken: { symbol: 'ETH', decimals: 18 },
-      gasCurrencyCoinGeckoId: 'ethereum',
-    }),
+    tryGetChainMetadata: (domain: number) => mockChainMetadata(domain),
   }),
 }));
 jest.mock('./useIgpPayments', () => ({ useIgpPayments: jest.fn() }));
 jest.mock('./useNativeTokenUsdPrice', () => ({
-  useNativeTokenUsdPrice: () => 2000,
+  useNativeTokenUsdPrice: (domain: number) => (domain === 4217 ? 1 : 2000),
   useTokenUsdPrices: () => ({ 'usd-coin': 1 }),
 }));
 
@@ -128,6 +136,28 @@ function labelWidths(html: string): Record<string, string | undefined> {
 }
 
 const mockUseIgpPayments = jest.mocked(useIgpPayments);
+
+it('renders the Tempo receipt fee in attodollars and its USD value', () => {
+  mockUseIgpPayments.mockReturnValue({
+    status: IgpPaymentsStatus.Disabled,
+    payments: undefined,
+    tokenMetadata: {},
+  });
+  const message: Message = {
+    ...makeMessage({ totalGasAmount: '468887', totalPayment: '174962388160380', numPayments: 1 }),
+    destinationChainId: 4217,
+    destinationDomainId: 4217,
+    destination: {
+      timestamp: 1_700_000_000_000,
+      hash: '0x',
+      gasUsed: 1629985,
+      effectiveGasPrice: 1600000000,
+    },
+  };
+  const text = textOf(renderCard(message));
+  expect(text).toContain('Gas cost:0.002607976 pathUSD($0.002608)');
+  expect(text).not.toContain('2607976000 pathUSD');
+});
 
 describe('with a token-denominated receipt', () => {
   beforeEach(() => {

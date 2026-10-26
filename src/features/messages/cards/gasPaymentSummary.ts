@@ -31,7 +31,10 @@ const ATTO_SCALED_FEE_PROTOCOLS = new Set<ProtocolType>([
 export function getDeliveryCostDecimals(
   protocol: ProtocolType | undefined,
   nativeDecimals: number,
+  chainName?: string,
 ): number {
+  // Tempo RPC gas prices are attodollars, while pathUSD balances have 6 decimals.
+  if (chainName === 'tempo') return 18;
   return protocol && ATTO_SCALED_FEE_PROTOCOLS.has(protocol) ? 18 : nativeDecimals;
 }
 const AMBIGUOUS_ASSET_ID = 'ambiguous';

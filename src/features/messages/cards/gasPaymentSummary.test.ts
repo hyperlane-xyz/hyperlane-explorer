@@ -360,6 +360,22 @@ describe('formatOtherPayments', () => {
 });
 
 describe('getDeliveryCostDecimals', () => {
+  it('uses attodollars for Tempo delivery fees without changing pathUSD payment units', () => {
+    const decimals = getDeliveryCostDecimals(ProtocolType.Ethereum, 6, 'tempo');
+    expect(decimals).toBe(18);
+    expect(
+      formatPaymentAmount('2607976000000000', {
+        id: NATIVE_ASSET_ID,
+        symbol: 'pathUSD',
+        decimals,
+      }),
+    ).toBe('0.002607976 pathUSD');
+    expect(
+      formatPaymentAmount('223783', { id: NATIVE_ASSET_ID, symbol: 'pathUSD', decimals: 6 }),
+    ).toBe('0.223783 pathUSD');
+    expect(getDeliveryCostDecimals(ProtocolType.Ethereum, 6, 'custom')).toBe(6);
+  });
+
   it('uses 18 decimals for protocols whose fees the scraper stores in atto units', () => {
     expect(getDeliveryCostDecimals(ProtocolType.Sealevel, 9)).toBe(18);
     expect(getDeliveryCostDecimals(ProtocolType.Cosmos, 6)).toBe(18);
