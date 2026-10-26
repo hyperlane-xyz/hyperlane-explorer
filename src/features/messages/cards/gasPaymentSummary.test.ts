@@ -8,7 +8,7 @@ import {
   formatPaymentUsd,
   formatRawUnits,
   formatUsd,
-  getDeliveryCostDecimals,
+  formatDeliveryCost,
   getOtherPayments,
   hasNonNativePayments,
   NATIVE_ASSET_ID,
@@ -359,32 +359,39 @@ describe('formatOtherPayments', () => {
   });
 });
 
-describe('getDeliveryCostDecimals', () => {
-  it('uses attodollars for Tempo delivery fees without changing pathUSD payment units', () => {
-    const decimals = getDeliveryCostDecimals(ProtocolType.Ethereum, 6, 'tempo');
-    expect(decimals).toBe(18);
-    expect(
-      formatPaymentAmount('2607976000000000', {
-        id: NATIVE_ASSET_ID,
-        symbol: 'pathUSD',
-        decimals,
-      }),
-    ).toBe('0.002607976 pathUSD');
+describe('formatDeliveryCost', () => {
+  it.each([
+    ['2607976000000000', '0.002608'],
+    ['0', '0'],
+    ['1', '0.000001'],
+    ['1000000000000', '0.000001'],
+    ['1000000000001', '0.000002'],
+    ['1234567890123456789', '1.234568'],
+  ])('rounds Tempo fee %s up to the charged token amount %s', (raw, expected) => {
+    expect(formatDeliveryCost(raw, ProtocolType.Ethereum, 6, 'tempo')).toBe(expected);
+  });
+
+  it('retains six-decimal pathUSD payment units', () => {
     expect(
       formatPaymentAmount('223783', { id: NATIVE_ASSET_ID, symbol: 'pathUSD', decimals: 6 }),
     ).toBe('0.223783 pathUSD');
-    expect(getDeliveryCostDecimals(ProtocolType.Ethereum, 6, 'custom')).toBe(6);
   });
 
-  it('uses 18 decimals for protocols whose fees the scraper stores in atto units', () => {
-    expect(getDeliveryCostDecimals(ProtocolType.Sealevel, 9)).toBe(18);
-    expect(getDeliveryCostDecimals(ProtocolType.Cosmos, 6)).toBe(18);
-    expect(getDeliveryCostDecimals(ProtocolType.CosmosNative, 6)).toBe(18);
+  it('uses atto units for protocols whose fees the scraper scales', () => {
+    for (const { protocol, decimals } of [
+      { protocol: ProtocolType.Sealevel, decimals: 9 },
+      { protocol: ProtocolType.Cosmos, decimals: 6 },
+      { protocol: ProtocolType.CosmosNative, decimals: 6 },
+    ]) {
+      expect(formatDeliveryCost('1000000000000000000', protocol, decimals)).toBe('1');
+    }
   });
 
-  it('uses native decimals for other protocols', () => {
-    expect(getDeliveryCostDecimals(ProtocolType.Ethereum, 18)).toBe(18);
-    expect(getDeliveryCostDecimals(ProtocolType.Tron, 6)).toBe(6);
-    expect(getDeliveryCostDecimals(undefined, 18)).toBe(18);
+  it('preserves native units and precision for other chains', () => {
+    expect(formatDeliveryCost('1', ProtocolType.Ethereum, 18)).toBe('0.000000000000000001');
+    expect(formatDeliveryCost('1000000', ProtocolType.Tron, 6)).toBe('1');
+    expect(formatDeliveryCost('1000000', ProtocolType.Ethereum, 6, 'custom')).toBe('1');
+    expect(formatDeliveryCost('10', ProtocolType.Ethereum, 0, 'custom')).toBe('10');
+    expect(formatDeliveryCost('1000000000000000000', undefined, 18)).toBe('1');
   });
 });

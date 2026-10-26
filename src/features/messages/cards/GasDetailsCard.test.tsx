@@ -155,7 +155,7 @@ it('renders the Tempo receipt fee in attodollars and its USD value', () => {
     },
   };
   const text = textOf(renderCard(message));
-  expect(text).toContain('Gas cost:0.002607976 pathUSD($0.002608)');
+  expect(text).toContain('Gas cost:0.002608 pathUSD($0.002608)');
   expect(text).not.toContain('2607976000 pathUSD');
 });
 
