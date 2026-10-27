@@ -11,9 +11,9 @@ import { GasPayment } from '../../debugger/types';
 import { IgpPaymentsStatus } from '../igpPayments';
 import {
   formatOtherPayments,
+  formatDeliveryCost,
   formatRawUnits,
   formatUsd,
-  getDeliveryCostDecimals,
   getOtherPayments,
   hasNonNativePayments,
   NATIVE_ASSET_ID,
@@ -64,9 +64,8 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
     message.origin?.timestamp,
   );
   const destMetadata = chainMetadataResolver.tryGetChainMetadata(message.destinationDomainId);
-  const destDecimals = destMetadata?.nativeToken?.decimals || 18;
+  const destDecimals = destMetadata?.nativeToken?.decimals ?? 18;
   const destSymbol = destMetadata?.nativeToken?.symbol || 'ETH';
-  const deliveryCostDecimals = getDeliveryCostDecimals(destMetadata?.protocol, destDecimals);
 
   const { totalGasAmount, paymentFormatted, totalPaymentWei, numPayments, paymentsWithAddr } =
     useMemo(() => {
@@ -148,15 +147,16 @@ export function GasDetailsCard({ message, blur, igpPayments = {} }: Props) {
       ? new BigNumber(deliveryGasUsed).times(deliveryEffectiveGasPrice)
       : null;
   const deliveryCostFormatted = !isNullish(deliveryCostWei)
-    ? fromWei(deliveryCostWei.toString(), deliveryCostDecimals).toString()
+    ? formatDeliveryCost(
+        deliveryCostWei.toFixed(),
+        destMetadata?.protocol,
+        destDecimals,
+        destMetadata?.name,
+      )
     : null;
   const deliveryCostUsdFormatted =
-    !isNullish(deliveryCostWei) && !isNullish(destUsdPrice)
-      ? formatUsd(
-          new BigNumber(fromWei(deliveryCostWei.toString(), deliveryCostDecimals)).times(
-            destUsdPrice,
-          ),
-        )
+    !isNullish(deliveryCostFormatted) && !isNullish(destUsdPrice)
+      ? formatUsd(new BigNumber(deliveryCostFormatted).times(destUsdPrice))
       : null;
 
   return (

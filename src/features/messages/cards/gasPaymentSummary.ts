@@ -28,11 +28,20 @@ const ATTO_SCALED_FEE_PROTOCOLS = new Set<ProtocolType>([
   ProtocolType.CosmosNative,
 ]);
 
-export function getDeliveryCostDecimals(
+export function formatDeliveryCost(
+  amountRaw: string,
   protocol: ProtocolType | undefined,
   nativeDecimals: number,
-): number {
-  return protocol && ATTO_SCALED_FEE_PROTOCOLS.has(protocol) ? 18 : nativeDecimals;
+  chainName?: string,
+): string {
+  const isTempo = chainName === 'tempo';
+  const feeDecimals =
+    isTempo || (protocol && ATTO_SCALED_FEE_PROTOCOLS.has(protocol)) ? 18 : nativeDecimals;
+  const amount = new BigNumber(fromWei(amountRaw, feeDecimals));
+  // Tempo reports attodollars but rounds the actual token debit up to microdollars.
+  return isTempo
+    ? amount.decimalPlaces(nativeDecimals, BigNumber.ROUND_CEIL).toFixed()
+    : amount.toFixed();
 }
 const AMBIGUOUS_ASSET_ID = 'ambiguous';
 const AMBIGUOUS_ASSET_SYMBOL = 'unknown token';
