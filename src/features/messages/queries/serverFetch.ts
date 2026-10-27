@@ -7,7 +7,10 @@ import { MessagesStubQueryResult, MessageStubEntry, messageStubFragment } from '
  * Server-side utility to fetch message data from GraphQL for OG meta tags
  * This is used in getServerSideProps to fetch minimal message info
  */
-export async function fetchMessageForOG(messageId: string): Promise<MessageOGData | null> {
+export async function fetchMessageForOG(
+  messageId: string,
+  signal?: AbortSignal,
+): Promise<MessageOGData | null> {
   // Validate messageId format (must be 0x-prefixed hex string)
   if (!messageId || !/^0x[0-9a-f]+$/i.test(messageId)) return null;
   const identifier = stringToPostgresBytea(messageId);
@@ -25,6 +28,7 @@ export async function fetchMessageForOG(messageId: string): Promise<MessageOGDat
 
   try {
     const response = await fetch(config.apiUrl, {
+      signal,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +85,7 @@ function parseMessageForOG(message: MessageStubEntry): MessageOGData {
 /**
  * Fetch chain names from the domains table
  */
-export async function fetchDomainNames(): Promise<Map<number, string>> {
+export async function fetchDomainNames(signal?: AbortSignal): Promise<Map<number, string>> {
   const domainMap = new Map<number, string>();
 
   const query = `
@@ -95,6 +99,7 @@ export async function fetchDomainNames(): Promise<Map<number, string>> {
 
   try {
     const response = await fetch(config.apiUrl, {
+      signal,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

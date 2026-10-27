@@ -39,7 +39,8 @@
   ],
   "include": [
     "next-env.d.ts",
-    "./src/"
+    "./src/",
+    "./scripts/generate-og-video.ts"
   ],
   "ts-node": {
     "compilerOptions": {
