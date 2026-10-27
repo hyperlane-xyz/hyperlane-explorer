@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { Message, MessageStatus } from '../../types';
 import { MessageDebugStatus, type MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { serializeMessage } from '../messages/utils';
 import { MessageSummaryRow } from './MessageSummaryRow';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -54,16 +55,19 @@ jest.mock('../messages/cards/TransactionCard', () => ({
     status,
     transaction,
     isStatusFetching,
+    isOriginConfirming,
   }: {
     status: MessageStatus;
     transaction?: Message['destination'];
     isStatusFetching: boolean;
+    isOriginConfirming: boolean;
   }) => (
     <div
       data-testid="destination-transaction"
       data-status={status}
       data-tx-hash={transaction?.hash}
       data-fetching={isStatusFetching}
+      data-origin-confirming={isOriginConfirming}
     />
   ),
 }));
@@ -71,7 +75,10 @@ jest.mock('../messages/cards/WarpTransferDetailsCard', () => ({
   WarpTransferDetailsCard: () => null,
 }));
 jest.mock('../messages/ica', () => ({ useIsIcaMessage: () => true }));
-jest.mock('../messages/utils', () => ({ parseWarpRouteMessageDetails: () => undefined }));
+jest.mock('../messages/utils', () => ({
+  parseWarpRouteMessageDetails: () => undefined,
+  serializeMessage: jest.fn(() => 'serialized'),
+}));
 
 const mockUseMessageDeliveryStatus = jest.mocked(useMessageDeliveryStatus);
 
@@ -216,6 +223,53 @@ it('passes live ICA diagnostics to the details card', async () => {
       debugStatus: MessageDebugStatus.IcaCallFailure,
     },
   });
+
+  await act(async () => root.unmount());
+});
+
+it.each([
+  [false, 'serialized', `/message/${pendingMessage.msgId}`],
+  [true, 'serialized', `/message/${pendingMessage.msgId}?data=serialized`],
+  [true, undefined, `/message/${pendingMessage.msgId}`],
+])('links to message details with isPiMsg=%s, data=%s', async (isPiMsg, data, href) => {
+  jest.mocked(serializeMessage).mockReturnValue(data);
+  mockUseMessageDeliveryStatus.mockReturnValue({
+    messageWithDeliveryStatus: pendingMessage,
+    debugResult: undefined,
+    isDeliveryStatusFetching: false,
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(<MessageSummaryRow message={{ ...pendingMessage, isPiMsg }} index={0} />);
+  });
+
+  expect(container.querySelector('a')?.getAttribute('href')).toBe(href);
+
+  await act(async () => root.unmount());
+});
+
+it('shows unconfirmed pending dispatches as confirming', async () => {
+  const provisionalMessage = { ...pendingMessage, isProvisional: true, isOriginProvisional: true };
+  mockUseMessageDeliveryStatus.mockReturnValue({
+    messageWithDeliveryStatus: provisionalMessage,
+    debugResult: undefined,
+    isDeliveryStatusFetching: false,
+  });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(<MessageSummaryRow message={provisionalMessage} index={0} forceExpanded />);
+  });
+
+  expect(container.textContent).toContain('Confirming');
+  expect(
+    container
+      .querySelector('[data-testid="destination-transaction"]')
+      ?.getAttribute('data-origin-confirming'),
+  ).toBe('true');
 
   await act(async () => root.unmount());
 });

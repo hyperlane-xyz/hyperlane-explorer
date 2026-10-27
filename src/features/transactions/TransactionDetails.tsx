@@ -1,10 +1,13 @@
 import { SpinnerIcon, Tooltip } from '@hyperlane-xyz/widgets';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { Card } from '../../components/layout/Card';
-import { useStore } from '../../metadataStore';
+import { useChainMetadataResolver, useStore } from '../../metadataStore';
+import { useMultiProviderInitFailed, useReadyMultiProvider } from '../../store';
 import { logger } from '../../utils/logger';
 import { OriginTransactionCard } from '../messages/cards/OriginTransactionCard';
+import { PiQueryType } from '../messages/pi-queries/fetchPiChainMessages';
+import { usePiChainMessageSearchQuery } from '../messages/pi-queries/usePiChainMessageQuery';
 import { MessageSummaryRow } from './MessageSummaryRow';
 import { useTransactionMessageCount } from './useTransactionMessageCount';
 import { useTransactionMessagesQuery } from './useTransactionMessagesQuery';
@@ -17,11 +20,45 @@ export function TransactionDetails({ txHash }: Props) {
   const [allExpanded, setAllExpanded] = useState(false);
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
   const isWarpRouteDataLoaded = useStore((s) => s.isWarpRouteDataLoaded);
+  const chainMetadataResolver = useChainMetadataResolver();
+  const multiProvider = useReadyMultiProvider();
+  const isMultiProviderInitFailed = useMultiProviderInitFailed();
 
-  const { isFetching, isError, error, hasRun, isMessagesFound, messageList, originInfo, refetch } =
-    useTransactionMessagesQuery(txHash);
+  const {
+    isFetching: isDbFetching,
+    isError,
+    error,
+    hasRun: hasDbRun,
+    isMessagesFound: isDbMessagesFound,
+    messageList: dbMessageList,
+    refetch,
+  } = useTransactionMessagesQuery(txHash);
   const txMessageCount = useTransactionMessageCount(txHash);
+
+  // Fall back to RPC when the scraper has no messages for this tx (lag, outage, or unscraped
+  // origin). DB results win once indexed since the DB query keeps polling.
+  const shouldRunFallback = hasDbRun && !isDbMessagesFound;
+  const fallback = usePiChainMessageSearchQuery({
+    sanitizedInput: txHash,
+    piQueryType: PiQueryType.TxHash,
+    includeScrapedChains: true,
+    pause: !shouldRunFallback,
+  });
+  // The fallback resolves empty until the provider is ready, so don't treat that as a result
+  const isProviderPending = !multiProvider && !isMultiProviderInitFailed;
+  const hasFallbackRun = (fallback.hasRun && !isProviderPending) || fallback.isError;
+
+  const fallbackMessageList = useMemo(
+    () => [...fallback.messageList].sort((a, b) => a.nonce - b.nonce),
+    [fallback.messageList],
+  );
+
+  const isFetching = isDbFetching || (shouldRunFallback && fallback.isFetching);
+  const hasRun = hasDbRun && (!shouldRunFallback || hasFallbackRun);
+  const messageList = isDbMessagesFound ? dbMessageList : fallbackMessageList;
+  const isMessagesFound = messageList.length > 0;
   const isMessageListTruncated = txMessageCount > messageList.length;
+  const originMessage = messageList[0];
 
   useEffect(() => {
     if (!error) return;
@@ -35,7 +72,7 @@ export function TransactionDetails({ txHash }: Props) {
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   // Loading state
-  if (isFetching && !hasRun) {
+  if (!hasRun) {
     return (
       <TransactionStateCard>
         <SpinnerIcon width={40} height={40} />
@@ -44,8 +81,8 @@ export function TransactionDetails({ txHash }: Props) {
     );
   }
 
-  // Error state
-  if (isError) {
+  // Error state, unless the RPC fallback found messages
+  if (isError && !isMessagesFound) {
     return (
       <TransactionStateCard>
         <p className="text-red-500">Error loading transaction</p>
@@ -64,7 +101,7 @@ export function TransactionDetails({ txHash }: Props) {
   }
 
   // Not found state
-  if (hasRun && !isMessagesFound) {
+  if (!isMessagesFound) {
     return (
       <TransactionStateCard>
         <p className="text-gray-700">No messages found</p>
@@ -79,14 +116,12 @@ export function TransactionDetails({ txHash }: Props) {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Origin Transaction Card - reuse existing component */}
-      {originInfo && (
-        <OriginTransactionCard
-          chainName={originInfo.chainName}
-          domainId={originInfo.domainId}
-          transaction={originInfo.transaction}
-          blur={false}
-        />
-      )}
+      <OriginTransactionCard
+        chainName={chainMetadataResolver.tryGetChainName(originMessage.originDomainId) || 'Unknown'}
+        domainId={originMessage.originDomainId}
+        transaction={originMessage.origin}
+        blur={false}
+      />
 
       {/* Messages Section */}
       <Card className="mt-4 space-y-4">
