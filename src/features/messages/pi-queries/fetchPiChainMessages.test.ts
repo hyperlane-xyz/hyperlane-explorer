@@ -1,4 +1,7 @@
-import { Mailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
+import {
+  IInterchainGasPaymaster__factory as IgpFactory,
+  Mailbox__factory as MailboxFactory,
+} from '@hyperlane-xyz/core';
 import type { IRegistry } from '@hyperlane-xyz/registry';
 import { chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
@@ -12,6 +15,7 @@ import {
 import type { providers } from 'ethers';
 
 import { Message, MessageStatus } from '../../../types';
+import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 import { parseMessageLookupData } from '../messageLookup';
 import { fetchMessagesFromPiChain, PiMessageQuery, PiQueryType } from './fetchPiChainMessages';
@@ -95,6 +99,11 @@ const expectedMessage: Message = {
 };
 
 describe('fetchMessagesFromPiChain', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
   it('fetches a message by transaction hash', async () => {
     await expect(fetch({ input: txHash })).resolves.toEqual([expectedMessage]);
   });
@@ -181,6 +190,164 @@ describe('fetchMessagesFromPiChain', () => {
     ).resolves.toEqual([expectedMessage]);
   });
 
+  it('falls back when the hinted receipt request throws', async () => {
+    const provider = createProvider();
+    const getReceipt = jest.mocked(provider.getTransactionReceipt).getMockImplementation()!;
+    const badHint = `0x${'ff'.repeat(32)}`;
+    jest
+      .mocked(provider.getTransactionReceipt)
+      .mockImplementation((hash) =>
+        hash === badHint ? Promise.reject(new Error('receipt unavailable')) : getReceipt(hash),
+      );
+    await expect(
+      fetch({ input: msgId, transactionHash: badHint }, PiQueryType.MsgId, provider),
+    ).resolves.toEqual([expectedMessage]);
+    expect(provider.getLogs).toHaveBeenCalled();
+  });
+
+  it('gives the ordinary lookup its full budget after a hint times out', async () => {
+    jest.useFakeTimers();
+    const provider = createProvider();
+    const getReceipt = jest.mocked(provider.getTransactionReceipt).getMockImplementation()!;
+    const getLogs = jest.mocked(provider.getLogs).getMockImplementation()!;
+    const badHint = `0x${'ff'.repeat(32)}`;
+    jest
+      .mocked(provider.getTransactionReceipt)
+      .mockImplementation((hash) => (hash === badHint ? new Promise(() => {}) : getReceipt(hash)));
+    jest.mocked(provider.getLogs).mockImplementation(async (filter) => {
+      await new Promise((resolve) => setTimeout(resolve, 9_000));
+      return getLogs(filter);
+    });
+    const result = fetch({ input: msgId, transactionHash: badHint }, PiQueryType.MsgId, provider);
+    const assertion = expect(result).resolves.toEqual([expectedMessage]);
+    await jest.advanceTimersByTimeAsync(2_000);
+    expect(provider.getLogs).toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(9_000);
+    await assertion;
+  });
+
+  it('reports a timeout when the ordinary receipt lookup never completes', async () => {
+    jest.useFakeTimers();
+    const provider = createProvider();
+    jest.mocked(provider.getTransactionReceipt).mockImplementation(() => new Promise(() => {}));
+    const assertion = expect(
+      fetch({ input: txHash }, PiQueryType.TxHash, provider),
+    ).rejects.toThrow('message search timeout');
+    await jest.advanceTimersByTimeAsync(10_000);
+    await assertion;
+  });
+
+  it('falls back when a real hinted receipt contains only a different message', async () => {
+    const provider = createProvider();
+    const getReceipt = jest.mocked(provider.getTransactionReceipt).getMockImplementation()!;
+    const wrongHint = `0x${'ff'.repeat(32)}`;
+    const wrongBytes = formatMessage(
+      0,
+      1,
+      sepoliaConfig.domainId,
+      senderAddress,
+      destinationDomain,
+      recipientAddress,
+      '0x1234',
+    );
+    const wrongLog = {
+      ...baseLog,
+      ...mailbox.encodeEventLog(mailbox.getEvent('Dispatch'), [
+        senderAddress,
+        destinationDomain,
+        addressToBytes32(recipientAddress),
+        wrongBytes,
+      ]),
+      transactionHash: wrongHint,
+    };
+    jest.mocked(provider.getTransactionReceipt).mockImplementation(async (hash) => {
+      const receipt = await getReceipt(hash === wrongHint ? txHash : hash);
+      return hash === wrongHint ? { ...receipt, logs: [wrongLog] } : receipt;
+    });
+    await expect(
+      fetch({ input: msgId, transactionHash: wrongHint }, PiQueryType.MsgId, provider),
+    ).resolves.toEqual([expectedMessage]);
+    expect(provider.getLogs).toHaveBeenCalled();
+  });
+
+  it('keeps the selected message if optional IGP lookup rejects for a multi-dispatch receipt', async () => {
+    const receiptLogs = [
+      dispatchLog,
+      ...[1, 2, 3, 4].map((offset) => ({
+        ...baseLog,
+        ...mailbox.encodeEventLog(mailbox.getEvent('Dispatch'), [
+          senderAddress,
+          destinationDomain,
+          addressToBytes32(recipientAddress),
+          formatMessage(
+            0,
+            expectedMessage.nonce + offset,
+            sepoliaConfig.domainId,
+            senderAddress,
+            destinationDomain,
+            recipientAddress,
+            '0x1234',
+          ),
+        ]),
+        logIndex: offset * 2,
+      })),
+    ];
+    mockIgpQuery(Promise.reject(new Error('gas payments unavailable')));
+    await expect(
+      fetchMessagesFromPiChain(
+        { ...sepoliaConfig, interchainGasPaymaster: senderAddress },
+        { input: msgId },
+        createMultiProvider(createProvider({ receiptLogs })),
+        {} as IRegistry,
+        PiQueryType.MsgId,
+      ),
+    ).resolves.toEqual([expectedMessage]);
+  });
+
+  it('keeps a verified historical message when optional IGP lookup times out', async () => {
+    jest.useFakeTimers();
+    mockIgpQuery(new Promise(() => {}));
+    const result = fetchMessagesFromPiChain(
+      { ...sepoliaConfig, interchainGasPaymaster: senderAddress },
+      { input: msgId, transactionHash: txHash },
+      createMultiProvider(createProvider({ head: blockNumber + 6_000 })),
+      {} as IRegistry,
+      PiQueryType.MsgId,
+    );
+    const assertion = expect(result).resolves.toEqual([expectedMessage]);
+    await jest.advanceTimersByTimeAsync(2_000);
+    await assertion;
+  });
+
+  it('enriches a verified message when optional IGP lookup succeeds', async () => {
+    mockIgpQuery(Promise.resolve([{ args: { gasAmount: '100', payment: '200' } }]));
+    await expect(
+      fetchMessagesFromPiChain(
+        { ...sepoliaConfig, interchainGasPaymaster: senderAddress },
+        { input: msgId, transactionHash: txHash },
+        createMultiProvider(createProvider()),
+        {} as IRegistry,
+        PiQueryType.MsgId,
+      ),
+    ).resolves.toEqual([
+      { ...expectedMessage, totalGasAmount: '100', totalPayment: '200', numPayments: 1 },
+    ]);
+  });
+
+  it('rejects an unverifiable receipt and warns when no mailbox is configured', async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+    await expect(
+      fetchMessagesFromPiChain(
+        chainMetadata.sepolia,
+        { input: txHash },
+        createMultiProvider(createProvider()),
+        { getChainAddresses: async () => undefined } as unknown as IRegistry,
+        PiQueryType.TxHash,
+      ),
+    ).resolves.toEqual([]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no mailbox address'));
+  });
+
   it.each([PiQueryType.MsgId, PiQueryType.TxHash])(
     'rejects dispatch events from an unrelated contract in a %s lookup',
     async (queryType) => {
@@ -242,6 +409,13 @@ describe('fetchMessagesFromPiChain', () => {
     ).resolves.toEqual([expectedMessage]);
   });
 });
+
+function mockIgpQuery(result: Promise<unknown>) {
+  jest.spyOn(IgpFactory, 'connect').mockReturnValue({
+    filters: { GasPayment: () => ({}) },
+    queryFilter: () => result,
+  } as unknown as ReturnType<typeof IgpFactory.connect>);
+}
 
 function createMultiProvider(provider: providers.Provider) {
   return {

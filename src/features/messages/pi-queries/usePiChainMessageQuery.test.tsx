@@ -11,7 +11,6 @@ import { fetchMessagesFromPiChain, PiQueryType } from './fetchPiChainMessages';
 import { usePiChainMessageQuery } from './usePiChainMessageQuery';
 
 jest.mock('@hyperlane-xyz/utils', () => ({
-  timeout: (promise: Promise<unknown>) => promise,
   ensure0x: (value: string) => (value.startsWith('0x') ? value : `0x${value}`),
 }));
 jest.mock('../../../store', () => ({
@@ -144,4 +143,65 @@ it('requeries when a hint or provider version changes', async () => {
   mockProviderVersion++;
   await render();
   expect(fetchMessages).toHaveBeenCalledTimes(2);
+});
+
+it('requeries when scraped-chain metadata changes', async () => {
+  await render();
+  fetchMessages.mockClear();
+  mockScrapedDomains = [
+    {
+      id: 1,
+      name: 'one',
+      chain_id: 1,
+      native_token: 'ETH',
+      is_test_net: false,
+      is_deprecated: false,
+    },
+  ];
+  await render();
+  expect(fetchMessages).toHaveBeenCalledTimes(1);
+  expect(fetchMessages.mock.calls[0][0].domainId).toBe(2);
+});
+
+it('waits for a provider, then reports terminal initialization failure', async () => {
+  mockReady = false;
+  await render();
+  expect(state).toMatchObject({ hasRun: false, isError: false, isFetching: false });
+  expect(fetchMessages).not.toHaveBeenCalled();
+  mockInitFailed = true;
+  await render();
+  expect(state).toMatchObject({ hasRun: true, isError: true, isFetching: false });
+  mockInitFailed = false;
+  mockReady = true;
+  await render();
+  expect(state).toMatchObject({ hasRun: true, isError: false, isMessageFound: true });
+});
+
+it('reports RPC failure as an error instead of a missing message', async () => {
+  fetchMessages.mockRejectedValue(new Error('RPC unavailable'));
+  await render();
+  expect(state).toMatchObject({
+    hasRun: true,
+    isError: true,
+    isFetching: false,
+    isMessageFound: false,
+  });
+});
+
+it('retains a verified result when another chain fails', async () => {
+  fetchMessages.mockImplementation(async (chain) => {
+    if (chain.domainId === 1) return [message];
+    throw new Error('unrelated chain unavailable');
+  });
+  await render();
+  expect(state).toMatchObject({ hasRun: true, isError: false, isMessageFound: true, message });
+});
+
+it('does not query or report provider errors while paused', async () => {
+  props.pause = true;
+  mockReady = false;
+  mockInitFailed = true;
+  await render();
+  expect(fetchMessages).not.toHaveBeenCalled();
+  expect(state.isError).toBe(false);
 });

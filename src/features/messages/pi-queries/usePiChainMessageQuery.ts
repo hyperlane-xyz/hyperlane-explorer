@@ -1,19 +1,19 @@
-import type { IRegistry } from '@hyperlane-xyz/registry';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
-import { ensure0x, timeout } from '@hyperlane-xyz/utils';
+import { ensure0x } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 
-import { useMultiProviderVersion, useReadyMultiProvider, useRegistry } from '../../../store';
-import { Message } from '../../../types';
+import {
+  useMultiProviderInitFailed,
+  useMultiProviderVersion,
+  useReadyMultiProvider,
+  useRegistry,
+} from '../../../store';
 import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
-import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
 import type { MessageLookupData } from '../messageLookup';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
-import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
-
-const MESSAGE_SEARCH_TIMEOUT = 10_000; // 10s
+import { PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
 // Query 'Permissionless Interoperability (PI)' chains using
 // override chain metadata in store state
@@ -35,7 +35,9 @@ export function usePiChainMessageSearchQuery({
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const multiProvider = useReadyMultiProvider();
   const multiProviderVersion = useMultiProviderVersion();
+  const hasProviderInitFailed = useMultiProviderInitFailed();
   const registry = useRegistry();
+  const isProviderError = !pause && !multiProvider && hasProviderInitFailed;
 
   const { isLoading, isError, data } = useQuery({
     queryKey: [
@@ -45,6 +47,7 @@ export function usePiChainMessageSearchQuery({
       endTimeFilter,
       piQueryType,
       lookupData,
+      scrapedChains,
       multiProviderVersion,
       registry,
       pause,
@@ -63,42 +66,44 @@ export function usePiChainMessageSearchQuery({
           isEvmChain(multiProvider, c.domainId) &&
           isPiChain(multiProvider, scrapedChains, c.domainId),
       );
-      try {
-        const results = await Promise.allSettled(
-          piChains.map((c) =>
-            fetchMessages(
-              c,
-              {
-                ...query,
-                transactionHash:
-                  lookupData && c.domainId === lookupData.originDomainId
-                    ? lookupData.origin.hash
-                    : undefined,
-              },
-              multiProvider,
-              registry,
-              piQueryType,
-            ),
+      const results = await Promise.allSettled(
+        piChains.map((c) =>
+          fetchMessagesFromPiChain(
+            c,
+            {
+              ...query,
+              transactionHash:
+                lookupData && c.domainId === lookupData.originDomainId
+                  ? lookupData.origin.hash
+                  : undefined,
+            },
+            multiProvider,
+            registry,
+            piQueryType,
           ),
-        );
-        return results
-          .filter(
-            (result): result is PromiseFulfilledResult<Message[]> => result.status === 'fulfilled',
-          )
-          .map((result) => result.value)
-          .flat();
-      } catch {
-        logger.debug('No PI messages found for query:', sanitizedInput);
-        return [];
+        ),
+      );
+      const messages = results.flatMap((result) =>
+        result.status === 'fulfilled' ? result.value : [],
+      );
+      const errors = results.flatMap((result, index) => {
+        if (result.status === 'fulfilled') return [];
+        logger.warn('Error fetching PI messages for chain:', piChains[index].name, result.reason);
+        return [result.reason];
+      });
+      if (!messages.length && errors.length) {
+        throw new AggregateError(errors, 'PI message lookup failed');
       }
+      return messages;
     },
     retry: false,
+    enabled: !pause && !!multiProvider,
   });
 
   return {
     isFetching: isLoading,
-    isError,
-    hasRun: !!data,
+    isError: isError || isProviderError,
+    hasRun: !!data || isError || isProviderError,
     messageList: data || [],
     isMessagesFound: !!data?.length,
   };
@@ -133,25 +138,4 @@ export function usePiChainMessageQuery({
     message,
     isMessageFound,
   };
-}
-
-async function fetchMessages(
-  chainMetadata: ChainMetadata,
-  query: PiMessageQuery,
-  multiProvider: MultiProtocolProvider,
-  registry: IRegistry,
-  queryType?: PiQueryType,
-): Promise<Message[]> {
-  let messages: Message[];
-  try {
-    messages = await timeout(
-      fetchMessagesFromPiChain(chainMetadata, query, multiProvider, registry, queryType),
-      MESSAGE_SEARCH_TIMEOUT,
-      'message search timeout',
-    );
-    return messages;
-  } catch (error) {
-    logger.debug('Error fetching PI messages for chain:', chainMetadata.name, error);
-    throw error;
-  }
 }
