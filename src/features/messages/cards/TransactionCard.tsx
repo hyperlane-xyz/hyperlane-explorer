@@ -35,6 +35,7 @@ export function DestinationTransactionCard({
   transaction,
   debugResult,
   isStatusFetching,
+  isOriginConfirming = false,
   isPiMsg,
   blur,
   message,
@@ -46,6 +47,7 @@ export function DestinationTransactionCard({
   transaction?: MessageTx | MessageTxStub;
   debugResult?: MessageDebugResult;
   isStatusFetching: boolean;
+  isOriginConfirming?: boolean;
   isPiMsg?: boolean;
   blur: boolean;
   message?: Message | MessageStub;
@@ -75,6 +77,39 @@ export function DestinationTransactionCard({
           />
         )}
       </>
+    );
+  } else if (status === MessageStatus.Delivered) {
+    content = (
+      <DeliveryStatus>
+        <div>Message delivered.</div>
+        <div className="mt-2 text-sm font-light text-gray-500">
+          Transaction details are still being indexed.
+        </div>
+      </DeliveryStatus>
+    );
+  } else if (pause) {
+    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
+  } else if (
+    status === MessageStatus.Pending &&
+    collateralInfo.status === CollateralStatus.Insufficient
+  ) {
+    content = (
+      <InsufficientCollateralWarning
+        warpRouteDetails={warpRouteDetails}
+        collateralInfo={collateralInfo}
+      />
+    );
+  } else if (isOriginConfirming) {
+    content = (
+      <DeliveryStatus>
+        <div>Waiting for origin confirmations.</div>
+        <div className="mt-2 text-sm font-light text-gray-500">
+          Delivery can proceed once the origin confirmation threshold is reached.
+        </div>
+        <div className="mt-6 flex items-center justify-center">
+          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        </div>
+      </DeliveryStatus>
     );
   } else if (!debugResult && isStatusFetching) {
     content = (
@@ -111,8 +146,6 @@ export function DestinationTransactionCard({
         )}
       </>
     );
-  } else if (pause) {
-    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
   } else if (!hasChainConfig) {
     content = (
       <>
@@ -137,34 +170,21 @@ export function DestinationTransactionCard({
       </>
     );
   } else if (status === MessageStatus.Pending) {
-    // Show collateral warning for pending routes when the explorer can query
-    // the destination runtime directly. Today that path is EVM-only.
-    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
     content = (
-      <>
-        {hasCollateralWarning && (
-          <InsufficientCollateralWarning
-            warpRouteDetails={warpRouteDetails}
-            collateralInfo={collateralInfo}
-          />
-        )}
-        {!hasCollateralWarning && (
-          <DeliveryStatus>
-            <div className="flex flex-col items-center">
-              <div>Delivery to destination chain still in progress.</div>
-              {isPiMsg && (
-                <div className="mt-2 max-w-xs text-sm">
-                  Please ensure a relayer is running for this chain.
-                </div>
-              )}
-              <div className="mt-6 flex items-center justify-center">
-                <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
-              </div>
-              <CallDataModal debugResult={debugResult} />
+      <DeliveryStatus>
+        <div className="flex flex-col items-center">
+          <div>Delivery to destination chain still in progress.</div>
+          {isPiMsg && (
+            <div className="mt-2 max-w-xs text-sm">
+              Please ensure a relayer is running for this chain.
             </div>
-          </DeliveryStatus>
-        )}
-      </>
+          )}
+          <div className="mt-6 flex items-center justify-center">
+            <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+          </div>
+          <CallDataModal debugResult={debugResult} />
+        </div>
+      </DeliveryStatus>
     );
   } else {
     content = (

@@ -1,5 +1,3 @@
-import type { IRegistry } from '@hyperlane-xyz/registry';
-import type { ChainMap, ChainMetadata } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -11,18 +9,8 @@ import { logger } from '../../utils/logger';
 import { MissingChainConfigToast } from '../chains/MissingChainConfigToast';
 import { isEvmChain } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
-import { useExplorerConnectionState } from '../messages/queries/useLiveMessages';
+import { useIsMessageLive } from '../messages/queries/useLiveMessages';
 import { getDeliveryStatusRefetchInterval } from './deliveryStatusPolling';
-
-type DeliveryStatusQueryMessage = MessageStub &
-  Partial<Pick<Message, 'decodedBody' | 'totalGasAmount' | 'totalPayment' | 'numPayments'>>;
-type DeliveryStatusQueryKey = readonly [
-  'messageDeliveryStatus',
-  DeliveryStatusQueryMessage,
-  number,
-  IRegistry,
-  ChainMap<Partial<ChainMetadata>>,
-];
 
 export function useMessageDeliveryStatus({
   message,
@@ -35,8 +23,8 @@ export function useMessageDeliveryStatus({
   const multiProvider = useReadyMultiProvider();
   const multiProviderVersion = useMultiProviderVersion();
   const registry = useRegistry();
-  const explorerConnectionState = useExplorerConnectionState();
-  const queryMessage = createDeliveryStatusQueryMessage(message);
+  const isMessageLive = useIsMessageLive(message);
+  const queryMessage = { ...message, liveReceivedAt: undefined };
 
   const { data, error, isFetching } = useQuery({
     queryKey: [
@@ -45,25 +33,23 @@ export function useMessageDeliveryStatus({
       multiProviderVersion,
       registry,
       chainMetadataOverrides,
-    ] as DeliveryStatusQueryKey,
-    queryFn: async ({ queryKey }) => {
-      const [, messageForQuery] = queryKey;
+    ],
+    queryFn: async () => {
       const hasDeliveredDetails =
-        messageForQuery.status === MessageStatus.Delivered &&
-        !!messageForQuery.destination &&
-        'blockNumber' in messageForQuery.destination;
+        message.status === MessageStatus.Delivered &&
+        message.destination?.blockNumber !== undefined;
 
       if (!multiProvider || hasDeliveredDetails) {
-        return { message: messageForQuery };
+        return { message };
       }
 
-      const { id, originDomainId, destinationDomainId } = messageForQuery;
+      const { id, originDomainId, destinationDomainId } = message;
 
       if (
         !checkChain(multiProvider, originDomainId) ||
         !checkChain(multiProvider, destinationDomainId)
       ) {
-        return { message: messageForQuery };
+        return { message };
       }
 
       logger.debug('Fetching message delivery status for:', id);
@@ -72,38 +58,29 @@ export function useMessageDeliveryStatus({
         multiProvider,
         registry,
         chainMetadataOverrides,
-        messageForQuery,
+        message,
       );
 
       if (deliverStatus.status === MessageStatus.Delivered) {
         return {
           message: {
-            ...messageForQuery,
+            ...message,
             status: MessageStatus.Delivered,
             destination: deliverStatus.deliveryTransaction,
           },
         };
-      } else if (
-        deliverStatus.status === MessageStatus.Failing ||
-        deliverStatus.status === MessageStatus.Pending
-      ) {
-        return {
-          message: {
-            ...messageForQuery,
-            status: deliverStatus.status,
-          },
-          debugResult: deliverStatus.debugResult,
-        };
-      } else {
-        return { message: messageForQuery };
       }
+      return {
+        message: { ...message, status: deliverStatus.status },
+        debugResult: deliverStatus.debugResult,
+      };
     },
     retry: false,
     refetchInterval: (query) =>
       getDeliveryStatusRefetchInterval(
         query.state.data?.message.status === MessageStatus.Delivered,
         message.isPiMsg,
-        explorerConnectionState,
+        isMessageLive ? 'connected' : 'disconnected',
       ),
     enabled: enabled && !!multiProvider,
   });
@@ -119,16 +96,6 @@ export function useMessageDeliveryStatus({
     messageWithDeliveryStatus: data?.message || message,
     debugResult: data?.debugResult,
     isDeliveryStatusFetching: isFetching,
-  };
-}
-
-function createDeliveryStatusQueryMessage(
-  message: Message | MessageStub,
-): DeliveryStatusQueryMessage {
-  return {
-    ...message,
-    origin: { ...message.origin },
-    destination: message.destination ? { ...message.destination } : undefined,
   };
 }
 

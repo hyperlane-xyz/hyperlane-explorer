@@ -1,90 +1,344 @@
 /** @jest-environment jsdom */
 
+import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
+import { MessageStatus, type MessageStub } from '../../../types';
+import {
+  useConfirmationProgress,
+  isWaitingForOriginConfirmations,
+  getRequiredConfirmations,
+  calculateConfirmationCount,
+} from '../useConfirmationProgress';
 import {
   ExplorerEventsProvider,
   parseExplorerEvent,
-  shouldEnableExplorerEvents,
+  partitionExplorerDomains,
+  useExplorerBlockValue,
 } from './ExplorerEventsProvider';
+import {
+  useExplorerMessageRows,
+  useExplorerRefresh,
+  useIsMessageLive,
+  useMessageRowSubscription,
+} from './useLiveMessages';
 
-const reactTestGlobal = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean;
+const row = {
+  id: '1',
+  msg_id: '\\xab',
+  nonce: 1,
+  sender: '\\x01',
+  recipient: '\\x02',
+  origin_domain_id: 1,
+  destination_domain_id: 10,
+  is_delivered: false,
+  origin_block_height: '100',
+  origin_block_hash: '\\x03',
+  origin_mailbox: '\\x04',
+  origin_tx_hash: '\\x05',
+  origin_tx_sender: null,
+  origin_tx_recipient: null,
+  total_gas_amount: '0',
+  total_payment: '0',
+  num_payments: '0',
+  send_occurred_at: '2026-10-22T12:00:00Z',
 };
+const rollback = {
+  type: 'rollback',
+  confirmations: 0,
+  domain: 1,
+  fromHeight: '105',
+  toHeight: '99',
+};
+const block = {
+  type: 'block',
+  domain: 1,
+  height: '103',
+  headHeight: '105',
+  hash: `0x${'ab'.repeat(32)}`,
+};
+const refresh = jest.fn();
+const snapshot = { originDomainId: 1, destinationDomainId: 10 } as MessageStub;
+const resolver = {
+  tryGetChainMetadata: () => ({ blocks: { confirmations: 2, reorgPeriod: 5 } }),
+} as unknown as ChainMetadataResolver;
+let renders = 0;
+const testGlobal = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+const originalWebSocket = global.WebSocket;
+let sockets: FakeWebSocket[];
+let container: HTMLDivElement;
+let root: ReturnType<typeof createRoot>;
 
-beforeAll(() => {
-  reactTestGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+function Probe({ observeHead = false }: { observeHead?: boolean }) {
+  renders++;
+  const { messageRow } = useMessageRowSubscription('0xab', true, refresh, snapshot);
+  const rows = useExplorerMessageRows();
+  const head = useExplorerBlockValue(observeHead ? 1 : undefined, (block) => block?.headHeight);
+  const message = {
+    ...snapshot,
+    isProvisional: messageRow?.is_provisional,
+    status: messageRow?.is_delivered ? MessageStatus.Delivered : MessageStatus.Pending,
+    origin: { blockNumber: Number(messageRow?.origin_block_height) },
+  } as MessageStub;
+  const progress = useConfirmationProgress(message, resolver);
+  const waiting = isWaitingForOriginConfirmations(message, progress);
+  const testnetLive = useIsMessageLive({
+    originDomainId: 84532,
+    destinationDomainId: 11155111,
+  } as MessageStub);
+  return createElement(
+    'div',
+    null,
+    JSON.stringify({ messageRow, rows, progress, waiting, testnetLive, head }),
+  );
+}
+const state = () => JSON.parse(container.textContent!);
+const render = (domains = [1, 10], observeHead = false) =>
+  act(async () => {
+    root.render(
+      createElement(ExplorerEventsProvider, { domains }, createElement(Probe, { observeHead })),
+    );
+  });
+function send(message: unknown, socket = sockets.at(-1)!) {
+  socket.onmessage?.(new MessageEvent('message', { data: JSON.stringify(message) }));
+}
+const emit = (message: unknown, socket = sockets.at(-1)!) => act(async () => send(message, socket));
+
+beforeEach(() => {
+  testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+  jest.useFakeTimers();
+  refresh.mockClear();
+  sockets = [];
+  container = document.createElement('div');
+  root = createRoot(container);
+  global.WebSocket = class extends FakeWebSocket {
+    constructor(url: string) {
+      super(url);
+      sockets.push(this);
+    }
+  } as unknown as typeof WebSocket;
+});
+afterEach(async () => {
+  await act(async () => root.unmount());
+  global.WebSocket = originalWebSocket;
+  jest.useRealTimers();
+  jest.restoreAllMocks();
+  delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
 });
 
-afterAll(() => {
-  delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
-});
-
-describe('Explorer events routes', () => {
-  it('enables live events only where messages consume them', () => {
-    expect(shouldEnableExplorerEvents('/')).toBe(true);
-    expect(shouldEnableExplorerEvents('/message/[messageId]')).toBe(true);
-    expect(shouldEnableExplorerEvents('/tx/[txHash]')).toBe(false);
-    expect(shouldEnableExplorerEvents('/404')).toBe(false);
+it('applies origin and destination reorgs even after the detail leaves the bounded buffer', async () => {
+  await render();
+  expect(new URL(sockets[0].url).searchParams.get('confirmations')).toBe('0');
+  expect(new URL(sockets[0].url).searchParams.get('blocks')).toBe('true');
+  await emit({ type: 'ready', customDomains: [1, 10] });
+  await emit({ type: 'message_upsert', confirmations: 0, data: row });
+  expect(state().progress.current).toBeNull();
+  await emit({ ...block, headHeight: '103' });
+  expect(state().progress.current).toBe(3);
+  expect(state().waiting).toBe(true);
+  await emit(block);
+  expect(state().progress.current).toBe(5);
+  expect(state().waiting).toBe(false);
+  const cappedRenders = renders;
+  await emit({ ...block, headHeight: '106' });
+  expect(renders).toBe(cappedRenders);
+  await emit({ ...block, headHeight: '103' });
+  expect(state().progress.current).toBe(3);
+  await emit({
+    type: 'message_upsert',
+    confirmations: 0,
+    data: {
+      ...row,
+      is_delivered: true,
+      destination_block_height: null,
+      destination_tx_hash: '\\x06',
+      destination_tx_gas_used: 21000,
+    },
   });
-
-  it('does not construct a websocket on a transaction route', async () => {
-    const originalWebSocket = global.WebSocket;
-    const webSocketMock = jest.fn() as unknown as typeof WebSocket;
-    global.WebSocket = webSocketMock;
-    const container = document.createElement('div');
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        createElement(
-          ExplorerEventsProvider,
-          { enabled: shouldEnableExplorerEvents('/tx/[txHash]') },
-          createElement('div'),
-        ),
-      );
-    });
-
-    expect(webSocketMock).not.toHaveBeenCalled();
-    await act(async () => root.unmount());
-    global.WebSocket = originalWebSocket;
+  expect(state().progress.current).toBe(3);
+  expect(state().waiting).toBe(false);
+  expect(state().messageRow.is_provisional).toBe(true);
+  await emit({ ...rollback, domain: 10 });
+  expect(state().messageRow.is_delivered).toBe(true);
+  await emit({
+    type: 'message_upsert',
+    confirmations: 0,
+    data: {
+      ...state().messageRow,
+      destination_block_height: 105,
+    },
   });
-});
-
-describe('parseExplorerEvent', () => {
-  it('accepts the proxy numeric-string ID format', () => {
-    const data = makeProxyMessage();
-    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data }))).toEqual({
-      type: 'message_upsert',
-      data,
-    });
+  await act(async () => {
+    for (let i = 0; i < LIVE_MESSAGE_LIMIT; i++)
+      send({
+        type: 'message_upsert',
+        data: { ...row, msg_id: `\\xother${i}`, origin_domain_id: 173, destination_domain_id: 56 },
+      });
   });
-
-  it('rejects malformed message upserts', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    expect(parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: {} }))).toBeNull();
-    expect(
-      parseExplorerEvent(JSON.stringify({ type: 'message_upsert', data: { msg_id: '\\xabc' } })),
-    ).toBeNull();
-    expect(warn).toHaveBeenCalledTimes(2);
-    warn.mockRestore();
-  });
-});
-
-function makeProxyMessage() {
-  return {
-    id: '164316136',
-    msg_id: '\\xmessage-id',
-    nonce: 80498,
-    sender: '\\xsender',
-    recipient: '\\xrecipient',
+  expect(state().rows).toHaveLength(LIVE_MESSAGE_LIMIT);
+  expect(state().messageRow.msg_id).toBe(row.msg_id);
+  await emit({ ...rollback, domain: 173 });
+  expect(state().messageRow.is_delivered).toBe(true);
+  expect(refresh).toHaveBeenCalledTimes(2);
+  await emit({ ...rollback, domain: 10, toHeight: '104' });
+  expect(state().messageRow).toMatchObject({
     is_delivered: false,
-    send_occurred_at: '2026-08-21 07:53:28',
-    origin_domain_id: 173,
-    origin_tx_hash: '\\xorigin-hash',
-    origin_tx_sender: '\\xorigin-sender',
-    origin_tx_recipient: '\\xorigin-recipient',
-    destination_domain_id: 56,
-  };
+    destination_tx_hash: null,
+    destination_tx_gas_used: null,
+  });
+  await emit(rollback);
+  expect(state().messageRow).toBeNull();
+  expect(refresh).toHaveBeenCalledTimes(4);
+});
+
+it('refreshes the unscoped search only when a rollback changes its rows', async () => {
+  function Search() {
+    useExplorerRefresh(true, refresh);
+    return null;
+  }
+  await act(async () =>
+    root.render(createElement(ExplorerEventsProvider, null, createElement(Search))),
+  );
+  await emit({ type: 'ready' });
+  refresh.mockClear();
+  await emit({ ...rollback, domain: 173 });
+  await emit({ type: 'message_upsert', data: row });
+  await emit({ ...rollback, toHeight: '100' });
+  expect(refresh).not.toHaveBeenCalled();
+  await emit(rollback);
+  expect(refresh).toHaveBeenCalledTimes(1);
+});
+
+it('refreshes snapshot-only details only on their affected chains', async () => {
+  await render();
+  await emit({ type: 'ready' });
+  await emit({ ...rollback, domain: 173 });
+  expect(refresh).toHaveBeenCalledTimes(1);
+  await emit(rollback);
+  expect(refresh).toHaveBeenCalledTimes(2);
+});
+
+it('clears disconnected state, ignores stale frames, and refreshes after reconnecting', async () => {
+  await render(undefined, true);
+  await emit({ type: 'ready' });
+  await emit({ type: 'message_upsert', data: row });
+  await emit(block);
+  expect(state().head).toBe('105');
+  const previous = sockets[0];
+  await act(async () => previous.close());
+  await emit({ type: 'message_upsert', data: row }, previous);
+  await emit({ type: 'ready' }, previous);
+  expect(state().messageRow).toBeNull();
+  expect(state().rows).toEqual([]);
+  expect(state().head).toBeUndefined();
+  expect(state().progress).toBeNull();
+  expect(refresh).toHaveBeenCalledTimes(1);
+  await act(async () => jest.advanceTimersByTime(1000));
+  expect(sockets).toHaveLength(2);
+  await emit({ type: 'ready' });
+  expect(refresh).toHaveBeenCalledTimes(2);
+  await act(async () => previous.onopen?.(new Event('open')));
+  await act(async () => jest.advanceTimersByTime(65000));
+  expect(sockets[1].closed).toBe(true);
+});
+
+it('keeps healthy hidden tabs connected and falls back after a rejected negotiation', async () => {
+  const visibility = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+  await render();
+  await act(async () => jest.advanceTimersByTime(65000));
+  expect(sockets[0].closed).toBe(false);
+  visibility.mockReturnValue('visible');
+  await act(async () => jest.advanceTimersByTime(65000));
+  expect(sockets[0].closed).toBe(true);
+  await act(async () => jest.advanceTimersByTime(1000));
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  await emit({ type: 'error', error: 'Unsupported domain' });
+  expect(warn).toHaveBeenCalledWith('Explorer websocket subscription error', 'Unsupported domain');
+  await act(async () =>
+    sockets[1].onclose?.(
+      new CloseEvent('close', {
+        code: 1008,
+        reason: 'Maximum connections per client reached',
+      }),
+    ),
+  );
+  await act(async () => jest.advanceTimersByTime(2000));
+  expect(sockets).toHaveLength(3);
+  await act(async () =>
+    sockets[2].onclose?.(
+      new CloseEvent('close', {
+        code: 1008,
+        reason: 'Invalid subscription',
+      }),
+    ),
+  );
+  await act(async () => jest.advanceTimersByTime(130000));
+  expect(sockets).toHaveLength(3);
+});
+
+it('keeps equivalent subscriptions stable and respects negotiated chain coverage', async () => {
+  await render();
+  await emit({ type: 'ready', customDomains: [] });
+  await emit({ type: 'message_upsert', confirmations: 0, data: row });
+  expect(state().messageRow.is_provisional).toBe(false);
+  expect(state().messageRow.live_confirmations).toBeUndefined();
+  expect(state().testnetLive).toBe(false);
+  await render([10, 1]);
+  expect(sockets).toHaveLength(1);
+  await emit({ type: 'ready', customDomains: [1] });
+  await emit({ type: 'message_upsert', confirmations: 0, data: row });
+  expect(state().messageRow.live_confirmations).toBe(0);
+  await render([84532]);
+  await emit({ type: 'ready', customDomains: [84532] });
+  expect(state().testnetLive).toBe(true);
+});
+
+it('validates wire data while accepting partial transaction enrichment', () => {
+  expect(
+    parseExplorerEvent(JSON.stringify({ type: 'message_upsert', confirmations: 0, data: row })),
+  ).toEqual({ type: 'message_upsert', confirmations: 0, data: row });
+  expect(parseExplorerEvent(JSON.stringify(block))).toEqual(block);
+  expect(parseExplorerEvent(JSON.stringify(rollback))).toEqual(rollback);
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  for (const invalid of [
+    { ...block, headHeight: '9007199254740993' },
+    { ...block, headHeight: '102' },
+    { ...block, hash: '0xabc' },
+    { ...rollback, confirmations: 1 },
+    { ...rollback, toHeight: '106' },
+    { type: 'message_upsert', data: {} },
+    { type: 'message_upsert', data: { ...row, origin_block_height: '-1' } },
+  ])
+    expect(parseExplorerEvent(JSON.stringify(invalid))).toBeNull();
+  expect(partitionExplorerDomains([10, -1, 10, Number.NaN])).toEqual({
+    domainIds: [10, 0xffffffff],
+    invalidDomainIds: [Number.NaN],
+  });
+});
+
+it('keeps unknown heads and finality tags unknown, with numeric reorg thresholds', () => {
+  expect(calculateConfirmationCount(100, undefined, 5)).toBeNull();
+  expect(calculateConfirmationCount(100, 99, 5)).toBe(0);
+  expect(getRequiredConfirmations({ confirmations: 2, reorgPeriod: 10 })).toBe(10);
+  expect(getRequiredConfirmations({ confirmations: 2 })).toBe(2);
+  for (const reorgPeriod of ['safe', 'finalized'])
+    expect(getRequiredConfirmations({ confirmations: 2, reorgPeriod })).toBeUndefined();
+  const message = { status: MessageStatus.Pending, isProvisional: true };
+  expect(isWaitingForOriginConfirmations(message)).toBe(true);
+  expect(isWaitingForOriginConfirmations({ ...message, isOriginProvisional: false })).toBe(false);
+});
+
+class FakeWebSocket {
+  closed = false;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onopen: ((event: Event) => void) | null = null;
+  constructor(readonly url: string) {}
+  close() {
+    this.closed = true;
+    this.onclose?.(new CloseEvent('close'));
+  }
 }

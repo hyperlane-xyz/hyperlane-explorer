@@ -1,9 +1,12 @@
 import { isAddress } from '@hyperlane-xyz/utils';
 
+import { MESSAGE_PAGE_SIZE } from '../../../consts/api';
 import { MessageStatusFilter } from '../../../types';
 import { adjustToUtcTime } from '../../../utils/time';
 import { isPotentiallyTransactionHash, searchValueToPostgresBytea } from './encoding';
 import { messageDetailsFragment, messageStubFragment } from './fragments';
+
+export const PROVISIONAL_QUERY_KEY = 'provisional';
 
 /**
  * ========================
@@ -34,32 +37,33 @@ export function buildMessageQuery(
   limit: number,
   useStub = false,
   orderBy?: string,
-  { cached = true }: { cached?: boolean } = {},
+  { cached = true, provisional = false }: { cached?: boolean; provisional?: boolean } = {},
 ) {
-  let whereClause: string;
-  if (idType === MessageIdentifierType.Id) {
-    whereClause = 'msg_id: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.Sender) {
-    whereClause = 'sender: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.Recipient) {
-    whereClause = 'recipient: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.OriginTxHash) {
-    whereClause = 'origin_tx_hash: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.OriginTxSender) {
-    whereClause = 'origin_tx_sender: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.DestinationTxHash) {
-    whereClause = 'destination_tx_hash: {_eq: $identifier}';
-  } else if (idType === MessageIdentifierType.DestinationTxSender) {
-    whereClause = 'destination_tx_sender: {_eq: $identifier}';
-  } else {
-    throw new Error(`Invalid id type: ${idType}`);
-  }
+  const field = {
+    [MessageIdentifierType.Id]: 'msg_id',
+    [MessageIdentifierType.Sender]: 'sender',
+    [MessageIdentifierType.Recipient]: 'recipient',
+    [MessageIdentifierType.OriginTxHash]: 'origin_tx_hash',
+    [MessageIdentifierType.OriginTxSender]: 'origin_tx_sender',
+    [MessageIdentifierType.DestinationTxHash]: 'destination_tx_hash',
+    [MessageIdentifierType.DestinationTxSender]: 'destination_tx_sender',
+  }[idType];
+  if (typeof field !== 'string') throw new Error(`Invalid id type: ${idType}`);
   const variables = { identifier: searchValueToPostgresBytea(idValue) };
 
+  const where = `{send_occurred_at: {_is_null: false}, ${field}: {_eq: $identifier}}`;
   const query = `
   query ($identifier: bytea!)${cached ? ' @cached(ttl: 5)' : ''} {
+    ${
+      provisional
+        ? `canonical: message_view(where: ${where}, limit: ${limit}) {
+      msg_id origin_tx_hash origin_block_hash
+    }`
+        : ''
+    }
     message_view(
-      where: {send_occurred_at: {_is_null: false}, ${whereClause}},
+      ${provisional ? 'confirmations: 0,' : ''}
+      where: ${where},
       ${orderBy ? `order_by: {${orderBy}},` : ''}
       limit: ${limit}
     ) {
@@ -128,31 +132,45 @@ export function buildMessageSearchQuery(
     scopeDomainIds,
   );
 
-  // Build status filter clause
-  const statusWhereClause = buildStatusWhereClause(statusFilter);
-
-  // Build warp route address filter clause
-  const warpRouteWhereClause = buildWarpRouteWhereClause(warpAddressesBytea);
-
   // Due to DB performance issues, we cannot use an `_or` clause
   // Instead, each where clause for the search will be its own query
-  const queries = whereClauses.map(
-    (whereClause, i) =>
-      `q${i}: message_view(
+  // Raw dispatch IDs and canonical message IDs use different sequences.
+  // Fetch the provisional overlay separately so canonical pagination cannot
+  // push fresh dispatches below the LIMIT or use their IDs as history cursors.
+  const selections = whereClauses.map((whereClause, i) => ({
+    alias: `q${i}`,
+    whereClause,
+    provisional: false,
+  }));
+  if (!cursor) {
+    selections.push({
+      alias: PROVISIONAL_QUERY_KEY,
+      // OR is cheap over the small provisional set and avoids repeating the
+      // projection once per identifier field (or exceeding GraphQL limits).
+      whereClause: whereClauses.length > 1 ? `{_or: [${whereClauses.join(',')}]}` : whereClauses[0],
+      provisional: true,
+    });
+  }
+  const queries = selections.map(
+    ({ alias, whereClause, provisional }) =>
+      `${alias}: message_view(
+    ${provisional ? 'confirmations: 0,' : ''}
     where: {
       _and: [
         {send_occurred_at: {_is_null: false}},
+        ${provisional ? '{is_provisional: {_eq: true}},' : ''}
         ${originDomainWhereClause}
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
-        ${statusWhereClause}
-        ${warpRouteWhereClause}
+        ${statusFilter === 'delivered' ? '{is_delivered: {_eq: true}},' : ''}
+        ${provisional && statusFilter === 'pending' ? '{is_delivered: {_eq: false}},' : ''}
+        ${warpAddressesBytea.length ? '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},' : ''}
         ${whereClause}
       ]
     },
-    order_by: {id: ${orderDirection.toLowerCase()}},
-    limit: ${limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
+    order_by: ${provisional ? '[{send_occurred_at: desc}, {id: desc}]' : `{id: ${orderDirection.toLowerCase()}}`},
+    limit: ${provisional ? Math.min(limit, MESSAGE_PAGE_SIZE) : limit}${cursor ? `,\n    cursor: [{initial_value: {id: $cursor}, ordering: ${orderDirection}}]` : ''}
     ) {
       ${useStub ? messageStubFragment : messageDetailsFragment}
     }`,
@@ -175,21 +193,6 @@ export function buildMessageSearchQuery(
     ${queries.join('\n')}
   }`;
   return { query, variables };
-}
-
-// Note: Only 'delivered' filter is applied at DB level. 'pending' uses client-side
-// filtering (see useMessageQuery.ts) because DB query for is_delivered=false is slow.
-function buildStatusWhereClause(statusFilter: MessageStatusFilter): string {
-  if (statusFilter === 'delivered') {
-    return '{is_delivered: {_eq: true}},';
-  }
-  return '';
-}
-
-function buildWarpRouteWhereClause(warpAddressesBytea: string[]): string {
-  if (warpAddressesBytea.length === 0) return '';
-  // Filter messages where sender OR recipient is in the warp route addresses
-  return '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},';
 }
 
 function buildSearchWhereClauses(searchInput: string) {
