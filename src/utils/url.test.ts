@@ -140,4 +140,22 @@ describe('url utils', () => {
     expect(getBlockExplorerAddressUrl(resolver, 'broken', '0xabc')).toBeNull();
     await expect(tryGetBlockExplorerAddressUrl(resolver, 'broken', '0xabc')).resolves.toBeNull();
   });
+
+  it('rejects hashes and addresses that would escape the explorer path segment', () => {
+    const resolver = createResolver(validMetadata);
+
+    for (const value of ['../token/0xbad', '%2e%2e/address/0xbad', '..', '0x1?a=b', '0x1#x']) {
+      expect(getBlockExplorerTxUrl(resolver, 'ethereum', value)).toBeNull();
+      expect(getBlockExplorerAddressUrl(resolver, 'ethereum', value)).toBeNull();
+    }
+    expect(
+      getBlockExplorerTxUrl(
+        resolver,
+        'ethereum',
+        '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UQKWzt9yYQ',
+      ),
+    ).toBe(
+      'https://etherscan.io/tx/5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UQKWzt9yYQ',
+    );
+  });
 });

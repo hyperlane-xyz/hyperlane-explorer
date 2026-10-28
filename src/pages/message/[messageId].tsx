@@ -7,8 +7,6 @@ import { OGHead } from '../../components/OGHead';
 import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
 import { MessageDetailsLoading } from '../../features/messages/MessageDetailsLoading';
 import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
-import { deserializeMessage } from '../../features/messages/utils';
-import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
@@ -35,14 +33,12 @@ interface PageProps {
 
 const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   const router = useRouter();
-  const { messageId, data } = router.query;
+  const { messageId } = router.query;
 
   useEffect(() => {
     if (!messageId || typeof messageId !== 'string')
       router.replace('/').catch((e) => logger.error('Error routing back to home', e));
   }, [router, messageId]);
-
-  const message = data ? deserializeMessage<Message>(data) : undefined;
 
   // Generate OG metadata - use ogData from SSR props, not router.query
   // This ensures meta tags are rendered during SSR for social crawlers
@@ -77,7 +73,7 @@ const MessagePage: NextPage<PageProps> = ({ ogData, host }) => {
   return (
     <>
       <OGHead title={ogTitle} description={ogDescription} url={ogUrl} image={ogImage} />
-      <MessageDetailsPage messageId={messageId} message={message} />
+      <MessageDetailsPage messageId={messageId} />
     </>
   );
 };

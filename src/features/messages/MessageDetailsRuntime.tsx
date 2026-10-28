@@ -33,7 +33,7 @@ interface Props {
   messageId: string;
   baseMessage: Message | MessageStub;
   baseIsMessageFound: boolean;
-  hasDetailedUrlMessage: boolean;
+  hasInitialMessageDetails: boolean;
   hasGraphQlRun: boolean;
   isGraphQlMessageFound: boolean;
   destinationChainName: string;
@@ -47,7 +47,7 @@ export function MessageDetailsRuntime({
   messageId,
   baseMessage,
   baseIsMessageFound,
-  hasDetailedUrlMessage,
+  hasInitialMessageDetails,
   hasGraphQlRun,
   isGraphQlMessageFound,
   destinationChainName,
@@ -60,7 +60,7 @@ export function MessageDetailsRuntime({
     messageId: string;
     value: PiMessageDetailsState;
   }>({ messageId, value: DEFAULT_PI_MESSAGE_DETAILS_STATE });
-  const shouldRunPi = !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
+  const shouldRunPi = !hasInitialMessageDetails && hasGraphQlRun && !isGraphQlMessageFound;
   const activePiState =
     piState.messageId === messageId ? piState.value : DEFAULT_PI_MESSAGE_DETAILS_STATE;
 
@@ -80,7 +80,7 @@ export function MessageDetailsRuntime({
     });
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
   const hasRun =
-    hasDetailedUrlMessage || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
+    hasInitialMessageDetails || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
 
   useEffect(() => {
     onStateChange({

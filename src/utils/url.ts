@@ -12,7 +12,7 @@ export function getBlockExplorerTxUrl(
   hash: string,
 ) {
   const metadata = chainMetadataResolver.tryGetChainMetadata(chain);
-  if (!metadata || !hash) return null;
+  if (!metadata || !hash || !isSafePathSegment(hash)) return null;
   const baseUrl = getExplorerBaseUrl(metadata);
   if (!baseUrl) return null;
 
@@ -33,9 +33,18 @@ export function getBlockExplorerAddressUrl(
   const baseUrl = getExplorerBaseUrl(metadata);
   const linkAddress = toExplorerAddress(metadata, address);
   const urlPathStub = getExplorerAddressPathStub(metadata, linkAddress);
-  if (!baseUrl || !urlPathStub) return null;
+  if (!baseUrl || !urlPathStub || !isSafePathSegment(linkAddress)) return null;
 
   return appendToPath(baseUrl, `${urlPathStub}/${linkAddress}`)?.toString() || null;
+}
+
+// Hashes and addresses are appended as a single path segment. Reject anything that could
+// traverse or escape it (e.g. '../token/0x…', '%2e%2e/…', '?', '#'). Dots are allowed
+// for names like Aleo programs ('token.aleo'), but not as a '.' or '..' segment.
+function isSafePathSegment(value: string): boolean {
+  if (/^[A-Za-z0-9_.-]+$/.test(value) && value !== '.' && value !== '..') return true;
+  logger.debug('Rejecting unsafe block explorer path segment', value);
+  return false;
 }
 
 // Tron warp-route entries are stored in the registry as EVM-shaped hex

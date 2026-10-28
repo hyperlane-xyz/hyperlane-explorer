@@ -13,6 +13,7 @@ import {
   messageId,
   normalizeAddress,
   parseMessage,
+  timeout,
 } from '@hyperlane-xyz/utils';
 import { BigNumber, constants, ethers, providers } from 'ethers';
 
@@ -24,11 +25,15 @@ import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyper
 const mailbox = MailboxFactory.createInterface();
 const dispatchTopic0 = mailbox.getEventTopic('Dispatch');
 const dispatchIdTopic0 = mailbox.getEventTopic('DispatchId');
+const MESSAGE_SEARCH_TIMEOUT = 10_000;
+const RECEIPT_HINT_TIMEOUT = 2_000;
+const GAS_PAYMENTS_TIMEOUT = 2_000;
 // const processTopic0 = mailbox.getEventTopic('Process');
 // const processIdTopic0 = mailbox.getEventTopic('ProcessId');
 
 export interface PiMessageQuery {
   input: string;
+  transactionHash?: string;
   fromBlock?: providers.BlockTag;
   toBlock?: providers.BlockTag;
 }
@@ -73,6 +78,59 @@ export async function fetchMessagesFromPiChain(
   registry: IRegistry,
   queryType?: PiQueryType, // optionally force search down to just one type
 ): Promise<Message[]> {
+  let messages: Message[] = [];
+  if (
+    queryType === PiQueryType.MsgId &&
+    query.transactionHash &&
+    isValidTransactionHash(query.transactionHash, ProtocolType.Ethereum)
+  ) {
+    try {
+      const hintedMessages = await timeout(
+        fetchMessagesWithoutGasPayments(
+          chainMetadata,
+          { input: query.transactionHash },
+          multiProvider,
+          registry,
+          PiQueryType.TxHash,
+        ),
+        RECEIPT_HINT_TIMEOUT,
+        'receipt hint lookup timeout',
+      );
+      messages = hintedMessages.filter((m) => m.msgId.toLowerCase() === query.input.toLowerCase());
+    } catch (error) {
+      logger.warn('Receipt hint lookup failed; searching by message ID', chainMetadata.name, error);
+    }
+  }
+
+  if (!messages.length) {
+    // A slow or failed hint must not consume the ordinary lookup's time budget.
+    messages = await timeout(
+      fetchMessagesWithoutGasPayments(chainMetadata, query, multiProvider, registry, queryType),
+      MESSAGE_SEARCH_TIMEOUT,
+      'message search timeout',
+    );
+  }
+
+  if (messages.length >= 5 || !messages.length) return messages;
+  try {
+    return await timeout(
+      fetchIgpGasPayments(messages, chainMetadata, multiProvider),
+      GAS_PAYMENTS_TIMEOUT,
+      'gas payments lookup timeout',
+    );
+  } catch (error) {
+    logger.warn('Gas payment lookup failed; keeping verified messages', chainMetadata.name, error);
+    return messages;
+  }
+}
+
+async function fetchMessagesWithoutGasPayments(
+  chainMetadata: ChainMetadata,
+  query: PiMessageQuery,
+  multiProvider: MultiProtocolProvider,
+  registry: IRegistry,
+  queryType?: PiQueryType,
+): Promise<Message[]> {
   const input = query.input;
 
   let logs: ExtendedLog[] = [];
@@ -91,22 +149,32 @@ export async function fetchMessagesFromPiChain(
     return [];
   }
 
-  const messages = logs
-    .map((l) => logToMessage(multiProvider, l, chainMetadata))
-    .filter((m): m is Message => !!m);
+  if (!logs.length) return [];
+  const mailboxAddress = await resolveMailbox(chainMetadata, registry);
+  if (!mailboxAddress) return [];
 
-  // Fetch IGP gas payments for each message if it's a small set
-  if (messages.length < 5) {
-    const messagesWithGasPayments: Message[] = [];
-    // Avoiding parallelism here out of caution for RPC rate limits
-    for (const m of messages) {
-      messagesWithGasPayments.push(await tryFetchIgpGasPayments(m, chainMetadata, multiProvider));
-    }
-    return messagesWithGasPayments;
-  } else {
-    // Otherwise skip IGP gas fetching
-    return messages;
+  return logs
+    .filter((log) => log.address.toLowerCase() === mailboxAddress.toLowerCase())
+    .map((l) => logToMessage(multiProvider, l, chainMetadata))
+    .filter(
+      (m): m is Message =>
+        !!m &&
+        m.originDomainId === chainMetadata.domainId &&
+        (queryType !== PiQueryType.MsgId || m.msgId.toLowerCase() === input.toLowerCase()),
+    );
+}
+
+async function fetchIgpGasPayments(
+  messages: Message[],
+  chainMetadata: ChainMetadata,
+  multiProvider: MultiProtocolProvider,
+) {
+  const enrichedMessages: Message[] = [];
+  // Keep requests sequential to avoid RPC rate limits.
+  for (const message of messages) {
+    enrichedMessages.push(await tryFetchIgpGasPayments(message, chainMetadata, multiProvider));
   }
+  return enrichedMessages;
 }
 
 async function fetchLogsForAddress(
@@ -294,7 +362,7 @@ function logToMessage(
         to: log.to ? normalizeAddress(log.to) : constants.AddressZero,
         blockHash: log.blockHash,
         blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-        mailbox: chainMetadata.mailbox || constants.AddressZero,
+        mailbox: log.address,
         nonce: 0,
         // TODO get more gas info from tx
         gasLimit: 0,
@@ -355,6 +423,6 @@ async function resolveMailbox(
   const chainName = chainMetadata.name;
   const chainAddresses = await registry.getChainAddresses(chainName);
   const mailbox = chainAddresses?.mailbox;
-  if (!mailbox) logger.debug(`No mailbox address found for chain ${chainName}`);
+  if (!mailbox) logger.warn(`Cannot verify PI messages: no mailbox address for chain ${chainName}`);
   return mailbox;
 }
