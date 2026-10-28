@@ -29,6 +29,7 @@ const dispatchIdTopic0 = mailbox.getEventTopic('DispatchId');
 
 export interface PiMessageQuery {
   input: string;
+  transactionHash?: string;
   fromBlock?: providers.BlockTag;
   toBlock?: providers.BlockTag;
 }
@@ -91,9 +92,18 @@ export async function fetchMessagesFromPiChain(
     return [];
   }
 
+  const mailboxAddress = await resolveMailbox(chainMetadata, registry);
+  if (!mailboxAddress) return [];
+
   const messages = logs
+    .filter((log) => log.address.toLowerCase() === mailboxAddress.toLowerCase())
     .map((l) => logToMessage(multiProvider, l, chainMetadata))
-    .filter((m): m is Message => !!m);
+    .filter(
+      (m): m is Message =>
+        !!m &&
+        m.originDomainId === chainMetadata.domainId &&
+        (queryType !== PiQueryType.MsgId || m.msgId.toLowerCase() === input.toLowerCase()),
+    );
 
   // Fetch IGP gas payments for each message if it's a small set
   if (messages.length < 5) {
@@ -171,6 +181,27 @@ async function fetchLogsForMsgId(
   logger.debug(`Fetching logs for msgId ${msgId} on chain ${name} (${domainId})`);
   const mailbox = await resolveMailbox(chainMetadata, registry);
   if (!mailbox) return [];
+  // The URL supplies only a receipt lookup hint. Its contents never become a Message.
+  if (
+    query.transactionHash &&
+    isValidTransactionHash(query.transactionHash, ProtocolType.Ethereum)
+  ) {
+    const hintedLogs = await fetchLogsForTxHash(
+      chainMetadata,
+      { input: query.transactionHash },
+      multiProvider,
+    );
+    const matchingLogs = hintedLogs.filter((log) => {
+      if (log.address.toLowerCase() !== mailbox.toLowerCase()) return false;
+      const message = logToMessage(multiProvider, log, chainMetadata);
+      return (
+        !!message &&
+        message.originDomainId === domainId &&
+        message.msgId.toLowerCase() === msgId.toLowerCase()
+      );
+    });
+    if (matchingLogs.length) return matchingLogs;
+  }
   const topic1 = msgId;
   const logs: ExtendedLog[] = await fetchLogsFromProvider(
     [
@@ -294,7 +325,7 @@ function logToMessage(
         to: log.to ? normalizeAddress(log.to) : constants.AddressZero,
         blockHash: log.blockHash,
         blockNumber: BigNumber.from(log.blockNumber).toNumber(),
-        mailbox: chainMetadata.mailbox || constants.AddressZero,
+        mailbox: log.address,
         nonce: 0,
         // TODO get more gas info from tx
         gasLimit: 0,

@@ -9,6 +9,7 @@ import { logger } from '../../../utils/logger';
 import { useScrapedDomains } from '../../chains/queries/useScrapedChains';
 import { isEvmChain, isPiChain } from '../../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
+import type { MessageLookupData } from '../messageLookup';
 import { isValidSearchQuery } from '../queries/useMessageQuery';
 import { PiMessageQuery, PiQueryType, fetchMessagesFromPiChain } from './fetchPiChainMessages';
 
@@ -21,12 +22,14 @@ export function usePiChainMessageSearchQuery({
   startTimeFilter,
   endTimeFilter,
   piQueryType,
+  lookupData,
   pause,
 }: {
   sanitizedInput: string;
   startTimeFilter?: number | null;
   endTimeFilter?: number | null;
   piQueryType?: PiQueryType;
+  lookupData?: MessageLookupData;
   pause: boolean;
 }) {
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
@@ -40,6 +43,8 @@ export function usePiChainMessageSearchQuery({
       sanitizedInput,
       startTimeFilter,
       endTimeFilter,
+      piQueryType,
+      lookupData,
       multiProviderVersion,
       registry,
       pause,
@@ -60,7 +65,21 @@ export function usePiChainMessageSearchQuery({
       );
       try {
         const results = await Promise.allSettled(
-          piChains.map((c) => fetchMessages(c, query, multiProvider, registry, piQueryType)),
+          piChains.map((c) =>
+            fetchMessages(
+              c,
+              {
+                ...query,
+                transactionHash:
+                  lookupData && c.domainId === lookupData.originDomainId
+                    ? lookupData.origin.hash
+                    : undefined,
+              },
+              multiProvider,
+              registry,
+              piQueryType,
+            ),
+          ),
         );
         return results
           .filter(
@@ -87,9 +106,11 @@ export function usePiChainMessageSearchQuery({
 
 export function usePiChainMessageQuery({
   messageId,
+  lookupData,
   pause,
 }: {
   messageId: string;
+  lookupData?: MessageLookupData;
   pause: boolean;
 }) {
   const { hasRun, isError, isFetching, messageList } = usePiChainMessageSearchQuery({
@@ -97,10 +118,12 @@ export function usePiChainMessageQuery({
     startTimeFilter: null,
     endTimeFilter: null,
     piQueryType: PiQueryType.MsgId,
+    lookupData,
     pause,
   });
 
-  const message = messageList?.length ? messageList[0] : null;
+  const message =
+    messageList.find((m) => m.msgId.toLowerCase() === ensure0x(messageId).toLowerCase()) ?? null;
   const isMessageFound = !!message;
 
   return {

@@ -21,6 +21,7 @@ import {
   useRelatedIcaMessage,
   useRevealCalls,
 } from '../ica';
+import { getMessageDetailPath } from '../messageLookup';
 import { KeyValueRow } from './KeyValueRow';
 
 /**
@@ -384,7 +385,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     commitment={decodeResult.commitment}
                     titleAccessory={
                       <Link
-                        href={`/message/${relatedMessage.msgId}`}
+                        href={getMessageDetailPath(relatedMessage)}
                         className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
                       >
                         View REVEAL message
@@ -404,7 +405,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     titleAccessory={
                       relatedMessage && relatedMessageType === IcaMessageType.REVEAL ? (
                         <Link
-                          href={`/message/${relatedMessage.msgId}`}
+                          href={getMessageDetailPath(relatedMessage)}
                           className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
                         >
                           View REVEAL message
@@ -442,7 +443,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     titleAccessory={
                       relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT ? (
                         <Link
-                          href={`/message/${relatedMessage.msgId}`}
+                          href={getMessageDetailPath(relatedMessage)}
                           className="inline-flex items-center gap-1 text-xs font-medium text-green-800 underline hover:text-green-900"
                         >
                           View corresponding COMMITMENT message
@@ -466,7 +467,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
                     titleAccessory={
                       relatedMessage && relatedMessageType === IcaMessageType.COMMITMENT ? (
                         <Link
-                          href={`/message/${relatedMessage.msgId}`}
+                          href={getMessageDetailPath(relatedMessage)}
                           className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 underline hover:text-amber-900"
                         >
                           View corresponding COMMITMENT message

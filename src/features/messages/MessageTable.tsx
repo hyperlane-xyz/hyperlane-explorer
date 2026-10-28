@@ -19,6 +19,7 @@ import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString, getRelativeTimeRefreshInterval } from '../../utils/time';
 import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
+import { getMessageDetailPath } from './messageLookup';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
 import { parseWarpRouteMessageDetails } from './utils';
@@ -196,7 +197,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   router: NextRouter;
   warpRouteChainAddressMap: WarpRouteChainAddressMap;
 }) {
-  const { msgId, status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
+  const { status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
@@ -240,7 +241,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     );
   }
 
-  const detailPath = `/message/${msgId}`;
+  const detailPath = getMessageDetailPath(message);
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
     hasPrimedDetailPage.current = true;
@@ -408,7 +409,7 @@ const styles = {
 };
 
 function prefetchMessageNavigation(router: NextRouter, message: MessageStub) {
-  const detailPath = `/message/${message.msgId}`;
+  const detailPath = getMessageDetailPath(message);
   void router.prefetch(detailPath);
   void prefetchMessageDetailShell();
   prefetchMessageStub(message);

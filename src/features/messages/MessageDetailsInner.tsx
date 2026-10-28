@@ -79,7 +79,7 @@ interface Props {
   message?: Message | MessageStub;
 }
 
-export function MessageDetailsInner({ messageId, message: messageFromUrlParams }: Props) {
+export function MessageDetailsInner({ messageId, message: initialMessage }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
   const ensureChainMetadata = useStore((s) => s.ensureChainMetadata);
   const ensureWarpRouteData = useStore((s) => s.ensureWarpRouteData);
@@ -89,7 +89,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     messageId: string;
     value: MessageDetailsRuntimeState;
   } | null>(null);
-  const hasDetailedUrlMessage = hasCompleteMessageDetails(messageFromUrlParams);
+  const hasInitialMessageDetails = hasCompleteMessageDetails(initialMessage);
 
   const {
     isFetching: isGraphQlFetching,
@@ -97,14 +97,14 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
     hasRun: hasGraphQlRun,
     isMessageFound: isGraphQlMessageFound,
     message: messageFromGraphQl,
-  } = useMessageQuery({ messageId, pause: hasDetailedUrlMessage });
+  } = useMessageQuery({ messageId, pause: hasInitialMessageDetails });
 
-  const baseIsMessageFound = !!messageFromUrlParams || isGraphQlMessageFound;
+  const baseIsMessageFound = !!initialMessage || isGraphQlMessageFound;
   const baseMessage =
-    (hasDetailedUrlMessage ? messageFromUrlParams : messageFromGraphQl || messageFromUrlParams) ||
+    (hasInitialMessageDetails ? initialMessage : messageFromGraphQl || initialMessage) ||
     PLACEHOLDER_MESSAGE;
   const needsRuntimeMessageLookup =
-    !baseIsMessageFound && !hasDetailedUrlMessage && hasGraphQlRun && !isGraphQlMessageFound;
+    !baseIsMessageFound && !hasInitialMessageDetails && hasGraphQlRun && !isGraphQlMessageFound;
   const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
   const message = activeRuntimeState?.message || baseMessage;
   const confirmationProgress = useConfirmationProgress(message, chainMetadataResolver);
@@ -215,7 +215,7 @@ export function MessageDetailsInner({ messageId, message: messageFromUrlParams }
             messageId={messageId}
             baseMessage={baseMessage}
             baseIsMessageFound={baseIsMessageFound}
-            hasDetailedUrlMessage={hasDetailedUrlMessage}
+            hasInitialMessageDetails={hasInitialMessageDetails}
             hasGraphQlRun={hasGraphQlRun}
             isGraphQlMessageFound={isGraphQlMessageFound}
             destinationChainName={destinationChainName}

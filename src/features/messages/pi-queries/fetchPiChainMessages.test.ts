@@ -2,12 +2,19 @@ import { Mailbox__factory as MailboxFactory } from '@hyperlane-xyz/core';
 import type { IRegistry } from '@hyperlane-xyz/registry';
 import { chainAddresses, chainMetadata } from '@hyperlane-xyz/registry';
 import type { ChainMetadata } from '@hyperlane-xyz/sdk';
-import { addressToBytes32, formatMessage, messageId, normalizeAddress } from '@hyperlane-xyz/utils';
+import {
+  addressToBytes32,
+  formatMessage,
+  messageId,
+  normalizeAddress,
+  toBase64,
+} from '@hyperlane-xyz/utils';
 import type { providers } from 'ethers';
 
 import { Message, MessageStatus } from '../../../types';
 import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
-import { fetchMessagesFromPiChain } from './fetchPiChainMessages';
+import { parseMessageLookupData } from '../messageLookup';
+import { fetchMessagesFromPiChain, PiMessageQuery, PiQueryType } from './fetchPiChainMessages';
 
 const mailbox = MailboxFactory.createInterface();
 const sepoliaMailbox = chainAddresses.sepolia.mailbox;
@@ -103,24 +110,166 @@ describe('fetchMessagesFromPiChain', () => {
   it('returns no messages for invalid input', async () => {
     await expect(fetch({ input: 'invalidInput' })).resolves.toEqual([]);
   });
+
+  it('reopens a historical message from a receipt hint without a recent log scan', async () => {
+    const provider = createProvider({ head: blockNumber + 6000 });
+    await expect(fetch({ input: msgId }, PiQueryType.MsgId, provider)).resolves.toEqual([]);
+    jest.mocked(provider.getLogs).mockClear();
+
+    const lookup = parseMessageLookupData(
+      toBase64({
+        ...expectedMessage,
+        body: '0xbad',
+        status: MessageStatus.Delivered,
+        recipient: senderAddress,
+        destination: { hash: 'forged', blockNumber: 1 },
+      }),
+    )!;
+    await expect(
+      fetch({ input: msgId, transactionHash: lookup.origin.hash }, PiQueryType.MsgId, provider),
+    ).resolves.toEqual([expectedMessage]);
+    expect(provider.getLogs).not.toHaveBeenCalled();
+  });
+
+  it('selects the requested dispatch from a multi-message receipt', async () => {
+    const bytes = formatMessage(
+      0,
+      expectedMessage.nonce + 1,
+      sepoliaConfig.domainId,
+      senderAddress,
+      destinationDomain,
+      recipientAddress,
+      '0x1234',
+    );
+    const secondLog = {
+      ...baseLog,
+      ...mailbox.encodeEventLog(mailbox.getEvent('Dispatch'), [
+        senderAddress,
+        destinationDomain,
+        addressToBytes32(recipientAddress),
+        bytes,
+      ]),
+      logIndex: 2,
+    };
+    const secondMsgId = messageId(bytes);
+    const provider = createProvider({ receiptLogs: [dispatchLog, secondLog] });
+    const messages = await fetch(
+      { input: secondMsgId, transactionHash: txHash },
+      PiQueryType.MsgId,
+      provider,
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ msgId: secondMsgId, body: '0x1234' });
+    expect(provider.getLogs).not.toHaveBeenCalled();
+
+    // The ordinary message-ID fallback must also filter the full receipt.
+    const fallbackProvider = createProvider({ receiptLogs: [secondLog, dispatchLog] });
+    await expect(fetch({ input: msgId }, PiQueryType.MsgId, fallbackProvider)).resolves.toEqual([
+      expectedMessage,
+    ]);
+  });
+
+  it('rejects a receipt that does not contain the URL message ID', async () => {
+    await expect(
+      fetch({ input: `0x${'ff'.repeat(32)}`, transactionHash: txHash }, PiQueryType.MsgId),
+    ).resolves.toEqual([]);
+  });
+
+  it('falls back to the message-ID scan when a receipt hint is not found', async () => {
+    await expect(
+      fetch({ input: msgId, transactionHash: `0x${'ff'.repeat(32)}` }, PiQueryType.MsgId),
+    ).resolves.toEqual([expectedMessage]);
+  });
+
+  it.each([PiQueryType.MsgId, PiQueryType.TxHash])(
+    'rejects dispatch events from an unrelated contract in a %s lookup',
+    async (queryType) => {
+      const provider = createProvider({
+        receiptLogs: [{ ...dispatchLog, address: senderAddress }],
+      });
+      await expect(
+        fetch(
+          { input: queryType === PiQueryType.MsgId ? msgId : txHash, transactionHash: txHash },
+          queryType,
+          provider,
+        ),
+      ).resolves.toEqual([]);
+    },
+  );
+
+  it('rejects dispatches whose origin domain does not match the queried chain', async () => {
+    const bytes = formatMessage(
+      0,
+      1,
+      sepoliaConfig.domainId + 1,
+      senderAddress,
+      destinationDomain,
+      recipientAddress,
+      '0x',
+    );
+    const provider = createProvider({
+      receiptLogs: [
+        {
+          ...baseLog,
+          ...mailbox.encodeEventLog(mailbox.getEvent('Dispatch'), [
+            senderAddress,
+            destinationDomain,
+            addressToBytes32(recipientAddress),
+            bytes,
+          ]),
+        },
+      ],
+    });
+    await expect(
+      fetch({ input: messageId(bytes), transactionHash: txHash }, PiQueryType.MsgId, provider),
+    ).resolves.toEqual([]);
+  });
+
+  it('uses the resolved mailbox when chain metadata does not embed its address', async () => {
+    const provider = createProvider();
+    const multiProvider = createMultiProvider(provider);
+    const registry = {
+      getChainAddresses: jest.fn(async () => ({ mailbox: sepoliaMailbox })),
+    } as unknown as IRegistry;
+    await expect(
+      fetchMessagesFromPiChain(
+        chainMetadata.sepolia,
+        { input: msgId, transactionHash: txHash },
+        multiProvider,
+        registry,
+        PiQueryType.MsgId,
+      ),
+    ).resolves.toEqual([expectedMessage]);
+  });
 });
 
-function fetch(query: { input: string; fromBlock?: number }) {
-  const provider = createProvider();
-  const multiProvider = {
+function createMultiProvider(provider: providers.Provider) {
+  return {
     getChainId: () => sepoliaConfig.chainId,
     getEthersV5Provider: () => provider,
     tryGetChainId: () => destinationDomain,
   } as unknown as ExplorerMultiProvider;
-
-  return fetchMessagesFromPiChain(sepoliaConfig, query, multiProvider, {} as IRegistry);
 }
 
-function createProvider() {
+function fetch(query: PiMessageQuery, queryType?: PiQueryType, provider = createProvider()) {
+  return fetchMessagesFromPiChain(
+    sepoliaConfig,
+    query,
+    createMultiProvider(provider),
+    {} as IRegistry,
+    queryType,
+  );
+}
+
+function createProvider({
+  head = blockNumber,
+  receiptLogs = [dispatchLog],
+}: { head?: number; receiptLogs?: providers.Log[] } = {}) {
   return {
     getBlock: jest.fn(async () => ({ timestamp })),
-    getBlockNumber: jest.fn(async () => blockNumber),
+    getBlockNumber: jest.fn(async () => head),
     getLogs: jest.fn(async (filter: providers.Filter) => {
+      if (Number(filter.fromBlock) > blockNumber) return [];
       const topics = filter.topics ?? [];
       if (matchesTopics(dispatchLog.topics, topics)) return [dispatchLog];
       if (matchesTopics(dispatchIdLog.topics, topics)) return [dispatchIdLog];
@@ -131,7 +280,7 @@ function createProvider() {
         ? {
             blockNumber,
             from: senderAddress,
-            logs: [dispatchLog],
+            logs: receiptLogs,
             to: sepoliaMailbox,
           }
         : null,
