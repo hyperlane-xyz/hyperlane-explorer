@@ -21,7 +21,7 @@ import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
-import { parseWarpRouteMessageDetails, serializeMessage } from './utils';
+import { parseWarpRouteMessageDetails } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
 
@@ -240,7 +240,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     );
   }
 
-  const base64 = message.isPiMsg ? serializeMessage(message) : undefined;
   const detailPath = `/message/${msgId}`;
   const primeDetailPage = () => {
     if (hasPrimedDetailPage.current) return;
@@ -271,7 +270,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
     <>
       <LinkCell
         path={detailPath}
-        base64={base64}
         aClasses="flex items-center py-2.5 pl-3 sm:pl-5"
         onNavigateIntent={primeDetailPage}
       >
@@ -282,7 +280,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         aClasses="flex items-center py-2.5"
         onNavigateIntent={primeDetailPage}
       >
@@ -293,7 +290,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         tdClasses="hidden sm:table-cell"
         aClasses={styles.value}
         onNavigateIntent={primeDetailPage}
@@ -302,7 +298,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         tdClasses="hidden sm:table-cell"
         aClasses={styles.value}
         onNavigateIntent={primeDetailPage}
@@ -311,7 +306,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         tdClasses="hidden lg:table-cell"
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
@@ -320,7 +314,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
       >
@@ -328,7 +321,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        base64={base64}
         aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
         tdClasses="hidden sm:table-cell"
         onNavigateIntent={primeDetailPage}
@@ -360,12 +352,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
           </>
         ) : null}
       </LinkCell>
-      <LinkCell
-        path={detailPath}
-        base64={base64}
-        tdClasses="w-8"
-        onNavigateIntent={primeDetailPage}
-      >
+      <LinkCell path={detailPath} tdClasses="w-8" onNavigateIntent={primeDetailPage}>
         {statusIcon && (
           <span className="flex h-[18px] w-[18px] items-center justify-center" title={statusTitle}>
             {statusIcon}
@@ -386,23 +373,20 @@ const RelativeTime = memo(function RelativeTime({ timestamp }: { timestamp: numb
 
 function LinkCell({
   path,
-  base64,
   tdClasses,
   aClasses,
   onNavigateIntent,
   children,
 }: PropsWithChildren<{
   path: string;
-  base64?: string;
   tdClasses?: string;
   aClasses?: string;
   onNavigateIntent?: () => void;
 }>) {
-  const params = base64 ? `?data=${base64}` : '';
   return (
     <td className={tdClasses}>
       <Link
-        href={`${path}${params}`}
+        href={path}
         prefetch={false}
         className={`block h-full w-full ${aClasses || ''}`}
         onMouseEnter={onNavigateIntent}

@@ -1,6 +1,5 @@
 import dynamic from 'next/dynamic';
 
-import { Message, MessageStub } from '../../types';
 import { MessageDetailsLoading } from './MessageDetailsLoading';
 import { getPrefetchedMessageStub } from './queries/prefetch';
 
@@ -13,16 +12,9 @@ const MessageDetailsInner = dynamic(
   { loading: () => <MessageDetailsLoading /> },
 );
 
-export function MessageDetailsPage({
-  messageId,
-  message,
-}: {
-  messageId: string;
-  message?: Message | MessageStub;
-}) {
-  const prefetchedMessage = getPrefetchedMessageStub(messageId);
-  const initialMessage =
-    message && 'blockNumber' in message.origin ? message : message || prefetchedMessage;
+export function MessageDetailsPage({ messageId }: { messageId: string }) {
+  // Message content is never read from the URL; only stubs from this session's own searches.
+  const initialMessage = getPrefetchedMessageStub(messageId);
 
   return (
     <>

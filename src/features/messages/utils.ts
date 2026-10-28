@@ -3,11 +3,9 @@ import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMet
 import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
 import {
   bytesToProtocolAddress,
-  fromBase64,
   fromHexString,
   fromWei,
   parseWarpRouteMessage,
-  toBase64,
 } from '@hyperlane-xyz/utils';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
@@ -15,14 +13,6 @@ import { formatAddress } from '../../utils/addresses';
 import { logger } from '../../utils/logger';
 import { getTokenFromWarpRouteChainAddressMap } from '../../utils/token';
 import { getWarpRouteAmountParts } from '../../utils/warpRouteAmounts';
-
-export function serializeMessage(msg: MessageStub | Message): string | undefined {
-  return toBase64(msg);
-}
-
-export function deserializeMessage<M extends MessageStub>(data: string | string[]): M | undefined {
-  return fromBase64<M>(data);
-}
 
 export function parseWarpRouteMessageDetails(
   message: Message | MessageStub,
