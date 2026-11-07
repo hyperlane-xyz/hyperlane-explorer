@@ -12,22 +12,23 @@ import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
-import { getHumanReadableDuration } from '../../utils/time';
-import { getChainDisplayName, isEvmChain } from '../chains/utils';
+import { getChainDisplayName } from '../chains/utils';
 import { useTransactionMessageCount } from '../transactions/useTransactionMessageCount';
 import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
 } from './cards/OriginTransactionCard';
+import {
+  MessageDiagnosticsProvider,
+  useMessageDiagnosticsContext,
+} from './diagnostics/MessageDiagnosticsContext';
+import { useOriginConfirmation } from './diagnostics/useOriginConfirmation';
 import { useIsIcaMessage } from './ica';
 import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
-import {
-  isWaitingForOriginConfirmations,
-  useConfirmationProgress,
-} from './useConfirmationProgress';
+import { isWaitingForOriginConfirmations } from './useConfirmationProgress';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const ContentDetailsCard = dynamic(
@@ -63,13 +64,16 @@ const WarpTransferDetailsCard = dynamic(
   () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
   { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
 );
-const WarpRouteIsmDetailsCard = dynamic(
-  () => import('./cards/WarpRouteIsmDetailsCard').then((mod) => mod.WarpRouteIsmDetailsCard),
-  { loading: () => <DetailCardSkeleton className="w-full" /> },
+const MessageLifecycleCard = dynamic(
+  () => import('./cards/MessageLifecycleCard').then((mod) => mod.MessageLifecycleCard),
+  {
+    loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
+  },
 );
-const TimelineCard = dynamic(() => import('./cards/TimelineCard').then((mod) => mod.TimelineCard), {
-  loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
-});
+const MessageDiagnosticsCard = dynamic(
+  () => import('./cards/MessageDiagnosticsCard').then((mod) => mod.MessageDiagnosticsCard),
+  { loading: () => <DetailSectionSkeleton className="w-full" rows={5} /> },
+);
 const MessageDetailsRuntime = lazy(() =>
   import('./MessageDetailsRuntime').then((mod) => ({ default: mod.MessageDetailsRuntime })),
 );
@@ -106,8 +110,26 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
   const needsRuntimeMessageLookup =
     !baseIsMessageFound && !hasInitialMessageDetails && hasGraphQlRun && !isGraphQlMessageFound;
   const activeRuntimeState = runtimeState?.messageId === messageId ? runtimeState.value : null;
-  const message = activeRuntimeState?.message || baseMessage;
-  const confirmationProgress = useConfirmationProgress(message, chainMetadataResolver);
+  // Indexed delivery is authoritative, even before the runtime effect catches up.
+  const message =
+    baseMessage.status === MessageStatus.Delivered
+      ? baseMessage
+      : activeRuntimeState?.message || baseMessage;
+  const originConfirmation = useOriginConfirmation(message, chainMetadataResolver);
+  const confirmationProgress =
+    originConfirmation.required === undefined
+      ? null
+      : { required: originConfirmation.required, current: originConfirmation.current ?? null };
+  const originTimestamp = activeRuntimeState?.originConfirmationTimestamp;
+  const timedOriginConfirmation = {
+    ...originConfirmation,
+    timestamp:
+      originConfirmation.timestamp ??
+      (originConfirmation.confirmed &&
+      originTimestamp?.blockNumber === originConfirmation.blockNumber
+        ? originTimestamp?.timestamp
+        : undefined),
+  };
   const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
   const isOriginConfirming =
     isMessageFound &&
@@ -126,15 +148,10 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     destinationDomainId: message.destinationDomainId,
   });
   const debugResult = activeRuntimeState?.debugResult;
-  const { status, originDomainId, destinationDomainId, origin, destination, isPiMsg } = message;
-  const duration = destination?.timestamp
-    ? getHumanReadableDuration(destination.timestamp - origin.timestamp, 3)
-    : undefined;
-  const showTimeline =
-    !isPiMsg &&
-    'blockNumber' in origin &&
-    isEvmChain(chainMetadataResolver, originDomainId) &&
-    isEvmChain(chainMetadataResolver, destinationDomainId);
+  const { status, originDomainId, destinationDomainId, origin, destination } = message;
+  const showLifecycle = isMessageFound;
+  const confirmed =
+    baseMessage.status === MessageStatus.Delivered && baseMessage.isProvisional === false;
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
@@ -165,9 +182,9 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   return (
-    <>
-      <div className="bg-accent-gradient shadow-accent-glow flex items-center justify-between rounded px-3 py-3">
-        <div className="flex min-w-0 items-center gap-2">
+    <MessageDiagnosticsProvider messageId={messageId} live={showLifecycle} enabled={showLifecycle}>
+      <div className="bg-accent-gradient shadow-accent-glow flex flex-wrap items-center justify-between gap-3 rounded px-3 py-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="bg-cream-300 h-2.5 w-2.5 rounded-full" />
           <h2 className="text-lg font-medium text-white">{`${
             isIcaMsg ? 'ICA ' : ''
@@ -187,7 +204,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           isMessageFound={isMessageFound}
           isFetching={isFetching}
           isError={isError}
-          duration={duration}
         />
       </div>
       <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
@@ -195,7 +211,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           chainName={originChainName}
           domainId={originDomainId}
           transaction={origin}
-          confirmationProgress={confirmationProgress}
           blur={blur}
         />
         <Suspense
@@ -221,26 +236,35 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
             destinationChainName={destinationChainName}
             blur={blur}
             isOriginConfirming={isOriginConfirming}
+            originConfirmation={originConfirmation}
             warpRouteDetails={warpRouteDetails}
             onStateChange={handleRuntimeStateChange}
           />
         </Suspense>
-        {showTimeline && <TimelineCard message={message} blur={blur} />}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
         {warpRouteDetails && (
-          <>
-            <WarpTransferDetailsCard
-              message={message}
-              warpRouteDetails={warpRouteDetails}
-              blur={blur}
-            />
-            <WarpRouteIsmDetailsCard
-              message={message}
-              warpRouteDetails={warpRouteDetails}
-              blur={blur}
-            />
-          </>
+          <WarpTransferDetailsCard
+            message={message}
+            warpRouteDetails={warpRouteDetails}
+            blur={blur}
+          />
         )}
+        {showLifecycle && (
+          <MessageLifecycleCard
+            key={messageId}
+            messageId={messageId}
+            message={message}
+            confirmed={confirmed}
+            originConfirmation={timedOriginConfirmation}
+            blur={blur}
+          />
+        )}
+        {showLifecycle && (
+          <MessageDiagnosticsCard
+            destinationChainName={destinationChainName}
+            delivered={status === MessageStatus.Delivered}
+          />
+        )}
+        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
         <WarpRouteVisualizationCard
           message={message}
           warpRouteDetails={warpRouteDetails}
@@ -257,7 +281,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
         )}
       </div>
-    </>
+    </MessageDiagnosticsProvider>
   );
 }
 
@@ -269,7 +293,9 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.isMessageFound === b.isMessageFound &&
     a.message === b.message &&
     a.debugResult === b.debugResult &&
-    a.isDeliveryStatusFetching === b.isDeliveryStatusFetching
+    a.isDeliveryStatusFetching === b.isDeliveryStatusFetching &&
+    a.originConfirmationTimestamp?.blockNumber === b.originConfirmationTimestamp?.blockNumber &&
+    a.originConfirmationTimestamp?.timestamp === b.originConfirmationTimestamp?.timestamp
   );
 }
 
@@ -293,22 +319,23 @@ function StatusHeader({
   isMessageFound,
   isFetching,
   isError,
-  duration,
 }: {
   messageStatus: MessageStatus;
   isOriginConfirming: boolean;
   isMessageFound: boolean;
   isFetching: boolean;
   isError: boolean;
-  duration?: string;
 }) {
+  const { observation } = useMessageDiagnosticsContext();
+  const loading = isFetching && !isMessageFound;
   let text: string;
-  if (isFetching) {
+  if (loading) {
     text = 'Loading message';
   } else if (isMessageFound) {
-    text = isOriginConfirming
-      ? 'Status: Confirming on origin'
-      : `Status: ${toTitleCase(messageStatus)}`;
+    text =
+      isOriginConfirming && !observation
+        ? 'Status: Confirming on origin'
+        : `Status: ${toTitleCase(messageStatus)}`;
   } else if (isError) {
     text = 'Error finding message';
   } else {
@@ -316,7 +343,7 @@ function StatusHeader({
   }
 
   let icon: React.ReactNode;
-  if (isFetching) {
+  if (loading) {
     icon = (
       <div className="flex items-center justify-center">
         <SpinnerIcon width={20} height={20} color={Color.white} />
@@ -331,7 +358,6 @@ function StatusHeader({
   return (
     <div className="flex items-center">
       <h3 className="mr-2 text-lg font-medium text-white">{text}</h3>
-      {duration && <span className="text-cream-300 mr-3 text-sm">({duration})</span>}
       {icon}
     </div>
   );

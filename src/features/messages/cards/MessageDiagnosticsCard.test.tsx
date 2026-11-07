@@ -1,0 +1,293 @@
+import type { ChainMetadata } from '@hyperlane-xyz/sdk';
+import { ProtocolType } from '@hyperlane-xyz/utils';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
+import type { DiagnosticState } from '../diagnostics/types';
+import { MessageDiagnosticsCard } from './MessageDiagnosticsCard';
+
+jest.mock('@hyperlane-xyz/widgets', () => ({
+  SpinnerIcon: () => <span data-testid="spinner" />,
+  BoxArrowIcon: () => null,
+  CopyButton: ({ copyValue }: { copyValue: string }) => <button data-copy={copyValue}>Copy</button>,
+}));
+jest.mock('../diagnostics/MessageDiagnosticsContext', () => ({
+  useMessageDiagnosticsContext: jest.fn(),
+}));
+jest.mock('../../../metadataStore', () => ({
+  useChainMetadata: () => mockMetadata,
+  useChainMetadataResolver: () => ({ tryGetChainMetadata: () => mockMetadata }),
+}));
+
+const useDiagnostics = jest.mocked(useMessageDiagnosticsContext);
+const address = `0x${'11'.repeat(20)}`;
+let mockMetadata: ChainMetadata;
+
+function report(state?: DiagnosticState) {
+  const observation = state
+    ? {
+        relayer: address,
+        observedAt: '2026-11-07T12:00:00Z',
+        activityId: '1',
+        state,
+      }
+    : undefined;
+  return {
+    diagnostics: null,
+    activities: [],
+    history: {
+      activityPage: null,
+      loadedActivities: [],
+      page: 0,
+      fetching: false,
+      error: undefined,
+      next: jest.fn(),
+      previous: jest.fn(),
+    },
+    observation,
+    relayers: observation ? [observation] : [],
+    connectionState: 'live' as const,
+    fetching: false,
+    selectedRelayer: '',
+    setSelectedRelayer: jest.fn(),
+  };
+}
+
+function render(delivered = false) {
+  return renderToStaticMarkup(
+    <MessageDiagnosticsCard destinationChainName={mockMetadata.name} delivered={delivered} />,
+  );
+}
+
+beforeEach(() => {
+  mockMetadata = {
+    name: 'ethereum',
+    chainId: 1,
+    domainId: 1,
+    protocol: ProtocolType.Ethereum,
+    nativeToken: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: [{ http: 'https://rpc.invalid' }],
+    blockExplorers: [
+      {
+        name: 'Explorer',
+        url: 'https://explorer.test',
+        apiUrl: 'https://explorer.test',
+        family: 'etherscan',
+      },
+    ],
+  };
+  useDiagnostics.mockReturnValue(report());
+});
+
+it('keeps unused failed alternatives neutral and shows the satisfied threshold', () => {
+  useDiagnostics.mockReturnValue(
+    report({
+      phase: 'ready_to_submit',
+      tree_root: 'root',
+      modules: [
+        {
+          node_id: 'root',
+          ism: address,
+          module_type: 'Aggregation',
+          threshold: 1,
+          verified: 1,
+          selected_children: ['selected'],
+          children: [
+            { node_id: 'selected', ism: address },
+            { node_id: 'unused', ism: address },
+          ],
+        },
+        { node_id: 'selected', ism: address, children: [], verification: 'succeeded' },
+        {
+          node_id: 'unused',
+          ism: address,
+          children: [],
+          verification: 'failed',
+          metadata_error: 'Simulation failed',
+        },
+      ],
+    }),
+  );
+  const html = render();
+  expect(html).toContain('data-node-id="unused" data-state="unused"');
+  expect(html).toContain('Threshold met');
+  expect(html).toContain('1 of 2 checks required');
+  expect(html).not.toContain('Attempt failed');
+  expect(html).not.toContain('text-red-700');
+  expect(html).not.toContain('text-green-700');
+});
+
+it('distinguishes ready CCIP proof data from actual destination acceptance', () => {
+  useDiagnostics.mockReturnValue(
+    report({
+      phase: 'ready_to_submit',
+      tree_root: 'root',
+      modules: [
+        {
+          node_id: 'root',
+          ism: address,
+          module_type: 'CcipRead',
+          children: [],
+          metadata_status: 'ready',
+          offchain_read: { state: 'succeeded', http_status: 200 },
+        },
+      ],
+    }),
+  );
+  const html = render();
+  expect(html).toContain('data-node-id="root" data-state="ready"');
+  expect(html).toContain('Gateway responded successfully · HTTP 200');
+  expect(html).toContain('Destination acceptance is tracked separately.');
+  expect(html).not.toContain('Relayer verification check passed.');
+  expect(html).not.toContain('Accepted on destination');
+  expect(html).not.toContain('text-green-700');
+  expect(render(true)).toContain('Accepted on destination');
+});
+
+it.each([
+  [ProtocolType.Ethereum, `0x${'00'.repeat(12)}${'11'.repeat(20)}`, address],
+  [ProtocolType.Sealevel, `0x${'01'.repeat(32)}`, '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi'],
+])('links and copies the native %s module address', (protocol, encoded, native) => {
+  mockMetadata = { ...mockMetadata, protocol };
+  useDiagnostics.mockReturnValue(
+    report({
+      phase: 'preparing',
+      tree_root: 'root',
+      modules: [{ node_id: 'root', ism: encoded, children: [] }],
+    }),
+  );
+  const html = render();
+  expect(html).toContain(`href="https://explorer.test/address/${native}"`);
+  expect(html).toContain(`data-copy="${native}"`);
+});
+
+it('shows loading first, then neutral waiting when no reporter has observed the message', () => {
+  useDiagnostics.mockReturnValue({ ...report(), fetching: true });
+  expect(render()).toContain('Loading validation details…');
+  expect(render()).toContain('data-testid="spinner"');
+  useDiagnostics.mockReturnValue(report());
+  const html = render();
+  expect(html).toContain('Waiting for a relayer observation.');
+  expect(html).not.toContain('Attempt failed');
+  expect(html).not.toContain('data-testid="spinner"');
+});
+
+it('keeps incomplete aggregation counts honest and stops recursive branch cycles', () => {
+  useDiagnostics.mockReturnValue(
+    report({
+      phase: 'preparing',
+      tree_root: 'root',
+      modules: [
+        { node_id: 'root', ism: address, module_type: 'Aggregation', threshold: 2, children: [] },
+      ],
+    }),
+  );
+  expect(render()).toContain('2 checks required');
+  expect(render()).not.toContain('of 0');
+  useDiagnostics.mockReturnValue(
+    report({
+      phase: 'preparing',
+      tree_root: 'root',
+      modules: [
+        {
+          node_id: 'root',
+          ism: address,
+          children: [
+            { node_id: 'root', ism: address },
+            { node_id: 'missing', ism: address },
+          ],
+        },
+      ],
+    }),
+  );
+  const html = render();
+  expect(html).toContain('Further branch details unavailable');
+  expect(html).toContain('Waiting for module details');
+});
+
+it.each([ProtocolType.Ethereum, ProtocolType.Sealevel])(
+  'copies validator identities without destination explorer links on %s',
+  (protocol) => {
+    mockMetadata = { ...mockMetadata, protocol };
+    const second = `0x${'22'.repeat(20)}`;
+    const missing = `0x${'33'.repeat(20)}`;
+    const node = {
+      node_id: 'root',
+      ism: `0x${'01'.repeat(32)}`,
+      module_type: 'MessageIdMultisig',
+      children: [],
+      validators: [`0x${'00'.repeat(12)}${address.slice(2)}`, second, missing],
+      signatures: {
+        collected: 2,
+        threshold: 2,
+        index: 7,
+        root: `0x${'44'.repeat(32)}`,
+        unavailable: [{ validator: missing, reason: 'missing' }],
+      },
+    };
+    useDiagnostics.mockReturnValue(
+      report({ phase: 'ready_to_submit', tree_root: 'root', modules: [node] }),
+    );
+    const html = render();
+    expect(html).toContain('2 of 3 signatures required · 2 collected');
+    expect(html).not.toContain('2/2 validator signatures');
+    expect(html.match(/✓ Signed/g)).toHaveLength(2);
+    expect(html.match(/data-validator-status="collected"/g)).toHaveLength(2);
+    expect(html.match(/data-validator-status="unavailable"/g)).toHaveLength(1);
+    expect(html).toContain('Checkpoint not found in validator storage');
+    expect(html).toContain(`data-copy="${address}"`);
+    expect(html).toContain(`data-copy="${second}"`);
+    expect(html).not.toContain(`href="https://explorer.test/address/${address}"`);
+    expect(html).not.toContain(`href="https://explorer.test/address/${second}"`);
+
+    // One aggregate signature among two possible signers cannot identify either one.
+    useDiagnostics.mockReturnValue(
+      report({
+        phase: 'awaiting_signatures',
+        tree_root: 'root',
+        modules: [{ ...node, signatures: { ...node.signatures, collected: 1 } }],
+      }),
+    );
+    const partial = render();
+    expect(partial.match(/data-validator-status="unknown"/g)).toHaveLength(2);
+    expect(partial.match(/>Unknown<\/span>/g)).toHaveLength(2);
+    expect(partial).not.toContain('data-validator-status="collected"');
+    expect(partial).not.toContain('Not signed');
+    expect(partial).not.toContain('Not reported');
+    expect(partial).not.toContain('✓ Signed');
+    expect(partial).toContain(
+      'Unknown means individual signer details were not recorded, not that the validator did not sign.',
+    );
+  },
+);
+
+it('separates a six-of-nine threshold from six collected signatures without guessing signers', () => {
+  const validators = Array.from({ length: 9 }, (_, i) => `0x${String(i + 1).repeat(40)}`);
+  const node = {
+    node_id: 'root',
+    ism: address,
+    module_type: 'MessageIdMultisig',
+    children: [],
+    validators,
+    threshold: 6,
+    signatures: {
+      collected: 6,
+      index: 7,
+      root: `0x${'44'.repeat(32)}`,
+      unavailable: [],
+    },
+  };
+  useDiagnostics.mockReturnValue(report({ tree_root: 'root', modules: [node] }));
+  const html = render();
+  expect(html).toContain('6 of 9 signatures required · 6 collected');
+  expect(html.match(/data-validator-status="unknown"/g)).toHaveLength(9);
+  for (const validator of validators) expect(html).toContain(`data-copy="${validator}"`);
+  expect(html).not.toContain('✓ Signed');
+  expect(html).not.toContain('Not reported');
+
+  useDiagnostics.mockReturnValue(
+    report({ tree_root: 'root', modules: [{ ...node, validators: undefined }] }),
+  );
+  expect(render()).toContain('6 signatures required · 6 collected');
+  expect(render()).not.toContain('of 0');
+});

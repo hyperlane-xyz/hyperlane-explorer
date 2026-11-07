@@ -1,0 +1,32 @@
+.fill {
+  transform-origin: left;
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.indeterminate {
+  animation: progress-sweep 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+
+  .indeterminate {
+    animation: none;
+    transform: translateX(75%);
+  }
+
+  .spinner {
+    animation: none !important;
+  }
+}

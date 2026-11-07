@@ -9,6 +9,8 @@ import { useStore } from '../../../metadataStore';
 import { isPiChain } from '../utils';
 import { type DomainsEntry, DOMAINS_QUERY } from './fragments';
 
+const EMPTY_DOMAINS: DomainsEntry[] = [];
+
 export function useScrapedDomains() {
   const scrapedDomains = useStore((s) => s.scrapedDomains);
   const setScrapedDomains = useStore((s) => s.setScrapedDomains);
@@ -18,7 +20,9 @@ export function useScrapedDomains() {
     pause: !!scrapedDomains?.length,
   });
   const { data, fetching: isFetching, error } = result;
-  const resolvedScrapedDomains = scrapedDomains.length ? scrapedDomains : (data?.domain ?? []);
+  const resolvedScrapedDomains = scrapedDomains.length
+    ? scrapedDomains
+    : (data?.domain ?? EMPTY_DOMAINS);
   const retry = useCallback(
     () => reexecuteQuery({ requestPolicy: 'network-only' }),
     [reexecuteQuery],

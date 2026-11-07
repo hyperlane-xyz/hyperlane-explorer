@@ -7,7 +7,6 @@ import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageTx, MessageTxStub } from '../../../types';
 import { getChainDisplayName } from '../../chains/utils';
-import type { ConfirmationProgress } from '../useConfirmationProgress';
 import { KeyValueRow } from './KeyValueRow';
 import { transactionHelpText } from './TransactionCard';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
@@ -17,20 +16,17 @@ export function OriginTransactionCard({
   domainId,
   transaction,
   blur,
-  confirmationProgress,
 }: {
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
-  confirmationProgress?: ConfirmationProgress | null;
 }) {
   return (
     <MessageTransactionPreviewCard
       chainName={chainName}
       domainId={domainId}
       transaction={transaction}
-      confirmationProgress={confirmationProgress}
       blur={blur}
       title="Origin Transaction"
       helpText={transactionHelpText.origin}
@@ -114,7 +110,6 @@ function MessageTransactionPreviewCard({
   blur,
   title,
   helpText,
-  confirmationProgress,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -122,7 +117,6 @@ function MessageTransactionPreviewCard({
   blur: boolean;
   title: string;
   helpText: string;
-  confirmationProgress?: ConfirmationProgress | null;
 }) {
   const chainMetadataResolver = useChainMetadataResolver();
   const tooltipId = `${useId()}-transaction-info`;
@@ -141,7 +135,6 @@ function MessageTransactionPreviewCard({
           transaction={transaction}
           blur={blur}
           resolver={chainMetadataResolver}
-          confirmationProgress={confirmationProgress}
         />
       </div>
     </SectionCard>
