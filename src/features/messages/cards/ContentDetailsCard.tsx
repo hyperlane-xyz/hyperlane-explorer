@@ -14,11 +14,15 @@ import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
+import { isEcoMessage } from '../eco';
 import { MessagePayload } from './MessagePayload';
 
 const WarpTransferDetails = dynamic(
   () => import('./WarpTransferDetailsCard').then((module) => module.WarpTransferDetails),
   { loading: () => <p className="py-3 text-sm text-gray-500">Loading Warp details…</p> },
+);
+const EcoDetailsCard = dynamic(() =>
+  import('./EcoDetailsCard').then((module) => module.EcoDetailsCard),
 );
 
 interface Props {
@@ -42,6 +46,7 @@ export function ContentDetailsCard({ message, blur, warpRouteDetails, details }:
 
 function ContentDetails({ message, blur, warpRouteDetails, details }: Props) {
   const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
+  const isEcoMsg = isEcoMessage(message);
   const [isRaw, setRaw] = useState(false);
   const contentId = useId();
   const rawBytes = useMemo(() => {
@@ -153,7 +158,9 @@ function ContentDetails({ message, blur, warpRouteDetails, details }: Props) {
                 ? 'Warp message'
                 : isAeroVoterMessage(message)
                   ? 'Aero V3 message'
-                  : 'Payload'
+                  : isEcoMsg
+                    ? 'Eco intent proof'
+                    : 'Payload'
             }
             details={
               warpRouteDetails ? (
@@ -163,7 +170,7 @@ function ContentDetails({ message, blur, warpRouteDetails, details }: Props) {
                   blur={blur}
                 />
               ) : (
-                details
+                (details ?? (isEcoMsg && !blur ? <EcoDetailsCard message={message} /> : undefined))
               )
             }
           />

@@ -18,6 +18,7 @@ import {
 import { CollateralStatus } from './collateral/types';
 import { MessageDiagnosticsProvider } from './diagnostics/MessageDiagnosticsContext';
 import { useOriginConfirmation } from './diagnostics/useOriginConfirmation';
+import { isEcoMessage } from './eco';
 import { useIsIcaMessage } from './ica';
 import {
   DetailCardSkeleton,
@@ -190,7 +191,9 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
                   ? 'Interchain account message'
                   : isAeroVoterMessage(message)
                     ? 'Aero V3 message'
-                    : 'Interchain message'
+                    : isEcoMessage(message)
+                      ? 'Eco intent proof'
+                      : 'Interchain message'
             }
             paused={!!pause}
             waitingForLiquidity={waitingForLiquidity}

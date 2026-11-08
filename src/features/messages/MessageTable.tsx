@@ -14,12 +14,13 @@ import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub } from '../../types';
-import { formatAddress, formatTxHash } from '../../utils/addresses';
+import { formatAddress } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString, getRelativeTimeRefreshInterval } from '../../utils/time';
 import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
+import { isEcoMessage } from './eco';
 import { getMessageDetailPath } from './messageLookup';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
@@ -155,7 +156,6 @@ export function MessageTable({
           <th className={`${styles.header} xs:text-left pl-1 sm:pl-2`}>Destination</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Sender</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
-          <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
           <th className={styles.header}>Time sent</th>
           <th className={`${styles.header} hidden sm:table-cell`}>Payload</th>
         </tr>
@@ -202,7 +202,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
 
   const formattedSender = formatAddress(sender, originDomainId, chainMetadataResolver);
   const formattedRecipient = formatAddress(recipient, destinationDomainId, chainMetadataResolver);
-  const formattedTxHash = formatTxHash(origin.hash, originDomainId, chainMetadataResolver);
   const hasPrimedDetailPage = useRef(false);
 
   useEffect(() => {
@@ -268,6 +267,19 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
           : ''
       }`
     : '';
+  const aeroMessageType = isAeroVoterMessage(message)
+    ? (getAeroVoterMessageTypeLabel(message.body) ?? 'Unknown message type')
+    : null;
+  const application = aeroMessageType
+    ? {
+        name: 'Aero',
+        label: aeroMessageType,
+        icon: 'aero',
+        tooltip: `Aero v3: ${aeroMessageType}`,
+      }
+    : isEcoMessage(message)
+      ? { name: 'Eco', label: 'Intent proof', icon: 'eco', tooltip: 'Eco: Intent proof' }
+      : null;
   return (
     <>
       <LinkCell
@@ -308,14 +320,6 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        tdClasses="hidden lg:table-cell"
-        aClasses={styles.valueTruncated}
-        onNavigateIntent={primeDetailPage}
-      >
-        {shortenAddress(formattedTxHash)}
-      </LinkCell>
-      <LinkCell
-        path={detailPath}
         aClasses={styles.valueTruncated}
         onNavigateIntent={primeDetailPage}
       >
@@ -352,15 +356,21 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>
           </>
-        ) : isAeroVoterMessage(message) ? (
+        ) : application ? (
           <>
-            <Image src="/images/aero.svg" alt="" width={20} height={20} className="shrink-0" />
+            <Image
+              src={`/images/${application.icon}.svg`}
+              alt={application.name}
+              width={20}
+              height={20}
+              className="shrink-0"
+            />
             <span
-              className={styles.iconText}
+              className={`${styles.iconText} min-w-0 max-w-32 truncate`}
               data-tooltip-id="root-tooltip"
-              data-tooltip-content={`Aero v3: ${getAeroVoterMessageTypeLabel(message.body) ?? 'Unknown message type'}`}
+              data-tooltip-content={application.tooltip}
             >
-              Aero
+              {application.label}
             </span>
           </>
         ) : null}
