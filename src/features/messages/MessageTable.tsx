@@ -1,5 +1,4 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
 import { isNullish, shortenAddress } from '@hyperlane-xyz/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,7 +12,7 @@ import { getAeroVoterMessageTypeLabel, isAeroVoterMessage } from '../../consts/a
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
-import { MessageStatus, MessageStub } from '../../types';
+import { MessageStatus, MessageStub, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
 import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
@@ -24,6 +23,8 @@ import { isEcoMessage } from './eco';
 import { getMessageDetailPath } from './messageLookup';
 import { prefetchMessageDetailShell } from './navigationPrefetch';
 import { prefetchMessageStub } from './queries/prefetch';
+import type { SwapApplication } from './swapMessages';
+import { useSwapMessageApplications } from './useSwapMessageApplications';
 import { parseWarpRouteMessageDetails } from './utils';
 
 const BACKGROUND_PREFETCH_COUNT = 5;
@@ -40,6 +41,21 @@ export function MessageTable({
   const router = useRouter();
   const chainMetadataResolver = useChainMetadataResolver();
   const warpRouteChainAddressMap = useStore((s) => s.warpRouteChainAddressMap);
+  const warpDetails = useMemo(
+    () =>
+      new Map(
+        messageList.map((message) => [
+          message.msgId,
+          parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
+        ]),
+      ),
+    [messageList, warpRouteChainAddressMap, chainMetadataResolver],
+  );
+  const bridgeMessageIds = useMemo(
+    () => new Set([...warpDetails].filter(([, details]) => details).map(([id]) => id)),
+    [warpDetails],
+  );
+  const swapApplications = useSwapMessageApplications(messageList, bridgeMessageIds);
   const previousMessageIds = useRef<Set<string> | null>(null);
   const previousMessageStatuses = useRef<Map<string, MessageStatus>>(new Map());
   const insertedMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -177,7 +193,8 @@ export function MessageTable({
                 message={m}
                 chainMetadataResolver={chainMetadataResolver}
                 router={router}
-                warpRouteChainAddressMap={warpRouteChainAddressMap}
+                warpRouteDetails={warpDetails.get(m.msgId)}
+                swapApplication={swapApplications.get(m.msgId)}
               />
             </tr>
           );
@@ -191,12 +208,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   message,
   chainMetadataResolver,
   router,
-  warpRouteChainAddressMap,
+  warpRouteDetails,
+  swapApplication,
 }: {
   message: MessageStub;
   chainMetadataResolver: ChainMetadataResolver;
   router: NextRouter;
-  warpRouteChainAddressMap: WarpRouteChainAddressMap;
+  warpRouteDetails?: WarpRouteDetails;
+  swapApplication?: SwapApplication;
 }) {
   const { status, sender, recipient, originDomainId, destinationDomainId, origin } = message;
 
@@ -251,22 +270,23 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
   const originChainName = chainMetadataResolver.tryGetChainName(originDomainId) || 'Unknown';
   const destinationChainName =
     chainMetadataResolver.tryGetChainName(destinationDomainId) || 'Unknown';
-  const warpRouteDetails = useMemo(
-    () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
-    [message, warpRouteChainAddressMap, chainMetadataResolver],
-  );
   const isDifferentWarpToken = warpRouteDetails
     ? warpRouteDetails.originToken.symbol !== warpRouteDetails.destinationToken.symbol ||
       warpRouteDetails.originToken.logoURI !== warpRouteDetails.destinationToken.logoURI
     : false;
   const showDestInTooltip = isDifferentWarpToken || !isNullish(warpRouteDetails?.destAmount);
-  const warpTooltipContent = warpRouteDetails
-    ? `${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${
-        showDestInTooltip
-          ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}`
-          : ''
-      }`
-    : '';
+  const swapTooltip = swapApplication
+    ? `${swapApplication.name === 'MetaSwap' ? 'Aero v3: Metaswap' : 'Hyperlane: HyperSwap'} - ${swapApplication.stage === 'Commit' ? 'Commitment' : swapApplication.stage}`
+    : null;
+  const warpTooltipContent =
+    swapTooltip ??
+    (warpRouteDetails
+      ? `${formatAmountCompact(warpRouteDetails.amount)} ${warpRouteDetails.originToken.symbol}${
+          showDestInTooltip
+            ? ` → ${formatAmountCompact(warpRouteDetails.destAmount ?? warpRouteDetails.amount)} ${warpRouteDetails.destinationToken.symbol}`
+            : ''
+        }`
+      : '');
   const aeroMessageType = isAeroVoterMessage(message)
     ? (getAeroVoterMessageTypeLabel(message.body) ?? 'Unknown message type')
     : null;
@@ -279,7 +299,14 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       }
     : isEcoMessage(message)
       ? { name: 'Eco', label: 'Intent proof', icon: 'eco', tooltip: 'Eco: Intent proof' }
-      : null;
+      : swapApplication
+        ? {
+            name: swapApplication.name === 'MetaSwap' ? 'Aero' : 'Hyperlane',
+            label: swapApplication.name,
+            icon: swapApplication.name === 'MetaSwap' ? 'aero' : null,
+            tooltip: swapTooltip,
+          }
+        : null;
   return (
     <>
       <LinkCell
@@ -333,16 +360,39 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       >
         {warpRouteDetails ? (
           <>
-            {isDifferentWarpToken ? (
-              <div className="relative flex-shrink-0" style={{ width: 26, height: 20 }}>
+            {swapApplication || isDifferentWarpToken ? (
+              <div
+                className="relative flex-shrink-0"
+                style={{ width: 26, height: 20 }}
+                data-tooltip-id="root-tooltip"
+                data-tooltip-content={warpTooltipContent}
+              >
                 <div className="absolute left-0" style={{ top: -1 }}>
-                  <TokenIcon token={warpRouteDetails.originToken} size={16} />
+                  {swapApplication ? (
+                    <Image
+                      src={
+                        swapApplication.name === 'MetaSwap' ? '/images/aero.svg' : '/favicon.svg'
+                      }
+                      alt={swapApplication.name === 'MetaSwap' ? 'Aero' : 'Hyperlane'}
+                      width={16}
+                      height={16}
+                    />
+                  ) : (
+                    <TokenIcon token={warpRouteDetails.originToken} size={16} />
+                  )}
                 </div>
                 <div
                   className="absolute right-0 rounded-full ring-1 ring-white"
                   style={{ bottom: -1 }}
                 >
-                  <TokenIcon token={warpRouteDetails.destinationToken} size={16} />
+                  <TokenIcon
+                    token={
+                      swapApplication
+                        ? warpRouteDetails.originToken
+                        : warpRouteDetails.destinationToken
+                    }
+                    size={16}
+                  />
                 </div>
               </div>
             ) : (
@@ -359,7 +409,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
         ) : application ? (
           <>
             <Image
-              src={`/images/${application.icon}.svg`}
+              src={application.icon ? `/images/${application.icon}.svg` : '/favicon.svg'}
               alt={application.name}
               width={20}
               height={20}
