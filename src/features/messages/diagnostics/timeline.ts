@@ -31,7 +31,6 @@ export interface MessageTimelineOptions {
   confirmed?: boolean;
   confirmationTracked?: boolean;
   originConfirmation?: OriginConfirmation;
-  historyComplete?: boolean;
 }
 
 /** Current evidence controls progress; recorded history supplies timing, never completion. */
@@ -40,7 +39,7 @@ export function getMessageTimeline(
   observation: RelayerDiagnosticState | undefined,
   activities: DiagnosticActivity[],
   options: MessageTimelineOptions = {},
-): { stages: MessageTimelineStage[]; totalElapsed?: number; timingComplete: boolean } {
+): { stages: MessageTimelineStage[]; totalElapsed?: number } {
   const delivered = message.status === MessageStatus.Delivered;
   const confirmed = delivered && options.confirmed === true;
   const state = observation?.state;
@@ -145,14 +144,6 @@ export function getMessageTimeline(
   return {
     stages: timeline,
     totalElapsed: elapsed(dispatchedAt, deliveredAt),
-    timingComplete:
-      options.historyComplete === true &&
-      timeline.every(
-        (stage) =>
-          ['origin_confirmed', 'confirmed'].includes(stage.id) ||
-          stage.status !== 'complete' ||
-          stage.timestamp !== undefined,
-      ),
   };
 }
 

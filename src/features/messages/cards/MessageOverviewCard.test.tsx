@@ -8,6 +8,8 @@ import { MessageOverviewCard } from './MessageOverviewCard';
 jest.mock('@hyperlane-xyz/widgets', () => ({
   BoxArrowIcon: () => null,
   EnvelopeIcon: () => null,
+  WideChevronIcon: () => <svg data-chevron="true" />,
+  SpinnerIcon: () => <svg data-spinner="true" />,
   CopyButton: ({ copyValue }: { copyValue: string }) => <button data-copy={copyValue}>Copy</button>,
 }));
 jest.mock('../../../components/icons/ChainLogo', () => ({ ChainLogo: () => null }));
@@ -155,4 +157,21 @@ it('preserves native Radix account recipients and full transfer precision', () =
   expect(html).toContain(`data-copy="${account}"`);
   expect(html).not.toContain('/component/');
   expect(html).toContain('>4,996.61864 ');
+});
+
+it('animates only active pending delivery and preserves success while confirming', () => {
+  const active = renderToStaticMarkup(<MessageOverviewCard message={message} active />);
+  expect(active).toContain('data-spinner="true"');
+  expect(active.match(/data-chevron="true"/g)).toHaveLength(2);
+  const paused = renderToStaticMarkup(<MessageOverviewCard message={message} />);
+  expect(paused).not.toContain('data-spinner="true"');
+  const delivered = renderToStaticMarkup(
+    <MessageOverviewCard message={{ ...message, status: MessageStatus.Delivered }} active />,
+  );
+  expect(delivered).not.toContain('data-spinner="true"');
+  expect(delivered).toContain('Successful delivery');
+  const failed = renderToStaticMarkup(
+    <MessageOverviewCard message={{ ...message, status: MessageStatus.Failing }} active />,
+  );
+  expect(failed).not.toContain('data-spinner="true"');
 });

@@ -1,0 +1,51 @@
+.branch {
+  position: relative;
+}
+
+.branch::before {
+  position: absolute;
+  top: 1.3rem;
+  left: -0.5rem;
+  width: 0.5rem;
+  border-top: 1px solid #d1d5db;
+  content: '';
+}
+
+.branch[data-state='unused']::before,
+.branch[data-state='unknown']::before {
+  border-top-style: dashed;
+}
+
+.branch[data-state='verified']::before,
+.branch[data-state='ready']::before {
+  border-color: #93baa6;
+}
+
+.check {
+  display: flex;
+  animation: check-in 250ms ease-out;
+}
+
+@keyframes check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check {
+    animation: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .branch::before {
+    left: -0.75rem;
+    width: 0.75rem;
+  }
+}

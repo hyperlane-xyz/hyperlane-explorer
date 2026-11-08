@@ -7,7 +7,10 @@ import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsC
 import { MessageRelayActivityPanel } from './MessageRelayActivityPanel';
 
 jest.mock('@hyperlane-xyz/utils', () => ({ shortenAddress: (value: string) => value }));
-jest.mock('@hyperlane-xyz/widgets', () => ({ CopyButton: () => null }));
+jest.mock('@hyperlane-xyz/widgets', () => ({
+  CopyButton: () => null,
+  WideChevronIcon: () => null,
+}));
 jest.mock('../diagnostics/MessageDiagnosticsContext');
 jest.mock('../../../components/icons/ChainLogo', () => ({ ChainLogo: () => null }));
 jest.mock('../../../metadataStore', () => ({
@@ -100,7 +103,10 @@ it('shows parallel origin and relayer work, with timing details on demand', asyn
   expect(route.querySelectorAll('button')).toHaveLength(6);
   expect(route.querySelectorAll('[data-status="active"]')).toHaveLength(2);
   expect(route.textContent).toContain('4/15');
-  expect(route.textContent).toContain('+1s');
+  expect(route.querySelector('[aria-label="Picked up timing details"]')?.textContent).toContain(
+    '—',
+  );
+  expect(route.textContent).not.toContain('+1s');
   expect(rootElement.querySelector('section[aria-label$="timing details"]')).toBeNull();
   await act(async () => {
     rootElement
@@ -108,7 +114,7 @@ it('shows parallel origin and relayer work, with timing details on demand', asyn
       .click();
   });
   expect(rootElement.querySelector('section[aria-label$="timing details"]')?.textContent).toContain(
-    'Relayer observed',
+    'Relayer observed · +1s from dispatch',
   );
   expect(rootElement.querySelector('section[aria-label$="timing details"]')?.textContent).toContain(
     'Fast relayers can begin before origin confirmations',
@@ -165,8 +171,14 @@ it('does not claim indexed delivery or finality from a relayer report', async ()
   } as MessageStub;
   await render({ message: delivered });
   expect(rootElement.textContent).toContain('Confirming destination');
-  expect(rootElement.querySelector('[aria-label="Message relay route"]')?.textContent).toContain(
-    '+4s',
+  // Delivery time is known, but validation time is not: no invented step delay.
+  const delivery = rootElement.querySelector<HTMLButtonElement>(
+    '[aria-label="Delivered timing details"]',
+  )!;
+  expect(delivery.textContent).toContain('—');
+  await act(async () => delivery.click());
+  expect(rootElement.querySelector('section[aria-label$="timing details"]')?.textContent).toContain(
+    'Chain timestamp · +4s from dispatch',
   );
   await render({ message: { ...delivered, isPiMsg: true } });
   expect(rootElement.textContent).not.toContain('Confirming destination');
@@ -193,7 +205,7 @@ it('keeps a late relayer recheck separate from chain confirmation time', async (
     confirmed: true,
   });
   const route = rootElement.querySelector('[aria-label="Message relay route"]')!;
-  expect(route.textContent).toContain('+4s');
+  expect(route.textContent).not.toContain('+4s');
   expect(route.textContent).not.toContain('10m');
   const button = route.querySelector<HTMLButtonElement>(
     '[aria-label="Confirmation timing details"]',
@@ -202,6 +214,54 @@ it('keeps a late relayer recheck separate from chain confirmation time', async (
   await act(async () => button.click());
   const detail = rootElement.querySelector('section[aria-label$="timing details"]');
   expect(detail?.textContent).toContain('Relayer checked delivery');
+  expect(detail?.textContent).toContain('10m 10.4s after delivery');
   expect(detail?.textContent).toContain('+10m 14.4s from dispatch');
   expect(detail?.textContent).toContain('tracked separately');
+});
+
+it('shows per-step intervals and preserves pickup before origin confirmation', async () => {
+  context.observation = {
+    ...observation,
+    state: { ...observation.state, phase: 'ready_to_submit', phase_started_at_millis: 4000 },
+  };
+  const delivered = {
+    ...message,
+    status: MessageStatus.Delivered,
+    destination: { timestamp: 5000 },
+  } as MessageStub;
+  await render({
+    message: delivered,
+    originConfirmation: { confirmed: true, tracked: true, timestamp: 1500 },
+  });
+  const route = rootElement.querySelector('[aria-label="Message relay route"]')!;
+  expect(
+    [...route.querySelectorAll('button')].map((button) => button.lastElementChild?.textContent),
+  ).toEqual(['0s', '+500ms', '+500ms', '+2s', '+1s', 'Confirming']);
+  expect(rootElement.textContent).toContain('Time since previous step');
+  await act(async () => {
+    route.querySelector<HTMLButtonElement>('[aria-label="Validated timing details"]')!.click();
+  });
+  let detail = rootElement.querySelector('section[aria-label$="timing details"]');
+  expect(detail?.textContent).toContain('2s after pickup');
+  expect(detail?.textContent).toContain('+3s from dispatch');
+
+  await render({
+    message: delivered,
+    originConfirmation: { confirmed: true, tracked: true, timestamp: 6000 },
+  });
+  const pickup = route.querySelector<HTMLButtonElement>('[aria-label="Picked up timing details"]')!;
+  expect(pickup.textContent).toContain('−4s');
+  await act(async () => pickup.click());
+  detail = rootElement.querySelector('section[aria-label$="timing details"]');
+  expect(detail?.textContent).toContain('4s before origin confirmation');
+  expect(detail?.textContent).toContain('+1s from dispatch');
+
+  context.observation = {
+    ...observation,
+    state: { ...observation.state, phase: 'ready_to_submit', phase_started_at_millis: 2000 },
+  };
+  await render({ message: delivered });
+  expect(route.querySelector('[aria-label="Validated timing details"]')?.textContent).toContain(
+    '+0ms',
+  );
 });

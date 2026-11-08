@@ -37,6 +37,13 @@ jest.mock('../transactions/useTransactionMessageCount', () => ({
 jest.mock('./queries/useMessageQuery', () => ({ useMessageQuery: () => mockQuery }));
 jest.mock('./ica', () => ({ useIsIcaMessage: () => false }));
 jest.mock('./utils', () => ({ parseWarpRouteMessageDetails: () => undefined }));
+jest.mock('./warpVisualization/useWarpRouteVisualization', () => ({
+  useWarpRouteVisualization: () => ({ visualization: undefined }),
+}));
+jest.mock('@hyperlane-xyz/widgets', () => ({
+  ShieldIcon: () => null,
+  WideChevronIcon: () => null,
+}));
 jest.mock('./useConfirmationProgress', () => ({ isWaitingForOriginConfirmations: () => false }));
 jest.mock('./diagnostics/useOriginConfirmation', () => ({
   useOriginConfirmation: () => ({ confirmed: false, tracked: false }),
@@ -49,7 +56,6 @@ jest.mock('./cards/MessageRelayActivityPanel', () => ({ MessageRelayActivityPane
 jest.mock('./cards/MessageDiagnosticsCard', () => ({ MessageDiagnosticsCard: () => null }));
 jest.mock('./cards/AeroVoterDetailsCard', () => ({ AeroVoterDetailsCard: () => null }));
 jest.mock('./cards/IcaDetailsCard', () => ({ IcaDetailsCard: () => null }));
-jest.mock('./cards/IsmDetailsCard', () => ({ IsmDetailsCard: () => null }));
 jest.mock('./cards/WarpRouteVisualizationCard', () => ({ WarpRouteVisualizationCard: () => null }));
 jest.mock('./cards/ContentDetailsCard', () => ({
   ContentDetailsCard: () => <section data-testid="envelope">Message envelope</section>,
@@ -164,7 +170,6 @@ it('keeps lookup mounted outside tabs, reveals transactions below content, and r
         isError: false,
         isMessageFound: true,
         message,
-        isDeliveryStatusFetching: false,
         collateralStatus: CollateralStatus.Insufficient,
         debugResult: {
           status: MessageDebugStatus.NoErrorsFound,
@@ -181,12 +186,13 @@ it('keeps lookup mounted outside tabs, reveals transactions below content, and r
     );
     await act(async () =>
       [...technical.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
-        .find((tab) => tab.textContent === 'Details')!
+        .find((tab) => tab.textContent === 'Relayer activity')!
         .click(),
     );
-    expect(technical.textContent).toContain(
-      'No additional application details were detected for this message.',
-    );
+    expect([...technical.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)).toEqual([
+      'Security',
+      'Relayer activity',
+    ]);
     expect(mockRuntimeMount).toHaveBeenCalledTimes(1);
     expect(mockRuntimeUnmount).not.toHaveBeenCalled();
 

@@ -56,7 +56,11 @@ function report(state?: DiagnosticState) {
 
 function render(delivered = false) {
   return renderToStaticMarkup(
-    <MessageDiagnosticsCard destinationChainName={mockMetadata.name} delivered={delivered} />,
+    <MessageDiagnosticsCard
+      originDomainId={57073}
+      destinationChainName={mockMetadata.name}
+      delivered={delivered}
+    />,
   );
 }
 
@@ -112,10 +116,12 @@ it('keeps unused failed alternatives neutral and shows the satisfied threshold',
   const html = render();
   expect(html).toContain('data-node-id="unused" data-state="unused"');
   expect(html).toContain('Threshold met');
-  expect(html).toContain('1 of 2 checks required');
+  expect(html).toContain('1/2 checks passed');
+  expect(html).toContain('title="1 of 2 checks required"');
   expect(html).not.toContain('Attempt failed');
   expect(html).not.toContain('text-red-700');
-  expect(html).not.toContain('text-green-700');
+  expect(html).toContain('text-green-700');
+  expect(html.split('data-node-id="unused"')[1]).not.toContain('text-green-700');
 });
 
 it('distinguishes ready CCIP proof data from actual destination acceptance', () => {
@@ -145,7 +151,7 @@ it('distinguishes ready CCIP proof data from actual destination acceptance', () 
   expect(html).toContain('Destination acceptance is tracked separately.');
   expect(html).not.toContain('Relayer verification check passed.');
   expect(html).not.toContain('Accepted on destination');
-  expect(html).not.toContain('text-green-700');
+  expect(html).toContain('text-green-700');
   expect(render(true)).toContain('Accepted on destination');
 });
 
@@ -176,10 +182,14 @@ it('shows loading first, then neutral waiting when no reporter has observed the 
   expect(html).not.toContain('Attempt failed');
   expect(html).not.toContain('data-testid="spinner"');
 
-  useDiagnostics.mockReturnValue(report({ phase: 'dropped', modules: [] }));
+  useDiagnostics.mockReturnValue(
+    report({ phase: 'dropped', modules: [{ node_id: 'root', ism: address, children: [] }] }),
+  );
   const stopped = render();
   expect(stopped).toContain('Last reported checks');
   expect(stopped).not.toContain('Checks in progress');
+  expect(stopped).not.toContain('data-testid="spinner"');
+  expect(stopped).not.toContain('>Checking<');
 });
 
 it('keeps incomplete aggregation counts honest and stops recursive branch cycles', () => {
@@ -188,11 +198,19 @@ it('keeps incomplete aggregation counts honest and stops recursive branch cycles
       phase: 'preparing',
       tree_root: 'root',
       modules: [
-        { node_id: 'root', ism: address, module_type: 'Aggregation', threshold: 2, children: [] },
+        {
+          node_id: 'root',
+          ism: address,
+          module_type: 'Aggregation',
+          threshold: 2,
+          verified: 1,
+          children: [],
+        },
       ],
     }),
   );
   expect(render()).toContain('2 checks required');
+  expect(render().replace(/<[^>]*>/g, '')).toContain('1/2 required checks passed');
   expect(render()).not.toContain('of 0');
   useDiagnostics.mockReturnValue(
     report({
@@ -239,9 +257,10 @@ it.each([ProtocolType.Ethereum, ProtocolType.Sealevel])(
       report({ phase: 'ready_to_submit', tree_root: 'root', modules: [node] }),
     );
     const html = render();
-    expect(html).toContain('2 of 3 signatures required · 2 collected');
+    expect(html.match(/2 of 3 signatures required/g)).toHaveLength(1);
+    expect(html.replace(/<[^>]*>/g, '')).toContain('2 signatures collected');
     expect(html).not.toContain('2/2 validator signatures');
-    expect(html.match(/✓ Signed/g)).toHaveLength(2);
+    expect(html.match(/✓ Signature observed/g)).toHaveLength(2);
     expect(html.match(/data-validator-status="collected"/g)).toHaveLength(2);
     expect(html.match(/data-validator-status="unavailable"/g)).toHaveLength(1);
     expect(html).toContain('Checkpoint not found in validator storage');
@@ -260,44 +279,95 @@ it.each([ProtocolType.Ethereum, ProtocolType.Sealevel])(
     );
     const partial = render();
     expect(partial.match(/data-validator-status="unknown"/g)).toHaveLength(2);
-    expect(partial.match(/>Unknown<\/span>/g)).toHaveLength(2);
+    expect(partial.match(/>Not reported<\/span>/g)).toHaveLength(2);
     expect(partial).not.toContain('data-validator-status="collected"');
     expect(partial).not.toContain('Not signed');
-    expect(partial).not.toContain('Not reported');
-    expect(partial).not.toContain('✓ Signed');
+    expect(partial).not.toContain('✓ Signature observed');
     expect(partial).toContain(
-      'Unknown means individual signer details were not recorded, not that the validator did not sign.',
+      'This report does not identify every signer. “Not reported” does not mean unsigned.',
     );
   },
 );
 
-it('separates a six-of-nine threshold from six collected signatures without guessing signers', () => {
-  const validators = Array.from({ length: 9 }, (_, i) => `0x${String(i + 1).repeat(40)}`);
-  const node = {
-    node_id: 'root',
-    ism: address,
-    module_type: 'MessageIdMultisig',
-    children: [],
-    validators,
-    threshold: 6,
-    signatures: {
-      collected: 6,
-      index: 7,
-      root: `0x${'44'.repeat(32)}`,
-      unavailable: [],
-    },
-  };
-  useDiagnostics.mockReturnValue(report({ tree_root: 'root', modules: [node] }));
-  const html = render();
-  expect(html).toContain('6 of 9 signatures required · 6 collected');
-  expect(html.match(/data-validator-status="unknown"/g)).toHaveLength(9);
-  for (const validator of validators) expect(html).toContain(`data-copy="${validator}"`);
-  expect(html).not.toContain('✓ Signed');
-  expect(html).not.toContain('Not reported');
+it.each(['MessageIdMultisig', 'MerkleRootMultisig'])(
+  'shows the %s threshold once in its caption, distinct from signatures collected',
+  (moduleType) => {
+    const validators = Array.from({ length: 9 }, (_, i) => `0x${String(i + 1).repeat(40)}`);
+    const node = {
+      node_id: 'root',
+      ism: address,
+      module_type: moduleType,
+      children: [],
+      validators,
+      threshold: 6,
+      signatures: {
+        collected: 6,
+        index: 7,
+        root: `0x${'44'.repeat(32)}`,
+        unavailable: [],
+      },
+    };
+    useDiagnostics.mockReturnValue(report({ tree_root: 'root', modules: [node] }));
+    const html = render();
+    expect(html.match(/6 of 9 signatures required/g)).toHaveLength(1);
+    expect(html).toMatch(/<summary[^>]*>[\s\S]*6 of 9 signatures required[\s\S]*?<\/summary>/);
+    expect(html.replace(/<[^>]*>/g, '')).toContain('6 signatures collected');
+    expect(html.match(/data-validator-status="unknown"/g)).toHaveLength(9);
+    for (const validator of validators) expect(html).toContain(`data-copy="${validator}"`);
+    expect(html).not.toContain('✓ Signature observed');
 
+    useDiagnostics.mockReturnValue(
+      report({ tree_root: 'root', modules: [{ ...node, verification: 'succeeded' }] }),
+    );
+    const passed = render();
+    expect(passed).toContain('6/9 signatures collected');
+    expect(passed).toContain('title="6 of 9 signatures required"');
+    expect(passed.replace(/<[^>]*>/g, '')).not.toContain('signatures required');
+    expect(passed).not.toContain('✓ Signature observed');
+
+    useDiagnostics.mockReturnValue(
+      report({
+        tree_root: 'root',
+        modules: [
+          {
+            ...node,
+            verification: 'succeeded',
+            signatures: { ...node.signatures, collected: undefined },
+          },
+        ],
+      }),
+    );
+    expect(render()).toContain('6 of 9 signatures required');
+    expect(render()).not.toContain('signatures collected');
+
+    useDiagnostics.mockReturnValue(
+      report({ tree_root: 'root', modules: [{ ...node, validators: undefined }] }),
+    );
+    expect(render()).toContain('6 signatures required');
+    expect(render().replace(/<[^>]*>/g, '')).toContain('6 signatures collected');
+    expect(render()).not.toContain('of 0');
+  },
+);
+
+it('labels routing with message origin context, including unused alternatives', () => {
   useDiagnostics.mockReturnValue(
-    report({ tree_root: 'root', modules: [{ ...node, validators: undefined }] }),
+    report({
+      phase: 'ready_to_submit',
+      tree_root: 'root',
+      modules: [
+        {
+          node_id: 'root',
+          ism: address,
+          module_type: 'Aggregation',
+          children: [{ node_id: 'route', ism: address }],
+          selected_children: [],
+        },
+        { node_id: 'route', ism: address, module_type: 'Routing', children: [] },
+      ],
+    }),
   );
-  expect(render()).toContain('6 signatures required · 6 collected');
-  expect(render()).not.toContain('of 0');
+  const html = render();
+  expect(html).toContain('Origin domain 57073');
+  expect(html).toContain('data-node-id="route" data-state="unused"');
+  expect(html).not.toContain('Selected route');
 });

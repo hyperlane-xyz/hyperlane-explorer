@@ -4,7 +4,6 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../../types';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
-import { useMessageActivityPage } from '../diagnostics/useMessageDiagnostics';
 import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
 import { MessageLifecycleCard } from './MessageLifecycleCard';
 
@@ -34,10 +33,8 @@ jest.mock('../queries/ExplorerEventsProvider', () => ({
     ),
 }));
 jest.mock('../diagnostics/MessageDiagnosticsContext');
-jest.mock('../diagnostics/useMessageDiagnostics');
 
 const useDiagnostics = jest.mocked(useMessageDiagnosticsContext);
-const useHistory = jest.mocked(useMessageActivityPage);
 const message = {
   status: MessageStatus.Pending,
   originDomainId: 1,
@@ -60,19 +57,18 @@ beforeEach(() => {
   mockHead = undefined;
   container = document.createElement('div');
   root = createRoot(container);
-  useHistory.mockReturnValue({
-    activityPage: null,
-    loadedActivities: [],
-    page: 0,
-    fetching: false,
-    error: undefined,
-    next: jest.fn(),
-    previous: jest.fn(),
-    latest: jest.fn(),
-  });
   useDiagnostics.mockReturnValue({
     diagnostics: null,
-    history: useHistory('message'),
+    history: {
+      activityPage: null,
+      loadedActivities: [],
+      page: 0,
+      fetching: false,
+      error: undefined,
+      next: jest.fn(),
+      previous: jest.fn(),
+      latest: jest.fn(),
+    },
     activities: [],
     connectionState: 'live',
     fetching: false,
@@ -93,21 +89,9 @@ const render = async (
   confirmed = false,
   originConfirmation?: OriginConfirmation,
 ) => {
-  const context = useDiagnostics();
-  const history = useHistory('message');
-  useDiagnostics.mockReturnValue({
-    ...context,
-    history,
-    activities: [
-      ...(context.diagnostics?.activities ?? []),
-      ...history.loadedActivities,
-      ...(history.activityPage?.activities ?? []),
-    ],
-  });
   await act(async () =>
     root.render(
       <MessageLifecycleCard
-        messageId="message"
         message={value}
         confirmed={confirmed}
         originConfirmation={originConfirmation}
@@ -227,23 +211,15 @@ test('keeps on-chain delivery duration independent of late relayer confirmation 
   useDiagnostics.mockReturnValue({
     ...useDiagnostics(),
     observation: { ...reporter, activityId: '2', state: row.activity.state },
-  });
-  useHistory.mockReturnValue({
-    ...useHistory('message'),
-    activityPage: {
-      message_id: 'message',
-      has_more: false,
-      next_before_id: null,
-      activities: [
-        row,
-        {
-          ...row,
-          id: '1',
-          observed_at: '1970-01-01T00:00:02Z',
-          activity: { type: 'snapshot', state: reporter.state },
-        },
-      ],
-    },
+    activities: [
+      row,
+      {
+        ...row,
+        id: '1',
+        observed_at: '1970-01-01T00:00:02Z',
+        activity: { type: 'snapshot', state: reporter.state },
+      },
+    ],
   });
   await render(
     {
@@ -341,7 +317,7 @@ test('the unified status header stops transit motion for blocked and delivered m
   ));
   await act(async () =>
     root.render(
-      <MessageLifecycleCard messageId="message" message={message} confirmed={false}>
+      <MessageLifecycleCard message={message} confirmed={false}>
         {content}
       </MessageLifecycleCard>,
     ),
@@ -351,12 +327,7 @@ test('the unified status header stops transit motion for blocked and delivered m
   expect(container.textContent).toContain('Live updates');
   await act(async () =>
     root.render(
-      <MessageLifecycleCard
-        messageId="message"
-        message={message}
-        confirmed={false}
-        waitingForLiquidity
-      >
+      <MessageLifecycleCard message={message} confirmed={false} waitingForLiquidity>
         {content}
       </MessageLifecycleCard>,
     ),
@@ -371,7 +342,6 @@ test('the unified status header stops transit motion for blocked and delivered m
   await act(async () =>
     root.render(
       <MessageLifecycleCard
-        messageId="message"
         message={{ ...message, status: MessageStatus.Delivered }}
         confirmed={true}
         waitingForLiquidity
@@ -465,14 +435,7 @@ test('omits estimates for missing metadata, unknown status, and blocked deliveri
     'Delivery status unavailable',
   );
   await act(async () =>
-    root.render(
-      <MessageLifecycleCard
-        messageId="message"
-        message={message}
-        confirmed={false}
-        waitingForLiquidity
-      />,
-    ),
+    root.render(<MessageLifecycleCard message={message} confirmed={false} waitingForLiquidity />),
   );
   expect(container.querySelector('[data-testid="delivery-estimate"]')).toBeNull();
 });

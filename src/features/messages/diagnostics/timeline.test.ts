@@ -55,7 +55,6 @@ describe('message lifecycle timing', () => {
       current,
       history,
       {
-        historyComplete: true,
         originConfirmation: { confirmed: true, tracked: true, timestamp: 108_000 },
       },
     );
@@ -80,7 +79,6 @@ describe('message lifecycle timing', () => {
     expect(stage(timeline, 'validated').timeSource).toBe('relayer');
     expect(stage(timeline, 'confirmed').status).toBe('active');
     expect(timeline.totalElapsed).toBe(23_000);
-    expect(timeline.timingComplete).toBe(true);
     expect(getActivityTimings(history, message.origin.timestamp).get('3')?.sinceDispatch).toBe(
       18_000,
     );
@@ -88,13 +86,12 @@ describe('message lifecycle timing', () => {
       { ...message, status: MessageStatus.Delivered },
       current,
       history,
-      { confirmed: true, historyComplete: true },
+      { confirmed: true },
     );
     expect(stage(confirmed, 'confirmed')).toMatchObject({
       status: 'complete',
       timestamp: undefined,
     });
-    expect(confirmed.timingComplete).toBe(true);
   });
 
   it('never promotes relayer-observed delivery or stale destination fields to indexed delivery', () => {
@@ -167,14 +164,13 @@ describe('message lifecycle timing', () => {
       { ...message, status: MessageStatus.Delivered },
       current,
       history,
-      { historyComplete: true, originConfirmation: { confirmed: true, tracked: false } },
+      { originConfirmation: { confirmed: true, tracked: false } },
     );
     expect(stage(unknown, 'origin_confirmed')).toMatchObject({
       status: 'complete',
       timestamp: undefined,
     });
     expect(stage(unknown, 'picked_up').elapsedSincePrevious).toBeUndefined();
-    expect(unknown.timingComplete).toBe(true);
   });
 
   it('records the selected relayer confirmation time separately from canonical finality', () => {
@@ -211,19 +207,15 @@ describe('message lifecycle timing', () => {
   });
 
   it('keeps phase timing unknown when bounded history has only a later phase', () => {
-    const timeline = getMessageTimeline(
-      { ...message, status: MessageStatus.Delivered },
-      current,
-      [history[2]],
-      { historyComplete: false },
-    );
+    const timeline = getMessageTimeline({ ...message, status: MessageStatus.Delivered }, current, [
+      history[2],
+    ]);
     expect(stage(timeline, 'validated')).toMatchObject({
       status: 'complete',
       timestamp: undefined,
     });
     expect(stage(timeline, 'delivered').timestamp).toBe(123_000);
     expect(stage(timeline, 'delivered').elapsedSincePrevious).toBeUndefined();
-    expect(timeline.timingComplete).toBe(false);
     const future = activity('9', 'ready_to_submit', 140_000);
     expect(
       stage(getMessageTimeline(message, current, [future]), 'validated').timestamp,

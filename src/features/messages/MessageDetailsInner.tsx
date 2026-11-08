@@ -29,6 +29,7 @@ import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
 import { isWaitingForOriginConfirmations } from './useConfirmationProgress';
 import { parseWarpRouteMessageDetails } from './utils';
+import { useWarpRouteVisualization } from './warpVisualization/useWarpRouteVisualization';
 
 const ContentDetailsCard = dynamic(
   () => import('./cards/ContentDetailsCard').then((mod) => mod.ContentDetailsCard),
@@ -36,12 +37,6 @@ const ContentDetailsCard = dynamic(
 );
 const AeroVoterDetailsCard = dynamic(() =>
   import('./cards/AeroVoterDetailsCard').then((mod) => mod.AeroVoterDetailsCard),
-);
-const IsmDetailsCard = dynamic(
-  () => import('./cards/IsmDetailsCard').then((mod) => mod.IsmDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
 );
 const IcaDetailsCard = dynamic(
   () => import('./cards/IcaDetailsCard').then((mod) => mod.IcaDetailsCard),
@@ -152,6 +147,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     () => parseWarpRouteMessageDetails(message, warpRouteChainAddressMap, chainMetadataResolver),
     [chainMetadataResolver, message, warpRouteChainAddressMap],
   );
+  const { visualization: warpVisualization } = useWarpRouteVisualization(warpRouteDetails);
   const txMessageCount = useTransactionMessageCount(isMessageFound ? origin.hash : undefined);
   const handleRuntimeStateChange = useCallback(
     (value: MessageDetailsRuntimeState) =>
@@ -184,7 +180,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
         {isMessageFound ? (
           <MessageLifecycleCard
             key={`progress-${messageId}`}
-            messageId={messageId}
             message={message}
             confirmed={confirmed}
             originConfirmation={timedOriginConfirmation}
@@ -265,8 +260,10 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
             message={message}
             blur={false}
             warpRouteDetails={warpRouteDetails}
-            isIca={isIcaMsg}
-          />
+          >
+            {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
+            {isAeroVoterMessage(message) && <AeroVoterDetailsCard message={message} blur={blur} />}
+          </ContentDetailsCard>
         )}
 
         <div hidden={!isMessageFound}>
@@ -323,6 +320,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           security={
             showLifecycle && (
               <MessageDiagnosticsCard
+                originDomainId={originDomainId}
                 destinationChainName={destinationChainName}
                 delivered={status === MessageStatus.Delivered}
               />
@@ -339,31 +337,15 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
               />
             )
           }
-          details={
-            <>
-              {isIcaMsg && (
-                <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />
-              )}
-              {isAeroVoterMessage(message) && (
-                <AeroVoterDetailsCard message={message} blur={blur} />
-              )}
+          warpRoute={
+            warpRouteDetails &&
+            warpVisualization && (
               <WarpRouteVisualizationCard
-                message={message}
                 warpRouteDetails={warpRouteDetails}
+                visualization={warpVisualization}
                 blur={blur}
               />
-              {debugResult?.ismDetails && (
-                <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-              )}
-              {!isIcaMsg &&
-                !isAeroVoterMessage(message) &&
-                !warpRouteDetails &&
-                !debugResult?.ismDetails && (
-                  <p className="text-sm text-gray-500">
-                    No additional application details were detected for this message.
-                  </p>
-                )}
-            </>
+            )
           }
         />
       </div>
@@ -379,7 +361,6 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.isMessageFound === b.isMessageFound &&
     a.message === b.message &&
     a.debugResult === b.debugResult &&
-    a.isDeliveryStatusFetching === b.isDeliveryStatusFetching &&
     a.collateralStatus === b.collateralStatus &&
     a.originConfirmationTimestamp?.blockNumber === b.originConfirmationTimestamp?.blockNumber &&
     a.originConfirmationTimestamp?.timestamp === b.originConfirmationTimestamp?.timestamp

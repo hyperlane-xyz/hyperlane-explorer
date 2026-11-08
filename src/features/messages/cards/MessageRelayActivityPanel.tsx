@@ -40,6 +40,7 @@ const timingOrigins: Partial<Record<MessageTimelineStage['id'], string>> = {
   picked_up: 'origin confirmation',
   validated: 'pickup',
   delivered: 'validation',
+  confirmed: 'delivery',
 };
 
 export function MessageRelayActivityPanel({
@@ -174,7 +175,7 @@ export function MessageRelayActivityPanel({
             relayer={observation?.relayer}
           />
           <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xxs text-gray-500">
-            <span>Times from dispatch · select a step for details</span>
+            <span>Time since previous step · select a step for details</span>
             <div className="flex min-w-0 items-center gap-2">
               <label htmlFor={`reporter-${message.msgId}`}>Relayer</label>
               <select
@@ -269,7 +270,7 @@ function RelayRoute({
                   )}
                 >
                   {groupIndex === 1 ? (
-                    <SendIcon width={19} height={19} aria-hidden="true" />
+                    <SendIcon size={15} active={sending} />
                   ) : (
                     <ChainLogo chainName={chainName} size={23} />
                   )}
@@ -299,6 +300,13 @@ function RelayRoute({
                       : stage.id === 'confirmed'
                         ? 'Confirmation'
                         : stage.label;
+                  const interval = stage.elapsedSincePrevious;
+                  const timingValue =
+                    stage.id === 'dispatched' && stage.timestamp !== undefined
+                      ? '0s'
+                      : interval !== undefined
+                        ? `${interval < 0 ? '−' : '+'}${formatElapsed(Math.abs(interval))}`
+                        : undefined;
                   const value = notTracked
                     ? 'Not tracked'
                     : stage.id === 'confirmed'
@@ -309,10 +317,8 @@ function RelayRoute({
                           : '—'
                       : origin && active && originConfirmation?.required !== undefined
                         ? `${originConfirmation.current ?? '—'}/${originConfirmation.required}`
-                        : stage.sinceDispatch !== undefined
-                          ? stage.id === 'dispatched'
-                            ? '0s'
-                            : `+${formatElapsed(stage.sinceDispatch)}`
+                        : timingValue !== undefined
+                          ? timingValue
                           : complete
                             ? '—'
                             : active || stage.status === 'failed'
@@ -363,7 +369,16 @@ function RelayRoute({
                         >
                           {label}
                         </span>
-                        <span className="shrink-0 tabular-nums text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4">
+                        <span
+                          className="shrink-0 tabular-nums text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4"
+                          title={
+                            stage.id !== 'confirmed' &&
+                            interval !== undefined &&
+                            timingOrigins[stage.id]
+                              ? `${formatElapsed(Math.abs(interval))} ${interval < 0 ? 'before' : 'after'} ${timingOrigins[stage.id]}`
+                              : undefined
+                          }
+                        >
                           {value}
                         </span>
                       </button>
@@ -403,8 +418,7 @@ function RelayRoute({
                 </time>
                 {' · '}
                 {selected.timeSource === 'chain' ? 'Chain timestamp' : 'Relayer observed'}
-                {selected.id === 'confirmed' &&
-                  selected.sinceDispatch !== undefined &&
+                {selected.sinceDispatch !== undefined &&
                   ` · +${formatElapsed(selected.sinceDispatch)} from dispatch`}
               </span>
             ) : (

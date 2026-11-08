@@ -1,6 +1,7 @@
 import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import { isValidAddress, ProtocolType } from '@hyperlane-xyz/utils';
 import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
+import BigNumber from 'bignumber.js';
 import { useMemo } from 'react';
 
 import { TokenIcon } from '../../../components/icons/TokenIcon';
@@ -14,6 +15,8 @@ import {
 } from '../../../types';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { isCollateralRoute } from '../collateral/utils';
+import { formatUsd } from './gasPaymentSummary';
+import { useTokenUsdPrices } from './useNativeTokenUsdPrice';
 import { WarpFeeDetails } from './WarpFeeDetails';
 
 interface Props {
@@ -73,21 +76,21 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
     <div className="space-y-4">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
         <TokenDetails
-          label="Origin token"
           token={originToken}
           amount={amount}
-          amountLabel="Origin amount"
+          amountLabel="Sent"
+          domainId={message.originDomainId}
+          timestamp={message.origin.timestamp}
           link={blockExplorerAddressUrls.originToken}
           blur={blur}
         />
         <TokenDetails
-          label="Destination token"
           token={destinationToken}
           amount={receivedAmount}
-          amountLabel={
-            message.status === MessageStatus.Delivered
-              ? 'Received (inferred)'
-              : 'Expected destination'
+          amountLabel={message.status === MessageStatus.Delivered ? 'Received' : 'Expected'}
+          domainId={message.destinationDomainId}
+          timestamp={
+            message.status === MessageStatus.Delivered ? message.destination?.timestamp : undefined
           }
           link={blockExplorerAddressUrls.destinationToken}
           blur={blur}
@@ -175,20 +178,34 @@ export function WarpTransferDetailsCard(props: Props) {
 }
 
 function TokenDetails({
-  label,
   token,
   amount,
   amountLabel,
+  domainId,
+  timestamp,
   link,
   blur,
 }: {
-  label: string;
   token: TokenArgs;
   amount: string;
   amountLabel: string;
+  domainId: number;
+  timestamp?: number;
   link: string | null;
   blur: boolean;
 }) {
+  const metadata = useChainMetadataResolver().tryGetChainMetadata(domainId);
+  const prices = useTokenUsdPrices(
+    token.coinGeckoId ? [token.coinGeckoId] : [],
+    !!metadata?.isTestnet,
+    timestamp,
+  );
+  const price = token.coinGeckoId ? prices[token.coinGeckoId] : undefined;
+  const usdValue =
+    price != null && Number.isFinite(price) && price >= 0
+      ? new BigNumber(amount).times(price)
+      : undefined;
+  const usdDisplay = usdValue?.isFinite() ? formatUsd(usdValue) : undefined;
   const address = token.collateralAddressOrDenom ?? token.addressOrDenom;
   return (
     <div className="flex min-w-0 items-start gap-3">
@@ -197,7 +214,12 @@ function TokenDetails({
       </span>
       <div className="min-w-0">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-          <span className="text-gray-500">{amountLabel}:</span>
+          <span
+            className="text-gray-500"
+            title="Amount inferred from the payload and Hyperlane Registry token metadata."
+          >
+            {amountLabel}:
+          </span>
           {link ? (
             <a
               href={link}
@@ -216,27 +238,21 @@ function TokenDetails({
               {token.symbol}
             </span>
           )}
-          <CopyButton
-            copyValue={address}
-            aria-label={`Copy ${label.toLowerCase()} address`}
-            width={12}
-            height={12}
-            className="shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
-          />
         </div>
-        <div className="mt-1 flex items-start gap-2">
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span
             className={`min-w-0 break-all font-mono text-lg font-medium leading-6 text-gray-900 ${blur ? 'blur-xs' : ''}`}
           >
             {`${amount} ${token.symbol}`}
           </span>
-          <CopyButton
-            copyValue={amount}
-            aria-label={`Copy ${amountLabel.toLowerCase()}`}
-            width={12}
-            height={12}
-            className="mt-1.5 shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
-          />
+          {usdDisplay && (
+            <span
+              className={`text-xs text-gray-500 ${blur ? 'blur-xs' : ''}`}
+              title="Approximate USD value using CoinGecko's daily price for the transaction date, or current price for today and undated transactions."
+            >
+              ({usdDisplay})
+            </span>
+          )}
         </div>
       </div>
     </div>

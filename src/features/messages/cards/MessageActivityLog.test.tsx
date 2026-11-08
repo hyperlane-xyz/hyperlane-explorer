@@ -32,7 +32,11 @@ const history = (
 
 it('retains an older page timing independently of the bounded history cache', () => {
   const html = renderToStaticMarkup(
-    <MessageActivityLog history={history([row('1', 2000, 'preparing')], 21)} dispatchedAt={1000} />,
+    <MessageActivityLog
+      header={null}
+      history={history([row('1', 2000, 'preparing')], 21)}
+      dispatchedAt={1000}
+    />,
   );
   expect(html).toContain('Preparing');
   expect(html).toContain('1s');
@@ -42,6 +46,7 @@ it('retains an older page timing independently of the bounded history cache', ()
 it('orders observations chronologically without extending on-chain delivery by late reports', () => {
   const html = renderToStaticMarkup(
     <MessageActivityLog
+      header={null}
       history={history([row('2', 781000, 'delivered'), row('1', 2000, 'preparing')])}
       dispatchedAt={1000}
       deliveredAt={181000}
@@ -69,7 +74,9 @@ it('preserves provenance and pagination without inventing unavailable observatio
   const page = history([observed, unknown], 1);
   page.activityPage!.has_more = true;
   page.activityPage!.next_before_id = '1';
-  const html = renderToStaticMarkup(<MessageActivityLog history={page} dispatchedAt={1000} />);
+  const html = renderToStaticMarkup(
+    <MessageActivityLog header={null} history={page} dispatchedAt={1000} />,
+  );
   expect(html).toContain('aria-label="Relayer activity log"');
   expect(html).toContain('Since dispatch: </span>—');
   expect(html).toContain('Observation time unavailable');
@@ -80,6 +87,43 @@ it('preserves provenance and pagination without inventing unavailable observatio
   const pagination = html.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
   expect(pagination).toHaveLength(3);
   expect(pagination.every((button) => !/\sdisabled(?:=|\s|>)/.test(button))).toBe(true);
+});
+
+it('measures consecutive reports from the same relayer instead of interleaved reporters', () => {
+  const page = history([
+    row('3', 4500, 'ready_to_submit'),
+    { ...row('2', 4000, 'preparing'), relayer: 'other-relayer' },
+    row('1', 2000, 'preparing'),
+  ]);
+  const html = renderToStaticMarkup(
+    <MessageActivityLog header={null} history={page} dispatchedAt={1000} />,
+  );
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const intervals = doc.querySelectorAll('span[title^="Since prior report"]');
+  expect(intervals).toHaveLength(1);
+  expect(intervals[0].textContent).toBe('2.5s later than this relayer’s prior report');
+  expect(intervals[0].getAttribute('title')).toContain(
+    '#1 from this relayer: 1970-01-01T00:00:02.000Z → 1970-01-01T00:00:04.500Z (2500 ms)',
+  );
+  expect(intervals[0].parentElement?.textContent).toContain('+3.5s');
+});
+
+it('does not bridge missing or reversed timestamps, while retaining real zero intervals', () => {
+  const page = history([
+    row('5', 2500, 'preparing'),
+    row('4', 2500, 'preparing'),
+    row('3', 3000, 'preparing'),
+    { ...row('2', 2000, 'preparing'), observed_at: 'unrecorded' },
+    row('1', 1000, 'preparing'),
+  ]);
+  const html = renderToStaticMarkup(
+    <MessageActivityLog header={null} history={page} dispatchedAt={1000} />,
+  );
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const intervals = doc.querySelectorAll('span[title^="Since prior report"]');
+  expect(intervals).toHaveLength(1);
+  expect(intervals[0].textContent).toBe('0ms later than this relayer’s prior report');
+  expect(intervals[0].getAttribute('title')).toContain('#4 from this relayer');
 });
 
 const reactTestGlobal = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
@@ -96,7 +140,7 @@ afterEach(async () => {
 });
 const renderLog = async (page: ReturnType<typeof history>, key = 'message') => {
   await act(async () =>
-    root.render(<MessageActivityLog key={key} history={page} dispatchedAt={1000} />),
+    root.render(<MessageActivityLog header={null} key={key} history={page} dispatchedAt={1000} />),
   );
 };
 const visibleIds = () =>
@@ -125,13 +169,20 @@ it('shows eight records, freezes live prepends, and crosses both directions with
   const initial = batch(100, 50);
   await renderLog(initial);
   expect(visibleIds()).toEqual(['93', '94', '95', '96', '97', '98', '99', '100']);
+  expect(
+    rootElement.querySelector('span[title^="Since prior report"]')?.getAttribute('title'),
+  ).toContain('#92 from this relayer');
   await click('← Earlier');
   expect(visibleIds()).toEqual(['85', '86', '87', '88', '89', '90', '91', '92']);
   const refreshed = batch(120, 50);
+  refreshed.loadedActivities = [row('40', 40000, 'preparing')];
   await renderLog(refreshed);
   expect(visibleIds()).toEqual(['85', '86', '87', '88', '89', '90', '91', '92']);
   for (let i = 0; i < 5; i++) await click('← Earlier');
   expect(visibleIds()).toEqual(['51', '52']);
+  const boundaryIntervals = rootElement.querySelectorAll('span[title^="Since prior report"]');
+  expect(boundaryIntervals).toHaveLength(1);
+  expect(boundaryIntervals[0].getAttribute('title')).toContain('#51 from this relayer');
   await click('← Earlier');
   expect(refreshed.next).toHaveBeenCalledWith('51');
   const older = batch(50, 50, 1, false);

@@ -4,7 +4,7 @@ import type { WarpRouteConfigs } from '@hyperlane-xyz/sdk/warp/read';
 import type { WarpCoreConfig } from '@hyperlane-xyz/sdk/warp/types';
 import { useMemo } from 'react';
 
-import { useStore } from '../../../store';
+import { useStore } from '../../../metadataStore';
 import { WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { normalizeAddressToHex } from '../../../utils/yamlParsing';

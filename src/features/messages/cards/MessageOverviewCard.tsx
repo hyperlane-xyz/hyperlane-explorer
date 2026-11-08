@@ -1,6 +1,6 @@
 import type { TokenArgs } from '@hyperlane-xyz/sdk';
 import { isZeroish } from '@hyperlane-xyz/utils';
-import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import { BoxArrowIcon, CopyButton, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import BigNumber from 'bignumber.js';
 import clsx from 'clsx';
 import Link from 'next/link';
@@ -38,6 +38,13 @@ export function MessageOverviewCard({
   active = false,
 }: Props) {
   const delivered = message.status === MessageStatus.Delivered;
+  const pending = message.status === MessageStatus.Pending;
+  const loading = pending && active;
+  const destinationTone = delivered
+    ? 'border-green-200 bg-green-25/70'
+    : pending
+      ? 'border-primary-200/70 bg-primary-25/35'
+      : 'border-gray-200 bg-gray-150/60';
   return (
     <section aria-label="Message overview" className="min-w-0">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
@@ -70,13 +77,8 @@ export function MessageOverviewCard({
           aria-hidden="true"
         >
           <span className="absolute h-full w-0.5 bg-primary-300 sm:h-0.5 sm:w-full" />
-          <span
-            className={clsx(
-              'relative flex h-9 w-9 items-center justify-center rounded-full border border-primary-300 bg-white',
-              active && styles.sending,
-            )}
-          >
-            <SendIcon width={18} height={18} className="rotate-90 sm:rotate-0" />
+          <span className="relative flex h-10 w-10 items-center justify-center bg-white">
+            <SendIcon active={loading} className="rotate-90 sm:rotate-0" />
           </span>
         </div>
         <RouteSide
@@ -101,7 +103,10 @@ export function MessageOverviewCard({
         />
         <TransactionLink
           label="Delivery transaction"
+          className={destinationTone}
           delivered={delivered}
+          pending={pending}
+          loading={loading}
           domainId={message.destinationDomainId}
           hash={delivered ? message.destination?.hash : undefined}
           emptyLabel={
@@ -145,7 +150,7 @@ function RouteSide({
   const nativeAddress = address && !token ? formatAddress(address, domainId, resolver) : address;
 
   return (
-    <div className="min-w-0 rounded-lg bg-gray-150/60 p-3 sm:p-4">
+    <div className="min-w-0 rounded-lg border border-gray-200 bg-gray-150/60 p-3 sm:p-4">
       <p className="text-xs text-gray-500">{label}</p>
       <div className="mt-2 flex min-w-0 items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center">
@@ -188,12 +193,18 @@ function TransactionLink({
   hash,
   emptyLabel,
   delivered = false,
+  pending = false,
+  loading = false,
+  className,
 }: {
   label: string;
   domainId: number;
   hash?: string;
   emptyLabel: string;
   delivered?: boolean;
+  pending?: boolean;
+  loading?: boolean;
+  className?: string;
 }) {
   const resolver = useChainMetadataResolver();
   const formattedHash =
@@ -203,17 +214,37 @@ function TransactionLink({
   return (
     <div
       className={clsx(
-        'min-w-0 rounded-lg border p-3',
-        delivered ? 'border-green-200 bg-green-25/70' : 'border-gray-200 bg-white',
+        'min-w-0 rounded-lg border p-3 transition-colors duration-300 motion-reduce:transition-none',
+        className ?? 'border-gray-200 bg-white',
       )}
     >
       <p
         className={clsx(
           'mb-1.5 flex items-center gap-1.5 text-xs',
-          delivered ? 'font-medium text-green-800' : 'text-gray-500',
+          delivered
+            ? 'font-medium text-green-800'
+            : pending
+              ? 'font-medium text-primary-800'
+              : 'text-gray-500',
         )}
       >
-        {delivered && <span aria-hidden="true">✓</span>}
+        {(delivered || pending) && (
+          <span aria-hidden="true" className="flex h-3 w-3 shrink-0 items-center justify-center">
+            {delivered ? (
+              '✓'
+            ) : loading ? (
+              <SpinnerIcon
+                width={12}
+                height={12}
+                color="currentColor"
+                style={{ color: 'inherit' }}
+                className={styles.spinner}
+              />
+            ) : (
+              <span className="h-2 w-2 rounded-full border border-current opacity-50" />
+            )}
+          </span>
+        )}
         {label}
         {delivered && <span className="ml-auto text-xxs font-normal">Successful delivery</span>}
       </p>
@@ -249,7 +280,9 @@ function TransactionLink({
           />
         </div>
       ) : (
-        <p className="text-sm text-gray-500">{emptyLabel}</p>
+        <p className={clsx('text-sm', pending ? 'text-primary-700' : 'text-gray-500')}>
+          {emptyLabel}
+        </p>
       )}
     </div>
   );

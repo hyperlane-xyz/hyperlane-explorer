@@ -35,7 +35,6 @@ export interface MessageDetailsRuntimeState {
   isMessageFound: boolean;
   message?: Message | MessageStub;
   debugResult?: MessageDebugResult;
-  isDeliveryStatusFetching: boolean;
   collateralStatus: CollateralStatus;
   originConfirmationTimestamp?: OriginConfirmationTimestamp;
 }
@@ -124,7 +123,6 @@ export function MessageDetailsRuntime({
       isMessageFound,
       message,
       debugResult,
-      isDeliveryStatusFetching,
       collateralStatus,
       originConfirmationTimestamp,
     });
@@ -132,7 +130,6 @@ export function MessageDetailsRuntime({
     collateralStatus,
     debugResult,
     hasRun,
-    isDeliveryStatusFetching,
     isMessageFound,
     message,
     onStateChange,

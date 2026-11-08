@@ -2,6 +2,8 @@ import { CopyButton, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
+import { CheckmarkIcon } from '../../../components/icons/CheckmarkIcon';
+import { PersonIcon } from '../../../components/icons/PersonIcon';
 import { useChainMetadata } from '../../../metadataStore';
 import { logger } from '../../../utils/logger';
 import { truncateString } from '../../../utils/string';
@@ -17,12 +19,15 @@ import { getValidatorSignatures } from '../diagnostics/validatorSignatures';
 import { postgresByteaToAddress } from '../queries/encoding';
 import { AddressInline } from './ismRender/AddressInline';
 
+import styles from './MessageDiagnosticsCard.module.css';
+
 interface Props {
+  originDomainId: number;
   destinationChainName: string;
   delivered: boolean;
 }
 
-export function MessageDiagnosticsCard({ destinationChainName, delivered }: Props) {
+export function MessageDiagnosticsCard({ originDomainId, destinationChainName, delivered }: Props) {
   const { diagnostics, observation, connectionState, fetching, error } =
     useMessageDiagnosticsContext();
   const state = observation?.state;
@@ -51,14 +56,23 @@ export function MessageDiagnosticsCard({ destinationChainName, delivered }: Prop
 
   return (
     <section className="min-w-0" aria-label="Security validation">
-      <div className="space-y-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-gray-900">Security validation</h2>
         <p
           className={clsx(
-            'text-xs',
-            delivered ? 'text-green-700' : proofReady ? 'text-primary-700' : 'text-gray-500',
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xxs font-medium',
+            delivered || proofReady
+              ? 'border-green-200/60 bg-green-25/50 text-green-700'
+              : live && !failed && ['preparing', 'awaiting_signatures'].includes(state?.phase ?? '')
+                ? 'border-primary-100 bg-accent-25 text-primary-700'
+                : 'border-gray-200 bg-gray-100 text-gray-500',
           )}
         >
+          {(delivered || proofReady) && (
+            <span aria-hidden="true">
+              <CheckmarkIcon width={13} height={13} color="currentColor" />
+            </span>
+          )}
           {summary}
         </p>
       </div>
@@ -73,6 +87,7 @@ export function MessageDiagnosticsCard({ destinationChainName, delivered }: Prop
                 width={14}
                 height={14}
                 color="currentColor"
+                style={{ color: 'inherit' }}
                 className="shrink-0 motion-reduce:animate-none"
               />
             )}
@@ -92,7 +107,13 @@ export function MessageDiagnosticsCard({ destinationChainName, delivered }: Prop
               key={observation.relayer}
               state={state}
               chainName={destinationChainName}
-              active={live && !failed}
+              originDomainId={originDomainId}
+              active={
+                live &&
+                !failed &&
+                !waitingForCommit &&
+                ['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
+              }
             />
             {(state.retry?.reason || state.failure?.reason) && (
               <details className="mt-3 text-xs text-gray-500">
@@ -136,10 +157,12 @@ export function MessageDiagnosticsCard({ destinationChainName, delivered }: Prop
 function IsmTree({
   state,
   chainName,
+  originDomainId,
   active,
 }: {
   state: DiagnosticState;
   chainName: string;
+  originDomainId: number;
   active: boolean;
 }) {
   const modules = new Map(state.modules.map((module) => [module.node_id, module]));
@@ -157,7 +180,7 @@ function IsmTree({
   return (
     <ul
       aria-label="ISM validation tree"
-      className="space-y-1 rounded-lg border border-gray-200 p-2"
+      className="space-y-1 rounded-xl border border-gray-200 bg-gray-50/70 p-2 sm:p-3"
     >
       {roots.map((nodeId) => (
         <IsmTreeNode
@@ -165,6 +188,7 @@ function IsmTree({
           nodeId={nodeId}
           modules={modules}
           chainName={chainName}
+          originDomainId={originDomainId}
           active={active}
           preparing={['preparing', 'awaiting_signatures'].includes(state.phase ?? '')}
           selected={true}
@@ -179,6 +203,7 @@ function IsmTreeNode({
   nodeId,
   modules,
   chainName,
+  originDomainId,
   selected,
   preparing,
   active,
@@ -187,6 +212,7 @@ function IsmTreeNode({
   nodeId: string;
   modules: Map<string, DiagnosticModule>;
   chainName: string;
+  originDomainId: number;
   selected?: boolean;
   preparing: boolean;
   active: boolean;
@@ -205,6 +231,27 @@ function IsmTreeNode({
   const complete = status === 'verified' || status === 'ready';
   const working = active && status === 'waiting' && selected !== false;
   const aggregation = node.module_type === 'Aggregation';
+  const hasSignatures = !!(
+    node.module_type?.endsWith('Multisig') ||
+    node.validators ||
+    node.signatures
+  );
+  const signatureThreshold = node.signatures?.threshold ?? node.threshold;
+  const requiredCaption =
+    aggregation && node.threshold != null
+      ? `${node.threshold}${node.children.length ? ` of ${node.children.length}` : ''} checks required`
+      : hasSignatures && signatureThreshold != null
+        ? `${signatureThreshold}${node.validators?.length ? ` of ${node.validators.length}` : ''} signatures required`
+        : undefined;
+  const collected = node.signatures?.collected;
+  const caption =
+    node.module_type === 'Routing' && originDomainId >= 0
+      ? `Origin domain ${originDomainId}`
+      : complete && aggregation && node.verified != null
+        ? `${node.verified}${node.children.length ? `/${node.children.length}` : ''} checks passed`
+        : complete && hasSignatures && collected != null
+          ? `${collected}${node.validators?.length ? `/${node.validators.length}` : ''} signatures collected`
+          : requiredCaption;
   const thresholdMet =
     node.threshold != null && node.verified != null && node.verified >= node.threshold;
   const moduleLabel =
@@ -229,22 +276,38 @@ function IsmTreeNode({
   const checks = node.checks && typeof node.checks === 'object' ? Object.entries(node.checks) : [];
 
   return (
-    <li data-node-id={nodeId} data-state={status} className="min-w-0">
-      <details className="peer group/node rounded-md open:bg-gray-50/80">
-        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs transition-colors hover:bg-gray-100/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 [&::-webkit-details-marker]:hidden">
+    <li
+      data-node-id={nodeId}
+      data-state={status}
+      className={clsx('min-w-0', ancestors.length > 0 && styles.branch)}
+    >
+      <details className="peer group/node rounded-xl open:bg-white open:shadow-sm">
+        <summary
+          className={clsx(
+            'grid cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_0.5rem] items-center gap-x-2 gap-y-1 rounded-xl border border-gray-200 px-2 py-2 text-xs transition-colors hover:bg-gray-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 motion-reduce:transition-none sm:flex sm:gap-2 [&::-webkit-details-marker]:hidden',
+            complete && 'bg-gradient-to-r from-green-25/40 to-transparent',
+            working && 'bg-gradient-to-r from-accent-25 to-transparent',
+          )}
+        >
           <span
             className={clsx(
-              'flex h-4 w-4 shrink-0 items-center justify-center',
+              'row-span-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors motion-reduce:transition-none',
               unused || status === 'unknown'
-                ? 'text-gray-400'
+                ? 'border-gray-200 bg-gray-100 text-gray-400'
                 : status === 'failed'
-                  ? 'text-red-700'
-                  : 'text-primary-700',
+                  ? 'border-red-100 bg-red-100/20 text-red-700'
+                  : complete
+                    ? 'border-green-200/70 bg-green-100/40 text-green-700'
+                    : working
+                      ? 'border-primary-100 bg-white text-primary-700'
+                      : 'border-gray-200 bg-white text-gray-400',
             )}
             aria-hidden="true"
           >
             {complete ? (
-              '✓'
+              <span className={styles.check}>
+                <CheckmarkIcon width={15} height={15} color="currentColor" />
+              </span>
             ) : status === 'failed' ? (
               '×'
             ) : working ? (
@@ -252,6 +315,7 @@ function IsmTreeNode({
                 width={12}
                 height={12}
                 color="currentColor"
+                style={{ color: 'inherit' }}
                 className="motion-reduce:animate-none"
               />
             ) : unused ? (
@@ -261,53 +325,59 @@ function IsmTreeNode({
             )}
           </span>
           <span className={clsx('min-w-0 flex-1', unused ? 'text-gray-500' : 'text-gray-800')}>
-            <span className="block truncate font-medium" title={moduleLabel}>
+            <span className="block font-medium sm:truncate" title={moduleLabel}>
               {moduleLabel}
             </span>
-            {aggregation && node.threshold != null && (
-              <span className="mt-0.5 block text-xxs text-gray-500">
-                {node.threshold}
-                {node.children.length > 0 && ` of ${node.children.length}`} checks required
+            {caption && (
+              <span
+                className="mt-0.5 block text-xxs text-gray-500"
+                title={complete ? requiredCaption : undefined}
+              >
+                {caption}
               </span>
             )}
           </span>
           <span
             className={clsx(
-              'shrink-0 text-right text-xxs',
+              'col-start-2 row-start-2 shrink-0 justify-self-start rounded-full border px-2 py-0.5 text-right text-xxs transition-colors motion-reduce:transition-none',
               unused
-                ? 'text-gray-500'
+                ? 'border-transparent text-gray-500'
                 : status === 'failed'
-                  ? 'text-red-700'
+                  ? 'border-red-100 bg-red-100/20 text-red-700'
                   : complete
-                    ? 'text-primary-700'
-                    : 'text-gray-500',
+                    ? 'border-green-100 bg-green-25/50 text-green-700'
+                    : working
+                      ? 'border-primary-100 bg-accent-25 text-primary-700'
+                      : 'border-gray-200 bg-gray-100 text-gray-500',
             )}
           >
             <span className="block">{statusLabel}</span>
           </span>
           <span
-            className="text-gray-400 transition-transform group-open/node:rotate-90 motion-reduce:transition-none"
+            className="col-start-3 row-span-2 row-start-1 text-gray-400 transition-transform group-open/node:rotate-90 motion-reduce:transition-none"
             aria-hidden="true"
           >
             ›
           </span>
         </summary>
-        <div className="ml-4 space-y-2 border-l border-gray-200 px-3 pb-3 pt-1 text-xs leading-relaxed text-gray-600">
+        <div className="ml-5 space-y-2 border-l border-gray-200 px-3 pb-3 pt-2 text-xs leading-relaxed text-gray-600">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Program</span>
             <ProgramAddress address={node.ism} chainName={chainName} />
           </div>
-          {node.verified != null && node.threshold != null && (
+          {!complete && aggregation && node.verified != null && node.threshold != null && (
             <p>
               {node.verified}/{node.threshold} required checks passed
-              {thresholdMet ? ' · Threshold met' : ''}
             </p>
           )}
-          {(node.module_type?.endsWith('Multisig') || node.validators || node.signatures) && (
-            <ValidatorSignatures node={node} />
-          )}
+          {hasSignatures && <ValidatorSignatures node={node} muted={unused} complete={complete} />}
           {node.offchain_read && (
-            <p className={clsx(node.offchain_read.state === 'succeeded' && 'text-primary-700')}>
+            <p
+              className={clsx(
+                !unused && node.offchain_read.state === 'succeeded' && 'text-green-700',
+                status === 'failed' && node.offchain_read.state === 'failed' && 'text-red-700',
+              )}
+            >
               {node.offchain_read.state === 'succeeded'
                 ? 'Gateway responded successfully'
                 : `Gateway: ${diagnosticLabel(node.offchain_read.state)}`}
@@ -320,13 +390,20 @@ function IsmTreeNode({
           )}
           {node.metadata_status === 'ready' && (
             <p className="text-gray-500">
-              Proof data is ready. Destination acceptance is tracked separately.
+              <span className={clsx(!unused && 'text-green-700')}>Proof data is ready.</span>{' '}
+              Destination acceptance is tracked separately.
             </p>
           )}
           {checks.map(
             ([name, result]) =>
               typeof result === 'string' && (
-                <p key={name}>
+                <p
+                  key={name}
+                  className={clsx(
+                    !unused && result === 'succeeded' && 'text-green-700',
+                    status === 'failed' && result === 'failed' && 'text-red-700',
+                  )}
+                >
                   {diagnosticLabel(name)}: {diagnosticLabel(result)}
                 </p>
               ),
@@ -340,7 +417,7 @@ function IsmTreeNode({
       {node.children.length > 0 && (
         <ul
           className={clsx(
-            'ml-3 space-y-1 border-l border-gray-200 pl-2 sm:ml-4',
+            'ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2 sm:ml-5 sm:pl-3',
             unused && 'hidden peer-open:block',
           )}
         >
@@ -350,6 +427,7 @@ function IsmTreeNode({
               nodeId={child.node_id}
               modules={modules}
               chainName={chainName}
+              originDomainId={originDomainId}
               active={active}
               preparing={preparing}
               selected={
@@ -368,41 +446,53 @@ function IsmTreeNode({
   );
 }
 
-function ValidatorSignatures({ node }: { node: DiagnosticModule }) {
+function ValidatorSignatures({
+  node,
+  muted,
+  complete,
+}: {
+  node: DiagnosticModule;
+  muted: boolean;
+  complete: boolean;
+}) {
   const validators = getValidatorSignatures(node);
-  const threshold = node.signatures?.threshold ?? node.threshold;
-  const total = node.validators?.length;
   const collected = node.signatures?.collected;
   return (
     <div>
       <p className="mb-1 font-medium">Validators</p>
-      {(threshold != null || collected != null) && (
-        <p className="mb-2 text-gray-600">
-          {threshold != null && (
-            <>
-              {threshold}
-              {total ? ` of ${total}` : ''} signatures required
-            </>
-          )}
-          {threshold != null && collected != null && ' · '}
-          {collected != null && `${collected} collected`}
+      {!complete && collected != null && (
+        <p className={clsx('mb-2', !muted && collected > 0 ? 'text-green-700' : 'text-gray-600')}>
+          {collected} signatures collected
         </p>
       )}
       {!validators.length && <p className="text-gray-500">Validator addresses are not recorded.</p>}
       {validators.some(({ status }) => status === 'unknown') && (
         <p className="mb-2 text-xxs text-gray-500">
-          Unknown means individual signer details were not recorded, not that the validator did not
-          sign.
+          This report does not identify every signer. “Not reported” does not mean unsigned.
         </p>
       )}
-      <ul className="space-y-1" aria-label="Validator signatures">
+      <ul
+        className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/70"
+        aria-label="Validator signatures"
+      >
         {validators.map(({ address, status, reason }) => (
           <li
             key={address}
             data-validator-status={status}
-            className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 bg-gray-100/70 px-2 py-2 text-gray-500"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2.5 py-2 text-gray-500"
           >
-            <span className="inline-flex min-w-0 items-center gap-1.5">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={clsx(
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                  !muted && status === 'collected'
+                    ? 'bg-green-100/40 text-green-700'
+                    : 'bg-gray-200/60 text-gray-500',
+                )}
+              >
+                <PersonIcon width={14} height={14} />
+              </span>
               <span title={address} className="truncate font-mono text-xxs sm:text-xs">
                 {truncateString(address, 8, 6)}
               </span>
@@ -410,21 +500,22 @@ function ValidatorSignatures({ node }: { node: DiagnosticModule }) {
                 copyValue={address}
                 width={12}
                 height={12}
-                className="shrink-0 opacity-60"
+                aria-label="Copy validator address"
+                className="shrink-0 text-gray-500 opacity-60 [&_rect]:stroke-current [&_path]:fill-current"
               />
             </span>
             <span
               className={clsx(
-                'shrink-0 text-xxs font-medium',
-                status === 'collected' ? 'text-primary-700' : 'text-gray-500',
+                'ml-auto shrink-0 text-xxs font-medium',
+                !muted && status === 'collected' ? 'text-green-700' : 'text-gray-500',
               )}
               title={reason}
             >
               {status === 'collected'
-                ? '✓ Signed'
+                ? '✓ Signature observed'
                 : status === 'unavailable'
                   ? 'Unavailable'
-                  : 'Unknown'}
+                  : 'Not reported'}
               {reason && <span className="sr-only">: {reason}</span>}
             </span>
           </li>

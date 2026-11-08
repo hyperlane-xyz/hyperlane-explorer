@@ -23,11 +23,9 @@ import { calculateConfirmationCount, getRequiredConfirmations } from '../useConf
 import styles from './MessageLifecycleCard.module.css';
 
 interface Props {
-  messageId: string;
   message: Message | MessageStub;
   confirmed: boolean;
   originConfirmation?: OriginConfirmation;
-  blur?: boolean;
   messageKind?: string;
   children?: ReactNode | ((active: boolean) => ReactNode);
   notice?: ReactNode;
@@ -66,7 +64,6 @@ export function MessageLifecycleCard({
   message,
   confirmed,
   originConfirmation,
-  blur,
   messageKind = 'Interchain message',
   children,
   notice,
@@ -193,10 +190,7 @@ export function MessageLifecycleCard({
   return (
     <section
       aria-label="Message progress"
-      className={clsx(
-        'shadow-card min-w-0 overflow-hidden rounded-xl border border-primary-200/40 bg-white',
-        blur && 'blur-xs',
-      )}
+      className="shadow-card min-w-0 overflow-hidden rounded-xl border border-primary-200/40 bg-white"
     >
       <header
         className={clsx(

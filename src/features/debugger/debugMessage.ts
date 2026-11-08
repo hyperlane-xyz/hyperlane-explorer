@@ -6,7 +6,13 @@ import {
   IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import { ChainMap, ChainMetadata, isProxy, proxyImplementation } from '@hyperlane-xyz/sdk';
+import {
+  ChainMap,
+  ChainMetadata,
+  isProxy,
+  ModuleType,
+  proxyImplementation,
+} from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -34,7 +40,7 @@ import {
   IcaMessageType,
   isIcaMessage,
 } from '../messages/ica';
-import { GasPayment, IsmModuleTypes, MessageDebugResult, MessageDebugStatus } from './types';
+import { GasPayment, MessageDebugResult, MessageDebugStatus } from './types';
 
 type Provider = providers.Provider;
 
@@ -110,8 +116,7 @@ export async function debugMessage(
     destMailbox,
     destProvider,
   );
-  if (ismCheckResult.status && ismCheckResult.description) return { ...ismCheckResult, ...details };
-  else details.ismDetails = ismCheckResult.ismDetails;
+  if (ismCheckResult) return { ...ismCheckResult, ...details };
 
   // TODO support for non-default IGP gas checks here
   // Disabling for now for https://github.com/hyperlane-xyz/hyperlane-monorepo/issues/3668
@@ -272,9 +277,8 @@ async function checkMultisigIsmEmpty(
         'Invalid ISM. Please verify that the ISM has been configured correctly or exists.',
     };
   }
-  const ismDetails = { ismAddress, moduleType };
-  if (moduleType !== IsmModuleTypes.LEGACY_MULTISIG && moduleType !== IsmModuleTypes.MULTISIG) {
-    return { ismDetails };
+  if (moduleType !== ModuleType.LEGACY_MULTISIG && moduleType !== ModuleType.MERKLE_ROOT_MULTISIG) {
+    return undefined;
   }
 
   const multisigIsm = MultisigIsmFactory.connect(ismAddress, destProvider);
@@ -284,16 +288,14 @@ async function checkMultisigIsmEmpty(
     return {
       status: MessageDebugStatus.MultisigIsmEmpty,
       description: 'Validator list is empty, has the ISM been configured correctly?',
-      ismDetails,
     };
   } else if (threshold < 1) {
     return {
       status: MessageDebugStatus.MultisigIsmEmpty,
       description: 'Threshold is less than 1, has the ISM been configured correctly?',
-      ismDetails,
     };
   }
-  return { ismDetails };
+  return undefined;
 }
 
 async function tryCheckIgpGasFunded(

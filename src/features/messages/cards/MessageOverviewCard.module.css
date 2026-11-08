@@ -1,19 +1,5 @@
-.sending {
-  animation: send-glow 1.8s ease-in-out infinite;
-}
-
-@keyframes send-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px rgb(127 81 200 / 8%);
-  }
-  50% {
-    box-shadow: 0 0 0 7px rgb(127 81 200 / 22%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .sending {
-    animation: none;
+  .spinner {
+    animation: none !important;
   }
 }

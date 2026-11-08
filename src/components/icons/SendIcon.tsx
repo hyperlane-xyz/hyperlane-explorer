@@ -1,22 +1,38 @@
-import { memo, type SVGProps } from 'react';
+import { WideChevronIcon } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
+import { memo } from 'react';
 
-function _SendIcon({ width = 20, height = 20, ...props }: SVGProps<SVGSVGElement>) {
+import styles from './SendIcon.module.css';
+
+function _SendIcon({
+  size = 18,
+  active = false,
+  className,
+}: {
+  size?: number;
+  active?: boolean;
+  className?: string;
+}) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width={width}
-      height={height}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
+    <span
+      aria-hidden="true"
+      className={clsx('inline-flex items-center gap-0.5', active && styles.sending, className)}
     >
-      <path d="m3 3 18 9-18 9 3-9-3-9Z" />
-      <path d="M6 12h15" />
-    </svg>
+      <WideChevronIcon
+        width={size * 0.6}
+        height={size}
+        direction="e"
+        color="currentColor"
+        rounded
+      />
+      <WideChevronIcon
+        width={size * 0.6}
+        height={size}
+        direction="e"
+        color="currentColor"
+        rounded
+      />
+    </span>
   );
 }
 

@@ -19,7 +19,7 @@ export function MessageActivityLog({
   dispatchedAt: number;
   deliveredAt?: number;
   controls?: ReactNode;
-  header?: ReactNode;
+  header: ReactNode;
 }) {
   // Freeze the latest batch while browsing older records; its cursor must stay paired
   // with those rows even when the live query receives a newer 50-record batch.
@@ -41,10 +41,32 @@ export function MessageActivityLog({
     selectedOffset === 'oldest'
       ? Math.max(0, Math.floor((batchRows.length - 1) / VISIBLE_ROWS) * VISIBLE_ROWS)
       : selectedOffset;
-  const timings = useMemo(
-    () => getActivityTimings(batchRows, dispatchedAt, deliveredAt),
-    [batchRows, dispatchedAt, deliveredAt],
-  );
+  const { timings, previousReports } = useMemo(() => {
+    const timings = getActivityTimings(batchRows, dispatchedAt, deliveredAt);
+    const previousReports = new Map<string, { id: string; timestamp: number; elapsed: number }>();
+    const lastByRelayer = new Map<string, string>();
+    // This complete server batch proves adjacency; sparse cached pages or socket anchors do not.
+    for (const row of [...batchRows].reverse()) {
+      const previousId = lastByRelayer.get(row.relayer);
+      const previousTimestamp = previousId ? timings.get(previousId)?.timestamp : undefined;
+      const timestamp = timings.get(row.id)?.timestamp;
+      if (
+        previousId !== undefined &&
+        previousTimestamp !== undefined &&
+        timestamp !== undefined &&
+        timestamp >= previousTimestamp
+      ) {
+        previousReports.set(row.id, {
+          id: previousId,
+          timestamp: previousTimestamp,
+          elapsed: timestamp - previousTimestamp,
+        });
+      }
+      // An unrecorded timestamp must break the interval, not skip back to an older report.
+      lastByRelayer.set(row.relayer, row.id);
+    }
+    return { timings, previousReports };
+  }, [batchRows, dispatchedAt, deliveredAt]);
   const rows = batchRows.slice(offset, offset + VISIBLE_ROWS).sort((a, b) => {
     const aTime = timings.get(a.id)?.timestamp;
     const bTime = timings.get(b.id)?.timestamp;
@@ -82,12 +104,7 @@ export function MessageActivityLog({
 
   return (
     <section className="min-w-0" aria-label="Relayer activity and logs">
-      {header ?? (
-        <div className="flex items-center justify-between gap-3 text-sm text-gray-700">
-          <h2 className="font-medium">Relay activity</h2>
-          {history.fetching && <span className="text-xs text-gray-500">Updating…</span>}
-        </div>
-      )}
+      {header}
       <div className="mt-3">
         {controls}
         <nav
@@ -152,6 +169,7 @@ export function MessageActivityLog({
           >
             {rows.map((row) => {
               const timing = timings.get(row.id);
+              const previousReport = previousReports.get(row.id);
               const description = describeDiagnosticActivity(row);
               return (
                 <li key={row.id}>
@@ -162,6 +180,15 @@ export function MessageActivityLog({
                         {timing?.sinceDispatch === undefined
                           ? '—'
                           : `+${formatElapsed(timing.sinceDispatch)}`}
+                        {previousReport && (
+                          <span
+                            className="mt-0.5 block text-xxs font-normal leading-4 text-gray-500"
+                            title={`Since prior report #${previousReport.id} from this relayer: ${new Date(previousReport.timestamp).toISOString()} → ${new Date(previousReport.timestamp + previousReport.elapsed).toISOString()} (${previousReport.elapsed} ms). Recorded update interval, not stage execution time.`}
+                          >
+                            {formatElapsed(previousReport.elapsed)} later
+                            <span className="sr-only"> than this relayer’s prior report</span>
+                          </span>
+                        )}
                       </span>
                       <span className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                         <span className="block font-medium leading-5 text-gray-800">

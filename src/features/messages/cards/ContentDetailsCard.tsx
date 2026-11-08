@@ -2,7 +2,7 @@ import { formatMessage } from '@hyperlane-xyz/utils';
 import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
-import { useMemo } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { MessageIcon } from '../../../components/icons/MessageIcon';
@@ -13,7 +13,6 @@ import { formatAddress } from '../../../utils/addresses';
 import { logger } from '../../../utils/logger';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
-import { CollapsibleLabelAndCodeBlock } from './CodeBlock';
 import { MessagePayload } from './MessagePayload';
 
 const WarpTransferDetails = dynamic(
@@ -25,11 +24,16 @@ interface Props {
   message: Message | MessageStub;
   blur: boolean;
   warpRouteDetails?: WarpRouteDetails;
-  isIca?: boolean;
+  children?: ReactNode;
 }
 
-export function ContentDetailsCard({ message, blur, warpRouteDetails, isIca }: Props) {
+export function ContentDetailsCard({ message, blur, warpRouteDetails, children }: Props) {
   const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
+  const [view, setView] = useState({ messageId: msgId, raw: false });
+  const isRaw = view.messageId === msgId && view.raw;
+  const contentId = useId();
+  // Standalone consumers also reset representation when navigating to another message.
+  if (view.messageId !== msgId) setView({ messageId: msgId, raw: false });
   const rawBytes = useMemo(() => {
     try {
       if (originDomainId < 0 || destinationDomainId < 0) return '';
@@ -58,66 +62,105 @@ export function ContentDetailsCard({ message, blur, warpRouteDetails, isIca }: P
           <MessageIcon width={18} height={18} className="text-primary-700" aria-hidden="true" />
           <h2 className="text-sm font-medium text-gray-800">Message details</h2>
         </div>
-        <dl className={clsx('flex items-center gap-2 text-xs', blur && 'blur-xs')}>
-          <dt className="text-gray-500">Nonce</dt>
-          <dd className="flex items-center gap-2">
-            <span className="font-mono tabular-nums text-gray-800">{nonce}</span>
-            <CopyButton
-              copyValue={String(nonce)}
-              aria-label="Copy nonce"
-              width={12}
-              height={12}
-              className="text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
-            />
-          </dd>
-        </dl>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <fieldset className="flex rounded-md bg-gray-200/70 p-0.5">
+            <legend className="sr-only">Message representation</legend>
+            {(['Details', 'Raw'] as const).map((label) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={isRaw === (label === 'Raw')}
+                aria-controls={contentId}
+                onClick={() => setView({ messageId: msgId, raw: label === 'Raw' })}
+                className={clsx(
+                  'rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500',
+                  isRaw === (label === 'Raw')
+                    ? 'bg-white text-primary-800 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </fieldset>
+          <CopyButton
+            copyValue={rawBytes}
+            aria-label="Copy raw message"
+            title={rawBytes ? 'Copy raw message' : 'Raw message bytes unavailable'}
+            disabled={!rawBytes}
+            width={13}
+            height={13}
+            className="rounded p-2 text-gray-500 hover:text-gray-800 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 [&_rect]:stroke-current [&_path]:fill-current"
+          />
+        </div>
       </header>
-      <div className={clsx('space-y-4 p-4 sm:p-5', blur && 'blur-xs')}>
-        <dl className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1.5 border-b border-gray-200 pb-3">
-          <dt
-            className="shrink-0 text-xs text-gray-500"
-            title="Hash of the complete encoded message"
-          >
-            Message ID
-          </dt>
-          <dd className="min-w-0">
-            <CopyableValue label="message ID" value={msgId} />
-          </dd>
-        </dl>
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
-          <EnvelopeEndpoint
-            label="Origin"
-            addressLabel="Sender"
-            domainId={originDomainId}
-            address={sender}
+      <div id={contentId} className={clsx('p-4 sm:p-5', blur && 'blur-xs')}>
+        <div hidden={isRaw} className="space-y-4">
+          <dl className="flex min-w-0 flex-wrap items-baseline gap-x-6 gap-y-3 border-b border-gray-200 pb-3">
+            <div className="flex min-w-0 flex-1 basis-64 flex-wrap items-baseline gap-x-4 gap-y-1.5">
+              <dt
+                className="shrink-0 text-xs text-gray-500"
+                title="Hash of the complete encoded message"
+              >
+                Message ID
+              </dt>
+              <dd className="min-w-0">
+                <CopyableValue label="message ID" value={msgId} />
+              </dd>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 text-xs">
+              <dt className="text-gray-500">Nonce</dt>
+              <dd className="flex items-center gap-2">
+                <span className="font-mono tabular-nums text-gray-800">{nonce}</span>
+                <CopyButton
+                  copyValue={String(nonce)}
+                  aria-label="Copy nonce"
+                  width={12}
+                  height={12}
+                  className="text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
+                />
+              </dd>
+            </div>
+          </dl>
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
+            <EnvelopeEndpoint
+              label="Origin"
+              addressLabel="Sender"
+              domainId={originDomainId}
+              address={sender}
+            />
+            <EnvelopeEndpoint
+              label="Destination"
+              addressLabel="Recipient"
+              domainId={destinationDomainId}
+              address={recipient}
+            />
+          </div>
+          <MessagePayload
+            message={message}
+            warp={
+              warpRouteDetails && (
+                <WarpTransferDetails
+                  message={message}
+                  warpRouteDetails={warpRouteDetails}
+                  blur={blur}
+                />
+              )
+            }
           />
-          <EnvelopeEndpoint
-            label="Destination"
-            addressLabel="Recipient"
-            domainId={destinationDomainId}
-            address={recipient}
-          />
+          {children}
         </div>
-        <MessagePayload
-          message={message}
-          warp={
-            warpRouteDetails && (
-              <WarpTransferDetails
-                message={message}
-                warpRouteDetails={warpRouteDetails}
-                blur={blur}
-              />
-            )
-          }
-        />
-        {isIca && (
-          <p className="text-xs text-gray-500">
-            Decoded interchain account instructions are available in the Details tab below.
-          </p>
-        )}
-        <div className="py-0.5">
-          <CollapsibleLabelAndCodeBlock label="Raw message bytes" value={rawBytes} />
-        </div>
+        {isRaw &&
+          (rawBytes ? (
+            <pre
+              aria-label="Raw message bytes"
+              className="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-gray-50 p-3 font-mono text-xs leading-5 text-gray-700"
+            >
+              <code>{rawBytes}</code>
+            </pre>
+          ) : (
+            <p className="text-sm text-gray-500">Raw message bytes unavailable.</p>
+          ))}
       </div>
     </section>
   );
