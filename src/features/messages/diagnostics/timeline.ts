@@ -224,14 +224,18 @@ export function getActivityTimings(
   return timings;
 }
 
-export function formatElapsed(milliseconds: number): string {
+export function formatElapsed(milliseconds: number, precision?: 'tenths'): string {
   if (!Number.isFinite(milliseconds) || milliseconds < 0) return 'Unknown';
   if (milliseconds < 1_000) return Math.round(milliseconds) + 'ms';
   const tenths = Math.round(milliseconds / 100);
   const hours = Math.floor(tenths / 36_000);
   const minutes = Math.floor((tenths % 36_000) / 600);
   const seconds = (tenths % 600) / 10;
-  return [hours ? hours + 'h' : '', minutes ? minutes + 'm' : '', seconds ? seconds + 's' : '']
+  return [
+    hours ? hours + 'h' : '',
+    minutes ? minutes + 'm' : '',
+    seconds ? (precision === 'tenths' ? seconds.toFixed(1) : seconds) + 's' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 }

@@ -1,12 +1,8 @@
 import { scalesEqual } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
-import {
-  bytesToProtocolAddress,
-  fromHexString,
-  fromWei,
-  parseWarpRouteMessage,
-} from '@hyperlane-xyz/utils';
+import { bytesToProtocolAddress, fromHexString, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
+import { utils as ethersUtils } from 'ethers';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
@@ -57,18 +53,26 @@ export function parseWarpRouteMessageDetails(
       decimals: originToken.decimals,
       scale: originToken.scale,
     });
-    const amount = fromWei(amountParts.amount.toString(), amountParts.decimals);
+    const amount = ethersUtils
+      .formatUnits(amountParts.amount, amountParts.decimals)
+      .replace(/\.0$/, '');
 
     let destAmount: string | null = null;
-    if (!scalesEqual(originToken.scale, destinationToken.scale)) {
+    if (
+      !scalesEqual(originToken.scale, destinationToken.scale) ||
+      originToken.decimals !== destinationToken.decimals
+    ) {
       const destAmountParts = getWarpRouteAmountParts(parsedMessage.amount, {
         decimals: destinationToken.decimals,
         scale: destinationToken.scale,
       });
-      destAmount = fromWei(destAmountParts.amount.toString(), destAmountParts.decimals);
+      destAmount = ethersUtils
+        .formatUnits(destAmountParts.amount, destAmountParts.decimals)
+        .replace(/\.0$/, '');
     }
 
     return {
+      wireAmount: parsedMessage.amount.toString(),
       amount,
       destAmount,
       transferRecipient: address,

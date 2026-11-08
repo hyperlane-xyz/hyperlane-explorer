@@ -1,20 +1,24 @@
-import { shortenAddress } from '@hyperlane-xyz/utils';
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
-import { Card } from '../../../components/layout/Card';
+import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, type Message, type MessageStub } from '../../../types';
+import {
+  estimateConfirmationSeconds,
+  estimateDeliverySeconds,
+  formatEstimatedTime,
+} from '../diagnostics/deliveryEstimate';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
 import {
   formatElapsed,
-  formatTimestamp,
   getMessageTimeline,
   type MessageTimelineStage,
 } from '../diagnostics/timeline';
-import { diagnosticLabel, isWaitingForCommit } from '../diagnostics/types';
+import { isWaitingForCommit } from '../diagnostics/types';
 import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
-import { MessageActivityLog } from './MessageActivityLog';
+import { useExplorerBlockValue } from '../queries/ExplorerEventsProvider';
+import { calculateConfirmationCount, getRequiredConfirmations } from '../useConfirmationProgress';
 
 import styles from './MessageLifecycleCard.module.css';
 
@@ -24,6 +28,11 @@ interface Props {
   confirmed: boolean;
   originConfirmation?: OriginConfirmation;
   blur?: boolean;
+  messageKind?: string;
+  children?: ReactNode | ((active: boolean) => ReactNode);
+  notice?: ReactNode;
+  paused?: boolean;
+  waitingForLiquidity?: boolean;
 }
 
 const phaseLabels: Record<string, string> = {
@@ -36,6 +45,14 @@ const phaseLabels: Record<string, string> = {
   retrying: 'Waiting for the next relay attempt',
   dropped: 'This relayer stopped processing the message',
 };
+const submissionLabels: Record<string, string> = {
+  submitting: 'Submitting transaction',
+  submitted: 'Transaction submitted',
+  pending_inclusion: 'Awaiting inclusion',
+  mempool: 'In mempool',
+  included: 'Included · awaiting indexing',
+  finalized: 'Included · awaiting indexing',
+};
 const activeLabels: Record<string, string> = {
   dispatched: 'Dispatching',
   origin_confirmed: 'Confirming origin',
@@ -46,22 +63,24 @@ const activeLabels: Record<string, string> = {
 };
 
 export function MessageLifecycleCard({
-  messageId,
   message,
   confirmed,
   originConfirmation,
   blur,
+  messageKind = 'Interchain message',
+  children,
+  notice,
+  paused = false,
+  waitingForLiquidity = false,
 }: Props) {
-  const {
-    diagnostics,
-    history,
-    activities,
-    connectionState,
-    observation,
-    relayers,
-    selectedRelayer,
-    setSelectedRelayer,
-  } = useMessageDiagnosticsContext();
+  const { diagnostics, activities, connectionState, observation } = useMessageDiagnosticsContext();
+  const metadata = useChainMetadataResolver();
+  const destinationHead = useExplorerBlockValue(
+    message.status === MessageStatus.Delivered && !confirmed
+      ? message.destinationDomainId
+      : undefined,
+    (head) => (head ? Number(head.headHeight) : undefined),
+  );
   const confirmationTracked = !message.isPiMsg || confirmed;
   const timeline = useMemo(
     () =>
@@ -69,154 +88,250 @@ export function MessageLifecycleCard({
         confirmed,
         confirmationTracked,
         originConfirmation,
-        historyComplete: !!history.activityPage && !history.activityPage.has_more,
       }),
-    [
-      message,
-      observation,
-      activities,
-      confirmed,
-      confirmationTracked,
-      originConfirmation,
-      history.activityPage,
-    ],
+    [message, observation, activities, confirmed, confirmationTracked, originConfirmation],
   );
   const delivered = message.status === MessageStatus.Delivered;
   const state = observation?.state;
-  const status = confirmed
-    ? 'Delivery confirmed'
-    : delivered
-      ? confirmationTracked
-        ? 'Delivered · waiting for destination confirmation'
+  const waitingForCommit = isWaitingForCommit(state);
+  const failed = !!state?.failure && !waitingForCommit;
+  const blocked =
+    paused ||
+    waitingForLiquidity ||
+    failed ||
+    state?.phase === 'dropped' ||
+    (state?.phase === 'retrying' && !waitingForCommit) ||
+    message.status === MessageStatus.Failing;
+  const active = message.status === MessageStatus.Pending && !blocked;
+  const originConfirming = !!originConfirmation?.tracked && !originConfirmation.confirmed;
+  const status = delivered
+    ? confirmed
+      ? 'Delivery confirmed'
+      : confirmationTracked
+        ? 'Delivered · confirming'
         : 'Delivered · confirmation not tracked'
-      : isWaitingForCommit(state)
-        ? 'Waiting for commit confirmation'
-        : state?.failure
-          ? 'Relayer waiting to retry'
-          : state?.phase
-            ? (phaseLabels[state.phase] ?? 'Waiting for relay update')
-            : originConfirmation?.tracked && !originConfirmation.confirmed
-              ? 'Waiting for origin confirmations'
-              : 'Waiting for a relayer to pick up this message';
-  const live = connectionState === 'live';
-  const connectionLabel = live
-    ? 'Live activity'
-    : connectionState === 'disconnected'
-      ? 'Reconnecting'
-      : connectionState === 'connecting'
-        ? 'Connecting'
-        : 'Recorded activity';
+    : paused
+      ? 'Delivery paused'
+      : waitingForLiquidity
+        ? 'Waiting for destination liquidity'
+        : waitingForCommit
+          ? 'Waiting for commit confirmation'
+          : failed
+            ? 'Relayer waiting to retry'
+            : message.status === MessageStatus.Failing
+              ? 'Delivery needs attention'
+              : message.status === MessageStatus.Unknown
+                ? 'Delivery status unavailable'
+                : state?.phase
+                  ? (phaseLabels[state.phase] ?? 'Waiting for relay update')
+                  : originConfirming
+                    ? 'Confirming on origin'
+                    : 'Waiting for relayer pickup';
+  const explanation = delivered
+    ? confirmed
+      ? 'This message has arrived and is confirmed on the destination chain.'
+      : confirmationTracked
+        ? 'Delivery succeeded. Waiting for confirmations on the destination chain.'
+        : 'Delivery succeeded. Additional confirmation data is not available.'
+    : message.status === MessageStatus.Unknown
+      ? 'Waiting for enough data to determine the delivery status.'
+      : blocked
+        ? 'Tracking continues. Check the details below for the current delay.'
+        : waitingForCommit
+          ? 'The relayer is waiting for the earlier commitment to become available.'
+          : originConfirming
+            ? `${originConfirmation?.current ?? '—'} / ${originConfirmation?.required ?? '—'} origin confirmations${observation ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`
+            : state?.phase === 'submitting'
+              ? 'The relayer is sending the delivery transaction to the destination chain.'
+              : ['confirming', 'delivered'].includes(state?.phase ?? '')
+                ? 'Waiting for on-chain delivery to appear in the explorer.'
+                : ['preparing', 'awaiting_signatures', 'ready_to_submit'].includes(
+                      state?.phase ?? '',
+                    )
+                  ? 'The relayer has picked up the message and is preparing it for delivery.'
+                  : 'The message is dispatched. We are watching for the next relay update.';
+
+  const destinationBlocks = metadata.tryGetChainMetadata(message.destinationDomainId)?.blocks;
+  const destinationRequired = confirmationTracked
+    ? getRequiredConfirmations(destinationBlocks)
+    : undefined;
+  const destinationCurrent =
+    destinationRequired === undefined
+      ? null
+      : calculateConfirmationCount(
+          message.destination?.blockNumber,
+          destinationHead,
+          destinationRequired,
+        );
+  const estimatedSeconds = delivered
+    ? !confirmed && confirmationTracked
+      ? estimateConfirmationSeconds(
+          { confirmed, required: destinationRequired, current: destinationCurrent },
+          destinationBlocks?.estimateBlockTime,
+        )
+      : undefined
+    : active
+      ? estimateDeliverySeconds(
+          metadata.tryGetChainMetadata(message.originDomainId)?.blocks,
+          originConfirmation,
+          !!observation,
+        )
+      : undefined;
+  const progressStatus =
+    delivered && !confirmed && destinationRequired && destinationCurrent != null
+      ? `Destination confirmations · ${destinationCurrent} / ${destinationRequired}`
+      : active && state?.phase === 'submitting'
+        ? (submissionLabels[state.submission?.stage ?? ''] ?? status)
+        : active &&
+            !observation &&
+            originConfirming &&
+            originConfirmation.current != null &&
+            originConfirmation.required != null
+          ? `Origin confirmations · ${originConfirmation.current} / ${originConfirmation.required}`
+          : status;
 
   return (
-    <Card className={clsx('w-full', blur && 'blur-xs')} padding="p-4 sm:p-5">
-      <section aria-label="Message progress">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Message progress
-            </h3>
-            <p className="mt-1.5 text-lg font-medium text-gray-900" aria-live="polite">
+    <section
+      aria-label="Message progress"
+      className={clsx(
+        'shadow-card min-w-0 overflow-hidden rounded-xl border border-primary-200/40 bg-white',
+        blur && 'blur-xs',
+      )}
+    >
+      <header
+        className={clsx(
+          'relative overflow-hidden px-4 py-5 text-white sm:px-5 sm:py-6',
+          delivered ? 'bg-green-800' : 'bg-primary-900',
+        )}
+      >
+        {active && <span aria-hidden="true" className={styles.headerSweep} />}
+        <div className="relative flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
+          <div className="grid w-full min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-3 sm:w-auto sm:flex-1">
+            <p className="col-start-2 mb-1 text-xs text-white/70">{messageKind}</p>
+            <span
+              className={clsx(
+                'row-start-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 text-xl',
+                active && styles.beacon,
+              )}
+              aria-hidden="true"
+            >
+              {delivered ? (
+                '✓'
+              ) : active ? (
+                <SpinnerIcon
+                  width={20}
+                  height={20}
+                  color="currentColor"
+                  style={{ color: 'inherit' }}
+                  className={styles.spinner}
+                />
+              ) : (
+                '—'
+              )}
+            </span>
+            <h1
+              className="col-start-2 row-start-2 min-w-0 text-xl font-medium leading-tight sm:text-2xl"
+              aria-live="polite"
+            >
               {status}
+            </h1>
+            <p className="col-start-2 mt-1 max-w-xl text-xs leading-relaxed text-white/80">
+              {explanation}
             </p>
           </div>
-          <div className="text-right">
+          <div className="ml-[3.25rem] shrink-0 text-sm sm:ml-0 sm:text-right">
+            {!delivered && (
+              <span className="inline-flex items-center gap-1.5 text-white/80">
+                <span
+                  aria-hidden="true"
+                  className={clsx(
+                    'h-1.5 w-1.5 rounded-full bg-white',
+                    connectionState === 'live' && 'motion-safe:animate-pulse',
+                  )}
+                />
+                {connectionState === 'live'
+                  ? 'Live updates'
+                  : connectionState === 'disconnected'
+                    ? 'Reconnecting'
+                    : connectionState === 'connecting'
+                      ? 'Connecting'
+                      : 'Recorded activity'}
+              </span>
+            )}
             {timeline.totalElapsed !== undefined && (
-              <p className="text-lg font-medium tabular-nums text-green-700">
-                {formatElapsed(timeline.totalElapsed)}{' '}
-                <span className="text-xs font-normal text-gray-500">block to block</span>
+              <p className="tabular-nums text-white/80">
+                Delivered in{' '}
+                <span className="font-medium text-white">
+                  {formatElapsed(timeline.totalElapsed, 'tenths')}
+                </span>
               </p>
             )}
-            <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-gray-500">
-              <span
-                className={clsx(
-                  'h-1.5 w-1.5 rounded-full',
-                  live
-                    ? 'bg-primary-500 motion-safe:animate-pulse'
-                    : confirmed
-                      ? 'bg-green-600'
-                      : 'bg-gray-400',
-                )}
-              />
-              {connectionLabel}
-            </span>
           </div>
         </div>
-
+      </header>
+      {(children || notice) && (
+        <div className="space-y-4 p-4 sm:p-5">
+          {typeof children === 'function' ? children(active) : children}
+          {notice}
+        </div>
+      )}
+      <div className="border-t border-gray-200 bg-gray-150/60 p-4 sm:p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 text-sm">
+          <h2 className="min-w-0 font-medium text-gray-600">
+            Progress:{' '}
+            <span className="text-primary-800" aria-live="polite" data-testid="progress-status">
+              {progressStatus}
+            </span>
+          </h2>
+          {estimatedSeconds !== undefined && estimatedSeconds > 0 && (
+            <p
+              className="tabular-nums text-gray-500 sm:ml-auto sm:text-right"
+              data-testid="delivery-estimate"
+            >
+              Estimated {delivered ? 'confirmation' : 'delivery'}{' '}
+              {formatEstimatedTime(estimatedSeconds)}
+            </p>
+          )}
+        </div>
         <ol
-          className="mt-6 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-6"
+          className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 md:grid-cols-6"
           aria-label="Message lifecycle stages"
         >
           {timeline.stages.map((stage) => (
             <LifecycleStage
               key={stage.id}
               stage={stage}
-              confirmationTracked={confirmationTracked}
               originConfirmation={originConfirmation}
+              suspended={
+                message.status === MessageStatus.Unknown ||
+                (blocked && !delivered && stage.id !== 'origin_confirmed')
+              }
             />
           ))}
         </ol>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-300/60 pt-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500">
-            <label htmlFor={`reporter-${messageId}`}>Following relayer</label>
-            <select
-              id={`reporter-${messageId}`}
-              value={selectedRelayer}
-              onChange={(event) => setSelectedRelayer(event.target.value)}
-              className="max-w-full rounded border border-gray-300 bg-white py-1.5 pl-2 pr-7 text-xs text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500"
-            >
-              <option value="">Automatic · furthest progress</option>
-              {selectedRelayer && !observation && (
-                <option value={selectedRelayer}>
-                  {shortenAddress(selectedRelayer)} · unavailable
-                </option>
-              )}
-              {relayers.map((relay) => (
-                <option key={relay.relayer} value={relay.relayer}>
-                  {shortenAddress(relay.relayer)} · {diagnosticLabel(relay.state.phase)}
-                </option>
-              ))}
-            </select>
-            {observation && (
-              <span title={observation.relayer}>{shortenAddress(observation.relayer)}</span>
-            )}
-          </div>
-        </div>
         {diagnostics?.partial && (
           <p className="mt-2 text-xs text-gray-500">
             Some observations are missing. Complete relayer reports are retained when available.
           </p>
         )}
-        {!timeline.timingComplete && (
-          <p className="mt-2 text-xs text-gray-500">
-            Unrecorded timings are shown as —. Chain block times and relayer observation times may
-            differ.
-          </p>
-        )}
-        <MessageActivityLog
-          history={history}
-          dispatchedAt={message.origin.timestamp}
-          deliveryDuration={timeline.totalElapsed}
-          deliveredAt={delivered ? message.destination?.timestamp : undefined}
-        />
-      </section>
-    </Card>
+      </div>
+    </section>
   );
 }
 
 function LifecycleStage({
   stage,
-  confirmationTracked,
   originConfirmation,
+  suspended,
 }: {
   stage: MessageTimelineStage;
-  confirmationTracked: boolean;
   originConfirmation?: OriginConfirmation;
+  suspended: boolean;
 }) {
   const complete = stage.status === 'complete';
   const active = stage.status === 'active';
+  const running = active && !suspended;
   const isOrigin = stage.id === 'origin_confirmed';
-  const isConfirmation = stage.id === 'confirmed';
   const required = originConfirmation?.required;
   const current = originConfirmation?.current;
   const confirmations =
@@ -230,32 +345,6 @@ function LifecycleStage({
       ? Math.min(required, Math.max(0, current))
       : undefined;
   const fraction = confirmations !== undefined ? confirmations / required! : undefined;
-  const indeterminate = active && fraction === undefined;
-  let timingDetail: string | undefined;
-  if (stage.elapsedSincePrevious !== undefined) {
-    const elapsed = stage.elapsedSincePrevious;
-    const previous =
-      stage.id === 'picked_up'
-        ? 'origin confirmation'
-        : stage.id === 'validated'
-          ? 'pickup'
-          : stage.id === 'delivered'
-            ? 'validation'
-            : isConfirmation
-              ? 'delivery'
-              : 'dispatch';
-    timingDetail = `${formatElapsed(Math.abs(elapsed))} ${elapsed < 0 ? 'before' : 'after'} ${previous}`;
-  } else if (stage.id === 'dispatched') timingDetail = 'Origin block time';
-  else if (isOrigin && originConfirmation?.required !== undefined) {
-    timingDetail = complete
-      ? `${originConfirmation.required} confirmations`
-      : `${originConfirmation.current ?? '—'} / ${originConfirmation.required} confirmations`;
-  } else if (isOrigin) timingDetail = 'Confirmation block unavailable';
-  else if (isConfirmation && !confirmationTracked) timingDetail = 'Confirmation data unavailable';
-  else if (isConfirmation && stage.timestamp === undefined)
-    timingDetail = 'Awaiting relayer report';
-  else if (stage.status === 'pending' || active) timingDetail = 'Awaiting observation';
-  else timingDetail = 'Timing not recorded';
 
   return (
     <li
@@ -264,13 +353,13 @@ function LifecycleStage({
       data-status={stage.status}
     >
       <div
-        role={active ? 'progressbar' : undefined}
-        aria-label={active ? `${stage.label} progress` : undefined}
+        role={running ? 'progressbar' : undefined}
+        aria-label={running ? `${stage.label} progress` : undefined}
         aria-valuemin={confirmations !== undefined ? 0 : undefined}
         aria-valuemax={confirmations !== undefined ? required : undefined}
         aria-valuenow={confirmations}
         aria-valuetext={
-          active
+          running
             ? confirmations !== undefined
               ? `${confirmations} of ${required} confirmations`
               : 'In progress'
@@ -278,7 +367,7 @@ function LifecycleStage({
         }
         className={clsx(
           'relative h-1 overflow-hidden rounded-full',
-          active ? 'bg-primary-50' : 'bg-gray-200',
+          running ? 'bg-primary-200' : 'bg-gray-200',
         )}
       >
         <span
@@ -292,10 +381,7 @@ function LifecycleStage({
         />
         <span
           aria-hidden="true"
-          className={clsx(
-            'absolute inset-y-0 left-0 w-2/5 rounded-full bg-primary-500',
-            indeterminate ? styles.indeterminate : 'hidden',
-          )}
+          className={clsx('absolute inset-0 rounded-full', running ? styles.shimmer : 'hidden')}
         />
       </div>
       <div className="mt-3 flex min-h-10 items-center gap-1.5">
@@ -306,8 +392,14 @@ function LifecycleStage({
           )}
           aria-hidden="true"
         >
-          {active ? (
-            <SpinnerIcon width={12} height={12} color="currentColor" className={styles.spinner} />
+          {running ? (
+            <SpinnerIcon
+              width={12}
+              height={12}
+              color="currentColor"
+              style={{ color: 'inherit' }}
+              className={styles.spinner}
+            />
           ) : complete ? (
             '✓'
           ) : stage.status === 'failed' ? (
@@ -318,44 +410,21 @@ function LifecycleStage({
         </span>
         <span
           className={clsx(
-            'text-xs font-medium',
+            'text-sm font-medium',
             complete || active ? 'text-gray-800' : 'text-gray-500',
           )}
         >
-          {active || stage.status === 'failed'
-            ? (activeLabels[stage.id] ?? stage.label)
-            : stage.label}
+          {active && suspended
+            ? stage.id === 'validated'
+              ? 'Validation waiting'
+              : stage.id === 'delivered'
+                ? 'Delivery waiting'
+                : (activeLabels[stage.id] ?? stage.label)
+            : active || stage.status === 'failed'
+              ? (activeLabels[stage.id] ?? stage.label)
+              : stage.label}
         </span>
       </div>
-      <div
-        className="mt-2 text-sm tabular-nums text-gray-800"
-        title={stage.timestamp === undefined ? undefined : new Date(stage.timestamp).toISOString()}
-      >
-        {stage.timestamp !== undefined
-          ? formatTimestamp(stage.timestamp)
-          : isConfirmation && !confirmationTracked
-            ? 'Not tracked'
-            : isConfirmation && complete
-              ? 'Confirmed'
-              : '—'}
-      </div>
-      <div className="mt-1 min-h-8 text-xs tabular-nums leading-relaxed text-gray-500">
-        {timingDetail}
-      </div>
-      {isOrigin && originConfirmation?.blockNumber !== undefined && (
-        <p className="mt-1 text-xxs leading-relaxed text-gray-500">
-          Block {originConfirmation.blockNumber.toLocaleString()}
-          {stage.timestamp !== undefined ? ` · ${originConfirmation.required} confirmations` : ''}
-        </p>
-      )}
-      {isConfirmation && stage.timestamp !== undefined && (
-        <p
-          className="mt-1 text-xxs leading-relaxed text-gray-500"
-          title="When this relayer checked successful delivery. This can occur later than the chain confirmation policy was satisfied."
-        >
-          Relayer observed
-        </p>
-      )}
     </li>
   );
 }

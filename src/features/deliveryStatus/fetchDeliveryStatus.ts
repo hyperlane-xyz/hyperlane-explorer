@@ -63,9 +63,7 @@ export async function fetchDeliveryStatus(
         nonce: txDetails?.nonce || 0,
         gasLimit: toDecimalNumber(txDetails?.gasLimit || 0),
         gasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
-        effectiveGasPrice: toDecimalNumber(txDetails?.gasPrice || 0),
-        gasUsed: toDecimalNumber(txDetails?.gasLimit || 0),
-        cumulativeGasUsed: toDecimalNumber(txDetails?.gasLimit || 0),
+        // Actual gas usage and effective price require a receipt; transaction limits are not costs.
         maxFeePerGas: toDecimalNumber(txDetails?.maxFeePerGas || 0),
         maxPriorityPerGas: toDecimalNumber(txDetails?.maxPriorityFeePerGas || 0),
       },

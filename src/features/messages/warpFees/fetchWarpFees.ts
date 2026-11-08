@@ -17,6 +17,7 @@ import { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import { getWarpRouteAmountParts } from '../../../utils/warpRouteAmounts';
 import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
+import { IgpPaymentDenomKind, parseIgpPayments } from '../igpPayments';
 
 export interface WarpFeeBreakdown {
   bridgeFee: string;
@@ -107,6 +108,17 @@ export async function fetchWarpFees(
   const receipt = await provider.getTransactionReceipt(message.origin.hash);
   // Receipt not yet indexed — throw so React Query retries instead of caching null forever.
   if (!receipt) throw new Error(`No receipt for tx ${message.origin.hash}`);
+
+  // Token-paid IGP may be included in the router's token pull. Without payer attribution,
+  // a separate route fee cannot be isolated; native subtraction also needs known units.
+  if (
+    parseIgpPayments(receipt.logs, message.msgId).some(
+      (payment) =>
+        payment.denom.kind !== IgpPaymentDenomKind.Native &&
+        !BigNumber.from(payment.paymentAmount).isZero(),
+    )
+  )
+    return null;
 
   const routerAddress = warpRouteDetails.originToken.addressOrDenom;
 

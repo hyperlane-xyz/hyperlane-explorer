@@ -347,3 +347,13 @@ test('formats debug durations without hiding negative or unavailable values', ()
   expect(formatTimestamp(0)).toBe('Unknown');
   expect(formatTimestamp(100_000)).toMatch(/\d{2}:\d{2}:\d{2}/);
 });
+
+test('optionally keeps tenths of seconds while carrying rounded minutes and hours', () => {
+  expect(formatElapsed(16_000, 'tenths')).toBe('16.0s');
+  expect(formatElapsed(16_340, 'tenths')).toBe('16.3s');
+  expect(formatElapsed(75_000, 'tenths')).toBe('1m 15.0s');
+  expect(formatElapsed(59_960, 'tenths')).toBe('1m');
+  expect(formatElapsed(3_599_960, 'tenths')).toBe('1h');
+  expect(formatElapsed(248, 'tenths')).toBe('248ms');
+  expect(formatElapsed(16_000)).toBe('16s');
+});

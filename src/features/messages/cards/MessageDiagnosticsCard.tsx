@@ -2,7 +2,6 @@ import { CopyButton, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
-import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadata } from '../../../metadataStore';
 import { logger } from '../../../utils/logger';
 import { truncateString } from '../../../utils/string';
@@ -34,87 +33,103 @@ export function MessageDiagnosticsCard({ destinationChainName, delivered }: Prop
   const live = connectionState === 'live' && !delivered;
   const failed = !!state?.failure && !waitingForCommit && !delivered;
 
+  const summary = delivered
+    ? 'Accepted on destination'
+    : proofReady
+      ? 'Validation ready'
+      : waitingForCommit || failed || state?.phase === 'retrying'
+        ? 'Waiting for validation'
+        : state
+          ? live && ['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
+            ? 'Checks in progress'
+            : 'Last reported checks'
+          : fetching
+            ? 'Loading validation details'
+            : error
+              ? 'Validation details unavailable'
+              : 'Waiting for relayer checks';
+
   return (
-    <SectionCard
-      className="w-full"
-      title="Security validation"
-      icon={
-        <span
+    <section className="min-w-0" aria-label="Security validation">
+      <div className="space-y-1">
+        <h2 className="text-sm font-medium text-gray-900">Security validation</h2>
+        <p
           className={clsx(
             'text-xs',
             delivered ? 'text-green-700' : proofReady ? 'text-primary-700' : 'text-gray-500',
           )}
         >
-          {delivered ? 'Accepted on destination' : proofReady ? 'Proof ready' : 'Relayer checks'}
-        </span>
-      }
-    >
-      <p className="mb-3 text-xs leading-relaxed text-gray-500">
-        The selected checks authorize this message. Unused alternatives do not block delivery.
-      </p>
-      {!state ? (
-        <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
-          {fetching && (
-            <SpinnerIcon
-              width={14}
-              height={14}
-              color="currentColor"
-              className="shrink-0 motion-reduce:animate-none"
-            />
-          )}
-          <span>
-            {fetching
-              ? 'Loading validation details…'
-              : error
-                ? 'Validation details are temporarily unavailable.'
-                : delivered
-                  ? 'No validation details were recorded for this message.'
-                  : 'Waiting for a relayer observation.'}
-          </span>
-        </div>
-      ) : (
-        <>
-          <IsmTree
-            key={observation.relayer}
-            state={state}
-            chainName={destinationChainName}
-            active={live && !failed}
-          />
-          {(state.retry?.reason || state.failure?.reason) && (
-            <details className="mt-3 text-xs text-gray-500">
-              <summary className="cursor-pointer py-1">
-                {waitingForCommit ? 'Waiting for commit confirmation' : 'Relay notes'}
-              </summary>
-              <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 leading-relaxed">
-                {state.retry?.reason && <p>{diagnosticLabel(state.retry.reason)}</p>}
-                {state.failure?.reason && (
-                  <p className={clsx(failed && 'text-red-700')}>
-                    {state.failure.stage && `${diagnosticLabel(state.failure.stage)}: `}
-                    {diagnosticLabel(state.failure.reason)}
-                  </p>
-                )}
-              </div>
-            </details>
-          )}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-2 text-xxs text-gray-500">
-            <span title={observation.relayer}>
-              Relayer {truncateString(observation.relayer, 8, 6)}
-            </span>
+          {summary}
+        </p>
+      </div>
+      <div className="mt-3">
+        <p className="mb-3 text-xs leading-relaxed text-gray-500">
+          The selected checks authorize this message. Unused alternatives do not block delivery.
+        </p>
+        {!state ? (
+          <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+            {fetching && (
+              <SpinnerIcon
+                width={14}
+                height={14}
+                color="currentColor"
+                className="shrink-0 motion-reduce:animate-none"
+              />
+            )}
             <span>
-              {diagnostics?.partial
-                ? 'Some details are unavailable'
-                : error || connectionState === 'disconnected'
-                  ? 'Showing last observation'
-                  : delivered || connectionState === 'historical'
-                    ? 'Recorded validation path'
-                    : live
-                      ? 'Updating live'
-                      : 'Connecting…'}
+              {fetching
+                ? 'Loading validation details…'
+                : error
+                  ? 'Validation details are temporarily unavailable.'
+                  : delivered
+                    ? 'No validation details were recorded for this message.'
+                    : 'Waiting for a relayer observation.'}
             </span>
           </div>
-        </>
-      )}
-    </SectionCard>
+        ) : (
+          <>
+            <IsmTree
+              key={observation.relayer}
+              state={state}
+              chainName={destinationChainName}
+              active={live && !failed}
+            />
+            {(state.retry?.reason || state.failure?.reason) && (
+              <details className="mt-3 text-xs text-gray-500">
+                <summary className="cursor-pointer py-1">
+                  {waitingForCommit ? 'Waiting for commit confirmation' : 'Relay notes'}
+                </summary>
+                <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 leading-relaxed">
+                  {state.retry?.reason && <p>{diagnosticLabel(state.retry.reason)}</p>}
+                  {state.failure?.reason && (
+                    <p className={clsx(failed && 'text-red-700')}>
+                      {state.failure.stage && `${diagnosticLabel(state.failure.stage)}: `}
+                      {diagnosticLabel(state.failure.reason)}
+                    </p>
+                  )}
+                </div>
+              </details>
+            )}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-2 text-xxs text-gray-500">
+              <span title={observation.relayer}>
+                Relayer {truncateString(observation.relayer, 8, 6)}
+              </span>
+              <span>
+                {diagnostics?.partial
+                  ? 'Some details are unavailable'
+                  : error || connectionState === 'disconnected'
+                    ? 'Showing last observation'
+                    : delivered || connectionState === 'historical'
+                      ? 'Recorded validation path'
+                      : live
+                        ? 'Updating live'
+                        : 'Connecting…'}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 

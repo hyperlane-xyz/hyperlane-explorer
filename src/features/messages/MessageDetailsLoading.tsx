@@ -3,22 +3,42 @@ import { SectionCard } from '../../components/layout/SectionCard';
 
 export function MessageDetailsLoading() {
   return (
-    <div>
-      <div className="bg-accent-gradient shadow-accent-glow flex items-center justify-between rounded px-3 py-3">
-        <div className="flex items-center gap-2">
-          <div className="bg-cream-300/70 h-2.5 w-2.5 rounded-full" />
-          <div className="h-6 w-52 animate-pulse rounded bg-white/20" />
+    <section
+      className="mx-auto w-full max-w-5xl space-y-4"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Loading message details"
+    >
+      <div
+        className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+        aria-hidden="true"
+      >
+        <div className="space-y-3 bg-primary-900 p-5 sm:p-6">
+          <div className="h-3 w-36 rounded bg-white/20 motion-safe:animate-pulse" />
+          <div className="h-7 w-64 max-w-full rounded bg-white/30 motion-safe:animate-pulse" />
+          <div className="h-3 w-72 max-w-full rounded bg-white/20 motion-safe:animate-pulse" />
         </div>
-        <div className="h-6 w-36 animate-pulse rounded bg-white/20" />
+        <div className="p-4 sm:p-5">
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            {[0, 1].map((side) => (
+              <div key={side} className="space-y-4">
+                <div className="h-7 w-40 rounded bg-gray-100 motion-safe:animate-pulse" />
+                <div className="h-10 w-52 max-w-full rounded bg-gray-200 motion-safe:animate-pulse" />
+                <div className="h-4 w-44 rounded bg-gray-100 motion-safe:animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 h-12 rounded bg-gray-100 motion-safe:animate-pulse" />
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-gray-200 pt-5 sm:grid-cols-3 lg:grid-cols-6">
+            {[0, 1, 2, 3, 4, 5].map((stage) => (
+              <div key={stage} className="h-12 rounded bg-gray-100 motion-safe:animate-pulse" />
+            ))}
+          </div>
+        </div>
       </div>
-
-      <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
-        <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={4} />
-        <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
-        <DetailSectionSkeleton className="w-full" rows={4} />
-        <DetailSectionSkeleton className="w-full" rows={4} />
-      </div>
-    </div>
+      <div className="h-20 rounded-xl bg-white/90 motion-safe:animate-pulse" aria-hidden="true" />
+      <span className="sr-only">Loading message details</span>
+    </section>
   );
 }
 

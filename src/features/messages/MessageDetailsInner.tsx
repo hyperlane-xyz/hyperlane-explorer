@@ -1,30 +1,29 @@
-import { toTitleCase } from '@hyperlane-xyz/utils';
-import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 
-import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { getMessagePause } from '../../consts/pausedRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
-import { Color } from '../../styles/Color';
 import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
-import { getChainDisplayName } from '../chains/utils';
 import { useTransactionMessageCount } from '../transactions/useTransactionMessageCount';
+import { MessageOverviewCard } from './cards/MessageOverviewCard';
+import { MessageRelayActivityPanel } from './cards/MessageRelayActivityPanel';
+import { MessageTechnicalDetails } from './cards/MessageTechnicalDetails';
 import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
 } from './cards/OriginTransactionCard';
-import {
-  MessageDiagnosticsProvider,
-  useMessageDiagnosticsContext,
-} from './diagnostics/MessageDiagnosticsContext';
+import { CollateralStatus } from './collateral/types';
+import { MessageDiagnosticsProvider } from './diagnostics/MessageDiagnosticsContext';
 import { useOriginConfirmation } from './diagnostics/useOriginConfirmation';
 import { useIsIcaMessage } from './ica';
-import { DetailCardSkeleton, DetailSectionSkeleton } from './MessageDetailsLoading';
+import {
+  DetailCardSkeleton,
+  DetailSectionSkeleton,
+  MessageDetailsLoading,
+} from './MessageDetailsLoading';
 import type { MessageDetailsRuntimeState } from './MessageDetailsRuntime';
 import { PLACEHOLDER_MESSAGE } from './placeholderMessages';
 import { useMessageQuery } from './queries/useMessageQuery';
@@ -50,24 +49,18 @@ const IcaDetailsCard = dynamic(
     loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
   },
 );
-const GasDetailsCard = dynamic(
-  () => import('./cards/GasDetailsCard').then((mod) => mod.GasDetailsCard),
-  {
-    loading: () => <DetailSectionSkeleton className="w-full" rows={3} />,
-  },
+const OriginGasPaymentDetails = dynamic(
+  () => import('./cards/OriginGasPaymentDetails').then((mod) => mod.OriginGasPaymentDetails),
+  { loading: () => <p className="py-3 text-sm text-gray-500">Loading funding details…</p> },
 );
 const WarpRouteVisualizationCard = dynamic(
   () => import('./cards/WarpRouteVisualizationCard').then((mod) => mod.WarpRouteVisualizationCard),
   { loading: () => <DetailCardSkeleton className="w-full" /> },
 );
-const WarpTransferDetailsCard = dynamic(
-  () => import('./cards/WarpTransferDetailsCard').then((mod) => mod.WarpTransferDetailsCard),
-  { loading: () => <DetailSectionSkeleton className="w-full" rows={4} /> },
-);
 const MessageLifecycleCard = dynamic(
   () => import('./cards/MessageLifecycleCard').then((mod) => mod.MessageLifecycleCard),
   {
-    loading: () => <DetailCardSkeleton className="w-full !bg-transparent !shadow-none" />,
+    loading: () => <MessageDetailsLoading />,
   },
 );
 const MessageDiagnosticsCard = dynamic(
@@ -160,7 +153,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     [chainMetadataResolver, message, warpRouteChainAddressMap],
   );
   const txMessageCount = useTransactionMessageCount(isMessageFound ? origin.hash : undefined);
-  const showTxLink = txMessageCount > 1;
   const handleRuntimeStateChange = useCallback(
     (value: MessageDetailsRuntimeState) =>
       setRuntimeState((prev) => {
@@ -181,105 +173,199 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     ensureWarpRouteData().catch((e) => logger.error('Error loading warp route data', e));
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
+  const pause = status !== MessageStatus.Delivered ? getMessagePause(message) : undefined;
+  const waitingForLiquidity =
+    status !== MessageStatus.Delivered &&
+    activeRuntimeState?.collateralStatus === CollateralStatus.Insufficient;
+
   return (
     <MessageDiagnosticsProvider messageId={messageId} live={showLifecycle} enabled={showLifecycle}>
-      <div className="bg-accent-gradient shadow-accent-glow flex flex-wrap items-center justify-between gap-3 rounded px-3 py-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <div className="bg-cream-300 h-2.5 w-2.5 rounded-full" />
-          <h2 className="text-lg font-medium text-white">{`${
-            isIcaMsg ? 'ICA ' : ''
-          }Message to ${getChainDisplayName(chainMetadataResolver, destinationChainName)}`}</h2>
-          {showTxLink && (
-            <Link
-              href={`/tx/${origin.hash}`}
-              className="text-cream-300 text-sm font-medium transition-colors hover:text-white"
-            >
-              View all {txMessageCount} messages in tx
-            </Link>
-          )}
-        </div>
-        <StatusHeader
-          messageStatus={status}
-          isOriginConfirming={isOriginConfirming}
-          isMessageFound={isMessageFound}
-          isFetching={isFetching}
-          isError={isError}
-        />
-      </div>
-      <div className="mt-3 flex flex-wrap items-stretch justify-between gap-3 md:mt-4 md:gap-4">
-        <OriginTransactionCard
-          chainName={originChainName}
-          domainId={originDomainId}
-          transaction={origin}
-          blur={blur}
-        />
-        <Suspense
-          fallback={
-            <DestinationTransactionPreviewCard
-              chainName={destinationChainName}
-              domainId={destinationDomainId}
-              status={status}
-              transaction={destination}
-              blur={blur}
-              isLiveDetailsPending={isFetching}
-              isOriginConfirming={isOriginConfirming}
-            />
-          }
-        >
-          <MessageDetailsRuntime
-            messageId={messageId}
-            baseMessage={baseMessage}
-            baseIsMessageFound={baseIsMessageFound}
-            hasInitialMessageDetails={hasInitialMessageDetails}
-            hasGraphQlRun={hasGraphQlRun}
-            isGraphQlMessageFound={isGraphQlMessageFound}
-            destinationChainName={destinationChainName}
-            blur={blur}
-            isOriginConfirming={isOriginConfirming}
-            originConfirmation={originConfirmation}
-            warpRouteDetails={warpRouteDetails}
-            onStateChange={handleRuntimeStateChange}
-          />
-        </Suspense>
-        {warpRouteDetails && (
-          <WarpTransferDetailsCard
-            message={message}
-            warpRouteDetails={warpRouteDetails}
-            blur={blur}
-          />
-        )}
-        {showLifecycle && (
+      <div className="mx-auto w-full min-w-0 max-w-5xl space-y-4 sm:space-y-5">
+        {isMessageFound ? (
           <MessageLifecycleCard
-            key={messageId}
+            key={`progress-${messageId}`}
             messageId={messageId}
             message={message}
             confirmed={confirmed}
             originConfirmation={timedOriginConfirmation}
-            blur={blur}
+            messageKind={
+              warpRouteDetails
+                ? 'Warp Transfer'
+                : isIcaMsg
+                  ? 'Interchain account message'
+                  : 'Interchain message'
+            }
+            paused={!!pause}
+            waitingForLiquidity={waitingForLiquidity}
+            notice={
+              (pause || waitingForLiquidity || status === MessageStatus.Failing) && (
+                <aside
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                  aria-live="polite"
+                >
+                  <p className="font-medium">
+                    {pause
+                      ? 'Delivery is paused'
+                      : waitingForLiquidity
+                        ? 'Waiting for destination liquidity'
+                        : 'Delivery needs attention'}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed">
+                    {pause
+                      ? 'This route or chain is paused. Delivery will not proceed while the pause remains active.'
+                      : waitingForLiquidity
+                        ? 'The destination route needs more liquidity to complete this transfer. See the destination transaction below for balances and rebalance status.'
+                        : 'The destination check reported an issue. See the destination transaction below for delivery diagnostics.'}
+                  </p>
+                  {pause?.link && (
+                    <a
+                      href={pause.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block text-xs underline underline-offset-2"
+                    >
+                      Read the status update ↗
+                    </a>
+                  )}
+                </aside>
+              )
+            }
+          >
+            {(active) => (
+              <MessageOverviewCard
+                message={message}
+                warpRouteDetails={warpRouteDetails}
+                txMessageCount={txMessageCount}
+                active={active}
+              />
+            )}
+          </MessageLifecycleCard>
+        ) : isFetching ? (
+          <MessageDetailsLoading />
+        ) : (
+          <section
+            className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8"
+            aria-live="polite"
+          >
+            <h1 className="text-xl font-medium text-gray-900">
+              {isError ? 'Message temporarily unavailable' : 'Message not found'}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {isError
+                ? 'The explorer could not load this message. Please try again shortly.'
+                : 'Check the message ID. A newly dispatched message may still be indexing.'}
+            </p>
+            <code className="mt-4 block break-all text-xs text-gray-500">{messageId}</code>
+          </section>
+        )}
+
+        {isMessageFound && (
+          <ContentDetailsCard
+            key={`envelope-${messageId}`}
+            message={message}
+            blur={false}
+            warpRouteDetails={warpRouteDetails}
+            isIca={isIcaMsg}
           />
         )}
-        {showLifecycle && (
-          <MessageDiagnosticsCard
-            destinationChainName={destinationChainName}
-            delivered={status === MessageStatus.Delivered}
-          />
-        )}
-        {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
-        <WarpRouteVisualizationCard
-          message={message}
-          warpRouteDetails={warpRouteDetails}
-          blur={blur}
+
+        <div hidden={!isMessageFound}>
+          <div className="flex min-w-0 flex-wrap gap-4">
+            <OriginTransactionCard
+              chainName={originChainName}
+              domainId={originDomainId}
+              transaction={origin}
+              blur={blur}
+            >
+              {isMessageFound && (
+                <OriginGasPaymentDetails
+                  message={message}
+                  blur={false}
+                  igpPayments={debugResult?.gasDetails?.contractToPayments}
+                />
+              )}
+            </OriginTransactionCard>
+            <Suspense
+              fallback={
+                <DestinationTransactionPreviewCard
+                  chainName={destinationChainName}
+                  domainId={destinationDomainId}
+                  status={status}
+                  transaction={destination}
+                  blur={blur}
+                  isLiveDetailsPending={isFetching}
+                  isOriginConfirming={isOriginConfirming}
+                />
+              }
+            >
+              <MessageDetailsRuntime
+                key={messageId}
+                messageId={messageId}
+                baseMessage={baseMessage}
+                baseIsMessageFound={baseIsMessageFound}
+                hasInitialMessageDetails={hasInitialMessageDetails}
+                hasGraphQlRun={hasGraphQlRun}
+                isGraphQlMessageFound={isGraphQlMessageFound}
+                destinationChainName={destinationChainName}
+                blur={blur}
+                isOriginConfirming={isOriginConfirming}
+                originConfirmation={originConfirmation}
+                warpRouteDetails={warpRouteDetails}
+                onStateChange={handleRuntimeStateChange}
+              />
+            </Suspense>
+          </div>
+        </div>
+
+        <MessageTechnicalDetails
+          key={`technical-${messageId}`}
+          hidden={!isMessageFound}
+          security={
+            showLifecycle && (
+              <MessageDiagnosticsCard
+                destinationChainName={destinationChainName}
+                delivered={status === MessageStatus.Delivered}
+              />
+            )
+          }
+          activity={
+            showLifecycle && (
+              <MessageRelayActivityPanel
+                paused={!!pause}
+                waitingForLiquidity={waitingForLiquidity}
+                message={message}
+                confirmed={confirmed}
+                originConfirmation={timedOriginConfirmation}
+              />
+            )
+          }
+          details={
+            <>
+              {isIcaMsg && (
+                <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />
+              )}
+              {isAeroVoterMessage(message) && (
+                <AeroVoterDetailsCard message={message} blur={blur} />
+              )}
+              <WarpRouteVisualizationCard
+                message={message}
+                warpRouteDetails={warpRouteDetails}
+                blur={blur}
+              />
+              {debugResult?.ismDetails && (
+                <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
+              )}
+              {!isIcaMsg &&
+                !isAeroVoterMessage(message) &&
+                !warpRouteDetails &&
+                !debugResult?.ismDetails && (
+                  <p className="text-sm text-gray-500">
+                    No additional application details were detected for this message.
+                  </p>
+                )}
+            </>
+          }
         />
-        <ContentDetailsCard message={message} blur={blur} />
-        {isAeroVoterMessage(message) && <AeroVoterDetailsCard message={message} blur={blur} />}
-        <GasDetailsCard
-          message={message}
-          igpPayments={debugResult?.gasDetails?.contractToPayments}
-          blur={blur}
-        />
-        {debugResult?.ismDetails && (
-          <IsmDetailsCard ismDetails={debugResult.ismDetails} blur={blur} />
-        )}
       </div>
     </MessageDiagnosticsProvider>
   );
@@ -294,6 +380,7 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.message === b.message &&
     a.debugResult === b.debugResult &&
     a.isDeliveryStatusFetching === b.isDeliveryStatusFetching &&
+    a.collateralStatus === b.collateralStatus &&
     a.originConfirmationTimestamp?.blockNumber === b.originConfirmationTimestamp?.blockNumber &&
     a.originConfirmationTimestamp?.timestamp === b.originConfirmationTimestamp?.timestamp
   );
@@ -310,56 +397,6 @@ function hasCompleteMessageDetails(message?: Message | MessageStub | null): mess
     'blockNumber' in message.origin &&
     'mailbox' in message.origin &&
     'gasLimit' in message.origin
-  );
-}
-
-function StatusHeader({
-  messageStatus,
-  isOriginConfirming,
-  isMessageFound,
-  isFetching,
-  isError,
-}: {
-  messageStatus: MessageStatus;
-  isOriginConfirming: boolean;
-  isMessageFound: boolean;
-  isFetching: boolean;
-  isError: boolean;
-}) {
-  const { observation } = useMessageDiagnosticsContext();
-  const loading = isFetching && !isMessageFound;
-  let text: string;
-  if (loading) {
-    text = 'Loading message';
-  } else if (isMessageFound) {
-    text =
-      isOriginConfirming && !observation
-        ? 'Status: Confirming on origin'
-        : `Status: ${toTitleCase(messageStatus)}`;
-  } else if (isError) {
-    text = 'Error finding message';
-  } else {
-    text = 'Message not found';
-  }
-
-  let icon: React.ReactNode;
-  if (loading) {
-    icon = (
-      <div className="flex items-center justify-center">
-        <SpinnerIcon width={20} height={20} color={Color.white} />
-      </div>
-    );
-  } else if (isMessageFound && messageStatus === MessageStatus.Delivered) {
-    icon = <CheckmarkIcon width={24} height={24} color={Color.white} />;
-  } else {
-    icon = null;
-  }
-
-  return (
-    <div className="flex items-center">
-      <h3 className="mr-2 text-lg font-medium text-white">{text}</h3>
-      {icon}
-    </div>
   );
 }
 

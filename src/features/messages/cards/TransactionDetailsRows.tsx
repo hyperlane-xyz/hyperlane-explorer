@@ -1,12 +1,11 @@
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
 import { isZeroish } from '@hyperlane-xyz/utils';
+import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
 
 import { MessageTx, MessageTxStub } from '../../../types';
 import { formatTxHash } from '../../../utils/addresses';
-import { getDateTimeString, getHumanReadableTimeString } from '../../../utils/time';
+import { getDateTimeString } from '../../../utils/time';
 import { getBlockExplorerAddressUrl, getBlockExplorerTxUrl } from '../../../utils/url';
-import { getChainDisplayName } from '../../chains/utils';
-import { KeyValueRow } from './KeyValueRow';
 
 type TransactionResolver = Pick<ChainMetadataResolver, 'tryGetChainMetadata' | 'tryGetChainName'>;
 
@@ -25,63 +24,93 @@ export function TransactionDetailsRows({
 }) {
   const { hash, from, timestamp } = transaction;
   const blockNumber = 'blockNumber' in transaction ? transaction.blockNumber : undefined;
-  const labelWidth = 'w-28';
-
   const formattedHash = formatTxHash(hash, domainId, resolver);
-  const txExplorerLink =
-    hash && !isZeroish(hash) ? getBlockExplorerTxUrl(resolver, chainName, formattedHash) : null;
+  const hasHash = !!hash && !isZeroish(hash);
+  const txExplorerLink = hasHash ? getBlockExplorerTxUrl(resolver, chainName, formattedHash) : null;
   const fromExplorerLink = from ? getBlockExplorerAddressUrl(resolver, chainName, from) : null;
-  const idString =
-    chainName && chainName !== resolver.tryGetChainName(domainId)
-      ? `${chainName} / ${domainId}`
-      : `${domainId}`;
-  const chainDescription = `${getChainDisplayName(resolver, chainName, false, false)} (${idString})`;
 
   return (
-    <>
-      <KeyValueRow
-        label="Chain:"
-        labelWidth={labelWidth}
-        display={chainDescription}
-        blurValue={blur}
-      />
-      <KeyValueRow
-        label="Tx:"
-        labelWidth={labelWidth}
-        display={formattedHash}
-        showCopy={true}
-        blurValue={blur}
-        link={txExplorerLink}
-        truncateMiddle={true}
-      />
+    <dl className={`min-w-0 space-y-3 ${blur ? 'blur-xs' : ''}`}>
+      <div>
+        <dt className="mb-1 text-xxs text-gray-500">Transaction hash</dt>
+        <dd>
+          <TransactionValue
+            value={hasHash ? formattedHash : ''}
+            href={txExplorerLink}
+            label="transaction hash"
+          />
+        </dd>
+      </div>
       {from && (
-        <KeyValueRow
-          label="From:"
-          labelWidth={labelWidth}
-          display={from}
-          showCopy={true}
-          blurValue={blur}
-          link={fromExplorerLink}
-          truncateMiddle={true}
-        />
+        <div>
+          <dt className="mb-1 text-xxs text-gray-500">Submitted by</dt>
+          <dd>
+            <TransactionValue value={from} href={fromExplorerLink} label="transaction sender" />
+          </dd>
+        </div>
       )}
-      {!!timestamp && (
-        <KeyValueRow
-          label="Time:"
-          labelWidth={labelWidth}
-          display={getHumanReadableTimeString(timestamp)}
-          subDisplay={`(${getDateTimeString(timestamp)})`}
-          blurValue={blur}
-        />
+      {(!!timestamp || blockNumber !== undefined) && (
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 border-t border-gray-200/70 pt-3 text-xs">
+          {!!timestamp && (
+            <div className="min-w-0">
+              <dt className="text-xxs text-gray-500">Time (local)</dt>
+              <dd className="mt-1 text-gray-700">
+                <time
+                  dateTime={new Date(timestamp).toISOString()}
+                  title={new Date(timestamp).toISOString()}
+                >
+                  {getDateTimeString(timestamp)}
+                </time>
+              </dd>
+            </div>
+          )}
+          {blockNumber !== undefined && (
+            <div>
+              <dt className="text-xxs text-gray-500">Block</dt>
+              <dd className="mt-1 break-all tabular-nums text-gray-700">
+                {blockNumber.toLocaleString()}
+              </dd>
+            </div>
+          )}
+        </div>
       )}
-      {blockNumber !== undefined && (
-        <KeyValueRow
-          label="Block:"
-          labelWidth={labelWidth}
-          display={blockNumber.toString()}
-          blurValue={blur}
-        />
+    </dl>
+  );
+}
+
+function TransactionValue({
+  value,
+  href,
+  label,
+}: {
+  value: string;
+  href: string | null;
+  label: string;
+}) {
+  if (!value) return <span className="text-xs text-gray-500">Not available</span>;
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`View ${label} on block explorer`}
+          className="min-w-0 break-all font-mono text-xs leading-5 text-primary-700 underline decoration-primary-200 underline-offset-4 hover:text-primary-900"
+        >
+          {value}
+          <BoxArrowIcon width={11} height={11} className="ml-1 inline-block align-middle" />
+        </a>
+      ) : (
+        <code className="min-w-0 break-all text-xs leading-5 text-gray-800">{value}</code>
       )}
-    </>
+      <CopyButton
+        copyValue={value}
+        aria-label={`Copy ${label}`}
+        width={12}
+        height={12}
+        className="mt-1 shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
+      />
+    </div>
   );
 }

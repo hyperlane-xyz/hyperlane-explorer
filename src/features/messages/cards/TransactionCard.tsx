@@ -1,9 +1,7 @@
-import { ErrorIcon, Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
+import { ErrorIcon, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { PropsWithChildren, ReactNode, useId, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 
-import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
 import { getMessagePause, MessagePauseType } from '../../../consts/pausedRoutes';
 import { useMultiProvider } from '../../../store';
@@ -22,7 +20,9 @@ import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
 import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
+import { DestinationExecutionCost } from './DestinationExecutionCost';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
+import { TransactionRecordCard, transactionHelpText } from './TransactionRecordCard';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
@@ -40,6 +40,7 @@ export function DestinationTransactionCard({
   blur,
   message,
   warpRouteDetails,
+  onCollateralStatusChange,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -52,6 +53,7 @@ export function DestinationTransactionCard({
   blur: boolean;
   message?: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
+  onCollateralStatusChange?: (status: CollateralStatus) => void;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
@@ -60,16 +62,22 @@ export function DestinationTransactionCard({
 
   const { isOpen, open, close } = useModal();
 
+  useEffect(() => {
+    onCollateralStatusChange?.(collateralInfo.status);
+  }, [collateralInfo.status, onCollateralStatusChange]);
+
   let content: ReactNode;
   if (transaction) {
     content = (
       <>
-        <TransactionDetails
+        <TransactionDetailsRows
           chainName={chainName}
           domainId={domainId}
           transaction={transaction}
           blur={blur}
+          resolver={multiProvider}
         />
+        {message && <DestinationExecutionCost message={message} blur={blur} />}
         {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
           <ActiveRebalanceModal
             warpRouteDetails={warpRouteDetails}
@@ -106,8 +114,8 @@ export function DestinationTransactionCard({
         <div className="mt-2 text-sm font-light text-gray-500">
           Delivery can proceed once the origin confirmation threshold is reached.
         </div>
-        <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        <div className="mt-3 flex items-center justify-center">
+          <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
@@ -115,8 +123,8 @@ export function DestinationTransactionCard({
     content = (
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
-        <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        <div className="mt-3 flex items-center justify-center">
+          <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
@@ -179,8 +187,8 @@ export function DestinationTransactionCard({
               Please ensure a relayer is running for this chain.
             </div>
           )}
-          <div className="mt-6 flex items-center justify-center">
-            <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+          <div className="mt-3 flex items-center justify-center">
+            <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
           </div>
           <CallDataModal debugResult={debugResult} />
         </div>
@@ -200,13 +208,14 @@ export function DestinationTransactionCard({
   }
 
   return (
-    <TransactionCard
+    <TransactionRecordCard
       chainName={chainName}
-      title="Destination Transaction"
+      domainId={domainId}
+      title="Delivery transaction"
       helpText={transactionHelpText.destination}
     >
       {content}
-    </TransactionCard>
+    </TransactionRecordCard>
   );
 }
 
@@ -240,52 +249,6 @@ function PausedMessageWarning({ type, link }: { type: MessagePauseType; link?: s
         </a>
       )}
     </div>
-  );
-}
-
-function TransactionCard({
-  chainName,
-  title,
-  helpText,
-  children,
-}: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
-  const tooltipId = `${useId()}-transaction-info`;
-
-  return (
-    <SectionCard
-      className="flex min-w-[340px] flex-1 basis-0 flex-col"
-      title={title}
-      leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText} />}
-    >
-      <div className="space-y-2">{children}</div>
-    </SectionCard>
-  );
-}
-
-function TransactionDetails({
-  chainName,
-  domainId,
-  transaction,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  transaction: MessageTx | MessageTxStub;
-  blur: boolean;
-}) {
-  const multiProvider = useMultiProvider();
-
-  return (
-    <>
-      <TransactionDetailsRows
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        blur={blur}
-        resolver={multiProvider}
-      />
-    </>
   );
 }
 
@@ -333,12 +296,6 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
     </>
   );
 }
-
-export const transactionHelpText = {
-  origin: 'Info about the transaction that initiated the message placement into the outbox.',
-  destination:
-    'Info about the transaction that triggered the delivery of the message from an inbox.',
-};
 
 const styles = {
   textLink:

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { CollateralStatus } from './collateral/types';
 import type { OriginConfirmation } from './diagnostics/useOriginConfirmation';
 import {
   useOriginConfirmationTimestamp,
@@ -16,7 +17,10 @@ const DestinationTransactionCard = dynamic(
   () => import('./cards/TransactionCard').then((mod) => mod.DestinationTransactionCard),
   {
     loading: () => (
-      <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
+      <DetailSectionSkeleton
+        className="flex min-w-0 flex-1 basis-full flex-col sm:basis-0"
+        rows={5}
+      />
     ),
   },
 );
@@ -32,6 +36,7 @@ export interface MessageDetailsRuntimeState {
   message?: Message | MessageStub;
   debugResult?: MessageDebugResult;
   isDeliveryStatusFetching: boolean;
+  collateralStatus: CollateralStatus;
   originConfirmationTimestamp?: OriginConfirmationTimestamp;
 }
 
@@ -68,6 +73,12 @@ export function MessageDetailsRuntime({
     messageId: string;
     value: PiMessageDetailsState;
   }>({ messageId, value: DEFAULT_PI_MESSAGE_DETAILS_STATE });
+  const [collateralState, setCollateralState] = useState<{
+    messageId: string;
+    status: CollateralStatus;
+  } | null>(null);
+  const collateralStatus =
+    collateralState?.messageId === messageId ? collateralState.status : CollateralStatus.Unknown;
   const shouldRunPi = !hasInitialMessageDetails && hasGraphQlRun && !isGraphQlMessageFound;
   const activePiState =
     piState.messageId === messageId ? piState.value : DEFAULT_PI_MESSAGE_DETAILS_STATE;
@@ -75,6 +86,17 @@ export function MessageDetailsRuntime({
   const handlePiStateChange = useCallback(
     (value: PiMessageDetailsState) => {
       setPiState({ messageId, value });
+    },
+    [messageId],
+  );
+
+  const handleCollateralStatusChange = useCallback(
+    (status: CollateralStatus) => {
+      setCollateralState((previous) =>
+        previous?.messageId === messageId && previous.status === status
+          ? previous
+          : { messageId, status },
+      );
     },
     [messageId],
   );
@@ -103,9 +125,11 @@ export function MessageDetailsRuntime({
       message,
       debugResult,
       isDeliveryStatusFetching,
+      collateralStatus,
       originConfirmationTimestamp,
     });
   }, [
+    collateralStatus,
     debugResult,
     hasRun,
     isDeliveryStatusFetching,
@@ -138,6 +162,7 @@ export function MessageDetailsRuntime({
         blur={blur}
         message={message || queriedMessage}
         warpRouteDetails={warpRouteDetails}
+        onCollateralStatusChange={handleCollateralStatusChange}
       />
     </>
   );

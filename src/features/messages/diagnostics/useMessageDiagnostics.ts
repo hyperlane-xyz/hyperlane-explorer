@@ -342,18 +342,26 @@ export function useMessageActivityPage(messageId: string, refreshKey?: string, e
     clearTimeout(refreshTimer.current);
     refreshTimer.current = undefined;
   }, [current.page]);
-  const next = useCallback(() => {
-    if (fetching || !activityPage?.has_more || !activityPage.next_before_id) return;
-    setPagination((previous) => {
-      const page = previous.messageId === messageId ? previous.page : 0;
-      const cursors =
-        previous.messageId === messageId ? previous.cursors.slice(0, page + 1) : [null];
-      return { messageId, page: page + 1, cursors: [...cursors, activityPage.next_before_id] };
-    });
-  }, [activityPage, fetching, messageId]);
+  const next = useCallback(
+    (beforeId?: string) => {
+      const cursor = beforeId ?? activityPage?.next_before_id;
+      if (fetching || !cursor || (!beforeId && !activityPage?.has_more)) return;
+      setPagination((previous) => {
+        const page = previous.messageId === messageId ? previous.page : 0;
+        const cursors =
+          previous.messageId === messageId ? previous.cursors.slice(0, page + 1) : [null];
+        return { messageId, page: page + 1, cursors: [...cursors, cursor] };
+      });
+    },
+    [activityPage, fetching, messageId],
+  );
   const previous = useCallback(
     () => setPagination((value) => ({ ...value, page: Math.max(0, value.page - 1) })),
     [],
+  );
+  const latest = useCallback(
+    () => setPagination({ messageId, page: 0, cursors: [null] }),
+    [messageId],
   );
   return {
     activityPage,
@@ -363,5 +371,6 @@ export function useMessageActivityPage(messageId: string, refreshKey?: string, e
     error: error?.message,
     next,
     previous,
+    latest,
   };
 }

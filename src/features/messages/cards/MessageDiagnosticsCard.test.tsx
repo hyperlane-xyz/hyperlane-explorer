@@ -43,6 +43,7 @@ function report(state?: DiagnosticState) {
       error: undefined,
       next: jest.fn(),
       previous: jest.fn(),
+      latest: jest.fn(),
     },
     observation,
     relayers: observation ? [observation] : [],
@@ -135,6 +136,10 @@ it('distinguishes ready CCIP proof data from actual destination acceptance', () 
     }),
   );
   const html = render();
+  expect(html).toMatch(/^<section/);
+  expect(html).not.toContain('View validation path');
+  expect(html).toMatch(/<h2[^>]*>Security validation<\/h2>/);
+  expect(html).toContain('Validation ready');
   expect(html).toContain('data-node-id="root" data-state="ready"');
   expect(html).toContain('Gateway responded successfully · HTTP 200');
   expect(html).toContain('Destination acceptance is tracked separately.');
@@ -170,6 +175,11 @@ it('shows loading first, then neutral waiting when no reporter has observed the 
   expect(html).toContain('Waiting for a relayer observation.');
   expect(html).not.toContain('Attempt failed');
   expect(html).not.toContain('data-testid="spinner"');
+
+  useDiagnostics.mockReturnValue(report({ phase: 'dropped', modules: [] }));
+  const stopped = render();
+  expect(stopped).toContain('Last reported checks');
+  expect(stopped).not.toContain('Checks in progress');
 });
 
 it('keeps incomplete aggregation counts honest and stops recursive branch cycles', () => {
