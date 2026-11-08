@@ -14,7 +14,6 @@ import {
   type WarpRouteDetails,
 } from '../../../types';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
-import { isCollateralRoute } from '../collateral/utils';
 import { formatUsd } from './gasPaymentSummary';
 import { useTokenUsdPrices } from './useNativeTokenUsdPrice';
 import { WarpFeeDetails } from './WarpFeeDetails';
@@ -69,7 +68,6 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
   if (!warpRouteDetails) return null;
 
   const { amount, destAmount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
-  const isCollateral = isCollateralRoute(destinationToken.standard);
   const receivedAmount = destAmount ?? amount;
 
   return (
@@ -145,16 +143,6 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
           </p>
         </div>
       </div>
-      <div className="space-y-1 text-xxs leading-relaxed text-gray-500">
-        <p>Warp transfer inferred from the payload and Hyperlane Registry token metadata.</p>
-        {isCollateral && (
-          <p>
-            <span className="font-medium">Collateral-backed route:</span> This transfer uses locked
-            collateral on the destination chain.
-          </p>
-        )}
-      </div>
-      <WarpFeeDetails message={message} warpRouteDetails={warpRouteDetails} blur={blur} />
     </div>
   );
 }
@@ -173,6 +161,7 @@ export function WarpTransferDetailsCard(props: Props) {
       }
     >
       <WarpTransferDetails {...props} />
+      <WarpFeeDetails {...props} />
     </SectionCard>
   );
 }

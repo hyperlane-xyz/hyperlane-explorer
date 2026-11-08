@@ -5,27 +5,20 @@ import { useId, useMemo, useState } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { SendIcon } from '../../../components/icons/SendIcon';
 import { useChainMetadataResolver } from '../../../metadataStore';
-import { MessageStatus, type Message, type MessageStub } from '../../../types';
+import type { Message, MessageStub } from '../../../types';
 import { getChainDisplayName } from '../../chains/utils';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
+import { diagnosticsConnectionLabel, getMessageProgress } from '../diagnostics/progress';
 import {
   formatElapsed,
   formatTimestamp,
   getMessageTimeline,
   type MessageTimelineStage,
 } from '../diagnostics/timeline';
-import { diagnosticLabel, isWaitingForCommit } from '../diagnostics/types';
+import { diagnosticLabel } from '../diagnostics/types';
 import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
 import { MessageActivityLog } from './MessageActivityLog';
 
-const phaseLabels: Record<string, string> = {
-  preparing: 'Preparing verification',
-  awaiting_signatures: 'Collecting signatures',
-  ready_to_submit: 'Ready to send',
-  submitting: 'Sending to destination',
-  confirming: 'Checking delivery',
-  delivered: 'Delivery reported · awaiting chain data',
-};
 const explanations: Record<MessageTimelineStage['id'], string> = {
   dispatched: 'The origin transaction that places this message in the mailbox.',
   origin_confirmed: 'The configured confirmation threshold for the origin block.',
@@ -65,7 +58,6 @@ export function MessageRelayActivityPanel({
     setSelectedRelayer,
     connectionState,
   } = useMessageDiagnosticsContext();
-  const delivered = message.status === MessageStatus.Delivered;
   const live = connectionState === 'live';
   const confirmationTracked = !message.isPiMsg || confirmed;
   const { stages } = useMemo(
@@ -78,59 +70,24 @@ export function MessageRelayActivityPanel({
     [message, observation, activities, confirmed, confirmationTracked, originConfirmation],
   );
   const state = observation?.state;
-  const waitingForCommit = isWaitingForCommit(state);
-  const relayStopped =
-    !delivered &&
-    (paused ||
-      waitingForLiquidity ||
-      waitingForCommit ||
-      !!state?.failure ||
-      ['retrying', 'dropped'].includes(state?.phase ?? '') ||
-      [MessageStatus.Failing, MessageStatus.Unknown].includes(message.status));
-  const currentStatus = delivered
-    ? confirmed
-      ? 'Delivery confirmed'
-      : confirmationTracked
-        ? 'Confirming destination'
-        : 'Delivered'
-    : paused
-      ? 'Delivery paused'
-      : waitingForLiquidity
-        ? 'Waiting for destination liquidity'
-        : state?.phase === 'dropped'
-          ? 'Relayer stopped processing'
-          : !waitingForCommit && (state?.failure || state?.phase === 'retrying')
-            ? 'Waiting for next relay attempt'
-            : message.status === MessageStatus.Failing
-              ? 'Delivery needs attention'
-              : message.status === MessageStatus.Unknown
-                ? 'Delivery status unavailable'
-                : waitingForCommit
-                  ? 'Waiting for commit confirmation'
-                  : observation
-                    ? state?.submission?.stage === 'mempool' &&
-                      ['submitting', 'confirming'].includes(state.phase ?? '')
-                      ? 'In destination mempool'
-                      : (phaseLabels[state?.phase ?? ''] ?? diagnosticLabel(state?.phase))
-                    : selectedRelayer
-                      ? 'Relayer report unavailable'
-                      : originConfirmation?.tracked && !originConfirmation.confirmed
-                        ? 'Waiting for origin confirmations'
-                        : 'Awaiting relayer pickup';
-  const connectionLabel = live
-    ? 'Live'
-    : connectionState === 'disconnected'
-      ? 'Reconnecting'
-      : connectionState === 'connecting'
-        ? 'Connecting'
-        : 'Recorded';
+  const progress = getMessageProgress({
+    messageStatus: message.status,
+    state,
+    confirmed,
+    confirmationTracked,
+    originConfirmation,
+    paused,
+    waitingForLiquidity,
+    selectedRelayer: !!selectedRelayer,
+  });
+  const connectionLabel = diagnosticsConnectionLabel(connectionState);
 
   return (
     <MessageActivityLog
       key={message.msgId}
       history={history}
       dispatchedAt={message.origin.timestamp}
-      deliveredAt={delivered ? message.destination?.timestamp : undefined}
+      deliveredAt={progress.delivered ? message.destination?.timestamp : undefined}
       header={
         <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2.5">
@@ -138,11 +95,11 @@ export function MessageRelayActivityPanel({
             <span
               className={clsx(
                 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xxs font-medium',
-                delivered ? 'bg-green-100/40 text-green-800' : 'bg-gray-150 text-gray-700',
+                progress.delivered ? 'bg-green-100/40 text-green-800' : 'bg-gray-150 text-gray-700',
               )}
             >
-              {delivered && <span aria-hidden="true">✓</span>}
-              {currentStatus}
+              {progress.delivered && <span aria-hidden="true">✓</span>}
+              {progress.activityStatus}
             </span>
           </div>
           <span
@@ -156,7 +113,7 @@ export function MessageRelayActivityPanel({
               className={clsx(
                 'h-1.5 w-1.5 rounded-full',
                 live ? 'bg-green-600' : 'bg-gray-400',
-                live && !delivered && 'motion-safe:animate-pulse',
+                live && !progress.delivered && 'motion-safe:animate-pulse',
               )}
             />
             {connectionLabel}
@@ -171,7 +128,7 @@ export function MessageRelayActivityPanel({
             stages={stages}
             originConfirmation={originConfirmation}
             confirmationTracked={confirmationTracked}
-            relayStopped={relayStopped}
+            relayStopped={progress.relayStopped}
             relayer={observation?.relayer}
           />
           <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xxs text-gray-500">

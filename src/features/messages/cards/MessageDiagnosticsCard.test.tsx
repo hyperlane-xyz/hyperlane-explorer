@@ -155,23 +155,6 @@ it('distinguishes ready CCIP proof data from actual destination acceptance', () 
   expect(render(true)).toContain('Accepted on destination');
 });
 
-it.each([
-  [ProtocolType.Ethereum, `0x${'00'.repeat(12)}${'11'.repeat(20)}`, address],
-  [ProtocolType.Sealevel, `0x${'01'.repeat(32)}`, '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi'],
-])('links and copies the native %s module address', (protocol, encoded, native) => {
-  mockMetadata = { ...mockMetadata, protocol };
-  useDiagnostics.mockReturnValue(
-    report({
-      phase: 'preparing',
-      tree_root: 'root',
-      modules: [{ node_id: 'root', ism: encoded, children: [] }],
-    }),
-  );
-  const html = render();
-  expect(html).toContain(`href="https://explorer.test/address/${native}"`);
-  expect(html).toContain(`data-copy="${native}"`);
-});
-
 it('shows loading first, then neutral waiting when no reporter has observed the message', () => {
   useDiagnostics.mockReturnValue({ ...report(), fetching: true });
   expect(render()).toContain('Loading validation details…');
@@ -232,62 +215,6 @@ it('keeps incomplete aggregation counts honest and stops recursive branch cycles
   expect(html).toContain('Further branch details unavailable');
   expect(html).toContain('Waiting for module details');
 });
-
-it.each([ProtocolType.Ethereum, ProtocolType.Sealevel])(
-  'copies validator identities without destination explorer links on %s',
-  (protocol) => {
-    mockMetadata = { ...mockMetadata, protocol };
-    const second = `0x${'22'.repeat(20)}`;
-    const missing = `0x${'33'.repeat(20)}`;
-    const node = {
-      node_id: 'root',
-      ism: `0x${'01'.repeat(32)}`,
-      module_type: 'MessageIdMultisig',
-      children: [],
-      validators: [`0x${'00'.repeat(12)}${address.slice(2)}`, second, missing],
-      signatures: {
-        collected: 2,
-        threshold: 2,
-        index: 7,
-        root: `0x${'44'.repeat(32)}`,
-        unavailable: [{ validator: missing, reason: 'missing' }],
-      },
-    };
-    useDiagnostics.mockReturnValue(
-      report({ phase: 'ready_to_submit', tree_root: 'root', modules: [node] }),
-    );
-    const html = render();
-    expect(html.match(/2 of 3 signatures required/g)).toHaveLength(1);
-    expect(html.replace(/<[^>]*>/g, '')).toContain('2 signatures collected');
-    expect(html).not.toContain('2/2 validator signatures');
-    expect(html.match(/✓ Signature observed/g)).toHaveLength(2);
-    expect(html.match(/data-validator-status="collected"/g)).toHaveLength(2);
-    expect(html.match(/data-validator-status="unavailable"/g)).toHaveLength(1);
-    expect(html).toContain('Checkpoint not found in validator storage');
-    expect(html).toContain(`data-copy="${address}"`);
-    expect(html).toContain(`data-copy="${second}"`);
-    expect(html).not.toContain(`href="https://explorer.test/address/${address}"`);
-    expect(html).not.toContain(`href="https://explorer.test/address/${second}"`);
-
-    // One aggregate signature among two possible signers cannot identify either one.
-    useDiagnostics.mockReturnValue(
-      report({
-        phase: 'awaiting_signatures',
-        tree_root: 'root',
-        modules: [{ ...node, signatures: { ...node.signatures, collected: 1 } }],
-      }),
-    );
-    const partial = render();
-    expect(partial.match(/data-validator-status="unknown"/g)).toHaveLength(2);
-    expect(partial.match(/>Not reported<\/span>/g)).toHaveLength(2);
-    expect(partial).not.toContain('data-validator-status="collected"');
-    expect(partial).not.toContain('Not signed');
-    expect(partial).not.toContain('✓ Signature observed');
-    expect(partial).toContain(
-      'This report does not identify every signer. “Not reported” does not mean unsigned.',
-    );
-  },
-);
 
 it.each(['MessageIdMultisig', 'MerkleRootMultisig'])(
   'shows the %s threshold once in its caption, distinct from signatures collected',

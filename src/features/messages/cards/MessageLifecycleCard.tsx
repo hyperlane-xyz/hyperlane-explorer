@@ -10,12 +10,12 @@ import {
   formatEstimatedTime,
 } from '../diagnostics/deliveryEstimate';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
+import { diagnosticsConnectionLabel, getMessageProgress } from '../diagnostics/progress';
 import {
   formatElapsed,
   getMessageTimeline,
   type MessageTimelineStage,
 } from '../diagnostics/timeline';
-import { isWaitingForCommit } from '../diagnostics/types';
 import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
 import { useExplorerBlockValue } from '../queries/ExplorerEventsProvider';
 import { calculateConfirmationCount, getRequiredConfirmations } from '../useConfirmationProgress';
@@ -33,16 +33,6 @@ interface Props {
   waitingForLiquidity?: boolean;
 }
 
-const phaseLabels: Record<string, string> = {
-  preparing: 'Validating message',
-  awaiting_signatures: 'Collecting validator signatures',
-  ready_to_submit: 'Validated · preparing delivery',
-  submitting: 'Delivering message',
-  confirming: 'Waiting for indexed delivery',
-  delivered: 'Relayer observed delivery · waiting for indexer',
-  retrying: 'Waiting for the next relay attempt',
-  dropped: 'This relayer stopped processing the message',
-};
 const submissionLabels: Record<string, string> = {
   submitting: 'Submitting transaction',
   submitted: 'Transaction submitted',
@@ -88,65 +78,16 @@ export function MessageLifecycleCard({
       }),
     [message, observation, activities, confirmed, confirmationTracked, originConfirmation],
   );
-  const delivered = message.status === MessageStatus.Delivered;
   const state = observation?.state;
-  const waitingForCommit = isWaitingForCommit(state);
-  const failed = !!state?.failure && !waitingForCommit;
-  const blocked =
-    paused ||
-    waitingForLiquidity ||
-    failed ||
-    state?.phase === 'dropped' ||
-    (state?.phase === 'retrying' && !waitingForCommit) ||
-    message.status === MessageStatus.Failing;
-  const active = message.status === MessageStatus.Pending && !blocked;
-  const originConfirming = !!originConfirmation?.tracked && !originConfirmation.confirmed;
-  const status = delivered
-    ? confirmed
-      ? 'Delivery confirmed'
-      : confirmationTracked
-        ? 'Delivered · confirming'
-        : 'Delivered · confirmation not tracked'
-    : paused
-      ? 'Delivery paused'
-      : waitingForLiquidity
-        ? 'Waiting for destination liquidity'
-        : waitingForCommit
-          ? 'Waiting for commit confirmation'
-          : failed
-            ? 'Relayer waiting to retry'
-            : message.status === MessageStatus.Failing
-              ? 'Delivery needs attention'
-              : message.status === MessageStatus.Unknown
-                ? 'Delivery status unavailable'
-                : state?.phase
-                  ? (phaseLabels[state.phase] ?? 'Waiting for relay update')
-                  : originConfirming
-                    ? 'Confirming on origin'
-                    : 'Waiting for relayer pickup';
-  const explanation = delivered
-    ? confirmed
-      ? 'This message has arrived and is confirmed on the destination chain.'
-      : confirmationTracked
-        ? 'Delivery succeeded. Waiting for confirmations on the destination chain.'
-        : 'Delivery succeeded. Additional confirmation data is not available.'
-    : message.status === MessageStatus.Unknown
-      ? 'Waiting for enough data to determine the delivery status.'
-      : blocked
-        ? 'Tracking continues. Check the details below for the current delay.'
-        : waitingForCommit
-          ? 'The relayer is waiting for the earlier commitment to become available.'
-          : originConfirming
-            ? `${originConfirmation?.current ?? '—'} / ${originConfirmation?.required ?? '—'} origin confirmations${observation ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`
-            : state?.phase === 'submitting'
-              ? 'The relayer is sending the delivery transaction to the destination chain.'
-              : ['confirming', 'delivered'].includes(state?.phase ?? '')
-                ? 'Waiting for on-chain delivery to appear in the explorer.'
-                : ['preparing', 'awaiting_signatures', 'ready_to_submit'].includes(
-                      state?.phase ?? '',
-                    )
-                  ? 'The relayer has picked up the message and is preparing it for delivery.'
-                  : 'The message is dispatched. We are watching for the next relay update.';
+  const { active, blocked, delivered, explanation, originConfirming, status } = getMessageProgress({
+    messageStatus: message.status,
+    state,
+    confirmed,
+    confirmationTracked,
+    originConfirmation,
+    paused,
+    waitingForLiquidity,
+  });
 
   const destinationBlocks = metadata.tryGetChainMetadata(message.destinationDomainId)?.blocks;
   const destinationRequired = confirmationTracked
@@ -174,6 +115,8 @@ export function MessageLifecycleCard({
           !!observation,
         )
       : undefined;
+  const originCurrent = originConfirmation?.current;
+  const originRequired = originConfirmation?.required;
   const progressStatus =
     delivered && !confirmed && destinationRequired && destinationCurrent != null
       ? `Destination confirmations · ${destinationCurrent} / ${destinationRequired}`
@@ -182,9 +125,9 @@ export function MessageLifecycleCard({
         : active &&
             !observation &&
             originConfirming &&
-            originConfirmation.current != null &&
-            originConfirmation.required != null
-          ? `Origin confirmations · ${originConfirmation.current} / ${originConfirmation.required}`
+            originCurrent != null &&
+            originRequired != null
+          ? `Origin confirmations · ${originCurrent} / ${originRequired}`
           : status;
 
   return (
@@ -245,11 +188,9 @@ export function MessageLifecycleCard({
                 />
                 {connectionState === 'live'
                   ? 'Live updates'
-                  : connectionState === 'disconnected'
-                    ? 'Reconnecting'
-                    : connectionState === 'connecting'
-                      ? 'Connecting'
-                      : 'Recorded activity'}
+                  : connectionState === 'historical'
+                    ? 'Recorded activity'
+                    : diagnosticsConnectionLabel(connectionState)}
               </span>
             )}
             {timeline.totalElapsed !== undefined && (

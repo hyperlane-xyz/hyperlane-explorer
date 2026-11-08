@@ -188,7 +188,9 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
                 ? 'Warp Transfer'
                 : isIcaMsg
                   ? 'Interchain account message'
-                  : 'Interchain message'
+                  : isAeroVoterMessage(message)
+                    ? 'Aero V3 message'
+                    : 'Interchain message'
             }
             paused={!!pause}
             waitingForLiquidity={waitingForLiquidity}
@@ -260,10 +262,14 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
             message={message}
             blur={false}
             warpRouteDetails={warpRouteDetails}
-          >
-            {isIcaMsg && <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} />}
-            {isAeroVoterMessage(message) && <AeroVoterDetailsCard message={message} blur={blur} />}
-          </ContentDetailsCard>
+            details={
+              isIcaMsg ? (
+                <IcaDetailsCard message={message} blur={blur} debugResult={debugResult} embedded />
+              ) : isAeroVoterMessage(message) ? (
+                <AeroVoterDetailsCard message={message} blur={blur} embedded />
+              ) : undefined
+            }
+          />
         )}
 
         <div hidden={!isMessageFound}>

@@ -40,10 +40,14 @@ const button = (label: string) =>
     (element) => element.textContent === label || element.getAttribute('aria-label') === label,
   )!;
 const click = async (label: string) => act(async () => button(label).click());
-const render = async (body: string, compact = false, msgId = 'message', warp?: ReactNode) =>
+const render = async (body: string, compact = false, msgId = 'message', details?: ReactNode) =>
   act(async () =>
     root.render(
-      <MessagePayload message={{ body, msgId } as MessageStub} compact={compact} warp={warp} />,
+      <MessagePayload
+        message={{ body, msgId } as MessageStub}
+        compact={compact}
+        details={details}
+      />,
     ),
   );
 
@@ -124,13 +128,13 @@ test('makes control bytes visible while preserving text whitespace', async () =>
   expect(container.textContent).toContain('Control bytes are escaped.');
 });
 
-test('defaults to Warp when decoding arrives, keeps live content current, and copies original bytes', async () => {
+test('defaults to Details when decoding arrives, keeps live content current, and copies original bytes', async () => {
   const body = '0x6869';
   await render(body);
   expect(button('Hex').getAttribute('aria-pressed')).toBe('true');
-  expect(button('Warp')).toBeUndefined();
+  expect(button('Details')).toBeUndefined();
   await render(body, false, 'message', <p>Transfer: 2 USDC</p>);
-  expect(button('Warp').getAttribute('aria-pressed')).toBe('true');
+  expect(button('Details').getAttribute('aria-pressed')).toBe('true');
   expect(container.textContent).toContain('Transfer: 2 USDC');
   expect(container.textContent).toContain('2 bytes');
   expect(container.querySelector('code')).toBeNull();
@@ -144,7 +148,7 @@ test('defaults to Warp when decoding arrives, keeps live content current, and co
 });
 
 test.each(['Hex', 'Text'])(
-  'keeps explicit %s selection through async Warp detection and live updates',
+  'keeps explicit %s selection through async details detection and live updates',
   async (view) => {
     const body = '0x6869';
     await render(body);
@@ -156,17 +160,17 @@ test.each(['Hex', 'Text'])(
     expect(button(view).getAttribute('aria-pressed')).toBe('true');
     expect(container.textContent).not.toContain('Transfer:');
     await render(body, false, 'other-message', <p>Transfer: 3 USDC</p>);
-    expect(button('Warp').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Details').getAttribute('aria-pressed')).toBe('true');
   },
 );
 
-test('falls back to Hex when selected Warp data disappears, without retaining decoded content', async () => {
+test('falls back to Hex when selected details disappear, without retaining decoded content', async () => {
   const body = '0x6869';
   await render(body, false, 'message', <p>Transfer: 2 USDC</p>);
   await click('Text');
-  await click('Warp');
+  await click('Details');
   await render(body);
-  expect(button('Warp')).toBeUndefined();
+  expect(button('Details')).toBeUndefined();
   expect(button('Hex').getAttribute('aria-pressed')).toBe('true');
   expect(container.querySelector('code')?.textContent).toBe(body);
   expect(container.textContent).not.toContain('Transfer:');

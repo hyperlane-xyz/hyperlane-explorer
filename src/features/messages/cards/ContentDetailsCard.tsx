@@ -6,6 +6,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { MessageIcon } from '../../../components/icons/MessageIcon';
+import { isAeroVoterMessage } from '../../../consts/aeroVoterRoutes';
 import { MAILBOX_VERSION } from '../../../consts/mailbox';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import type { Message, MessageStub, WarpRouteDetails } from '../../../types';
@@ -24,16 +25,25 @@ interface Props {
   message: Message | MessageStub;
   blur: boolean;
   warpRouteDetails?: WarpRouteDetails;
-  children?: ReactNode;
+  details?: ReactNode;
 }
 
-export function ContentDetailsCard({ message, blur, warpRouteDetails, children }: Props) {
+export function ContentDetailsCard({ message, blur, warpRouteDetails, details }: Props) {
+  return (
+    <ContentDetails
+      key={message.msgId}
+      message={message}
+      blur={blur}
+      warpRouteDetails={warpRouteDetails}
+      details={details}
+    />
+  );
+}
+
+function ContentDetails({ message, blur, warpRouteDetails, details }: Props) {
   const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
-  const [view, setView] = useState({ messageId: msgId, raw: false });
-  const isRaw = view.messageId === msgId && view.raw;
+  const [isRaw, setRaw] = useState(false);
   const contentId = useId();
-  // Standalone consumers also reset representation when navigating to another message.
-  if (view.messageId !== msgId) setView({ messageId: msgId, raw: false });
   const rawBytes = useMemo(() => {
     try {
       if (originDomainId < 0 || destinationDomainId < 0) return '';
@@ -71,7 +81,7 @@ export function ContentDetailsCard({ message, blur, warpRouteDetails, children }
                 type="button"
                 aria-pressed={isRaw === (label === 'Raw')}
                 aria-controls={contentId}
-                onClick={() => setView({ messageId: msgId, raw: label === 'Raw' })}
+                onClick={() => setRaw(label === 'Raw')}
                 className={clsx(
                   'rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500',
                   isRaw === (label === 'Raw')
@@ -138,17 +148,25 @@ export function ContentDetailsCard({ message, blur, warpRouteDetails, children }
           </div>
           <MessagePayload
             message={message}
-            warp={
-              warpRouteDetails && (
+            title={
+              warpRouteDetails
+                ? 'Warp message'
+                : isAeroVoterMessage(message)
+                  ? 'Aero V3 message'
+                  : 'Payload'
+            }
+            details={
+              warpRouteDetails ? (
                 <WarpTransferDetails
                   message={message}
                   warpRouteDetails={warpRouteDetails}
                   blur={blur}
                 />
+              ) : (
+                details
               )
             }
           />
-          {children}
         </div>
         {isRaw &&
           (rawBytes ? (

@@ -8,19 +8,40 @@ import { tryUtf8DecodeBytes } from '../../../utils/string';
 interface Props {
   message: Message | MessageStub;
   compact?: boolean;
-  warp?: ReactNode;
+  details?: ReactNode;
+  title?: string;
 }
 
-export function MessagePayload({ message, compact, warp }: Props) {
-  return <Payload key={message.msgId} body={message.body} compact={compact} warp={warp} />;
+export function MessagePayload({ message, compact, details, title = 'Payload' }: Props) {
+  return (
+    <Payload
+      key={message.msgId}
+      body={message.body}
+      compact={compact}
+      details={details}
+      title={title}
+    />
+  );
 }
 
-function Payload({ body, compact, warp }: { body: string; compact?: boolean; warp?: ReactNode }) {
-  const [selectedView, setView] = useState<'hex' | 'text' | 'warp'>();
-  const hasWarp = !!warp;
+function Payload({
+  body,
+  compact,
+  details,
+  title,
+}: {
+  body: string;
+  compact?: boolean;
+  details?: ReactNode;
+  title: string;
+}) {
+  const [selectedView, setView] = useState<'hex' | 'text' | 'details'>();
+  const hasDetails = !!details;
   // Async decoding may choose the default, but must not replace an explicit view.
   const view =
-    selectedView === 'warp' && !hasWarp ? 'hex' : (selectedView ?? (hasWarp ? 'warp' : 'hex'));
+    selectedView === 'details' && !hasDetails
+      ? 'hex'
+      : (selectedView ?? (hasDetails ? 'details' : 'hex'));
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
   const hex = body.replace(/^0x/i, '');
@@ -57,7 +78,7 @@ function Payload({ body, compact, warp }: { body: string; compact?: boolean; war
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-150/70 px-4 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-800">Payload</h3>
+          <h3 className="text-sm font-medium text-gray-800">{title}</h3>
           <span className="rounded border border-gray-200 bg-white/70 px-1.5 py-0.5 text-xxs tabular-nums text-gray-500">
             {byteCount === undefined
               ? 'Byte count unavailable'
@@ -67,8 +88,8 @@ function Payload({ body, compact, warp }: { body: string; compact?: boolean; war
         <div className="flex items-center gap-2">
           <fieldset className="flex rounded-md bg-gray-200/70 p-0.5">
             <legend className="sr-only">Payload view</legend>
-            {(['hex', 'text', 'warp'] as const)
-              .filter((option) => option !== 'warp' || hasWarp)
+            {(['details', 'hex', 'text'] as const)
+              .filter((option) => option !== 'details' || hasDetails)
               .map((option) => (
                 <button
                   key={option}
@@ -86,7 +107,7 @@ function Payload({ body, compact, warp }: { body: string; compact?: boolean; war
                       : 'text-gray-500 hover:text-gray-800',
                   )}
                 >
-                  {option === 'hex' ? 'Hex' : option === 'text' ? 'Text' : 'Warp'}
+                  {option === 'hex' ? 'Hex' : option === 'text' ? 'Text' : 'Details'}
                 </button>
               ))}
           </fieldset>
@@ -101,8 +122,8 @@ function Payload({ body, compact, warp }: { body: string; compact?: boolean; war
         </div>
       </div>
       <div id={contentId} className="p-4">
-        {view === 'warp' ? (
-          warp
+        {view === 'details' ? (
+          details
         ) : empty ? (
           <p className="text-sm text-gray-500">No payload data.</p>
         ) : display === undefined ? (
@@ -123,7 +144,7 @@ function Payload({ body, compact, warp }: { body: string; compact?: boolean; war
           </pre>
         )}
       </div>
-      {view !== 'warp' && (previewNote || truncated) && (
+      {view !== 'details' && (previewNote || truncated) && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-3 text-xs text-gray-500">
           {previewNote && <span>{previewNote}</span>}
           {!empty && truncated && (

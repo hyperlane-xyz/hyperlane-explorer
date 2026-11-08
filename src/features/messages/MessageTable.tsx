@@ -9,6 +9,7 @@ import { PropsWithChildren, ReactNode, memo, useEffect, useMemo, useRef, useStat
 import { ChainLogo } from '../../components/icons/ChainLogo';
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon';
 import { TokenIcon } from '../../components/icons/TokenIcon';
+import { getAeroVoterMessageTypeLabel, isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import ErrorIcon from '../../images/icons/error-circle.svg';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
 import { Color } from '../../styles/Color';
@@ -156,7 +157,7 @@ export function MessageTable({
           <th className={`${styles.header} hidden sm:table-cell`}>Recipient</th>
           <th className={`${styles.header} hidden lg:table-cell`}>Origin Tx</th>
           <th className={styles.header}>Time sent</th>
-          <th className={`${styles.header} hidden sm:table-cell`}>Warped Token</th>
+          <th className={`${styles.header} hidden sm:table-cell`}>Payload</th>
         </tr>
       </thead>
       <tbody>
@@ -322,7 +323,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
       </LinkCell>
       <LinkCell
         path={detailPath}
-        aClasses={`flex items-center py-2.5 ${warpRouteDetails ? 'ml-4' : 'justify-center'}`}
+        aClasses="ml-4 flex items-center py-2.5"
         tdClasses="hidden sm:table-cell"
         onNavigateIntent={primeDetailPage}
       >
@@ -350,6 +351,17 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
             >
               {formatAmountCompact(warpRouteDetails.amount)} {warpRouteDetails.originToken.symbol}
             </div>
+          </>
+        ) : isAeroVoterMessage(message) ? (
+          <>
+            <Image src="/images/aero.svg" alt="" width={20} height={20} className="shrink-0" />
+            <span
+              className={styles.iconText}
+              data-tooltip-id="root-tooltip"
+              data-tooltip-content={`Aero v3: ${getAeroVoterMessageTypeLabel(message.body) ?? 'Unknown message type'}`}
+            >
+              Aero
+            </span>
           </>
         ) : null}
       </LinkCell>

@@ -2,6 +2,7 @@ import { PropsWithChildren, ReactNode } from 'react';
 
 interface Props {
   className?: string;
+  embedded?: boolean;
   title: string;
   titleSize?: 'sm' | 'md';
   icon?: ReactNode;
@@ -10,12 +11,15 @@ interface Props {
 
 export function SectionCard({
   className,
+  embedded = false,
   title,
   titleSize = 'sm',
   icon,
   leading,
   children,
 }: PropsWithChildren<Props>) {
+  if (embedded) return <div className={`min-w-0 ${className || ''}`}>{children}</div>;
+
   return (
     <section className={`bg-card-gradient shadow-card overflow-auto rounded ${className || ''}`}>
       {/* Muted Gray Header */}

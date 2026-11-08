@@ -1,6 +1,6 @@
 import { AbiCoder } from '@ethersproject/abi';
 
-import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
+import { getAeroVoterMessageTypeLabel, isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { logger } from '../../utils/logger';
 import { AeroVoterMessage, AeroVoterMessageType, decodeAeroVoterMessage } from './aeroVoter';
 
@@ -11,8 +11,33 @@ const outbound = {
   recipient: '0xaaa49bd49a9be1eae5534eb35fc2c346afd7ca49',
 };
 
-// Real staging payloads; IDs also appear in the PR's manual verification links.
+// Captured staging and current deployment payloads.
 const examples = [
+  {
+    // 0x429abe35ce00c9bdcb434c430c0742d380b8e3ee67913efe040bf6231b89c00a
+    type: AeroVoterMessageType.AllocateGauge,
+    message: {
+      originDomainId: 8453,
+      destinationDomainId: 4663,
+      sender: '0xd9dc65a40e70517da5f4f5cb1f9e5d4b59aa2910',
+      recipient: '0x4aaff8cfb43e2cefbbbf4c133c934db6ba7e4c14',
+      body: '0x02000000000000000000000000000000000000000000000000000000000000192b00006af0906f000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002db000000000000000000000000000000000000000000000000000000006af09e7f00000000000000000000000000000000000000000000000000000003040b525000000000000000000000000000000000000000000000240753af5ef45b2cc1c60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000009334d493ddd2be406895b6d8e511413601dcfe60000000000000000000000000000000000000000000009ba4c5adec1f9e5af3200000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000',
+    },
+    expected: {
+      messageTypeName: 'AllocateGauge',
+      chainNonce: '6443',
+      payload: {
+        tokenId: '731',
+        allocations: [
+          {
+            gauge: '0x09334d493ddd2Be406895b6d8e511413601dcfe6',
+            allocated: '45937894698356272639794',
+            data: '0x',
+          },
+        ],
+      },
+    },
+  },
   {
     // 0xa7ea0aea6e3c522d2587396f289d765f6578f87f9917019a441dd25b364a4a0f
     type: AeroVoterMessageType.AllocateChain,
@@ -131,6 +156,19 @@ const examples = [
 beforeEach(() => jest.spyOn(logger, 'warn').mockImplementation(() => undefined));
 afterEach(() => jest.restoreAllMocks());
 
+it('labels header operations and leaves missing or unknown types unlabeled', () => {
+  expect(getAeroVoterMessageTypeLabel(example(AeroVoterMessageType.AllocateChain).body)).toBe(
+    'Allocate Chain',
+  );
+  expect(getAeroVoterMessageTypeLabel(example(AeroVoterMessageType.AllocateGauge).body)).toBe(
+    'Allocate Gauge',
+  );
+  expect(getAeroVoterMessageTypeLabel('0x08')).toBe('Emergency Deallocate');
+  for (const body of ['', '0x', '0x1', '0x1g', '0xff']) {
+    expect(getAeroVoterMessageTypeLabel(body)).toBeUndefined();
+  }
+});
+
 it.each(examples)('decodes captured voter type $type', ({ type, message, expected }) => {
   expect(decodeAeroVoterMessage(message)).toMatchObject({ messageType: type, ...expected });
   expect(logger.warn).not.toHaveBeenCalled();
@@ -173,6 +211,14 @@ it('matches padded adapter addresses and both route directions', () => {
         ...message,
         sender: `0x${message.sender.slice(2).toUpperCase().padStart(64, '0')}`,
         recipient: `0x${message.recipient.slice(2).toUpperCase().padStart(64, '0')}`,
+      }),
+    ).toBe(true);
+    expect(
+      isAeroVoterMessage({
+        originDomainId: message.destinationDomainId,
+        destinationDomainId: message.originDomainId,
+        sender: message.recipient,
+        recipient: message.sender,
       }),
     ).toBe(true);
   }
