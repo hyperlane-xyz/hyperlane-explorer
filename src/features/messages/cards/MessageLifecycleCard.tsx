@@ -259,10 +259,13 @@ export function MessageLifecycleCard({
               </span>
             )}
             {timeline.totalElapsed !== undefined && (
-              <p className="tabular-nums text-white/80">
+              <p
+                className="tabular-nums text-white/80"
+                title="Time between recorded origin and destination block timestamps. Whole-second records do not provide fractional timing."
+              >
                 Delivered in{' '}
                 <span className="font-medium text-white">
-                  {formatElapsed(timeline.totalElapsed, 'tenths')}
+                  {formatElapsed(timeline.totalElapsed)}
                 </span>
               </p>
             )}

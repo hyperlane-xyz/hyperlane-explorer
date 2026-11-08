@@ -316,10 +316,11 @@ test('missing origin timestamps do not produce an epoch-sized delivery duration'
   expect(container.textContent).not.toContain('Delivered in');
 });
 
-test('shows a fixed decimal for the on-chain delivery duration', async () => {
+test('shows recorded fractional delivery time without adding precision to whole seconds', async () => {
   for (const [timestamp, expected] of [
-    [17000, '16.0s'],
+    [17000, '16s'],
     [17200, '16.2s'],
+    [17340, '16.3s'],
   ] as const) {
     await render(
       {
@@ -330,6 +331,7 @@ test('shows a fixed decimal for the on-chain delivery duration', async () => {
       true,
     );
     expect(container.querySelector('header')?.textContent).toContain(`Delivered in ${expected}`);
+    expect(container.querySelector('header [title*="block timestamps"]')).not.toBeNull();
   }
 });
 

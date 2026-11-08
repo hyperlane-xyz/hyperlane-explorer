@@ -13,11 +13,13 @@ export function MessageActivityLog({
   dispatchedAt,
   deliveredAt,
   controls,
+  header,
 }: {
   history: ReturnType<typeof useMessageActivityPage>;
   dispatchedAt: number;
   deliveredAt?: number;
   controls?: ReactNode;
+  header?: ReactNode;
 }) {
   // Freeze the latest batch while browsing older records; its cursor must stay paired
   // with those rows even when the live query receives a newer 50-record batch.
@@ -80,10 +82,12 @@ export function MessageActivityLog({
 
   return (
     <section className="min-w-0" aria-label="Relayer activity and logs">
-      <div className="flex items-center justify-between gap-3 text-sm text-gray-700">
-        <h2 className="font-medium">Relay activity</h2>
-        {history.fetching && <span className="text-xs text-gray-500">Updating…</span>}
-      </div>
+      {header ?? (
+        <div className="flex items-center justify-between gap-3 text-sm text-gray-700">
+          <h2 className="font-medium">Relay activity</h2>
+          {history.fetching && <span className="text-xs text-gray-500">Updating…</span>}
+        </div>
+      )}
       <div className="mt-3">
         {controls}
         <nav
