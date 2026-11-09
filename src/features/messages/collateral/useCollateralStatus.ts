@@ -12,6 +12,7 @@ import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../../types';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
+import { fetchSealevelWarpRouteBalance } from '../warpVisualization/sealevelBalance';
 import { CollateralInfo, CollateralStatus } from './types';
 import { calculateCollateralStatus, isCctpRoute, isCollateralRoute } from './utils';
 
@@ -20,7 +21,7 @@ const COLLATERAL_REFETCH_INTERVAL = 30000; // 30 seconds
 const COLLATERAL_STALE_TIME = 20000; // 20 seconds
 
 /**
- * Fetches collateral for EVM hyp tokens without pulling the full runtime Token graph.
+ * Fetches collateral without pulling the full runtime Token graph.
  */
 async function fetchCollateralBalance(
   destinationToken: WarpRouteDetails['destinationToken'],
@@ -45,6 +46,15 @@ async function fetchCollateralBalance(
       });
       return undefined;
     }
+
+    if (chainMetadata.protocol === ProtocolType.Sealevel) {
+      return fetchSealevelWarpRouteBalance({
+        ...destinationToken,
+        chainName: destinationToken.chainName,
+      });
+    }
+
+    if (chainMetadata.protocol !== ProtocolType.Ethereum) return undefined;
 
     // Verify we can get a provider for this chain
     try {
@@ -146,13 +156,10 @@ export function useCollateralStatus(
       return false;
     }
 
-    // This balance check uses EVM adapters; other protocols remain unknown.
-    if (
-      multiProvider?.tryGetChainMetadata(warpRouteDetails.destinationToken.chainName)?.protocol !==
-      ProtocolType.Ethereum
-    ) {
-      return false;
-    }
+    const protocol = multiProvider?.tryGetChainMetadata(
+      warpRouteDetails.destinationToken.chainName,
+    )?.protocol;
+    if (protocol !== ProtocolType.Ethereum && protocol !== ProtocolType.Sealevel) return false;
 
     // Skip CCTP routes - they use Circle's burn/mint mechanism, not traditional collateral
     if (isCctpRoute(warpRouteDetails.destinationToken.addressOrDenom)) {
@@ -180,9 +187,17 @@ export function useCollateralStatus(
       'collateralBalance',
       destinationToken?.chainName,
       destinationToken?.addressOrDenom,
+      destinationToken?.standard,
+      destinationToken?.collateralAddressOrDenom,
       multiProviderVersion,
     ],
-    [destinationToken?.chainName, destinationToken?.addressOrDenom, multiProviderVersion],
+    [
+      destinationToken?.chainName,
+      destinationToken?.addressOrDenom,
+      destinationToken?.standard,
+      destinationToken?.collateralAddressOrDenom,
+      multiProviderVersion,
+    ],
   );
 
   const {

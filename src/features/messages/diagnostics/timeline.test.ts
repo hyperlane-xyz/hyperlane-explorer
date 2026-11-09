@@ -244,16 +244,16 @@ describe('message lifecycle timing', () => {
     ).toBe(115_000);
   });
 
-  it('retracts milestones on retry and uses the new attempt after recovery', () => {
+  it('keeps validation complete for delivery retries but restarts metadata retries', () => {
     const retry = activity('5', 'retrying', 125_000, {
       retry: { reason: 'ErrorSubmitting' },
       failure: { stage: 'simulate', reason: 'rpc_error' },
       submission: { stage: 'included', observed_at_millis: 121_000 },
     });
     const timeline = getMessageTimeline(message, observation(retry), [...history, retry]);
-    expect(stage(timeline, 'validated')).toMatchObject({ status: 'failed', timestamp: undefined });
+    expect(stage(timeline, 'validated')).toMatchObject({ status: 'complete', timestamp: 115_000 });
     expect(stage(timeline, 'delivered')).toMatchObject({
-      status: 'pending',
+      status: 'active',
       timestamp: undefined,
     });
     const waiting = activity('5', 'retrying', 125_000, {
@@ -262,7 +262,7 @@ describe('message lifecycle timing', () => {
     });
     expect(
       stage(getMessageTimeline(message, observation(waiting), history), 'validated').status,
-    ).toBe('active');
+    ).toBe('complete');
     const attestation = activity('5', 'retrying', 125_000, {
       failure: { stage: 'metadata', reason: 'CouldNotFetchMetadata' },
       modules: [
@@ -279,7 +279,7 @@ describe('message lifecycle timing', () => {
     ).toBe('active');
     const ready = activity('6', 'ready_to_submit', 128_000);
     const recovered = getMessageTimeline(message, observation(ready), [...history, retry, ready]);
-    expect(stage(recovered, 'validated').timestamp).toBe(128_000);
+    expect(stage(recovered, 'validated').timestamp).toBe(115_000);
     expect(stage(recovered, 'delivered')).toMatchObject({ status: 'active', timestamp: undefined });
   });
 

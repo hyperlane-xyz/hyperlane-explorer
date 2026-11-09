@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import { useMultiProviderVersion, useReadyMultiProvider } from '../../../store';
 import { logger } from '../../../utils/logger';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../../hyperlane/sdkRuntime';
+import { fetchSealevelWarpRouteBalance } from './sealevelBalance';
 import { SUPPORTED_SEALEVEL_BALANCE_STANDARDS } from './tokenStandards';
 import {
   ChainBalance,
@@ -68,35 +69,6 @@ function isSupportedSealevelStandard(standard: TokenStandard | string | undefine
   return SUPPORTED_SEALEVEL_BALANCE_STANDARDS.includes(standard as TokenStandard);
 }
 
-function getApiBalance(data: unknown): bigint | undefined {
-  if (!data || typeof data !== 'object') return undefined;
-  const { balance } = data as Record<string, unknown>;
-  if (typeof balance !== 'string') return undefined;
-  return BigInt(balance);
-}
-
-async function fetchSealevelTokenBalance(
-  token: WarpRouteTokenVisualization,
-): Promise<ChainBalance | undefined> {
-  const params = new URLSearchParams({
-    chainName: token.chainName,
-    addressOrDenom: token.addressOrDenom,
-    standard: token.standard || '',
-  });
-  if (token.collateralAddressOrDenom) {
-    params.set('collateralAddressOrDenom', token.collateralAddressOrDenom);
-  }
-
-  const response = await fetch(`/api/sealevel-warp-route-balance?${params.toString()}`);
-  if (!response.ok) {
-    logger.debug(`Sealevel balance API ${response.status} for ${token.chainName}:${token.symbol}`);
-    return undefined;
-  }
-
-  const balance = getApiBalance(await response.json());
-  return balance === undefined ? undefined : { balance };
-}
-
 /**
  * Fetch the balance data for a single token
  */
@@ -106,7 +78,8 @@ async function fetchTokenBalance(
 ): Promise<ChainBalance | undefined> {
   try {
     if (isSupportedSealevelStandard(token.standard)) {
-      return await fetchSealevelTokenBalance(token);
+      const balance = await fetchSealevelWarpRouteBalance(token);
+      return balance === undefined ? undefined : { balance };
     }
 
     const adapter = createEvmHypAdapter(multiProvider, token);

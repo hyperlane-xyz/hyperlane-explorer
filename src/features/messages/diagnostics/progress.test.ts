@@ -15,7 +15,7 @@ const progress = (
   });
 
 test.each([
-  [undefined, 'Waiting for relayer pickup', 'Awaiting relayer pickup'],
+  [undefined, 'Pending relayer pickup', 'Relayer pickup pending'],
   ['preparing', 'Validating message', 'Validating message'],
   ['ready_to_submit', 'Validated · preparing delivery', 'Validated · preparing delivery'],
   ['submitting', 'Delivering message', 'Delivering message'],
@@ -27,7 +27,7 @@ test.each([
   });
 });
 
-test('keeps expected commit waits neutral while stopping relay animation', () => {
+test('keeps expected commit delays pending and active', () => {
   expect(
     progress(MessageStatus.Pending, 'retrying', {
       state: {
@@ -38,10 +38,10 @@ test('keeps expected commit waits neutral while stopping relay animation', () =>
       },
     }),
   ).toMatchObject({
-    activityStatus: 'Waiting for commit confirmation',
-    blocked: false,
-    relayStopped: true,
-    status: 'Waiting for commit confirmation',
+    active: true,
+    activityStatus: 'Commit confirmation pending',
+    relayStopped: false,
+    status: 'Delivery pending',
   });
 });
 
@@ -67,12 +67,29 @@ test('keeps pending offchain attestations active and explains the delay', () => 
     }),
   ).toMatchObject({
     active: true,
-    activityStatus: 'Waiting for offchain attestation',
-    blocked: false,
-    explanation:
-      'The offchain attestation is not ready yet. The relayer is retrying automatically.',
+    activityStatus: 'Offchain attestation pending',
+    explanation: 'The offchain attestation is pending. Relayers will continue automatically.',
     relayStopped: false,
-    status: 'Waiting for offchain attestation',
+    status: 'Delivery pending',
+  });
+});
+
+test('keeps failed delivery attempts pending while relayers retry', () => {
+  expect(
+    progress(MessageStatus.Pending, 'retrying', {
+      state: {
+        phase: 'retrying',
+        modules: [],
+        retry: { reason: 'ErrorEstimatingGas' },
+        failure: { stage: 'simulate', reason: 'contract_call_failed' },
+      },
+    }),
+  ).toMatchObject({
+    active: true,
+    activityStatus: 'Retrying delivery',
+    explanation: 'The message remains pending while relayers retry automatically.',
+    relayStopped: false,
+    status: 'Delivery pending',
   });
 });
 

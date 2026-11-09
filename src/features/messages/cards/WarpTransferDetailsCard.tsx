@@ -233,7 +233,7 @@ function TokenDetails({
           <span
             className={`min-w-0 break-all font-mono text-lg font-medium leading-6 text-gray-900 ${blur ? 'blur-xs' : ''}`}
           >
-            {`${amount} ${token.symbol}`}
+            {`${new BigNumber(amount).toFormat()} ${token.symbol}`}
           </span>
           {usdDisplay && (
             <span

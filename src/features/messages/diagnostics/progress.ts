@@ -9,10 +9,10 @@ const phaseLabels: Record<string, string> = {
   awaiting_signatures: 'Collecting validator signatures',
   ready_to_submit: 'Validated · preparing delivery',
   submitting: 'Delivering message',
-  confirming: 'Waiting for indexed delivery',
-  delivered: 'Relayer observed delivery · waiting for indexer',
-  retrying: 'Waiting for the next relay attempt',
-  dropped: 'This relayer stopped processing the message',
+  confirming: 'Confirming delivery',
+  delivered: 'Delivery observed · indexing',
+  retrying: 'Retrying delivery',
+  dropped: 'Relayer stopped this attempt',
 };
 
 export function getMessageProgress({
@@ -21,8 +21,6 @@ export function getMessageProgress({
   confirmed,
   confirmationTracked,
   originConfirmation,
-  paused = false,
-  waitingForLiquidity = false,
   selectedRelayer = false,
 }: {
   messageStatus: MessageStatus;
@@ -30,53 +28,38 @@ export function getMessageProgress({
   confirmed: boolean;
   confirmationTracked: boolean;
   originConfirmation?: OriginConfirmation;
-  paused?: boolean;
-  waitingForLiquidity?: boolean;
   selectedRelayer?: boolean;
 }) {
   const delivered = messageStatus === MessageStatus.Delivered;
   const waitingForCommit = isWaitingForCommit(state);
   const waitingForAttestation = isWaitingForOffchainAttestation(state);
-  // A gateway may report the latest attempt as failed while the attestation itself is still
-  // pending. Keep that expected retry state live; terminal gateway failures are not pending.
-  const failed = !!state?.failure && !waitingForCommit && !waitingForAttestation;
-  const blocked =
-    paused ||
-    waitingForLiquidity ||
-    failed ||
-    state?.phase === 'dropped' ||
-    (state?.phase === 'retrying' && !waitingForCommit && !waitingForAttestation) ||
-    messageStatus === MessageStatus.Failing;
-  const active = messageStatus === MessageStatus.Pending && !blocked;
+  const hasRelayIssue = !!state?.failure || ['retrying', 'dropped'].includes(state?.phase ?? '');
+  const active = [MessageStatus.Pending, MessageStatus.Failing].includes(messageStatus);
   const originConfirming = !!originConfirmation?.tracked && !originConfirmation.confirmed;
 
-  let status = 'Waiting for relayer pickup';
+  let status = 'Pending relayer pickup';
   if (delivered)
     status = confirmed
       ? 'Delivery confirmed'
       : confirmationTracked
         ? 'Delivered · confirming'
         : 'Delivered · confirmation not tracked';
-  else if (paused) status = 'Delivery paused';
-  else if (waitingForLiquidity) status = 'Waiting for destination liquidity';
-  else if (waitingForCommit) status = 'Waiting for commit confirmation';
-  else if (waitingForAttestation) status = 'Waiting for offchain attestation';
-  else if (failed) status = 'Relayer waiting to retry';
-  else if (messageStatus === MessageStatus.Failing) status = 'Delivery needs attention';
   else if (messageStatus === MessageStatus.Unknown) status = 'Delivery status unavailable';
-  else if (state?.phase) status = phaseLabels[state.phase] ?? 'Waiting for relay update';
+  else if (waitingForCommit || waitingForAttestation || hasRelayIssue) status = 'Delivery pending';
+  else if (state?.phase) status = phaseLabels[state.phase] ?? 'Delivery pending';
   else if (originConfirming) status = 'Confirming on origin';
 
-  let activityStatus = 'Awaiting relayer pickup';
+  let activityStatus = 'Relayer pickup pending';
   if (
     state?.submission?.stage === 'mempool' &&
     ['submitting', 'confirming'].includes(state.phase ?? '')
   )
     activityStatus = 'In destination mempool';
-  else if (waitingForAttestation) activityStatus = 'Waiting for offchain attestation';
+  else if (waitingForCommit) activityStatus = 'Commit confirmation pending';
+  else if (waitingForAttestation) activityStatus = 'Offchain attestation pending';
   else if (state?.phase) activityStatus = phaseLabels[state.phase] ?? diagnosticLabel(state.phase);
   else if (selectedRelayer) activityStatus = 'Relayer report unavailable';
-  else if (originConfirming) activityStatus = 'Waiting for origin confirmations';
+  else if (originConfirming) activityStatus = 'Origin confirmations pending';
 
   let explanation = 'The message is dispatched. We are watching for the next relay update.';
   if (delivered)
@@ -87,13 +70,15 @@ export function getMessageProgress({
         : 'Delivery succeeded. Additional confirmation data is not available.';
   else if (messageStatus === MessageStatus.Unknown)
     explanation = 'Waiting for enough data to determine the delivery status.';
-  else if (blocked)
-    explanation = 'Tracking continues. Check the details below for the current delay.';
   else if (waitingForCommit)
-    explanation = 'The relayer is waiting for the earlier commitment to become available.';
+    explanation = 'The earlier commitment is still pending. Relayers will continue automatically.';
   else if (waitingForAttestation)
+    explanation = 'The offchain attestation is pending. Relayers will continue automatically.';
+  else if (messageStatus === MessageStatus.Failing)
     explanation =
-      'The offchain attestation is not ready yet. The relayer is retrying automatically.';
+      'The message remains pending while relayers retry. See the notice below for details.';
+  else if (hasRelayIssue)
+    explanation = 'The message remains pending while relayers retry automatically.';
   else if (originConfirming)
     explanation = `${originConfirmation.current ?? '—'} / ${originConfirmation.required ?? '—'} origin confirmations${state ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`;
   else if (state?.phase === 'submitting')
@@ -105,13 +90,12 @@ export function getMessageProgress({
 
   return {
     active,
-    activityStatus: delivered || blocked || waitingForCommit ? status : activityStatus,
-    blocked,
+    activityStatus: delivered ? status : activityStatus,
     delivered,
     explanation,
     originConfirming,
     relayStopped:
-      !delivered && (blocked || waitingForCommit || messageStatus === MessageStatus.Unknown),
+      !delivered && (state?.phase === 'dropped' || messageStatus === MessageStatus.Unknown),
     status,
     waitingForCommit,
   };

@@ -8,6 +8,7 @@ import { useChainMetadata } from '../../../metadataStore';
 import { logger } from '../../../utils/logger';
 import { truncateString } from '../../../utils/string';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
+import { hasPassedValidation } from '../diagnostics/timeline';
 import {
   DiagnosticModule,
   DiagnosticState,
@@ -36,12 +37,9 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
   const state = observation?.state;
   const waitingForCommit = isWaitingForCommit(state);
   const waitingForAttestation = isWaitingForOffchainAttestation(state);
-  const proofReady =
-    !!state &&
-    ['ready_to_submit', 'submitting', 'confirming', 'delivered'].includes(state.phase ?? '');
+  const proofReady = hasPassedValidation(state);
   const live = connectionState === 'live' && !delivered;
-  const failed =
-    !!state?.failure && !waitingForCommit && !waitingForAttestation && !delivered;
+  const failed = !!state?.failure && !waitingForCommit && !waitingForAttestation && !delivered;
 
   const summary = delivered
     ? 'Accepted on destination'

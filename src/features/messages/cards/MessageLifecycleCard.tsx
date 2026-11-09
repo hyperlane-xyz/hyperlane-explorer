@@ -29,8 +29,6 @@ interface Props {
   messageKind?: string;
   children?: ReactNode | ((active: boolean) => ReactNode);
   notice?: ReactNode;
-  paused?: boolean;
-  waitingForLiquidity?: boolean;
 }
 
 const submissionLabels: Record<string, string> = {
@@ -57,8 +55,6 @@ export function MessageLifecycleCard({
   messageKind = 'Interchain message',
   children,
   notice,
-  paused = false,
-  waitingForLiquidity = false,
 }: Props) {
   const { diagnostics, activities, connectionState, observation } = useMessageDiagnosticsContext();
   const metadata = useChainMetadataResolver();
@@ -79,14 +75,12 @@ export function MessageLifecycleCard({
     [message, observation, activities, confirmed, confirmationTracked, originConfirmation],
   );
   const state = observation?.state;
-  const { active, blocked, delivered, explanation, originConfirming, status } = getMessageProgress({
+  const { active, delivered, explanation, originConfirming, status } = getMessageProgress({
     messageStatus: message.status,
     state,
     confirmed,
     confirmationTracked,
     originConfirmation,
-    paused,
-    waitingForLiquidity,
   });
 
   const destinationBlocks = metadata.tryGetChainMetadata(message.destinationDomainId)?.blocks;
@@ -240,10 +234,7 @@ export function MessageLifecycleCard({
               key={stage.id}
               stage={stage}
               originConfirmation={originConfirmation}
-              suspended={
-                message.status === MessageStatus.Unknown ||
-                (blocked && !delivered && stage.id !== 'origin_confirmed')
-              }
+              suspended={message.status === MessageStatus.Unknown}
             />
           ))}
         </ol>

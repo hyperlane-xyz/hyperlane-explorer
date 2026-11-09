@@ -1,7 +1,5 @@
 import { MessageStatus, type MessageStub } from '../../../types';
 import {
-  isWaitingForCommit,
-  isWaitingForOffchainAttestation,
   type DiagnosticActivity,
   type DiagnosticState,
   type LifecycleStepStatus,
@@ -17,6 +15,8 @@ const stages = [
   ['delivered', 'Delivered'],
   ['confirmed', 'Confirmed'],
 ] as const;
+const validatedPhases = new Set(['ready_to_submit', 'submitting', 'confirming', 'delivered']);
+const postValidationFailureStages = new Set(['simulate', 'submit']);
 
 export interface MessageTimelineStage {
   id: (typeof stages)[number][0];
@@ -45,9 +45,7 @@ export function getMessageTimeline(
   const confirmed = delivered && options.confirmed === true;
   const state = observation?.state;
   const originConfirmation = options.originConfirmation;
-  const validatingComplete = ['ready_to_submit', 'submitting', 'confirming', 'delivered'].includes(
-    state?.phase ?? '',
-  );
+  const validatingComplete = hasPassedValidation(state);
   const current = confirmed
     ? 6
     : delivered
@@ -59,11 +57,6 @@ export function getMessageTimeline(
           : originConfirmation?.tracked && !originConfirmation.confirmed
             ? 1
             : 2;
-  const failed =
-    !delivered &&
-    !!(state?.failure || state?.phase === 'dropped') &&
-    !isWaitingForCommit(state) &&
-    !isWaitingForOffchainAttestation(state);
   const history = observation
     ? activities
         .filter((row) => row.relayer === observation.relayer && row.activity.state)
@@ -82,9 +75,11 @@ export function getMessageTimeline(
     : [];
   if (observation) history.push(observation);
   history.sort((a, b) => compareIds(a.activityId, b.activityId));
-  // A newer preparation/retry invalidates earlier validation milestones.
-  const lastPreparation = history.findLastIndex((row) =>
-    ['preparing', 'awaiting_signatures', 'retrying', 'dropped'].includes(row.state.phase ?? ''),
+  // Metadata retries restart validation. Simulation/submission retries happen after validation.
+  const lastPreparation = history.findLastIndex(
+    (row) =>
+      ['preparing', 'awaiting_signatures', 'dropped'].includes(row.state.phase ?? '') ||
+      (row.state.phase === 'retrying' && !hasPassedValidation(row.state)),
   );
   const attempt = history.slice(lastPreparation + 1);
   const firstSeen = earliest(
@@ -124,9 +119,7 @@ export function getMessageTimeline(
         : index < current
           ? 'complete'
           : index === current && !(id === 'confirmed' && options.confirmationTracked === false)
-            ? failed
-              ? 'failed'
-              : 'active'
+            ? 'active'
             : 'pending',
     timestamp: timestamps[index],
     timeSource:
@@ -149,6 +142,13 @@ export function getMessageTimeline(
     stages: timeline,
     totalElapsed: elapsed(dispatchedAt, deliveredAt),
   };
+}
+
+export function hasPassedValidation(state?: DiagnosticState) {
+  return (
+    validatedPhases.has(state?.phase ?? '') ||
+    (state?.phase === 'retrying' && postValidationFailureStages.has(state.failure?.stage ?? ''))
+  );
 }
 
 function validationTime(history: Array<{ state: DiagnosticState; observedAt: string }>) {

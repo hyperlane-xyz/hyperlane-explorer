@@ -40,14 +40,10 @@ export function MessageRelayActivityPanel({
   message,
   confirmed,
   originConfirmation,
-  paused = false,
-  waitingForLiquidity = false,
 }: {
   message: Message | MessageStub;
   confirmed: boolean;
   originConfirmation?: OriginConfirmation;
-  paused?: boolean;
-  waitingForLiquidity?: boolean;
 }) {
   const {
     history,
@@ -76,8 +72,6 @@ export function MessageRelayActivityPanel({
     confirmed,
     confirmationTracked,
     originConfirmation,
-    paused,
-    waitingForLiquidity,
     selectedRelayer: !!selectedRelayer,
   });
   const connectionLabel = diagnosticsConnectionLabel(connectionState);

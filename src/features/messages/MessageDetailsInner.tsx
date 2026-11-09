@@ -5,9 +5,10 @@ import { toast } from 'react-toastify';
 import { isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
 import { getMessagePause } from '../../consts/pausedRoutes';
 import { useChainMetadataResolver, useStore } from '../../metadataStore';
-import { Message, MessageStatus, MessageStub } from '../../types';
+import { Message, MessageStatus, MessageStub, WarpRouteDetails } from '../../types';
 import { logger } from '../../utils/logger';
 import { useTransactionMessageCount } from '../transactions/useTransactionMessageCount';
+import { CollateralDeficitDetails } from './cards/CollateralCards';
 import { MessageOverviewCard } from './cards/MessageOverviewCard';
 import { MessageRelayActivityPanel } from './cards/MessageRelayActivityPanel';
 import { MessageTechnicalDetails } from './cards/MessageTechnicalDetails';
@@ -15,8 +16,12 @@ import {
   DestinationTransactionPreviewCard,
   OriginTransactionCard,
 } from './cards/OriginTransactionCard';
-import { CollateralStatus } from './collateral/types';
-import { MessageDiagnosticsProvider } from './diagnostics/MessageDiagnosticsContext';
+import { CollateralInfo, CollateralStatus } from './collateral/types';
+import {
+  MessageDiagnosticsProvider,
+  useMessageDiagnosticsContext,
+} from './diagnostics/MessageDiagnosticsContext';
+import { diagnosticLabel } from './diagnostics/types';
 import { useOriginConfirmation } from './diagnostics/useOriginConfirmation';
 import { isEcoMessage } from './eco';
 import { useIsIcaMessage } from './ica';
@@ -171,9 +176,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
   }, [ensureWarpRouteData, isWarpRouteDataLoaded]);
 
   const pause = status !== MessageStatus.Delivered ? getMessagePause(message) : undefined;
-  const waitingForLiquidity =
-    status !== MessageStatus.Delivered &&
-    activeRuntimeState?.collateralStatus === CollateralStatus.Insufficient;
 
   return (
     <MessageDiagnosticsProvider
@@ -199,40 +201,13 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
                       ? 'Eco intent proof'
                       : 'Interchain message'
             }
-            paused={!!pause}
-            waitingForLiquidity={waitingForLiquidity}
             notice={
-              (pause || waitingForLiquidity || status === MessageStatus.Failing) && (
-                <aside
-                  className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-                  aria-live="polite"
-                >
-                  <p className="font-medium">
-                    {pause
-                      ? 'Delivery is paused'
-                      : waitingForLiquidity
-                        ? 'Waiting for destination liquidity'
-                        : 'Delivery needs attention'}
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed">
-                    {pause
-                      ? 'This route or chain is paused. Delivery will not proceed while the pause remains active.'
-                      : waitingForLiquidity
-                        ? 'The destination route needs more liquidity to complete this transfer. See the destination transaction below for balances and rebalance status.'
-                        : 'The destination check reported an issue. See the destination transaction below for delivery diagnostics.'}
-                  </p>
-                  {pause?.link && (
-                    <a
-                      href={pause.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-block text-xs underline underline-offset-2"
-                    >
-                      Read the status update ↗
-                    </a>
-                  )}
-                </aside>
-              )
+              <DeliveryIssueNotice
+                pause={pause}
+                collateralInfo={activeRuntimeState?.collateralInfo}
+                status={status}
+                warpRouteDetails={warpRouteDetails}
+              />
             }
           >
             {(active) => (
@@ -342,8 +317,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           activity={
             showLifecycle && (
               <MessageRelayActivityPanel
-                paused={!!pause}
-                waitingForLiquidity={waitingForLiquidity}
                 message={message}
                 confirmed={confirmed}
                 originConfirmation={timedOriginConfirmation}
@@ -366,6 +339,102 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
   );
 }
 
+function DeliveryIssueNotice({
+  pause,
+  collateralInfo,
+  status,
+  warpRouteDetails,
+}: {
+  pause?: ReturnType<typeof getMessagePause>;
+  collateralInfo?: CollateralInfo;
+  status: MessageStatus;
+  warpRouteDetails?: WarpRouteDetails;
+}) {
+  const { observation } = useMessageDiagnosticsContext();
+  const state = observation?.state;
+  const insufficient = collateralInfo?.status === CollateralStatus.Insufficient;
+  if (!pause && !insufficient && status !== MessageStatus.Failing) return null;
+
+  const title = pause
+    ? 'Delivery is paused'
+    : insufficient
+      ? 'Destination liquidity required'
+      : 'Delivery attempt will retry';
+  const description = pause
+    ? 'This route or chain is paused. The message remains pending until delivery can resume.'
+    : insufficient
+      ? 'The destination route does not currently have enough collateral. The message remains pending while relayers retry after liquidity is restored.'
+      : 'The latest attempt did not complete. The message remains pending while relayers retry automatically.';
+  const retryReason = state?.retry?.reason;
+  const failureReason = state?.failure?.reason;
+  const failureStage = state?.failure?.stage;
+  const error = insufficient || status === MessageStatus.Failing;
+
+  return (
+    <aside
+      className={`rounded-lg border px-4 py-3 text-sm ${
+        error
+          ? 'border-red-200 bg-red-50 text-red-900'
+          : 'border-amber-200 bg-amber-50 text-amber-900'
+      }`}
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          aria-hidden="true"
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
+            error ? 'border-red-300 bg-red-100 text-red-700' : 'border-amber-300 text-amber-700'
+          }`}
+        >
+          !
+        </span>
+        <div className="min-w-0">
+          <p className="font-medium">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed">{description}</p>
+          {insufficient && collateralInfo && (
+            <div className="mt-2 text-xs">
+              <CollateralDeficitDetails
+                warpRouteDetails={warpRouteDetails}
+                collateralInfo={collateralInfo}
+              />
+            </div>
+          )}
+          {!insufficient && (retryReason || failureReason || failureStage) && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {retryReason && (
+                <span>
+                  <span className="font-medium">Retry:</span> {diagnosticLabel(retryReason)}
+                </span>
+              )}
+              {failureReason && (
+                <span>
+                  <span className="font-medium">Reported cause:</span>{' '}
+                  {diagnosticLabel(failureReason)}
+                </span>
+              )}
+              {failureStage && (
+                <span>
+                  <span className="font-medium">Stage:</span> {diagnosticLabel(failureStage)}
+                </span>
+              )}
+            </div>
+          )}
+          {pause?.link && (
+            <a
+              href={pause.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs underline underline-offset-2"
+            >
+              Read the status update ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRuntimeState) {
   return (
     a.hasRun === b.hasRun &&
@@ -374,7 +443,10 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.isMessageFound === b.isMessageFound &&
     a.message === b.message &&
     a.debugResult === b.debugResult &&
-    a.collateralStatus === b.collateralStatus &&
+    a.collateralInfo.status === b.collateralInfo.status &&
+    a.collateralInfo.available === b.collateralInfo.available &&
+    a.collateralInfo.required === b.collateralInfo.required &&
+    a.collateralInfo.deficit === b.collateralInfo.deficit &&
     a.originConfirmationTimestamp?.blockNumber === b.originConfirmationTimestamp?.blockNumber &&
     a.originConfirmationTimestamp?.timestamp === b.originConfirmationTimestamp?.timestamp
   );
