@@ -13,7 +13,10 @@ import {
   DiagnosticState,
   diagnosticLabel,
   diagnosticModuleStatus,
+  isOffchainAttestationPending,
   isWaitingForCommit,
+  isWaitingForOffchainAttestation,
+  offchainReadLabel,
 } from '../diagnostics/types';
 import { getValidatorSignatures } from '../diagnostics/validatorSignatures';
 import { postgresByteaToAddress } from '../queries/encoding';
@@ -32,6 +35,7 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
     useMessageDiagnosticsContext();
   const state = observation?.state;
   const waitingForCommit = isWaitingForCommit(state);
+  const waitingForAttestation = isWaitingForOffchainAttestation(state);
   const proofReady =
     !!state &&
     ['ready_to_submit', 'submitting', 'confirming', 'delivered'].includes(state.phase ?? '');
@@ -42,17 +46,19 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
     ? 'Accepted on destination'
     : proofReady
       ? 'Validation ready'
-      : waitingForCommit || failed || state?.phase === 'retrying'
-        ? 'Waiting for validation'
-        : state
-          ? live && ['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
-            ? 'Checks in progress'
-            : 'Last reported checks'
-          : fetching
-            ? 'Loading validation details'
-            : error
-              ? 'Validation details unavailable'
-              : 'Waiting for relayer checks';
+      : waitingForAttestation
+        ? 'Attestation pending'
+        : waitingForCommit || failed || state?.phase === 'retrying'
+          ? 'Waiting for validation'
+          : state
+            ? live && ['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
+              ? 'Checks in progress'
+              : 'Last reported checks'
+            : fetching
+              ? 'Loading validation details'
+              : error
+                ? 'Validation details unavailable'
+                : 'Waiting for relayer checks';
 
   return (
     <section className="min-w-0" aria-label="Security validation">
@@ -63,7 +69,10 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xxs font-medium',
             delivered || proofReady
               ? 'border-green-200/60 bg-green-25/50 text-green-700'
-              : live && !failed && ['preparing', 'awaiting_signatures'].includes(state?.phase ?? '')
+              : live &&
+                  !failed &&
+                  (waitingForAttestation ||
+                    ['preparing', 'awaiting_signatures'].includes(state?.phase ?? ''))
                 ? 'border-primary-100 bg-accent-25 text-primary-700'
                 : 'border-gray-200 bg-gray-100 text-gray-500',
           )}
@@ -112,7 +121,8 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
                 live &&
                 !failed &&
                 !waitingForCommit &&
-                ['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
+                (waitingForAttestation ||
+                  ['preparing', 'awaiting_signatures'].includes(state.phase ?? ''))
               }
             />
             {(state.retry?.reason || state.failure?.reason) && (
@@ -121,7 +131,13 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
                   {waitingForCommit ? 'Waiting for commit confirmation' : 'Relay notes'}
                 </summary>
                 <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 leading-relaxed">
-                  {state.retry?.reason && <p>{diagnosticLabel(state.retry.reason)}</p>}
+                  {state.retry?.reason && (
+                    <p>
+                      {waitingForAttestation
+                        ? 'The attestation service has not produced the proof yet. The relayer will retry automatically.'
+                        : diagnosticLabel(state.retry.reason)}
+                    </p>
+                  )}
                   {state.failure?.reason && (
                     <p className={clsx(failed && 'text-red-700')}>
                       {state.failure.stage && `${diagnosticLabel(state.failure.stage)}: `}
@@ -227,6 +243,7 @@ function IsmTreeNode({
     );
   }
   const status = diagnosticModuleStatus(node, selected, preparing);
+  const attestationPending = isOffchainAttestationPending(node);
   const unused = status === 'unused';
   const complete = status === 'verified' || status === 'ready';
   const working = active && status === 'waiting' && selected !== false;
@@ -270,9 +287,11 @@ function IsmTreeNode({
             ? 'Attempt failed'
             : status === 'unknown'
               ? 'Not explored'
-              : working
-                ? 'Checking'
-                : 'Waiting';
+              : attestationPending
+                ? 'Attestation pending'
+                : working
+                  ? 'Checking'
+                  : 'Waiting';
   const checks = node.checks && typeof node.checks === 'object' ? Object.entries(node.checks) : [];
 
   return (
@@ -380,13 +399,17 @@ function IsmTreeNode({
             >
               {node.offchain_read.state === 'succeeded'
                 ? 'Gateway responded successfully'
-                : `Gateway: ${diagnosticLabel(node.offchain_read.state)}`}
+                : offchainReadLabel(node.offchain_read.state)}
               {node.offchain_read.http_status != null &&
                 ` · HTTP ${node.offchain_read.http_status}`}
             </p>
           )}
           {node.metadata_status && node.metadata_status !== 'ready' && (
-            <p>Proof data: {diagnosticLabel(node.metadata_status)}</p>
+            <p>
+              {attestationPending
+                ? 'Proof generation will resume automatically.'
+                : `Proof data: ${diagnosticLabel(node.metadata_status)}`}
+            </p>
           )}
           {node.metadata_status === 'ready' && (
             <p className="text-gray-500">
@@ -408,9 +431,10 @@ function IsmTreeNode({
                 </p>
               ),
           )}
-          {node.metadata_error && (
-            <p className={clsx(status === 'failed' && 'text-red-700')}>{node.metadata_error}</p>
-          )}
+          {node.metadata_error &&
+            !(attestationPending && node.metadata_error === 'Could not fetch metadata') && (
+              <p className={clsx(status === 'failed' && 'text-red-700')}>{node.metadata_error}</p>
+            )}
           {unused && <p>This alternative is not required by the selected path.</p>}
         </div>
       </details>

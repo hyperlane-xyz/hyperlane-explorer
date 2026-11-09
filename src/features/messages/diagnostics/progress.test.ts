@@ -45,6 +45,36 @@ test('keeps expected commit waits neutral while stopping relay animation', () =>
   });
 });
 
+test('keeps pending offchain attestations active and explains the delay', () => {
+  expect(
+    progress(MessageStatus.Pending, 'retrying', {
+      state: {
+        phase: 'retrying',
+        modules: [
+          {
+            ism: '0x01',
+            node_id: 'root',
+            children: [],
+            module_type: 'CcipRead',
+            metadata_error: 'Could not fetch metadata',
+            metadata_status: 'blocked',
+            offchain_read: { state: 'pending_retries_exhausted', endpoint: 0 },
+          },
+        ],
+        retry: { reason: 'CouldNotFetchMetadata', count: 7 },
+      },
+    }),
+  ).toMatchObject({
+    active: true,
+    activityStatus: 'Waiting for offchain attestation',
+    blocked: false,
+    explanation:
+      'The offchain attestation is not ready yet. The relayer is retrying automatically.',
+    relayStopped: false,
+    status: 'Waiting for offchain attestation',
+  });
+});
+
 test('prefers current mempool progress and canonical delivery state', () => {
   expect(
     progress(MessageStatus.Pending, 'submitting', {

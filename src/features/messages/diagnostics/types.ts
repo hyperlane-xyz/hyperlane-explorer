@@ -229,6 +229,23 @@ export function isWaitingForCommit(state?: DiagnosticState) {
   );
 }
 
+const pendingOffchainReadStates = new Set(['pending', 'pending_retries_exhausted']);
+
+export function isOffchainAttestationPending(module: DiagnosticModule) {
+  return pendingOffchainReadStates.has(module.offchain_read?.state ?? '');
+}
+
+export function isWaitingForOffchainAttestation(state?: DiagnosticState) {
+  return state?.modules.some(isOffchainAttestationPending) ?? false;
+}
+
+export function offchainReadLabel(state: string) {
+  if (state === 'pending') return 'Waiting for offchain attestation';
+  if (state === 'pending_retries_exhausted')
+    return 'Offchain attestation is still pending after the latest gateway checks';
+  return `Gateway: ${diagnosticLabel(state)}`;
+}
+
 const phaseRank: Record<string, number> = {
   retrying: 1,
   preparing: 2,
@@ -342,13 +359,13 @@ export function describeDiagnosticActivity(row: DiagnosticActivity) {
 
 function describeDiagnosticModule(module: DiagnosticModule) {
   const label = diagnosticLabel(module.module_type ?? 'Security module');
-  if (module.metadata_error) return `${label}: ${module.metadata_error}`;
   if (module.offchain_read?.state === 'succeeded') {
     return `${label}: gateway succeeded${module.offchain_read.http_status ? ` (HTTP ${module.offchain_read.http_status})` : ''}`;
   }
   if (module.offchain_read) {
-    return `${label}: ${diagnosticLabel(module.offchain_read.state)}`;
+    return `${label}: ${offchainReadLabel(module.offchain_read.state)}`;
   }
+  if (module.metadata_error) return `${label}: ${module.metadata_error}`;
   if (module.signatures) {
     return `${label}: ${module.signatures.collected}/${module.signatures.threshold} signatures`;
   }

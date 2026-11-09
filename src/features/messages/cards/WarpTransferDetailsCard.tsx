@@ -75,6 +75,7 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
         <TokenDetails
           token={originToken}
+          coinGeckoId={originToken.coinGeckoId ?? destinationToken.coinGeckoId}
           amount={amount}
           amountLabel="Sent"
           domainId={message.originDomainId}
@@ -84,6 +85,7 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
         />
         <TokenDetails
           token={destinationToken}
+          coinGeckoId={destinationToken.coinGeckoId ?? originToken.coinGeckoId}
           amount={receivedAmount}
           amountLabel={message.status === MessageStatus.Delivered ? 'Received' : 'Expected'}
           domainId={message.destinationDomainId}
@@ -138,9 +140,6 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
               className="mt-1 shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
             />
           </div>
-          <p className="mt-1 text-xxs leading-relaxed text-gray-500">
-            Exact encoded integer, before token decimals or scaling.
-          </p>
         </div>
       </div>
     </div>
@@ -168,6 +167,7 @@ export function WarpTransferDetailsCard(props: Props) {
 
 function TokenDetails({
   token,
+  coinGeckoId,
   amount,
   amountLabel,
   domainId,
@@ -176,6 +176,7 @@ function TokenDetails({
   blur,
 }: {
   token: TokenArgs;
+  coinGeckoId?: string;
   amount: string;
   amountLabel: string;
   domainId: number;
@@ -185,11 +186,11 @@ function TokenDetails({
 }) {
   const metadata = useChainMetadataResolver().tryGetChainMetadata(domainId);
   const prices = useTokenUsdPrices(
-    token.coinGeckoId ? [token.coinGeckoId] : [],
+    coinGeckoId ? [coinGeckoId] : [],
     !!metadata?.isTestnet,
     timestamp,
   );
-  const price = token.coinGeckoId ? prices[token.coinGeckoId] : undefined;
+  const price = coinGeckoId ? prices[coinGeckoId] : undefined;
   const usdValue =
     price != null && Number.isFinite(price) && price >= 0
       ? new BigNumber(amount).times(price)

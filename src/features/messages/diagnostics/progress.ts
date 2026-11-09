@@ -1,6 +1,6 @@
 import { MessageStatus } from '../../../types';
 import type { DiagnosticState } from './types';
-import { diagnosticLabel, isWaitingForCommit } from './types';
+import { diagnosticLabel, isWaitingForCommit, isWaitingForOffchainAttestation } from './types';
 import type { DiagnosticsConnectionState } from './useMessageDiagnostics';
 import type { OriginConfirmation } from './useOriginConfirmation';
 
@@ -36,13 +36,14 @@ export function getMessageProgress({
 }) {
   const delivered = messageStatus === MessageStatus.Delivered;
   const waitingForCommit = isWaitingForCommit(state);
+  const waitingForAttestation = isWaitingForOffchainAttestation(state);
   const failed = !!state?.failure && !waitingForCommit;
   const blocked =
     paused ||
     waitingForLiquidity ||
     failed ||
     state?.phase === 'dropped' ||
-    (state?.phase === 'retrying' && !waitingForCommit) ||
+    (state?.phase === 'retrying' && !waitingForCommit && !waitingForAttestation) ||
     messageStatus === MessageStatus.Failing;
   const active = messageStatus === MessageStatus.Pending && !blocked;
   const originConfirming = !!originConfirmation?.tracked && !originConfirmation.confirmed;
@@ -57,6 +58,7 @@ export function getMessageProgress({
   else if (paused) status = 'Delivery paused';
   else if (waitingForLiquidity) status = 'Waiting for destination liquidity';
   else if (waitingForCommit) status = 'Waiting for commit confirmation';
+  else if (waitingForAttestation) status = 'Waiting for offchain attestation';
   else if (failed) status = 'Relayer waiting to retry';
   else if (messageStatus === MessageStatus.Failing) status = 'Delivery needs attention';
   else if (messageStatus === MessageStatus.Unknown) status = 'Delivery status unavailable';
@@ -69,6 +71,7 @@ export function getMessageProgress({
     ['submitting', 'confirming'].includes(state.phase ?? '')
   )
     activityStatus = 'In destination mempool';
+  else if (waitingForAttestation) activityStatus = 'Waiting for offchain attestation';
   else if (state?.phase) activityStatus = phaseLabels[state.phase] ?? diagnosticLabel(state.phase);
   else if (selectedRelayer) activityStatus = 'Relayer report unavailable';
   else if (originConfirming) activityStatus = 'Waiting for origin confirmations';
@@ -86,6 +89,9 @@ export function getMessageProgress({
     explanation = 'Tracking continues. Check the details below for the current delay.';
   else if (waitingForCommit)
     explanation = 'The relayer is waiting for the earlier commitment to become available.';
+  else if (waitingForAttestation)
+    explanation =
+      'The offchain attestation is not ready yet. The relayer is retrying automatically.';
   else if (originConfirming)
     explanation = `${originConfirmation.current ?? '—'} / ${originConfirmation.required ?? '—'} origin confirmations${state ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`;
   else if (state?.phase === 'submitting')
