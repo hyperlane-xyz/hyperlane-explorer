@@ -111,7 +111,7 @@ export function getMessageTimeline(
     label,
     status:
       id === 'origin_confirmed'
-        ? delivered || originConfirmation?.confirmed
+        ? !!observation || delivered || originConfirmation?.confirmed
           ? 'complete'
           : originConfirmation?.tracked
             ? 'active'
