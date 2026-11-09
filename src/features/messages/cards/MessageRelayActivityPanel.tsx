@@ -48,6 +48,7 @@ export function MessageRelayActivityPanel({
   const {
     history,
     activities,
+    diagnostics,
     observation,
     relayers,
     selectedRelayer,
@@ -80,6 +81,7 @@ export function MessageRelayActivityPanel({
     <MessageActivityLog
       key={message.msgId}
       history={history}
+      liveActivities={diagnostics?.activities ?? []}
       dispatchedAt={message.origin.timestamp}
       deliveredAt={progress.delivered ? message.destination?.timestamp : undefined}
       header={

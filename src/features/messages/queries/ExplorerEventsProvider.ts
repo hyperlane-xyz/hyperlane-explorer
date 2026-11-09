@@ -44,6 +44,15 @@ const rollbackSchema = z
     toHeight: height,
   })
   .refine((rollback) => BigInt(rollback.toHeight) < BigInt(rollback.fromHeight));
+const diagnosticsSchema = z.object({
+  type: z.literal('diagnostics'),
+  data: z.object({ message_id: z.string() }).passthrough(),
+});
+const diagnosticsUnavailableSchema = z.object({
+  type: z.literal('diagnostics_unavailable'),
+  message_ids: z.array(z.string()),
+  message: z.string().optional(),
+});
 const eventSchema = z.discriminatedUnion('type', [
   blockSchema,
   rollbackSchema,
@@ -55,18 +64,23 @@ const eventSchema = z.discriminatedUnion('type', [
     confirmations: uint.optional(),
     data: z.custom<MessageEntry>(isMessageEntry),
   }),
+  diagnosticsSchema,
+  diagnosticsUnavailableSchema,
 ]);
 export type Rollback = z.infer<typeof rollbackSchema>;
 export type ExplorerBlock = z.infer<typeof blockSchema>;
+type ExplorerDiagnosticsEvent =
+  | z.infer<typeof diagnosticsSchema>
+  | z.infer<typeof diagnosticsUnavailableSchema>;
 type RefreshListener = (domain?: number) => void;
 type MessageListener = (message: MessageEntry | null) => void;
+type DiagnosticsListener = (event: ExplorerDiagnosticsEvent | null) => void;
 type MessageSubscription = {
   messageId: string;
   listener: MessageListener;
   row: MessageEntry | null;
   domains: number[];
 };
-
 export type ExplorerConnectionState = 'connecting' | 'connected' | 'disconnected' | 'unavailable';
 
 export interface ExplorerEventsContextValue {
@@ -74,6 +88,7 @@ export interface ExplorerEventsContextValue {
   subscribeRefresh: (listener: RefreshListener) => () => void;
   domainIds: number[];
   subscribe: (messageId: string, listener: MessageListener, domains?: number[]) => () => void;
+  subscribeDiagnostics: (listener: DiagnosticsListener) => () => void;
 }
 
 export const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
@@ -103,8 +118,13 @@ export function shouldEnableExplorerEvents(pathName: string) {
 export function ExplorerEventsProvider({
   children,
   domains = EMPTY_DOMAINS,
+  diagnosticsMessageId,
   enabled = true,
-}: PropsWithChildren<{ domains?: number[]; enabled?: boolean }>) {
+}: PropsWithChildren<{
+  domains?: number[];
+  diagnosticsMessageId?: string;
+  enabled?: boolean;
+}>) {
   const [connectionState, setConnectionState] = useState<ExplorerConnectionState>('unavailable');
   const [stream] = useState(createExplorerStream);
   const { domainIds, invalidDomainIds } = useMemo(
@@ -113,6 +133,7 @@ export function ExplorerEventsProvider({
   );
   const domainKey = domainIds.join(',');
   const listenersRef = useRef(new Set<MessageSubscription>());
+  const diagnosticsListenersRef = useRef(new Set<DiagnosticsListener>());
   const refreshListenersRef = useRef(new Set<RefreshListener>());
   const subscribeRefresh = useCallback((listener: RefreshListener) => {
     refreshListenersRef.current.add(listener);
@@ -140,14 +161,24 @@ export function ExplorerEventsProvider({
     },
     [stream],
   );
+  const subscribeDiagnostics = useCallback((listener: DiagnosticsListener) => {
+    diagnosticsListenersRef.current.add(listener);
+    return () => {
+      diagnosticsListenersRef.current.delete(listener);
+    };
+  }, []);
 
-  const clearMessages = useCallback(() => {
-    stream.setState({ messageRows: [], blockHeads: {} });
-    listenersRef.current.forEach((subscription) => {
-      subscription.row = null;
-      subscription.listener(null);
-    });
-  }, [stream]);
+  const clearMessages = useCallback(
+    (notifyDiagnostics = true) => {
+      stream.setState({ messageRows: [], blockHeads: {} });
+      listenersRef.current.forEach((subscription) => {
+        subscription.row = null;
+        subscription.listener(null);
+      });
+      if (notifyDiagnostics) diagnosticsListenersRef.current.forEach((listener) => listener(null));
+    },
+    [stream],
+  );
 
   useEffect(() => {
     if (invalidDomainIds.length) {
@@ -156,7 +187,7 @@ export function ExplorerEventsProvider({
   }, [invalidDomainIds]);
 
   useEffect(() => {
-    clearMessages();
+    clearMessages(false);
     if (!enabled || !config.wsUrl) {
       setConnectionState('unavailable');
       return;
@@ -201,7 +232,9 @@ export function ExplorerEventsProvider({
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(withConfirmations(config.wsUrl, subscribedDomains));
+        socket = new WebSocket(
+          withConfirmations(config.wsUrl, subscribedDomains, diagnosticsMessageId),
+        );
       } catch (error) {
         logger.error('Could not create Explorer live message websocket', error);
         scheduleReconnect();
@@ -251,6 +284,8 @@ export function ExplorerEventsProvider({
             ...stream.getState().messageRows.filter((row) => row.msg_id !== messageRow.msg_id),
           ].slice(0, LIVE_MESSAGE_LIMIT);
           stream.setState({ messageRows: nextRows });
+        } else if (message?.type === 'diagnostics' || message?.type === 'diagnostics_unavailable') {
+          diagnosticsListenersRef.current.forEach((listener) => listener(message));
         } else if (message?.type === 'rollback') {
           let changed = false;
           const nextRows = stream.getState().messageRows.flatMap((row) => {
@@ -300,16 +335,17 @@ export function ExplorerEventsProvider({
       ws?.close();
       ws = undefined;
     };
-  }, [domainKey, enabled, clearMessages, stream]);
+  }, [domainKey, diagnosticsMessageId, enabled, clearMessages, stream]);
 
   const value = useMemo(
     () => ({
       connectionState,
       subscribeRefresh,
       subscribe,
+      subscribeDiagnostics,
       domainIds: domainKey ? domainKey.split(',').map(Number) : [],
     }),
-    [connectionState, subscribeRefresh, subscribe, domainKey],
+    [connectionState, subscribeRefresh, subscribe, subscribeDiagnostics, domainKey],
   );
 
   return createElement(
@@ -329,12 +365,16 @@ export function parseExplorerEvent(data: unknown): z.infer<typeof eventSchema> |
   }
 }
 
-export function withConfirmations(wsUrl: string, domains: number[]) {
+export function withConfirmations(wsUrl: string, domains: number[], diagnosticsMessageId?: string) {
   const url = new URL(wsUrl);
   url.searchParams.set('blocks', 'true');
   if (domains.length) {
     url.searchParams.set('confirmations', '0');
     url.searchParams.set('domains', domains.join(','));
+  }
+  if (diagnosticsMessageId) {
+    url.searchParams.set('messageIds', diagnosticsMessageId);
+    url.searchParams.set('diagnostics', 'true');
   }
   return url.toString();
 }

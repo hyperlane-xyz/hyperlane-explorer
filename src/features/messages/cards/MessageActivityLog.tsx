@@ -3,7 +3,12 @@ import { CopyButton } from '@hyperlane-xyz/widgets';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { formatElapsed, formatTimestamp, getActivityTimings } from '../diagnostics/timeline';
-import { describeDiagnosticActivity, diagnosticLabel } from '../diagnostics/types';
+import {
+  describeDiagnosticActivity,
+  diagnosticLabel,
+  mergeActivityHistory,
+  type DiagnosticActivity,
+} from '../diagnostics/types';
 import type { useMessageActivityPage } from '../diagnostics/useMessageDiagnostics';
 
 const VISIBLE_ROWS = 8;
@@ -12,12 +17,14 @@ export function MessageActivityLog({
   history,
   dispatchedAt,
   deliveredAt,
+  liveActivities,
   controls,
   header,
 }: {
   history: ReturnType<typeof useMessageActivityPage>;
   dispatchedAt: number;
   deliveredAt?: number;
+  liveActivities: DiagnosticActivity[];
   controls?: ReactNode;
   header: ReactNode;
 }) {
@@ -28,7 +35,17 @@ export function MessageActivityLog({
     page: history.page,
     offset: 0,
   });
-  const batch = history.page === 0 ? (frozenLatest ?? history.activityPage) : history.activityPage;
+  const liveBatch = useMemo(
+    () =>
+      history.page === 0 && history.activityPage
+        ? {
+            ...history.activityPage,
+            activities: mergeActivityHistory(history.activityPage.activities, liveActivities),
+          }
+        : history.activityPage,
+    [history.activityPage, history.page, liveActivities],
+  );
+  const batch = history.page === 0 ? (frozenLatest ?? liveBatch) : history.activityPage;
   const batchRows = useMemo(
     () =>
       [...(batch?.activities ?? [])].sort((a, b) =>
@@ -80,7 +97,7 @@ export function MessageActivityLog({
   const hasEarlier = earlierInBatch || !!(batch?.has_more && batch.next_before_id);
   const browsing = history.page > 0 || offset > 0 || frozenLatest !== null;
   const earlier = () => {
-    if (history.page === 0 && !frozenLatest) setFrozenLatest(history.activityPage);
+    if (history.page === 0 && !frozenLatest) setFrozenLatest(liveBatch);
     if (earlierInBatch) {
       setView({ page: history.page, offset: offset + VISIBLE_ROWS });
     } else if (batch?.next_before_id) {

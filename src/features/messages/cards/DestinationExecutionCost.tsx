@@ -18,8 +18,7 @@ export function DestinationExecutionCost({
   const gasUsed = transaction && 'gasUsed' in transaction ? transaction.gasUsed : undefined;
   const effectiveGasPrice =
     transaction && 'effectiveGasPrice' in transaction ? transaction.effectiveGasPrice : undefined;
-  const hasExecutionCost =
-    message.status === MessageStatus.Delivered && !isNullish(gasUsed);
+  const hasExecutionCost = message.status === MessageStatus.Delivered && !isNullish(gasUsed);
   const usdPrice = useNativeTokenUsdPrice(
     message.destinationDomainId,
     transaction?.timestamp,

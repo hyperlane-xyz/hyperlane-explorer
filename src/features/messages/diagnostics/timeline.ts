@@ -90,21 +90,13 @@ export function getMessageTimeline(
   const originConfirmedAt = originConfirmation?.confirmed
     ? validTime(originConfirmation.timestamp)
     : undefined;
-  const relayerConfirmedAt = earliest(
-    attempt
-      .filter((row) => row.state.phase === 'delivered')
-      .map(
-        ({ state, observedAt }) =>
-          validTime(state.delivered_observed_at_millis) ?? parseObservationTime(observedAt),
-      ),
-  );
   const timestamps = [
     dispatchedAt,
     originConfirmedAt,
     firstSeen,
     validatingComplete || delivered ? validationTime(attempt) : undefined,
     deliveredAt,
-    relayerConfirmedAt,
+    undefined,
   ];
   const timeline = stages.map(([id, label], index): MessageTimelineStage => ({
     id,

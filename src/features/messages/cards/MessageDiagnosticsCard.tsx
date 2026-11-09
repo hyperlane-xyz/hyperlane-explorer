@@ -105,7 +105,7 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
                 : error
                   ? 'Validation details are temporarily unavailable.'
                   : delivered
-                    ? 'No validation details were recorded for this message.'
+                    ? 'No relayer diagnostics were recorded for this message.'
                     : 'Waiting for a relayer observation.'}
             </span>
           </div>

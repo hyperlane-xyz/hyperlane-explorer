@@ -66,6 +66,10 @@ export default function App({ Component, router, pageProps }: AppProps) {
     () => scrapedDomains.filter((domain) => !domain.is_test_net).map(({ id }) => id),
     [scrapedDomains],
   );
+  const diagnosticsMessageId =
+    isMessageRoute(router.pathname) && typeof router.query.messageId === 'string'
+      ? router.query.messageId
+      : undefined;
 
   const onRouteChangeStart = useCallback((url: string) => {
     setPendingRoute(isMessageRoute(url) ? url : null);
@@ -114,6 +118,7 @@ export default function App({ Component, router, pageProps }: AppProps) {
       <UrqlProvider value={urqlClient}>
         <ExplorerEventsProvider
           domains={scrapedDomainIds}
+          diagnosticsMessageId={diagnosticsMessageId}
           enabled={shouldEnableExplorerEvents(router.pathname)}
         >
           <AppLayout pathName={router.pathname}>

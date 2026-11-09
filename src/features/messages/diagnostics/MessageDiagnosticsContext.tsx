@@ -29,11 +29,7 @@ function DiagnosticsProvider({
   children,
 }: PropsWithChildren<{ messageId: string; live: boolean; enabled: boolean }>) {
   const diagnostics = useMessageDiagnostics(messageId, live, enabled);
-  const refreshKey = diagnostics.diagnostics?.activities.reduce(
-    (latest, row) => (BigInt(row.id) > BigInt(latest) ? row.id : latest),
-    '0',
-  );
-  const history = useMessageActivityPage(messageId, refreshKey, enabled);
+  const history = useMessageActivityPage(messageId, enabled);
   const activities = useMemo(
     () => [
       ...new Map(

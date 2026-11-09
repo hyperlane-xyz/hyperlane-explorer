@@ -108,7 +108,7 @@ describe('message lifecycle timing', () => {
       'pending',
     ]);
     expect(stage(timeline, 'delivered').timestamp).toBeUndefined();
-    expect(stage(timeline, 'confirmed').timestamp).toBe(122_000);
+    expect(stage(timeline, 'confirmed').timestamp).toBeUndefined();
     expect(timeline.totalElapsed).toBeUndefined();
   });
 
@@ -173,37 +173,22 @@ describe('message lifecycle timing', () => {
     expect(stage(unknown, 'picked_up').elapsedSincePrevious).toBeUndefined();
   });
 
-  it('records the selected relayer confirmation time separately from canonical finality', () => {
+  it('does not present a relayer delivery recheck as canonical chain confirmation time', () => {
     const terminal = activity('6', 'delivered', 130_000, { delivered_observed_at_millis: 125_000 });
-    const other = activity('5', 'delivered', 124_000, {}, 'other');
     const delivered = { ...message, status: MessageStatus.Delivered };
-    const timeline = getMessageTimeline(delivered, observation(terminal), [
-      ...history,
-      other,
-      terminal,
-    ]);
+    const timeline = getMessageTimeline(delivered, observation(terminal), [...history, terminal]);
     expect(stage(timeline, 'confirmed')).toMatchObject({
       status: 'active',
-      timestamp: 125_000,
-      timeSource: 'relayer',
-      elapsedSincePrevious: 2_000,
+      timestamp: undefined,
+      timeSource: undefined,
+      elapsedSincePrevious: undefined,
     });
     expect(
       stage(
         getMessageTimeline(delivered, observation(terminal), history, { confirmed: true }),
         'confirmed',
       ),
-    ).toMatchObject({ status: 'complete', timestamp: 125_000, timeSource: 'relayer' });
-    const fallback = activity('6', 'delivered', 130_000, { phase_started_at_millis: 124_000 });
-    expect(
-      stage(getMessageTimeline(delivered, observation(fallback), history), 'confirmed').timestamp,
-    ).toBe(130_000);
-    const finalized = activity('6', 'confirming', 126_000, {
-      submission: { stage: 'finalized', observed_at_millis: 126_000 },
-    });
-    expect(
-      stage(getMessageTimeline(delivered, observation(finalized), history), 'confirmed').timestamp,
-    ).toBeUndefined();
+    ).toMatchObject({ status: 'complete', timestamp: undefined, timeSource: undefined });
   });
 
   it('keeps phase timing unknown when bounded history has only a later phase', () => {
