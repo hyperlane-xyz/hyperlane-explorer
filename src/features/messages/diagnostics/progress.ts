@@ -37,7 +37,9 @@ export function getMessageProgress({
   const delivered = messageStatus === MessageStatus.Delivered;
   const waitingForCommit = isWaitingForCommit(state);
   const waitingForAttestation = isWaitingForOffchainAttestation(state);
-  const failed = !!state?.failure && !waitingForCommit;
+  // A gateway may report the latest attempt as failed while the attestation itself is still
+  // pending. Keep that expected retry state live; terminal gateway failures are not pending.
+  const failed = !!state?.failure && !waitingForCommit && !waitingForAttestation;
   const blocked =
     paused ||
     waitingForLiquidity ||

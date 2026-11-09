@@ -22,8 +22,6 @@ import { getBlockExplorerTxUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
 import { AddressInline } from './ismRender/AddressInline';
 
-import styles from './MessageOverviewCard.module.css';
-
 interface Props {
   message: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
@@ -238,7 +236,7 @@ function TransactionLink({
                 height={12}
                 color="currentColor"
                 style={{ color: 'inherit' }}
-                className={styles.spinner}
+                className="motion-reduce:animate-none"
               />
             ) : (
               <span className="h-2 w-2 rounded-full border border-current opacity-50" />

@@ -263,6 +263,20 @@ describe('message lifecycle timing', () => {
     expect(
       stage(getMessageTimeline(message, observation(waiting), history), 'validated').status,
     ).toBe('active');
+    const attestation = activity('5', 'retrying', 125_000, {
+      failure: { stage: 'metadata', reason: 'CouldNotFetchMetadata' },
+      modules: [
+        {
+          ism: '0x01',
+          node_id: 'root',
+          children: [],
+          offchain_read: { state: 'pending_retries_exhausted' },
+        },
+      ],
+    });
+    expect(
+      stage(getMessageTimeline(message, observation(attestation), history), 'validated').status,
+    ).toBe('active');
     const ready = activity('6', 'ready_to_submit', 128_000);
     const recovered = getMessageTimeline(message, observation(ready), [...history, retry, ready]);
     expect(stage(recovered, 'validated').timestamp).toBe(128_000);

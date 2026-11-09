@@ -62,6 +62,7 @@ test('keeps pending offchain attestations active and explains the delay', () => 
           },
         ],
         retry: { reason: 'CouldNotFetchMetadata', count: 7 },
+        failure: { stage: 'metadata', reason: 'CouldNotFetchMetadata' },
       },
     }),
   ).toMatchObject({

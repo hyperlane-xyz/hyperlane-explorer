@@ -40,7 +40,8 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
     !!state &&
     ['ready_to_submit', 'submitting', 'confirming', 'delivered'].includes(state.phase ?? '');
   const live = connectionState === 'live' && !delivered;
-  const failed = !!state?.failure && !waitingForCommit && !delivered;
+  const failed =
+    !!state?.failure && !waitingForCommit && !waitingForAttestation && !delivered;
 
   const summary = delivered
     ? 'Accepted on destination'

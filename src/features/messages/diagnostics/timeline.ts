@@ -1,6 +1,7 @@
 import { MessageStatus, type MessageStub } from '../../../types';
 import {
   isWaitingForCommit,
+  isWaitingForOffchainAttestation,
   type DiagnosticActivity,
   type DiagnosticState,
   type LifecycleStepStatus,
@@ -59,7 +60,10 @@ export function getMessageTimeline(
             ? 1
             : 2;
   const failed =
-    !delivered && !!(state?.failure || state?.phase === 'dropped') && !isWaitingForCommit(state);
+    !delivered &&
+    !!(state?.failure || state?.phase === 'dropped') &&
+    !isWaitingForCommit(state) &&
+    !isWaitingForOffchainAttestation(state);
   const history = observation
     ? activities
         .filter((row) => row.relayer === observation.relayer && row.activity.state)
