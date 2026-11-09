@@ -5,11 +5,6 @@ import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { CollateralInfo, CollateralStatus } from './collateral/types';
-import type { OriginConfirmation } from './diagnostics/useOriginConfirmation';
-import {
-  useOriginConfirmationTimestamp,
-  type OriginConfirmationTimestamp,
-} from './diagnostics/useOriginConfirmationTimestamp';
 import { DetailSectionSkeleton } from './MessageDetailsLoading';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
@@ -37,7 +32,6 @@ export interface MessageDetailsRuntimeState {
   message?: Message | MessageStub;
   debugResult?: MessageDebugResult;
   collateralInfo: CollateralInfo;
-  originConfirmationTimestamp?: OriginConfirmationTimestamp;
 }
 
 interface Props {
@@ -50,7 +44,6 @@ interface Props {
   destinationChainName: string;
   blur: boolean;
   isOriginConfirming: boolean;
-  originConfirmation?: OriginConfirmation;
   warpRouteDetails?: WarpRouteDetails;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
@@ -65,7 +58,6 @@ export function MessageDetailsRuntime({
   destinationChainName,
   blur,
   isOriginConfirming,
-  originConfirmation,
   warpRouteDetails,
   onStateChange,
 }: Props) {
@@ -113,10 +105,6 @@ export function MessageDetailsRuntime({
       enabled: isMessageFound,
     });
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
-  const originConfirmationTimestamp = useOriginConfirmationTimestamp(
-    queriedMessage,
-    originConfirmation,
-  );
   const hasRun =
     hasInitialMessageDetails || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
 
@@ -129,7 +117,6 @@ export function MessageDetailsRuntime({
       message,
       debugResult,
       collateralInfo,
-      originConfirmationTimestamp,
     });
   }, [
     collateralInfo,
@@ -138,7 +125,6 @@ export function MessageDetailsRuntime({
     isMessageFound,
     message,
     onStateChange,
-    originConfirmationTimestamp,
     activePiState.isError,
     activePiState.isFetching,
   ]);

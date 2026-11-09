@@ -8,7 +8,7 @@ export interface ValidatorSignature {
 }
 
 // Validator checkpoint signers use EVM addresses, independently of the ISM program's VM.
-function signerAddress(value: string): string | undefined {
+export function normalizeValidatorAddress(value: string): string | undefined {
   if (/^0x[\da-f]{40}$/i.test(value)) return value.toLowerCase();
   if (/^0x0{24}[\da-f]{40}$/i.test(value)) return `0x${value.slice(-40).toLowerCase()}`;
   return undefined;
@@ -27,7 +27,7 @@ export function signatureLocationUrl(location?: string): string | undefined {
 export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignature[] {
   const signatures = node.signatures;
   const configured = node.validators ?? [];
-  const key = (address: string) => signerAddress(address) ?? address;
+  const key = (address: string) => normalizeValidatorAddress(address) ?? address;
   const unavailable = new Map(
     (signatures?.unavailable ?? []).map((entry) => [key(entry.validator), entry.reason]),
   );

@@ -233,3 +233,16 @@ export function formatTimestamp(timestamp: number): string {
     hour12: false,
   });
 }
+
+/** Millisecond precision for diagnostic intervals, without rounding to tenths. */
+export function formatPreciseElapsed(milliseconds: number): string {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return 'Unknown';
+  const rounded = Math.round(milliseconds);
+  if (rounded < 1000) return `${rounded}ms`;
+  const hours = Math.floor(rounded / 3_600_000);
+  const minutes = Math.floor((rounded % 3_600_000) / 60_000);
+  const seconds = (rounded % 60_000) / 1000;
+  return [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '', seconds ? `${seconds}s` : '']
+    .filter(Boolean)
+    .join(' ');
+}

@@ -1,5 +1,11 @@
 import { MessageStatus } from '../../../types';
-import { formatElapsed, formatTimestamp, getActivityTimings, getMessageTimeline } from './timeline';
+import {
+  formatElapsed,
+  formatPreciseElapsed,
+  formatTimestamp,
+  getActivityTimings,
+  getMessageTimeline,
+} from './timeline';
 import type { DiagnosticActivity, DiagnosticState, RelayerDiagnosticState } from './types';
 
 const message = {
@@ -7,6 +13,17 @@ const message = {
   origin: { hash: 'origin', timestamp: 100_000 },
   destination: { hash: 'destination', timestamp: 123_000 },
 };
+
+it('formats diagnostic intervals at millisecond precision', () => {
+  expect(formatPreciseElapsed(0)).toBe('0ms');
+  expect(formatPreciseElapsed(799)).toBe('799ms');
+  expect(formatPreciseElapsed(1799)).toBe('1.799s');
+  expect(formatPreciseElapsed(8128)).toBe('8.128s');
+  expect(formatPreciseElapsed(60_000)).toBe('1m');
+  expect(formatPreciseElapsed(3_661_002)).toBe('1h 1m 1.002s');
+  expect(formatPreciseElapsed(Number.NaN)).toBe('Unknown');
+  expect(formatPreciseElapsed(-1)).toBe('Unknown');
+});
 function activity(
   id: string,
   phase: string,
