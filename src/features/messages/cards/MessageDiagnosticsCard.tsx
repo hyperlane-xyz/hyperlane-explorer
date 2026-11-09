@@ -1,4 +1,4 @@
-import { CopyButton, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import { BoxArrowIcon, CopyButton, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
@@ -19,7 +19,7 @@ import {
   isWaitingForOffchainAttestation,
   offchainReadLabel,
 } from '../diagnostics/types';
-import { getValidatorSignatures } from '../diagnostics/validatorSignatures';
+import { getValidatorSignatures, signatureLocationUrl } from '../diagnostics/validatorSignatures';
 import { postgresByteaToAddress } from '../queries/encoding';
 import { AddressInline } from './ismRender/AddressInline';
 
@@ -259,38 +259,34 @@ function IsmTreeNode({
       : hasSignatures && signatureThreshold != null
         ? `${signatureThreshold}${node.validators?.length ? ` of ${node.validators.length}` : ''} signatures required`
         : undefined;
-  const collected = node.signatures?.collected;
+  const collected = node.signatures?.signers.length;
   const caption =
     node.module_type === 'Routing' && originDomainId >= 0
       ? `Origin domain ${originDomainId}`
-      : complete && aggregation && node.verified != null
-        ? `${node.verified}${node.children.length ? `/${node.children.length}` : ''} checks passed`
-        : complete && hasSignatures && collected != null
-          ? `${collected}${node.validators?.length ? `/${node.validators.length}` : ''} signatures collected`
-          : requiredCaption;
-  const thresholdMet =
-    node.threshold != null && node.verified != null && node.verified >= node.threshold;
+      : requiredCaption;
   const moduleLabel =
     node.module_type === 'Null'
       ? 'Null ISM'
       : diagnosticLabel(node.module_type ?? 'Security module');
   const statusLabel = unused
     ? 'Unused'
-    : thresholdMet && complete
-      ? 'Threshold met'
-      : status === 'verified'
-        ? 'Check passed'
-        : status === 'ready'
-          ? 'Proof ready'
-          : status === 'failed'
-            ? 'Attempt failed'
-            : status === 'unknown'
-              ? 'Not explored'
-              : attestationPending
-                ? 'Attestation pending'
-                : working
-                  ? 'Checking'
-                  : 'Waiting';
+    : complete && aggregation && node.verified != null && node.threshold != null
+      ? `${Math.min(node.verified, node.threshold)}/${node.threshold} checks passed`
+      : complete && hasSignatures && collected != null && signatureThreshold != null
+        ? `${Math.min(collected, signatureThreshold)}/${signatureThreshold} signatures collected`
+        : status === 'verified'
+          ? 'Check passed'
+          : status === 'ready'
+            ? 'Proof ready'
+            : status === 'failed'
+              ? 'Attempt failed'
+              : status === 'unknown'
+                ? 'Not explored'
+                : attestationPending
+                  ? 'Attestation pending'
+                  : working
+                    ? 'Checking'
+                    : 'Waiting';
   const checks = node.checks && typeof node.checks === 'object' ? Object.entries(node.checks) : [];
 
   return (
@@ -346,14 +342,7 @@ function IsmTreeNode({
             <span className="block font-medium sm:truncate" title={moduleLabel}>
               {moduleLabel}
             </span>
-            {caption && (
-              <span
-                className="mt-0.5 block text-xxs text-gray-500"
-                title={complete ? requiredCaption : undefined}
-              >
-                {caption}
-              </span>
-            )}
+            {caption && <span className="mt-0.5 block text-xxs text-gray-500">{caption}</span>}
           </span>
           <span
             className={clsx(
@@ -479,7 +468,7 @@ function ValidatorSignatures({
   complete: boolean;
 }) {
   const validators = getValidatorSignatures(node);
-  const collected = node.signatures?.collected;
+  const collected = node.signatures?.signers.length;
   return (
     <div>
       <p className="mb-1 font-medium">Validators</p>
@@ -491,58 +480,78 @@ function ValidatorSignatures({
       {!validators.length && <p className="text-gray-500">Validator addresses are not recorded.</p>}
       {validators.some(({ status }) => status === 'unknown') && (
         <p className="mb-2 text-xxs text-gray-500">
-          This report does not identify every signer. “Not reported” does not mean unsigned.
+          Signers come directly from this relayer. “Not reported” means no signature was observed
+          before collection stopped.
         </p>
       )}
       <ul
         className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/70"
         aria-label="Validator signatures"
       >
-        {validators.map(({ address, status, reason }) => (
-          <li
-            key={address}
-            data-validator-status={status}
-            className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2.5 py-2 text-gray-500"
-          >
-            <span className="inline-flex min-w-0 items-center gap-2">
-              <span
-                aria-hidden="true"
-                className={clsx(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-                  !muted && status === 'collected'
-                    ? 'bg-green-100/40 text-green-700'
-                    : 'bg-gray-200/60 text-gray-500',
-                )}
-              >
-                <PersonIcon width={14} height={14} />
-              </span>
-              <span title={address} className="truncate font-mono text-xxs sm:text-xs">
-                {truncateString(address, 8, 6)}
-              </span>
-              <CopyButton
-                copyValue={address}
-                width={12}
-                height={12}
-                aria-label="Copy validator address"
-                className="shrink-0 text-gray-500 opacity-60 [&_rect]:stroke-current [&_path]:fill-current"
-              />
-            </span>
-            <span
-              className={clsx(
-                'ml-auto shrink-0 text-xxs font-medium',
-                !muted && status === 'collected' ? 'text-green-700' : 'text-gray-500',
-              )}
-              title={reason}
+        {validators.map(({ address, status, location, reason }) => {
+          const locationUrl = signatureLocationUrl(location);
+          return (
+            <li
+              key={address}
+              data-validator-status={status}
+              className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2.5 py-2 text-gray-500"
             >
-              {status === 'collected'
-                ? '✓ Signature observed'
-                : status === 'unavailable'
-                  ? 'Unavailable'
-                  : 'Not reported'}
-              {reason && <span className="sr-only">: {reason}</span>}
-            </span>
-          </li>
-        ))}
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className={clsx(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                    !muted && status === 'collected'
+                      ? 'bg-green-100/40 text-green-700'
+                      : 'bg-gray-200/60 text-gray-500',
+                  )}
+                >
+                  <PersonIcon width={14} height={14} />
+                </span>
+                <span title={address} className="truncate font-mono text-xxs sm:text-xs">
+                  {truncateString(address, 8, 6)}
+                </span>
+                <CopyButton
+                  copyValue={address}
+                  width={12}
+                  height={12}
+                  aria-label="Copy validator address"
+                  className="shrink-0 text-gray-500 opacity-60 [&_rect]:stroke-current [&_path]:fill-current"
+                />
+              </span>
+              <span
+                className={clsx(
+                  'ml-auto inline-flex shrink-0 items-center text-xxs font-medium',
+                  !muted && status === 'collected' ? 'text-green-700' : 'text-gray-500',
+                )}
+                title={reason}
+              >
+                {locationUrl ? (
+                  <a
+                    href={locationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open signature location for ${address}`}
+                    title={location}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-green-900"
+                  >
+                    <span>✓ Signature observed</span>
+                    <BoxArrowIcon width={11} height={11} />
+                  </a>
+                ) : (
+                  <span>
+                    {status === 'collected'
+                      ? '✓ Signature observed'
+                      : status === 'unavailable'
+                        ? 'Unavailable'
+                        : 'Not reported'}
+                  </span>
+                )}
+                {reason && <span className="sr-only">: {reason}</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

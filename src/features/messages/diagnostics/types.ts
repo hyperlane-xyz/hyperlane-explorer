@@ -11,12 +11,17 @@ const unavailableValidatorSchema = z.object({
   validator: z.string(),
   reason: z.string().nullish(),
 });
+const checkpointSignerSchema = z.object({
+  validator: z.string(),
+  location: z.string().nullish(),
+});
 
 const signaturesSchema = z.object({
   collected: count.nullish(),
   threshold: count.nullish(),
   index: count.nullish(),
   root: z.string().nullish(),
+  signers: z.array(checkpointSignerSchema),
   unavailable: z
     .array(unavailableValidatorSchema)
     .nullish()
@@ -367,7 +372,7 @@ function describeDiagnosticModule(module: DiagnosticModule) {
   }
   if (module.metadata_error) return `${label}: ${module.metadata_error}`;
   if (module.signatures) {
-    return `${label}: ${module.signatures.collected}/${module.signatures.threshold} signatures`;
+    return `${label}: ${module.signatures.signers.length}/${module.signatures.threshold} signatures`;
   }
   if (module.verified != null && module.threshold != null) {
     return `${label}: ${module.verified}/${module.threshold} checks passed`;

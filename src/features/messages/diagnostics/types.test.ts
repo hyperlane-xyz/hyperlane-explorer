@@ -44,7 +44,12 @@ describe('reduceMessageDiagnostics', () => {
               ism: 'root',
               node_id: 'root',
               children: [],
-              signatures: { collected: 2, threshold: 3, unavailable: [] },
+              signatures: {
+                collected: 2,
+                threshold: 3,
+                unavailable: [],
+                signers: [],
+              },
             },
           ],
           removed_modules: ['old'],

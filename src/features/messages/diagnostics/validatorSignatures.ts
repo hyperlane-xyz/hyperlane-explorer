@@ -3,6 +3,7 @@ import type { DiagnosticModule } from './types';
 export interface ValidatorSignature {
   address: string;
   status: 'collected' | 'unavailable' | 'unknown';
+  location?: string;
   reason?: string;
 }
 
@@ -11,6 +12,16 @@ function signerAddress(value: string): string | undefined {
   if (/^0x[\da-f]{40}$/i.test(value)) return value.toLowerCase();
   if (/^0x0{24}[\da-f]{40}$/i.test(value)) return `0x${value.slice(-40).toLowerCase()}`;
   return undefined;
+}
+
+export function signatureLocationUrl(location?: string): string | undefined {
+  if (!location || location === 'local') return undefined;
+  try {
+    const protocol = new URL(location).protocol;
+    return ['https:', 'http:', 's3:', 'gs:'].includes(protocol) ? location : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignature[] {
@@ -23,32 +34,27 @@ export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignatu
   const discovery = new Map(
     (signatures?.discovery_unavailable ?? []).map((entry) => [key(entry.validator), entry.reason]),
   );
-  const configuredSet = new Set(configured.map(key));
+  const signers = new Map(
+    (signatures?.signers ?? []).map((entry) => [key(entry.validator), entry.location ?? undefined]),
+  );
   const addresses = [
     ...new Set([
-      ...configuredSet,
+      ...configured.map(key),
+      ...signers.keys(),
       ...unavailable.keys(),
       ...discovery.keys(),
       ...(signatures?.latest_indices ?? []).map((entry) => key(entry.validator)),
     ]),
   ];
 
-  // The producer stops at quorum and only keeps the largest matching-root count,
-  // not its signer identities. The complement is proven ONLY when the complete,
-  // unique configured set is exhausted by that count and explicit failures for
-  // this checkpoint index. Discovery/latest indices never establish membership.
-  const membershipKnown =
-    configured.length > 0 &&
-    configured.every((address) => signerAddress(address) !== undefined) &&
-    configuredSet.size === configured.length &&
-    addresses.every((address) => configuredSet.has(address)) &&
-    signatures?.index != null &&
-    /^0x[\da-f]{64}$/i.test(signatures.root ?? '') &&
-    signatures.collected != null &&
-    signatures.collected > 0 &&
-    signatures.collected === configuredSet.size - unavailable.size;
-
   return addresses.map((address) => {
+    if (signers.has(address)) {
+      return {
+        address,
+        status: 'collected',
+        ...(signers.get(address) ? { location: signers.get(address) } : {}),
+      };
+    }
     if (unavailable.has(address)) {
       return {
         address,
@@ -56,7 +62,6 @@ export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignatu
         reason: checkpointReason(unavailable.get(address)),
       };
     }
-    if (membershipKnown) return { address, status: 'collected' };
     return {
       address,
       status: 'unknown',
