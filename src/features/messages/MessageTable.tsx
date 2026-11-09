@@ -307,6 +307,7 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
             tooltip: swapTooltip,
           }
         : null;
+  const hasSmallApplicationLogo = application?.name === 'Eco' || application?.name === 'Aero';
   return (
     <>
       <LinkCell
@@ -411,9 +412,9 @@ export const MessageSummaryRow = memo(function MessageSummaryRow({
             <Image
               src={application.icon ? `/images/${application.icon}.svg` : '/favicon.svg'}
               alt={application.name}
-              width={20}
-              height={20}
-              className="shrink-0"
+              width={hasSmallApplicationLogo ? 18 : 20}
+              height={hasSmallApplicationLogo ? 18 : 20}
+              className={hasSmallApplicationLogo ? 'mx-px shrink-0' : 'shrink-0'}
             />
             <span
               className={`${styles.iconText} min-w-0 max-w-32 truncate`}
