@@ -19,7 +19,7 @@ import { MessageDebugResult } from '../../debugger/types';
 import { CollateralStatus } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
-import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
+import { InsufficientCollateralWarning } from './CollateralCards';
 import { DestinationExecutionCost } from './DestinationExecutionCost';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
 import { TransactionRecordCard, transactionHelpText } from './TransactionRecordCard';
@@ -78,12 +78,6 @@ export function DestinationTransactionCard({
           resolver={multiProvider}
         />
         {message && <DestinationExecutionCost message={message} blur={blur} />}
-        {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
-          <ActiveRebalanceModal
-            warpRouteDetails={warpRouteDetails}
-            collateralInfo={collateralInfo}
-          />
-        )}
       </>
     );
   } else if (status === MessageStatus.Delivered) {

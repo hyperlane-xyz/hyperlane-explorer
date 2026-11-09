@@ -18,7 +18,13 @@ export function DestinationExecutionCost({
   const gasUsed = transaction && 'gasUsed' in transaction ? transaction.gasUsed : undefined;
   const effectiveGasPrice =
     transaction && 'effectiveGasPrice' in transaction ? transaction.effectiveGasPrice : undefined;
-  const usdPrice = useNativeTokenUsdPrice(message.destinationDomainId, transaction?.timestamp);
+  const hasExecutionCost =
+    message.status === MessageStatus.Delivered && !isNullish(gasUsed);
+  const usdPrice = useNativeTokenUsdPrice(
+    message.destinationDomainId,
+    transaction?.timestamp,
+    hasExecutionCost,
+  );
   const destinationMetadata = metadata.tryGetChainMetadata(message.destinationDomainId);
   const decimals = destinationMetadata?.nativeToken?.decimals;
   const symbol = destinationMetadata?.nativeToken?.symbol ?? 'native token';
@@ -40,7 +46,7 @@ export function DestinationExecutionCost({
       ? formatUsd(new BigNumber(cost).times(usdPrice))
       : null;
 
-  if (message.status !== MessageStatus.Delivered || isNullish(gasUsed)) return null;
+  if (!hasExecutionCost) return null;
 
   return (
     <div className="min-w-0 space-y-2 border-t border-gray-200 pt-3">

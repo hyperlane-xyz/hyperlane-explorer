@@ -189,9 +189,11 @@ export function connectMessageDiagnostics({
     };
   };
   onConnection(live ? 'connecting' : 'historical');
-  load();
   if (live && wsUrl) connect();
-  else if (live) onConnection('disconnected');
+  else {
+    load();
+    if (live) onConnection('disconnected');
+  }
   const fallback = live ? setInterval(load, 10_000) : undefined;
   return () => {
     stopped = true;
@@ -298,15 +300,20 @@ export function useMessageActivityPage(messageId: string, refreshKey?: string, e
     requestPolicy: 'network-only',
     pause: !enabled,
   });
-  const activityPage = useMemo(() => {
-    const parsed = messageActivityPageSchema.safeParse(data?.message_activity);
-    return parsed.success &&
-      normalizeDiagnosticMessageId(parsed.data.message_id) ===
-        normalizeDiagnosticMessageId(messageId) &&
-      operation?.variables?.beforeId === beforeId
-      ? parsed.data
-      : null;
+  const activityResult = useMemo(() => {
+    if (data?.message_activity === undefined) return { page: null };
+    const parsed = messageActivityPageSchema.safeParse(data.message_activity);
+    if (!parsed.success) return { page: null, error: 'Activity response was invalid' };
+    if (
+      normalizeDiagnosticMessageId(parsed.data.message_id) !==
+      normalizeDiagnosticMessageId(messageId)
+    )
+      return { page: null, error: 'Activity response did not match this message' };
+    return {
+      page: operation?.variables?.beforeId === beforeId ? parsed.data : null,
+    };
   }, [beforeId, data, messageId, operation]);
+  const activityPage = activityResult.page;
   useEffect(() => {
     if (!activityPage) return;
     setHistory((previous) => ({
@@ -368,7 +375,7 @@ export function useMessageActivityPage(messageId: string, refreshKey?: string, e
     loadedActivities: history.messageId === messageId ? history.rows : [],
     page: current.page,
     fetching: enabled && fetching,
-    error: error?.message,
+    error: error?.message ?? activityResult.error,
     next,
     previous,
     latest,

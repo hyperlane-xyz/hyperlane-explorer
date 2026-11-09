@@ -10,6 +10,7 @@ describe('usdPriceQueryOptions', () => {
     coinGeckoId: string | undefined;
     isTestnet: boolean;
     isSkipped: boolean;
+    enabled?: boolean;
   }
   const cases: Case[] = [
     {
@@ -25,10 +26,17 @@ describe('usdPriceQueryOptions', () => {
       isSkipped: true,
     },
     { name: 'a testnet asset', coinGeckoId: 'usd-coin', isTestnet: true, isSkipped: true },
+    {
+      name: 'a disabled price display',
+      coinGeckoId: 'usd-coin',
+      isTestnet: false,
+      isSkipped: true,
+      enabled: false,
+    },
   ];
   for (const c of cases) {
     it(`${c.isSkipped ? 'skips' : 'runs'} the query for ${c.name}`, () => {
-      const { queryFn } = usdPriceQueryOptions(c.coinGeckoId, c.isTestnet);
+      const { queryFn } = usdPriceQueryOptions(c.coinGeckoId, c.isTestnet, undefined, c.enabled);
       expect(queryFn === skipToken).toBe(c.isSkipped);
     });
   }

@@ -44,25 +44,15 @@ function setup(fetchSnapshot = jest.fn(async () => snapshot), live = true) {
   return { stop, fetchSnapshot, onSnapshot, onConnection, onError };
 }
 
-test('requires a valid snapshot for live status and ignores late HTTP after a socket update', async () => {
-  let resolveHttp: (value: typeof snapshot) => void = () => {};
-  const result = setup(
-    jest.fn(
-      () =>
-        new Promise((resolve) => {
-          resolveHttp = resolve;
-        }),
-    ),
-  );
+test('uses the socket snapshot without a duplicate initial HTTP request', async () => {
+  const result = setup();
   expect(result.onConnection).not.toHaveBeenCalledWith('live');
   const current = MockSocket.instances[0];
   current.send({ type: 'diagnostics', data: snapshot });
   expect(result.onConnection).toHaveBeenLastCalledWith('live');
-  resolveHttp(snapshot);
-  await flush();
   expect(result.onSnapshot).toHaveBeenCalledTimes(1);
   jest.advanceTimersByTime(10_000);
-  expect(result.fetchSnapshot).toHaveBeenCalledTimes(1);
+  expect(result.fetchSnapshot).not.toHaveBeenCalled();
   result.stop();
 });
 
@@ -74,10 +64,10 @@ test('falls back to HTTP on unavailable reports and resumes when the socket reco
   current.send({ type: 'diagnostics_unavailable', message_ids: [messageId] });
   await flush();
   expect(result.onConnection).toHaveBeenLastCalledWith('disconnected');
-  expect(result.fetchSnapshot).toHaveBeenCalledTimes(2);
+  expect(result.fetchSnapshot).toHaveBeenCalledTimes(1);
   current.send({ type: 'diagnostics', data: snapshot });
   jest.advanceTimersByTime(10_000);
-  expect(result.fetchSnapshot).toHaveBeenCalledTimes(2);
+  expect(result.fetchSnapshot).toHaveBeenCalledTimes(1);
   result.stop();
 });
 
@@ -111,17 +101,23 @@ test('historical mode fetches once without a socket or recurring polling', async
   result.stop();
 });
 
-test('bounds reconnect backoff and retries after HTTP timeouts without overlapping requests', async () => {
+test('falls back after HTTP timeouts without overlapping requests', async () => {
   const result = setup(jest.fn(() => new Promise(() => {})));
-  jest.advanceTimersByTime(15_000);
+  // The socket gets ten seconds to provide its initial snapshot before HTTP fallback starts.
+  jest.advanceTimersByTime(25_000);
   await flush();
   expect(result.onError).toHaveBeenLastCalledWith('Diagnostics request timed out');
   jest.advanceTimersByTime(5_000);
   expect(result.fetchSnapshot).toHaveBeenCalledTimes(2);
-  // Rapid socket errors grow the retry wait only up to ten seconds.
-  for (const delay of [2_000, 4_000, 8_000, 10_000, 10_000]) {
+  result.stop();
+});
+
+test('bounds websocket reconnect backoff', async () => {
+  const result = setup();
+  for (const delay of [1_000, 2_000, 4_000, 8_000, 10_000, 10_000]) {
     const current = MockSocket.instances.at(-1)!;
     current.onerror?.();
+    await flush();
     const count = MockSocket.instances.length;
     jest.advanceTimersByTime(delay - 1);
     expect(MockSocket.instances).toHaveLength(count);

@@ -176,7 +176,11 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     activeRuntimeState?.collateralStatus === CollateralStatus.Insufficient;
 
   return (
-    <MessageDiagnosticsProvider messageId={messageId} live={showLifecycle} enabled={showLifecycle}>
+    <MessageDiagnosticsProvider
+      messageId={messageId}
+      live={showLifecycle && status !== MessageStatus.Delivered}
+      enabled={showLifecycle}
+    >
       <div className="mx-auto w-full min-w-0 max-w-5xl space-y-4 sm:space-y-5">
         {isMessageFound ? (
           <MessageLifecycleCard

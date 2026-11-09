@@ -15,6 +15,7 @@ const COINGECKO_COIN_API = 'https://api.coingecko.com/api/v3/coins';
 export function useNativeTokenUsdPrice(
   originDomainId: number,
   dispatchTimestampMs?: number,
+  enabled = true,
 ): number | null {
   const chainMetadataResolver = useChainMetadataResolver();
   const originMetadata = chainMetadataResolver.tryGetChainMetadata(originDomainId);
@@ -24,6 +25,7 @@ export function useNativeTokenUsdPrice(
       originMetadata?.gasCurrencyCoinGeckoId,
       !!originMetadata?.isTestnet,
       dispatchTimestampMs,
+      enabled,
     ),
   );
 
@@ -50,6 +52,7 @@ export function usdPriceQueryOptions(
   coinGeckoId: string | undefined,
   isTestnet: boolean,
   dispatchTimestampMs?: number,
+  enabled = true,
 ) {
   // dd-mm-yyyy (UTC) for the dispatch date, or undefined to use the current spot
   // price (no timestamp, or dispatched today so EOD data isn't available yet).
@@ -58,14 +61,17 @@ export function usdPriceQueryOptions(
   return queryOptions({
     queryKey: ['tokenUsdPrice', coinGeckoId, isTestnet, historyDate ?? 'current'],
     queryFn:
-      coinGeckoId && !isTestnet
-        ? () =>
+      coinGeckoId && !isTestnet && enabled
+        ? ({ signal }) =>
             historyDate
-              ? fetchHistoricalUsdPrice(coinGeckoId, historyDate)
-              : fetchCurrentUsdPrice(coinGeckoId)
+              ? fetchHistoricalUsdPrice(coinGeckoId, historyDate, signal)
+              : fetchCurrentUsdPrice(coinGeckoId, signal)
         : skipToken,
     // Historical prices are immutable; the current spot price can go stale.
     staleTime: historyDate ? Infinity : 5 * 60 * 1000,
+    // Prices are optional decoration. Avoid repeated traffic when CoinGecko is unavailable.
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -87,26 +93,33 @@ function getHistoryDate(dispatchTimestampMs?: number): string | undefined {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-async function fetchHistoricalUsdPrice(coinGeckoId: string, date: string): Promise<number | null> {
+async function fetchHistoricalUsdPrice(
+  coinGeckoId: string,
+  date: string,
+  signal: AbortSignal,
+): Promise<number | null> {
   const url = `${COINGECKO_COIN_API}/${encodeURIComponent(
     coinGeckoId,
   )}/history?date=${date}&localization=false`;
-  const data = await getJson(url);
+  const data = await getJson(url, signal);
   const price = data?.market_data?.current_price?.usd;
   return typeof price === 'number' ? price : null;
 }
 
-async function fetchCurrentUsdPrice(coinGeckoId: string): Promise<number | null> {
+async function fetchCurrentUsdPrice(
+  coinGeckoId: string,
+  signal: AbortSignal,
+): Promise<number | null> {
   const url = `${COINGECKO_SIMPLE_PRICE_API}?ids=${encodeURIComponent(
     coinGeckoId,
   )}&vs_currencies=usd`;
-  const data = await getJson(url);
+  const data = await getJson(url, signal);
   const price = data?.[coinGeckoId]?.usd;
   return typeof price === 'number' ? price : null;
 }
 
-async function getJson(url: string): Promise<any> {
-  const resp = await fetch(url);
+async function getJson(url: string, signal: AbortSignal): Promise<any> {
+  const resp = await fetch(url, { signal });
   if (!resp.ok) throw new Error(`Failed to fetch token price: ${resp.status}`);
   return resp.json();
 }
