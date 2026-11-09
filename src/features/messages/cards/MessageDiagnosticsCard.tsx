@@ -533,10 +533,12 @@ function ValidatorSignatures({
                     rel="noopener noreferrer"
                     aria-label={`Open signature location for ${address}`}
                     title={location}
-                    className="inline-flex items-center gap-1.5 transition-colors hover:text-green-900"
+                    className="inline-flex items-center gap-1.5 leading-none transition-colors hover:text-green-900"
                   >
                     <span>✓ Signature observed</span>
-                    <BoxArrowIcon width={11} height={11} />
+                    <span className="flex h-3 w-3 shrink-0 items-center justify-center" aria-hidden>
+                      <BoxArrowIcon width={11} height={11} className="block" />
+                    </span>
                   </a>
                 ) : (
                   <span>

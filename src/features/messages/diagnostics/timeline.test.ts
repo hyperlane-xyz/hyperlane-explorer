@@ -112,7 +112,7 @@ describe('message lifecycle timing', () => {
     expect(timeline.totalElapsed).toBeUndefined();
   });
 
-  it('keeps origin confirmation independent from fast-path relay and delivery evidence', () => {
+  it('keeps fast-path origin confirmation independent until indexed delivery completes it', () => {
     const pending = { confirmed: false, tracked: true, required: 15, blockNumber: 115 };
     const waiting = getMessageTimeline(message, undefined, history, {
       originConfirmation: pending,
@@ -136,7 +136,7 @@ describe('message lifecycle timing', () => {
       { confirmed: true, originConfirmation: pending },
     );
     expect(stage(delivered, 'confirmed').status).toBe('complete');
-    expect(stage(delivered, 'origin_confirmed').status).toBe('active');
+    expect(stage(delivered, 'origin_confirmed').status).toBe('complete');
     for (const originConfirmation of [undefined, { confirmed: false, tracked: false }]) {
       expect(
         stage(
