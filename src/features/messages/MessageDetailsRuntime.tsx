@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { CollateralInfo, CollateralStatus } from './collateral/types';
+import type { OriginConfirmation } from './diagnostics/useOriginConfirmation';
+import {
+  useOriginConfirmationTimestamp,
+  type OriginConfirmationTimestamp,
+} from './diagnostics/useOriginConfirmationTimestamp';
 import { DetailSectionSkeleton } from './MessageDetailsLoading';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
@@ -11,13 +17,17 @@ const DestinationTransactionCard = dynamic(
   () => import('./cards/TransactionCard').then((mod) => mod.DestinationTransactionCard),
   {
     loading: () => (
-      <DetailSectionSkeleton className="flex min-w-[340px] flex-1 basis-0 flex-col" rows={5} />
+      <DetailSectionSkeleton
+        className="flex min-w-0 flex-1 basis-full flex-col sm:basis-0"
+        rows={5}
+      />
     ),
   },
 );
 const PiMessageDetailsBridge = dynamic(() =>
   import('./PiMessageDetailsBridge').then((mod) => mod.PiMessageDetailsBridge),
 );
+const UNKNOWN_COLLATERAL_INFO = { status: CollateralStatus.Unknown } as const;
 
 export interface MessageDetailsRuntimeState {
   hasRun: boolean;
@@ -26,7 +36,8 @@ export interface MessageDetailsRuntimeState {
   isMessageFound: boolean;
   message?: Message | MessageStub;
   debugResult?: MessageDebugResult;
-  isDeliveryStatusFetching: boolean;
+  collateralInfo: CollateralInfo;
+  originConfirmationTimestamp?: OriginConfirmationTimestamp;
 }
 
 interface Props {
@@ -39,6 +50,7 @@ interface Props {
   destinationChainName: string;
   blur: boolean;
   isOriginConfirming: boolean;
+  originConfirmation?: OriginConfirmation;
   warpRouteDetails?: WarpRouteDetails;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
@@ -53,6 +65,7 @@ export function MessageDetailsRuntime({
   destinationChainName,
   blur,
   isOriginConfirming,
+  originConfirmation,
   warpRouteDetails,
   onStateChange,
 }: Props) {
@@ -60,6 +73,12 @@ export function MessageDetailsRuntime({
     messageId: string;
     value: PiMessageDetailsState;
   }>({ messageId, value: DEFAULT_PI_MESSAGE_DETAILS_STATE });
+  const [collateralState, setCollateralState] = useState<{
+    messageId: string;
+    info: CollateralInfo;
+  } | null>(null);
+  const collateralInfo =
+    collateralState?.messageId === messageId ? collateralState.info : UNKNOWN_COLLATERAL_INFO;
   const shouldRunPi = !hasInitialMessageDetails && hasGraphQlRun && !isGraphQlMessageFound;
   const activePiState =
     piState.messageId === messageId ? piState.value : DEFAULT_PI_MESSAGE_DETAILS_STATE;
@@ -67,6 +86,21 @@ export function MessageDetailsRuntime({
   const handlePiStateChange = useCallback(
     (value: PiMessageDetailsState) => {
       setPiState({ messageId, value });
+    },
+    [messageId],
+  );
+
+  const handleCollateralInfoChange = useCallback(
+    (info: CollateralInfo) => {
+      setCollateralState((previous) =>
+        previous?.messageId === messageId &&
+        previous.info.status === info.status &&
+        previous.info.available === info.available &&
+        previous.info.required === info.required &&
+        previous.info.deficit === info.deficit
+          ? previous
+          : { messageId, info },
+      );
     },
     [messageId],
   );
@@ -79,6 +113,10 @@ export function MessageDetailsRuntime({
       enabled: isMessageFound,
     });
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
+  const originConfirmationTimestamp = useOriginConfirmationTimestamp(
+    queriedMessage,
+    originConfirmation,
+  );
   const hasRun =
     hasInitialMessageDetails || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
 
@@ -90,15 +128,17 @@ export function MessageDetailsRuntime({
       isMessageFound,
       message,
       debugResult,
-      isDeliveryStatusFetching,
+      collateralInfo,
+      originConfirmationTimestamp,
     });
   }, [
+    collateralInfo,
     debugResult,
     hasRun,
-    isDeliveryStatusFetching,
     isMessageFound,
     message,
     onStateChange,
+    originConfirmationTimestamp,
     activePiState.isError,
     activePiState.isFetching,
   ]);
@@ -124,6 +164,7 @@ export function MessageDetailsRuntime({
         blur={blur}
         message={message || queriedMessage}
         warpRouteDetails={warpRouteDetails}
+        onCollateralInfoChange={handleCollateralInfoChange}
       />
     </>
   );

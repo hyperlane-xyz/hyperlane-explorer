@@ -4,13 +4,12 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../../types';
+import { CollateralInfo, CollateralStatus } from '../collateral/types';
 import { DestinationTransactionCard } from './TransactionCard';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
-  ErrorIcon: () => null,
   Modal: () => null,
   SpinnerIcon: () => null,
-  Tooltip: () => null,
   useModal: () => ({ isOpen: false, open: jest.fn(), close: jest.fn() }),
 }));
 
@@ -27,14 +26,21 @@ jest.mock('../../../store', () => ({
   useMultiProvider: () => ({ tryGetChainMetadata: () => undefined }),
 }));
 jest.mock('../collateral/useCollateralStatus', () => ({
-  useCollateralStatus: () => ({ status: 'unknown' }),
+  useCollateralStatus: () => mockCollateralInfo,
 }));
 jest.mock('./CodeBlock', () => ({ LabelAndCodeBlock: () => null }));
-jest.mock('./CollateralCards', () => ({
-  ActiveRebalanceModal: () => null,
-  InsufficientCollateralWarning: () => null,
-}));
 jest.mock('./TransactionDetailsRows', () => ({ TransactionDetailsRows: () => null }));
+jest.mock('./TransactionRecordCard', () => ({
+  TransactionRecordCard: ({ children }: { children: React.ReactNode }) => children,
+  transactionHelpText: { destination: 'Delivery details' },
+}));
+jest.mock('./DestinationExecutionCost', () => ({ DestinationExecutionCost: () => null }));
+
+let mockCollateralInfo: CollateralInfo = { status: CollateralStatus.Unknown };
+
+beforeEach(() => {
+  mockCollateralInfo = { status: CollateralStatus.Unknown };
+});
 
 const reactTestGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -48,9 +54,15 @@ afterAll(() => {
   delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
 });
 
-it('shows a route halt warning before missing chain metadata', async () => {
+it('keeps the delivery card loading while delivery issues are shown elsewhere', async () => {
   const container = document.createElement('div');
   const root = createRoot(container);
+  mockCollateralInfo = {
+    status: CollateralStatus.Insufficient,
+    available: 1n,
+    required: 2n,
+    deficit: 1n,
+  };
   const message = {
     originDomainId: 10,
     destinationDomainId: 8453,
@@ -63,23 +75,53 @@ it('shows a route halt warning before missing chain metadata', async () => {
       <DestinationTransactionCard
         chainName="unknown"
         domainId={message.destinationDomainId}
-        status={MessageStatus.Pending}
-        isStatusFetching={true}
-        isOriginConfirming={true}
+        status={MessageStatus.Failing}
+        isStatusFetching={false}
         blur={false}
         message={message}
       />,
     );
   });
 
-  expect(container.textContent).toContain('Route Halted');
+  expect(container.textContent).toContain('Delivery to destination chain still in progress.');
+  expect(container.textContent).not.toContain('Route Halted');
+  expect(container.textContent).not.toContain('Insufficient Collateral');
   expect(container.textContent).not.toContain('Delivery status is unknown.');
-  const link = container.querySelector('a');
-  expect(link?.textContent).toBe('Read more about this');
-  expect(link?.getAttribute('href')).toBe(
-    'https://x.com/InfiniteTradePr/status/2090409024437039569',
-  );
-  expect(link?.getAttribute('target')).toBe('_blank');
-  expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+  await act(async () => root.unmount());
+});
+
+it('reports existing collateral results only when the status or listener changes', async () => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const onInfo = jest.fn();
+  const render = (onCollateralInfoChange = onInfo) =>
+    act(async () => {
+      root.render(
+        <DestinationTransactionCard
+          chainName="unknown"
+          domainId={1}
+          status={MessageStatus.Pending}
+          isStatusFetching={false}
+          blur={false}
+          onCollateralInfoChange={onCollateralInfoChange}
+        />,
+      );
+    });
+
+  await render();
+  expect(onInfo).toHaveBeenLastCalledWith({ status: CollateralStatus.Unknown });
+  mockCollateralInfo = {
+    status: CollateralStatus.Insufficient,
+    available: 180_400_000n,
+    required: 41_000_000_000n,
+    deficit: 40_819_600_000n,
+  };
+  await render();
+  expect(onInfo).toHaveBeenLastCalledWith(mockCollateralInfo);
+  await render();
+  expect(onInfo).toHaveBeenCalledTimes(2);
+  const nextListener = jest.fn();
+  await render(nextListener);
+  expect(nextListener).toHaveBeenCalledWith(mockCollateralInfo);
   await act(async () => root.unmount());
 });

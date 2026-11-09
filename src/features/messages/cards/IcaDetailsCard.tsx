@@ -21,6 +21,7 @@ import {
   useRelatedIcaMessage,
   useRevealCalls,
 } from '../ica';
+import { decodeIcaCall } from '../icaCalls';
 import { getMessageDetailPath } from '../messageLookup';
 import { KeyValueRow } from './KeyValueRow';
 
@@ -49,6 +50,7 @@ interface Props {
   message: Message | MessageStub;
   blur: boolean;
   debugResult?: MessageDebugResult;
+  embedded?: boolean;
 }
 
 function getFormattedCallValue(value: string, nativeDecimals: number) {
@@ -135,7 +137,7 @@ function IcaStatusPanel({
   );
 }
 
-export function IcaDetailsCard({ message, blur, debugResult }: Props) {
+export function IcaDetailsCard({ message, blur, debugResult, embedded = false }: Props) {
   const {
     body,
     msgId,
@@ -310,16 +312,16 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
   ]);
 
   const messageTypeLabel = useMemo(() => {
-    if (!decodeResult) return 'Unknown';
+    if (!decodeResult) return 'ICA message';
     switch (decodeResult.messageType) {
       case IcaMessageType.CALLS:
-        return 'Calls';
+        return 'ICA call';
       case IcaMessageType.COMMITMENT:
-        return 'Commitment';
+        return 'ICA commitment';
       case IcaMessageType.REVEAL:
-        return 'Reveal';
+        return 'ICA reveal';
       default:
-        return 'Unknown';
+        return 'ICA message';
     }
   }, [decodeResult]);
 
@@ -354,6 +356,7 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
 
   return (
     <SectionCard
+      embedded={embedded}
       className="w-full"
       title="Interchain Account Details"
       icon={
@@ -367,10 +370,9 @@ export function IcaDetailsCard({ message, blur, debugResult }: Props) {
         {decodeResult ? (
           <>
             {/* Message type info */}
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">{messageTypeLabel}</span>
-              <span className="mx-1">-</span>
-              <span>{messageTypeDescription}</span>
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-gray-800">{messageTypeLabel}</h4>
+              <p className="text-xs text-gray-500">{messageTypeDescription}</p>
             </div>
             {/* Status section for COMMITMENT type - at the top */}
             {decodeResult.messageType === IcaMessageType.COMMITMENT && decodeResult.commitment && (
@@ -686,6 +688,7 @@ function IcaCallDetails({
   );
 
   const isFailed = failedCallIndex === index;
+  const decoded = useMemo(() => decodeIcaCall(call.data), [call.data]);
 
   return (
     <div
@@ -698,6 +701,16 @@ function IcaCallDetails({
         {`Call ${index + 1} of ${total}${isFailed ? ' - Failed' : ''}`}
       </label>
       <div className="mt-2 space-y-2">
+        {decoded && (
+          <KeyValueRow
+            label="Function:"
+            labelWidth="w-16 sm:w-20"
+            display={decoded.signature}
+            tooltip="Matched to a known function signature; the target contract ABI is not verified."
+            showCopy
+            blurValue={blur}
+          />
+        )}
         <KeyValueRow
           label="Target:"
           labelWidth="w-16 sm:w-20"
@@ -717,8 +730,24 @@ function IcaCallDetails({
             blurValue={blur}
           />
         )}
+        {decoded && decoded.args.length > 0 && (
+          <div className="space-y-2 border-l-2 border-gray-200 pl-3">
+            {decoded.args.map((arg) => (
+              <KeyValueRow
+                key={arg.name}
+                label={`${arg.name}:`}
+                labelWidth="w-24 sm:w-28"
+                display={arg.value}
+                tooltip={`${arg.type}${arg.name === 'amount' ? ' · base units' : ''}`}
+                showCopy
+                allowZeroish
+                blurValue={blur}
+              />
+            ))}
+          </div>
+        )}
         <KeyValueRow
-          label="Data:"
+          label="Raw data:"
           labelWidth="w-16 sm:w-20"
           display={call.data}
           displayWidth="w-52 sm:w-80 lg:w-96"

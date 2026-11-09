@@ -2,19 +2,14 @@ import { AbiCoder } from '@ethersproject/abi';
 import { BigNumber } from '@ethersproject/bignumber';
 import { z } from 'zod';
 
-import { AERO_VOTER_ROOT_DOMAIN, isAeroVoterMessage } from '../../consts/aeroVoterRoutes';
+import {
+  AERO_VOTER_ROOT_DOMAIN,
+  AeroVoterMessageType,
+  isAeroVoterMessage,
+} from '../../consts/aeroVoterRoutes';
 import { logger } from '../../utils/logger';
 
-export enum AeroVoterMessageType {
-  AllocateChain = 1,
-  AllocateGauge = 2,
-  ClaimRewards = 3,
-  Redeem = 4,
-  SetOperator = 5,
-  Deallocate = 6,
-  ReduceCooldown = 7,
-  EmergencyDeallocate = 8,
-}
+export { AeroVoterMessageType } from '../../consts/aeroVoterRoutes';
 
 export type AeroVoterValue = string | boolean | AeroVoterFields | AeroVoterValue[];
 export interface AeroVoterFields {

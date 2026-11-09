@@ -1,9 +1,12 @@
 import { TokenStandard } from '@hyperlane-xyz/sdk';
+import { ProtocolType } from '@hyperlane-xyz/utils';
 import { BigNumber, providers, utils } from 'ethers';
 
 import type { MessageStub, WarpRouteDetails } from '../../../types';
+import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 import {
   computeFeeBps,
+  fetchWarpFees,
   countReceivedTransferRemotes,
   isSyntheticSameChainCcrMessage,
   parseIgpPaymentForMessage,
@@ -453,4 +456,86 @@ describe('computeFeeBps', () => {
   it('trims trailing zero in the fractional part (fee 250000 on 1e9 = 2.5 bps)', () => {
     expect(computeFeeBps(BigNumber.from(250000), BigNumber.from('1000000000'))).toBe('2.5');
   });
+});
+
+describe('fetchWarpFees separates IGP funding', () => {
+  const IGP = '0x0000000000000000000000000000000000000199';
+  const message = {
+    originDomainId: 1,
+    destinationDomainId: 2,
+    msgId: MSG_ID_1,
+    origin: { hash: 'dispatch' },
+  } as MessageStub;
+  function setup(standard: TokenStandard, tokenPayments: string[]) {
+    const token = standard === TokenStandard.EvmHypSynthetic ? ROUTER : TOKEN;
+    const logs = [
+      makeTransferLog(
+        SENDER,
+        standard === TokenStandard.EvmHypSynthetic ? ZERO : ROUTER,
+        BigNumber.from(110),
+        token,
+      ),
+      makeSentTransferRemoteLog(2, RECIPIENT, BigNumber.from(100), ROUTER),
+      makeDispatchIdLog(MSG_ID_1, MAILBOX),
+      ...tokenPayments.map((address) => makeTransferLog(ROUTER, IGP, BigNumber.from(10), address)),
+      makeGasPaymentLog(MSG_ID_1, 2, BigNumber.from(1000), BigNumber.from(10), IGP),
+    ];
+    const provider = {
+      getTransactionReceipt: jest.fn(async () => ({ logs })),
+      getTransaction: jest.fn(async () => ({ value: BigNumber.from(120) })),
+    };
+    const multiProvider = {
+      tryGetChainMetadata: () => ({ protocol: ProtocolType.Ethereum }),
+      getEthersV5Provider: () => provider,
+    } as unknown as ExplorerMultiProvider;
+    const originToken = {
+      chainName: 'origin',
+      name: 'Token',
+      standard,
+      addressOrDenom: ROUTER,
+      collateralAddressOrDenom: token,
+      decimals: 0,
+      symbol: 'TOK',
+    };
+    const route: WarpRouteDetails = {
+      originToken,
+      destinationToken: { ...originToken, chainName: 'destination' },
+      wireAmount: '100',
+      amount: '100',
+      destAmount: '100',
+      transferRecipient: RECIPIENT,
+    };
+    return { route, multiProvider };
+  }
+
+  it.each([
+    TokenStandard.EvmHypCollateral,
+    TokenStandard.EvmHypSynthetic,
+    TokenStandard.EvmHypNative,
+  ])(
+    'does not report an overlapping token IGP payment as a separate fee for %s',
+    async (standard) => {
+      const { route, multiProvider } = setup(standard, [
+        standard === TokenStandard.EvmHypSynthetic ? ROUTER : TOKEN,
+      ]);
+      expect(await fetchWarpFees(message, route, multiProvider)).toBeNull();
+    },
+  );
+
+  it('omits a separate fee when the IGP payment denomination is ambiguous', async () => {
+    const { route, multiProvider } = setup(TokenStandard.EvmHypCollateral, [TOKEN, ROUTER]);
+    expect(await fetchWarpFees(message, route, multiProvider)).toBeNull();
+  });
+
+  it.each([TokenStandard.EvmHypCollateral, TokenStandard.EvmHypNative])(
+    'preserves fee inference with native IGP on %s',
+    async (standard) => {
+      const { route, multiProvider } = setup(standard, []);
+      expect(await fetchWarpFees(message, route, multiProvider)).toMatchObject({
+        bridgeFee: '10',
+        totalSent: '110',
+        tokenSymbol: 'TOK',
+      });
+    },
+  );
 });

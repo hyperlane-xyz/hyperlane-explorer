@@ -16,10 +16,6 @@ export interface MessageDebugResult {
     deliveryGasEstimate?: string;
     contractToPayments?: AddressTo<GasPayment[]>;
   };
-  ismDetails?: {
-    ismAddress: Address;
-    moduleType: IsmModuleTypes;
-  };
   calldataDetails?: {
     handleCalldata: HexString;
     contract: Address;
@@ -35,13 +31,4 @@ export interface MessageDebugResult {
 export interface GasPayment {
   gasAmount: string;
   paymentAmount: string;
-}
-
-// Must match https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/interfaces/IInterchainSecurityModule.sol#L5
-export enum IsmModuleTypes {
-  UNUSED,
-  ROUTING,
-  AGGREGATION,
-  LEGACY_MULTISIG,
-  MULTISIG,
 }

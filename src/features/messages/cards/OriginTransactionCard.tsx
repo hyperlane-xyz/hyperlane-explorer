@@ -1,40 +1,35 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
-import { Tooltip } from '@hyperlane-xyz/widgets';
-import { useId } from 'react';
+import type { ReactNode } from 'react';
 
-import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import { MessageStatus, MessageTx, MessageTxStub } from '../../../types';
-import { getChainDisplayName } from '../../chains/utils';
-import type { ConfirmationProgress } from '../useConfirmationProgress';
-import { KeyValueRow } from './KeyValueRow';
-import { transactionHelpText } from './TransactionCard';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
+import { TransactionRecordCard, transactionHelpText } from './TransactionRecordCard';
 
 export function OriginTransactionCard({
   chainName,
   domainId,
   transaction,
   blur,
-  confirmationProgress,
+  children,
 }: {
+  children?: ReactNode;
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
-  confirmationProgress?: ConfirmationProgress | null;
 }) {
   return (
     <MessageTransactionPreviewCard
       chainName={chainName}
       domainId={domainId}
       transaction={transaction}
-      confirmationProgress={confirmationProgress}
       blur={blur}
-      title="Origin Transaction"
+      title="Origin transaction"
       helpText={transactionHelpText.origin}
-    />
+    >
+      {children}
+    </MessageTransactionPreviewCard>
   );
 }
 
@@ -55,9 +50,6 @@ export function DestinationTransactionPreviewCard({
   isLiveDetailsPending: boolean;
   isOriginConfirming?: boolean;
 }) {
-  const chainMetadataResolver = useChainMetadataResolver();
-  const tooltipId = `${useId()}-destination-transaction-info`;
-
   if (transaction) {
     return (
       <MessageTransactionPreviewCard
@@ -65,45 +57,30 @@ export function DestinationTransactionPreviewCard({
         domainId={domainId}
         transaction={transaction}
         blur={blur}
-        title="Destination Transaction"
+        title="Delivery transaction"
         helpText={transactionHelpText.destination}
       />
     );
   }
 
-  const idString =
-    chainName && chainName !== chainMetadataResolver.tryGetChainName(domainId)
-      ? `${chainName} / ${domainId}`
-      : `${domainId}`;
-  const chainDescription = `${getChainDisplayName(
-    chainMetadataResolver,
-    chainName,
-    false,
-    false,
-  )} (${idString})`;
-
   return (
-    <SectionCard
-      className="flex min-w-[340px] flex-1 basis-0 flex-col"
-      title="Destination Transaction"
-      leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={transactionHelpText.destination} />}
+    <TransactionRecordCard
+      chainName={chainName}
+      domainId={domainId}
+      title="Delivery transaction"
+      helpText={transactionHelpText.destination}
     >
       <div className="space-y-2">
-        <KeyValueRow label="Chain:" labelWidth="w-28" display={chainDescription} blurValue={blur} />
-        <KeyValueRow
-          label="Status:"
-          labelWidth="w-28"
-          display={isOriginConfirming ? 'Waiting for origin confirmations' : toTitleCase(status)}
-          blurValue={blur}
-        />
+        <p className={`text-sm text-gray-700 ${blur ? 'blur-xs' : ''}`}>
+          {isOriginConfirming ? 'Waiting for origin confirmations' : toTitleCase(status)}
+        </p>
         <div className="pt-2 text-sm font-light text-gray-500">
           {isLiveDetailsPending
             ? 'Loading live delivery details...'
             : 'Waiting for live delivery details.'}
         </div>
       </div>
-    </SectionCard>
+    </TransactionRecordCard>
   );
 }
 
@@ -114,25 +91,24 @@ function MessageTransactionPreviewCard({
   blur,
   title,
   helpText,
-  confirmationProgress,
+  children,
 }: {
+  children?: ReactNode;
   chainName: string;
   domainId: DomainId;
   transaction: MessageTx | MessageTxStub;
   blur: boolean;
   title: string;
   helpText: string;
-  confirmationProgress?: ConfirmationProgress | null;
 }) {
   const chainMetadataResolver = useChainMetadataResolver();
-  const tooltipId = `${useId()}-transaction-info`;
 
   return (
-    <SectionCard
-      className="flex min-w-[340px] flex-1 basis-0 flex-col"
+    <TransactionRecordCard
+      chainName={chainName}
+      domainId={domainId}
       title={title}
-      leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText} />}
+      helpText={helpText}
     >
       <div className="space-y-2">
         <TransactionDetailsRows
@@ -141,9 +117,9 @@ function MessageTransactionPreviewCard({
           transaction={transaction}
           blur={blur}
           resolver={chainMetadataResolver}
-          confirmationProgress={confirmationProgress}
         />
       </div>
-    </SectionCard>
+      {children}
+    </TransactionRecordCard>
   );
 }

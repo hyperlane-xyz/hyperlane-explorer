@@ -1,11 +1,8 @@
-import { ErrorIcon, Modal, SpinnerIcon, Tooltip, useModal } from '@hyperlane-xyz/widgets';
+import { Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import dynamic from 'next/dynamic';
-import { PropsWithChildren, ReactNode, useId, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 
-import { ChainLogo } from '../../../components/icons/ChainLogo';
-import { SectionCard } from '../../../components/layout/SectionCard';
 import { links } from '../../../consts/links';
-import { getMessagePause, MessagePauseType } from '../../../consts/pausedRoutes';
 import { useMultiProvider } from '../../../store';
 import { Color } from '../../../styles/Color';
 import {
@@ -16,13 +13,13 @@ import {
   MessageTxStub,
   WarpRouteDetails,
 } from '../../../types';
-import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
-import { CollateralStatus } from '../collateral/types';
+import { CollateralInfo } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
 import { LabelAndCodeBlock } from './CodeBlock';
-import { ActiveRebalanceModal, InsufficientCollateralWarning } from './CollateralCards';
+import { DestinationExecutionCost } from './DestinationExecutionCost';
 import { TransactionDetailsRows } from './TransactionDetailsRows';
+import { TransactionRecordCard, transactionHelpText } from './TransactionRecordCard';
 
 const ChainSearchModal = dynamic(() =>
   import('../../chains/ChainSearchModal').then((mod) => mod.ChainSearchModal),
@@ -40,6 +37,7 @@ export function DestinationTransactionCard({
   blur,
   message,
   warpRouteDetails,
+  onCollateralInfoChange,
 }: {
   chainName: string;
   domainId: DomainId;
@@ -52,30 +50,41 @@ export function DestinationTransactionCard({
   blur: boolean;
   message?: Message | MessageStub;
   warpRouteDetails?: WarpRouteDetails;
+  onCollateralInfoChange?: (info: CollateralInfo) => void;
 }) {
   const multiProvider = useMultiProvider();
   const hasChainConfig = !!multiProvider.tryGetChainMetadata(domainId);
   const collateralInfo = useCollateralStatus(message, warpRouteDetails);
-  const pause = status === MessageStatus.Pending && message ? getMessagePause(message) : undefined;
 
   const { isOpen, open, close } = useModal();
+
+  useEffect(() => {
+    onCollateralInfoChange?.({
+      status: collateralInfo.status,
+      available: collateralInfo.available,
+      required: collateralInfo.required,
+      deficit: collateralInfo.deficit,
+    });
+  }, [
+    collateralInfo.status,
+    collateralInfo.available,
+    collateralInfo.required,
+    collateralInfo.deficit,
+    onCollateralInfoChange,
+  ]);
 
   let content: ReactNode;
   if (transaction) {
     content = (
       <>
-        <TransactionDetails
+        <TransactionDetailsRows
           chainName={chainName}
           domainId={domainId}
           transaction={transaction}
           blur={blur}
+          resolver={multiProvider}
         />
-        {warpRouteDetails && collateralInfo.status === CollateralStatus.Sufficient && (
-          <ActiveRebalanceModal
-            warpRouteDetails={warpRouteDetails}
-            collateralInfo={collateralInfo}
-          />
-        )}
+        {message && <DestinationExecutionCost message={message} blur={blur} />}
       </>
     );
   } else if (status === MessageStatus.Delivered) {
@@ -87,18 +96,6 @@ export function DestinationTransactionCard({
         </div>
       </DeliveryStatus>
     );
-  } else if (pause) {
-    content = <PausedMessageWarning type={pause.type} link={pause.link} />;
-  } else if (
-    status === MessageStatus.Pending &&
-    collateralInfo.status === CollateralStatus.Insufficient
-  ) {
-    content = (
-      <InsufficientCollateralWarning
-        warpRouteDetails={warpRouteDetails}
-        collateralInfo={collateralInfo}
-      />
-    );
   } else if (isOriginConfirming) {
     content = (
       <DeliveryStatus>
@@ -106,8 +103,8 @@ export function DestinationTransactionCard({
         <div className="mt-2 text-sm font-light text-gray-500">
           Delivery can proceed once the origin confirmation threshold is reached.
         </div>
-        <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        <div className="mt-3 flex items-center justify-center">
+          <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
@@ -115,36 +112,24 @@ export function DestinationTransactionCard({
     content = (
       <DeliveryStatus>
         <div>Checking delivery status and inspecting message</div>
-        <div className="mt-6 flex items-center justify-center">
-          <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
+        <div className="mt-3 flex items-center justify-center">
+          <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
         </div>
       </DeliveryStatus>
     );
-  } else if (status === MessageStatus.Failing) {
-    // Check if this is a collateral-related failure
-    const hasCollateralWarning = collateralInfo.status === CollateralStatus.Insufficient;
+  } else if ([MessageStatus.Pending, MessageStatus.Failing].includes(status)) {
     content = (
-      <>
-        {hasCollateralWarning && (
-          <InsufficientCollateralWarning
-            warpRouteDetails={warpRouteDetails}
-            collateralInfo={collateralInfo}
-          />
+      <DeliveryStatus>
+        <div>Delivery to destination chain still in progress.</div>
+        {isPiMsg && (
+          <div className="mt-2 max-w-xs text-sm">
+            Please ensure a relayer is running for this chain.
+          </div>
         )}
-        {!hasCollateralWarning && (
-          <DeliveryStatus>
-            <div className="text-sm leading-relaxed text-gray-800">{`Delivery to destination chain seems to be failing ${
-              debugResult ? ': ' + debugStatusToDesc[debugResult.status] : ''
-            }`}</div>
-            {!!debugResult?.description && (
-              <div className="mt-5 text-center text-sm leading-relaxed break-words text-gray-800">
-                {debugResult.description}
-              </div>
-            )}
-            <CallDataModal debugResult={debugResult} />
-          </DeliveryStatus>
-        )}
-      </>
+        <div className="mt-3 flex items-center justify-center">
+          <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
+        </div>
+      </DeliveryStatus>
     );
   } else if (!hasChainConfig) {
     content = (
@@ -169,23 +154,6 @@ export function DestinationTransactionCard({
         {isOpen && <ChainSearchModal isOpen={isOpen} close={close} showAddChainMenu={true} />}
       </>
     );
-  } else if (status === MessageStatus.Pending) {
-    content = (
-      <DeliveryStatus>
-        <div className="flex flex-col items-center">
-          <div>Delivery to destination chain still in progress.</div>
-          {isPiMsg && (
-            <div className="mt-2 max-w-xs text-sm">
-              Please ensure a relayer is running for this chain.
-            </div>
-          )}
-          <div className="mt-6 flex items-center justify-center">
-            <SpinnerIcon width={40} height={40} color={Color.primaryDark} />
-          </div>
-          <CallDataModal debugResult={debugResult} />
-        </div>
-      </DeliveryStatus>
-    );
   } else {
     content = (
       <DeliveryStatus>
@@ -200,92 +168,14 @@ export function DestinationTransactionCard({
   }
 
   return (
-    <TransactionCard
+    <TransactionRecordCard
       chainName={chainName}
-      title="Destination Transaction"
+      domainId={domainId}
+      title="Delivery transaction"
       helpText={transactionHelpText.destination}
     >
       {content}
-    </TransactionCard>
-  );
-}
-
-function PausedMessageWarning({ type, link }: { type: MessagePauseType; link?: string }) {
-  const isChainHalted = type === 'chain';
-  const message = isChainHalted
-    ? 'A chain involved in this message is currently halted. ' +
-      'This message will not be processed while the chain remains halted, so its ' +
-      'transferred assets will not be available on the destination chain.'
-    : 'This route is halted due to a security incident. ' +
-      'This message will not be processed while the route remains halted, so its ' +
-      'transferred assets will not be available on the destination chain.';
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <ErrorIcon width={20} height={20} color={Color.red} />
-        <h3 className="text-sm font-medium text-red-600">
-          {isChainHalted ? 'Chain Halted' : 'Route Halted'}
-        </h3>
-      </div>
-      <p className="text-sm leading-relaxed text-gray-700">{message}</p>
-      {link && (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-sm text-gray-700 underline underline-offset-2 hover:text-gray-900"
-        >
-          Read more about this
-        </a>
-      )}
-    </div>
-  );
-}
-
-function TransactionCard({
-  chainName,
-  title,
-  helpText,
-  children,
-}: PropsWithChildren<{ chainName: string; title: string; helpText: string }>) {
-  const tooltipId = `${useId()}-transaction-info`;
-
-  return (
-    <SectionCard
-      className="flex min-w-[340px] flex-1 basis-0 flex-col"
-      title={title}
-      leading={<ChainLogo chainName={chainName} size={24} />}
-      icon={<Tooltip id={tooltipId} content={helpText} />}
-    >
-      <div className="space-y-2">{children}</div>
-    </SectionCard>
-  );
-}
-
-function TransactionDetails({
-  chainName,
-  domainId,
-  transaction,
-  blur,
-}: {
-  chainName: string;
-  domainId: DomainId;
-  transaction: MessageTx | MessageTxStub;
-  blur: boolean;
-}) {
-  const multiProvider = useMultiProvider();
-
-  return (
-    <>
-      <TransactionDetailsRows
-        chainName={chainName}
-        domainId={domainId}
-        transaction={transaction}
-        blur={blur}
-        resolver={multiProvider}
-      />
-    </>
+    </TransactionRecordCard>
   );
 }
 
@@ -333,12 +223,6 @@ function CallDataModal({ debugResult }: { debugResult?: MessageDebugResult }) {
     </>
   );
 }
-
-export const transactionHelpText = {
-  origin: 'Info about the transaction that initiated the message placement into the outbox.',
-  destination:
-    'Info about the transaction that triggered the delivery of the message from an inbox.',
-};
 
 const styles = {
   textLink:

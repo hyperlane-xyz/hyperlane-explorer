@@ -1,16 +1,22 @@
 import type { TokenArgs } from '@hyperlane-xyz/sdk';
-import { Tooltip } from '@hyperlane-xyz/widgets';
+import { isValidAddress, ProtocolType } from '@hyperlane-xyz/utils';
+import { CopyButton, Tooltip } from '@hyperlane-xyz/widgets';
+import BigNumber from 'bignumber.js';
 import { useMemo } from 'react';
 
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
 import { useChainMetadataResolver } from '../../../metadataStore';
-import { Message, MessageStub, WarpRouteDetails } from '../../../types';
-import { formatAmountWithCommas } from '../../../utils/amount';
+import {
+  MessageStatus,
+  type Message,
+  type MessageStub,
+  type WarpRouteDetails,
+} from '../../../types';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
-import { isCollateralRoute } from '../collateral/utils';
-import { useWarpFees } from '../warpFees/useWarpFees';
-import { KeyValueRow } from './KeyValueRow';
+import { formatUsd } from './gasPaymentSummary';
+import { useTokenUsdPrices } from './useNativeTokenUsdPrice';
+import { WarpFeeDetails } from './WarpFeeDetails';
 
 interface Props {
   message: Message | MessageStub;
@@ -18,9 +24,8 @@ interface Props {
   blur: boolean;
 }
 
-export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Props) {
+export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
-  const warpFees = useWarpFees(message, warpRouteDetails);
 
   const blockExplorerAddressUrls = useMemo(() => {
     if (!warpRouteDetails) {
@@ -32,18 +37,21 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
     }
 
     const { originToken, destinationToken, transferRecipient } = warpRouteDetails;
+    const tokenUrl = (domain: number, token: TokenArgs) => {
+      const address = token.collateralAddressOrDenom ?? token.addressOrDenom;
+      const protocol = chainMetadataResolver.tryGetChainMetadata(domain)?.protocol;
+      // Native Cosmos denominations are token identifiers, not explorer account addresses.
+      if (
+        (protocol === ProtocolType.Cosmos || protocol === ProtocolType.CosmosNative) &&
+        !isValidAddress(address, protocol)
+      )
+        return null;
+      return getBlockExplorerAddressUrl(chainMetadataResolver, domain, address);
+    };
 
     return {
-      originToken: getBlockExplorerAddressUrl(
-        chainMetadataResolver,
-        message.originDomainId,
-        originToken.addressOrDenom,
-      ),
-      destinationToken: getBlockExplorerAddressUrl(
-        chainMetadataResolver,
-        message.destinationDomainId,
-        destinationToken.addressOrDenom,
-      ),
+      originToken: tokenUrl(message.originDomainId, originToken),
+      destinationToken: tokenUrl(message.destinationDomainId, destinationToken),
       transferRecipient: getBlockExplorerAddressUrl(
         chainMetadataResolver,
         message.destinationDomainId,
@@ -60,12 +68,86 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
   if (!warpRouteDetails) return null;
 
   const { amount, destAmount, transferRecipient, originToken, destinationToken } = warpRouteDetails;
-  const isCollateral = isCollateralRoute(destinationToken.standard);
-  const isDifferentToken =
-    originToken.symbol !== destinationToken.symbol ||
-    originToken.logoURI !== destinationToken.logoURI;
   const receivedAmount = destAmount ?? amount;
 
+  return (
+    <div className="space-y-4">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
+        <TokenDetails
+          token={originToken}
+          coinGeckoId={originToken.coinGeckoId ?? destinationToken.coinGeckoId}
+          amount={amount}
+          amountLabel="Sent"
+          domainId={message.originDomainId}
+          timestamp={message.origin.timestamp}
+          link={blockExplorerAddressUrls.originToken}
+          blur={blur}
+        />
+        <TokenDetails
+          token={destinationToken}
+          coinGeckoId={destinationToken.coinGeckoId ?? originToken.coinGeckoId}
+          amount={receivedAmount}
+          amountLabel={message.status === MessageStatus.Delivered ? 'Received' : 'Expected'}
+          domainId={message.destinationDomainId}
+          timestamp={
+            message.status === MessageStatus.Delivered ? message.destination?.timestamp : undefined
+          }
+          link={blockExplorerAddressUrls.destinationToken}
+          blur={blur}
+        />
+      </div>
+      <div className="grid min-w-0 gap-3 border-t border-gray-200 pt-3 sm:grid-cols-2 sm:gap-6">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500">Transfer recipient</p>
+          <div className="mt-1 flex items-start gap-2">
+            {blockExplorerAddressUrls.transferRecipient ? (
+              <a
+                href={blockExplorerAddressUrls.transferRecipient}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View recipient on the destination block explorer"
+                className={`min-w-0 break-all font-mono text-xs leading-5 text-primary-700 underline decoration-primary-200 underline-offset-4 ${blur ? 'blur-xs' : ''}`}
+              >
+                {transferRecipient} ↗
+              </a>
+            ) : (
+              <span
+                className={`min-w-0 break-all font-mono text-xs leading-5 text-gray-800 ${blur ? 'blur-xs' : ''}`}
+              >
+                {transferRecipient}
+              </span>
+            )}
+            <CopyButton
+              copyValue={transferRecipient}
+              aria-label="Copy transfer recipient"
+              width={12}
+              height={12}
+              className="mt-1 shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
+            />
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500">Payload amount (raw units)</p>
+          <div className="mt-1 flex items-start gap-2">
+            <code className={`min-w-0 break-all text-sm text-gray-800 ${blur ? 'blur-xs' : ''}`}>
+              {warpRouteDetails.wireAmount}
+            </code>
+            <CopyButton
+              copyValue={warpRouteDetails.wireAmount}
+              aria-label="Copy payload amount in raw units"
+              width={12}
+              height={12}
+              className="mt-1 shrink-0 text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function WarpTransferDetailsCard(props: Props) {
+  if (!props.warpRouteDetails) return null;
   return (
     <SectionCard
       className="w-full"
@@ -77,124 +159,92 @@ export function WarpTransferDetailsCard({ message, warpRouteDetails, blur }: Pro
         />
       }
     >
-      <div className="flex gap-4 sm:gap-6">
-        {/* Token Logo Column */}
-        <TokenLogos
-          originToken={originToken}
-          destinationToken={destinationToken}
-          isDifferentToken={isDifferentToken}
-        />
-        {/* Details Column */}
-        <div className="min-w-0 flex-1 space-y-4">
-          {isCollateral && (
-            <div className="bg-primary-50 text-primary-700 rounded px-3 py-2 text-xs">
-              <span className="font-medium">Collateral-backed route:</span> This transfer uses
-              locked collateral on the destination chain
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-y-1.5 sm:grid-cols-2 sm:gap-x-2">
-            <KeyValueRow
-              label="Amount:"
-              labelWidth={styles.labelWidthXs}
-              display={`${formatAmountWithCommas(amount)} ${originToken.symbol}`}
-              copyValue={amount}
-              blurValue={blur}
-              showCopy
-            />
-            <KeyValueRow
-              label="Received amount:"
-              labelWidth={styles.labelWidthMd}
-              display={`${formatAmountWithCommas(receivedAmount)} ${destinationToken.symbol}`}
-              copyValue={receivedAmount}
-              blurValue={blur}
-              showCopy
-            />
-            <KeyValueRow
-              label="Origin token:"
-              labelWidth={styles.labelWidthXs}
-              display={originToken.symbol}
-              tooltip={originToken.addressOrDenom}
-              copyValue={originToken.addressOrDenom}
-              blurValue={blur}
-              link={blockExplorerAddressUrls.originToken}
-              showCopy
-            />
-            <KeyValueRow
-              label="Destination token:"
-              labelWidth={styles.labelWidthMd}
-              display={destinationToken.symbol}
-              tooltip={destinationToken.addressOrDenom}
-              copyValue={destinationToken.addressOrDenom}
-              blurValue={blur}
-              link={blockExplorerAddressUrls.destinationToken}
-              showCopy
-            />
-            {warpFees && (
-              <>
-                <KeyValueRow
-                  label="Total sent:"
-                  labelWidth={styles.labelWidthXs}
-                  display={`${warpFees.totalSent} ${warpFees.tokenSymbol}`}
-                  blurValue={blur}
-                />
-                <KeyValueRow
-                  label="Warp fee:"
-                  labelWidth={styles.labelWidthMd}
-                  display={`${warpFees.bridgeFee} ${warpFees.tokenSymbol}${
-                    warpFees.bridgeFeeBps ? ` (${warpFees.bridgeFeeBps} bps)` : ''
-                  }`}
-                  blurValue={blur}
-                />
-              </>
-            )}
-            <KeyValueRow
-              label="Transfer recipient:"
-              labelWidth={styles.labelWidthMd}
-              display={transferRecipient}
-              blurValue={blur}
-              link={blockExplorerAddressUrls.transferRecipient}
-              showCopy
-              classes="sm:col-span-2"
-            />
-          </div>
-        </div>
-      </div>
+      <WarpTransferDetails {...props} />
+      <WarpFeeDetails {...props} />
     </SectionCard>
   );
 }
 
-function TokenLogos({
-  originToken,
-  destinationToken,
-  isDifferentToken,
+function TokenDetails({
+  token,
+  coinGeckoId,
+  amount,
+  amountLabel,
+  domainId,
+  timestamp,
+  link,
+  blur,
 }: {
-  originToken: TokenArgs;
-  destinationToken: TokenArgs;
-  isDifferentToken: boolean;
+  token: TokenArgs;
+  coinGeckoId?: string;
+  amount: string;
+  amountLabel: string;
+  domainId: number;
+  timestamp?: number;
+  link: string | null;
+  blur: boolean;
 }) {
-  if (!isDifferentToken) {
-    return (
-      <div className="w- flex flex-shrink-0 items-center justify-center">
-        <TokenIcon token={originToken} size={80} />
-      </div>
-    );
-  }
-
+  const metadata = useChainMetadataResolver().tryGetChainMetadata(domainId);
+  const prices = useTokenUsdPrices(
+    coinGeckoId ? [coinGeckoId] : [],
+    !!metadata?.isTestnet,
+    timestamp,
+  );
+  const price = coinGeckoId ? prices[coinGeckoId] : undefined;
+  const usdValue =
+    price != null && Number.isFinite(price) && price >= 0
+      ? new BigNumber(amount).times(price)
+      : undefined;
+  const usdDisplay = usdValue?.isFinite() ? formatUsd(usdValue) : undefined;
+  const address = token.collateralAddressOrDenom ?? token.addressOrDenom;
   return (
-    <div className="flex flex-shrink-0 items-center justify-center">
-      <div className="relative" style={{ width: 73, height: 73 }}>
-        <div className="absolute top-0 left-0">
-          <TokenIcon token={originToken} size={48} />
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white">
+        <TokenIcon token={token} size={28} />
+      </span>
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span
+            className="text-gray-500"
+            title="Amount inferred from the payload and Hyperlane Registry token metadata."
+          >
+            {amountLabel}:
+          </span>
+          {link ? (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={address}
+              className={`min-w-0 break-all font-medium text-primary-700 underline decoration-primary-200 underline-offset-4 ${blur ? 'blur-xs' : ''}`}
+            >
+              {token.symbol} ↗
+            </a>
+          ) : (
+            <span
+              className={`min-w-0 break-all font-medium text-gray-800 ${blur ? 'blur-xs' : ''}`}
+              title={address}
+            >
+              {token.symbol}
+            </span>
+          )}
         </div>
-        <div className="absolute right-0 bottom-0 rounded-full ring-2 ring-white">
-          <TokenIcon token={destinationToken} size={48} />
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span
+            className={`min-w-0 break-all font-mono text-lg font-medium leading-6 text-gray-900 ${blur ? 'blur-xs' : ''}`}
+          >
+            {`${new BigNumber(amount).toFormat()} ${token.symbol}`}
+          </span>
+          {usdDisplay && (
+            <span
+              className={`text-xs text-gray-500 ${blur ? 'blur-xs' : ''}`}
+              title="Approximate USD value using CoinGecko's daily price for the transaction date, or current price for today and undated transactions."
+            >
+              ({usdDisplay})
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  labelWidthXs: 'w-28 sm:w-32',
-  labelWidthMd: 'w-28 sm:w-40',
-};

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { TextButton } from '../../../components/buttons/TextButton';
 import { Color } from '../../../styles/Color';
 import { WarpRouteDetails } from '../../../types';
+import { formatAmountWithCommas } from '../../../utils/amount';
 import { CollateralInfo, CollateralStatus, RebalanceInfo } from '../collateral/types';
 import { useActiveRebalances } from '../collateral/useActiveRebalances';
 
@@ -16,23 +17,16 @@ interface CollateralCardsProps {
   collateralInfo: CollateralInfo;
 }
 
+function formatCollateralAmount(amount: bigint | undefined, decimals: number) {
+  return amount === undefined
+    ? 'N/A'
+    : formatAmountWithCommas(fromWei(amount.toString(), decimals));
+}
+
 export function InsufficientCollateralWarning({
   warpRouteDetails,
   collateralInfo,
 }: CollateralCardsProps) {
-  const decimals = warpRouteDetails?.destinationToken.decimals ?? DEFAULT_DECIMALS;
-  const symbol = warpRouteDetails?.destinationToken.symbol ?? DEFAULT_SYMBOL;
-  // Show insufficient collateral warning
-  const deficit = collateralInfo.deficit
-    ? fromWei(collateralInfo.deficit.toString(), decimals)
-    : 'N/A';
-  const available = collateralInfo.available
-    ? fromWei(collateralInfo.available.toString(), decimals)
-    : 'N/A';
-  const required = collateralInfo.required
-    ? fromWei(collateralInfo.required.toString(), decimals)
-    : 'N/A';
-
   if (collateralInfo.status !== CollateralStatus.Insufficient) return null;
 
   return (
@@ -43,19 +37,36 @@ export function InsufficientCollateralWarning({
       </div>
       <div className="text-sm text-gray-700">
         <p className="mb-2">This transfer cannot be completed due to insufficient collateral.</p>
-        <div className="space-y-1">
-          <div>
-            <span className="font-medium">Available:</span> {available} {symbol}
-          </div>
-          <div>
-            <span className="font-medium">Required:</span> {required} {symbol}
-          </div>
-          <div>
-            <span className="font-medium text-red-600">Deficit:</span> {deficit} {symbol}
-          </div>
-        </div>
+        <CollateralDeficitDetails
+          warpRouteDetails={warpRouteDetails}
+          collateralInfo={collateralInfo}
+        />
         <ActiveRebalanceModal warpRouteDetails={warpRouteDetails} collateralInfo={collateralInfo} />
       </div>
+    </div>
+  );
+}
+
+export function CollateralDeficitDetails({
+  warpRouteDetails,
+  collateralInfo,
+}: CollateralCardsProps) {
+  const decimals = warpRouteDetails?.destinationToken.decimals ?? DEFAULT_DECIMALS;
+  const symbol = warpRouteDetails?.destinationToken.symbol ?? DEFAULT_SYMBOL;
+  const values = [
+    ['Available', collateralInfo.available],
+    ['Required', collateralInfo.required],
+    ['Deficit', collateralInfo.deficit],
+  ] as const;
+
+  return (
+    <div className="space-y-1 tabular-nums">
+      {values.map(([label, amount]) => (
+        <div key={label}>
+          <span className="font-medium">{label}:</span> {formatCollateralAmount(amount, decimals)}{' '}
+          {symbol}
+        </div>
+      ))}
     </div>
   );
 }

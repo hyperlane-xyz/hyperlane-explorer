@@ -107,6 +107,38 @@ function buildTestSetup({
 }
 
 describe('parseWarpRouteMessageDetails', () => {
+  it('keeps the exact encoded amount independently of registry scaling and formatting', () => {
+    const wire = 123456789012345678901234567891n;
+    const setup = buildTestSetup({
+      originToken: { decimals: 18, scale: 10 },
+      destToken: { decimals: 18, scale: 1 },
+      messageAmount: wire,
+    });
+    const result = parseWarpRouteMessageDetails(
+      setup.message,
+      setup.warpRouteChainAddressMap,
+      setup.chainMetadataResolver,
+    );
+    expect(result?.wireAmount).toBe(wire.toString());
+    expect(result?.amount).toBe('12345678901.234567890123456789');
+    expect(result?.destAmount).toBe('123456789012.345678901234567891');
+  });
+
+  it('uses destination decimals even when both registry scales are equal', () => {
+    const setup = buildTestSetup({
+      originToken: { decimals: 18 },
+      destToken: { decimals: 6 },
+      messageAmount: 10n ** 18n,
+    });
+    const result = parseWarpRouteMessageDetails(
+      setup.message,
+      setup.warpRouteChainAddressMap,
+      setup.chainMetadataResolver,
+    );
+    expect(result?.amount).toBe('1');
+    expect(result?.destAmount).toBe('1000000000000');
+  });
+
   describe('destAmount', () => {
     it('returns null when both tokens have no scale', () => {
       const { message, warpRouteChainAddressMap, chainMetadataResolver } = buildTestSetup({

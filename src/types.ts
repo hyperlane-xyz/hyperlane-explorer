@@ -67,6 +67,8 @@ export interface ExtendedLog extends providers.Log {
 }
 
 export interface WarpRouteDetails {
+  /** Exact encoded TokenMessage amount, before registry scaling or decimal formatting. */
+  wireAmount: string;
   amount: string;
   destAmount: string | null;
   transferRecipient: string;

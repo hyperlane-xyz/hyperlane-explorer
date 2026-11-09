@@ -15,7 +15,9 @@ export function useWarpFees(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: [
       'warpFees',
-      message.id,
+      message.originDomainId,
+      message.origin.hash,
+      message.msgId,
       warpRouteDetails?.originToken.addressOrDenom,
       multiProviderVersion,
     ],

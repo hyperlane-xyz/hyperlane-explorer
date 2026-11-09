@@ -1,0 +1,26 @@
+.sending svg {
+  animation: send-forward 1.6s ease-in-out infinite;
+}
+
+.sending svg:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+@keyframes send-forward {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateX(-1px);
+  }
+  45%,
+  60% {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sending svg {
+    animation: none !important;
+  }
+}

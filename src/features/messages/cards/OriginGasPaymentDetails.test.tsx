@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { Message, MessageStatus, type MessageStub } from '../../../types';
 import { IgpPayment, IgpPaymentDenomKind, IgpPaymentsStatus } from '../igpPayments';
-import { GasDetailsCard } from './GasDetailsCard';
+import { OriginGasPaymentDetails } from './OriginGasPaymentDetails';
 import { useIgpPayments } from './useIgpPayments';
 
 jest.mock('@hyperlane-xyz/widgets', () => ({
@@ -11,12 +11,15 @@ jest.mock('@hyperlane-xyz/widgets', () => ({
   CopyButton: () => null,
   Tooltip: () => null,
 }));
+let mockNativeDecimals: number | undefined = 18;
 function mockChainMetadata(domain: number) {
   return {
     name: domain === 4217 ? 'tempo' : 'base',
     protocol: ProtocolType.Ethereum,
     nativeToken:
-      domain === 4217 ? { symbol: 'pathUSD', decimals: 6 } : { symbol: 'ETH', decimals: 18 },
+      domain === 4217
+        ? { symbol: 'pathUSD', decimals: 6 }
+        : { symbol: 'ETH', decimals: mockNativeDecimals },
     gasCurrencyCoinGeckoId: domain === 4217 ? 'usd-coin' : 'ethereum',
   };
 }
@@ -117,7 +120,7 @@ const debuggerPayments = {
 
 function renderCard(message: Message | MessageStub, igpPayments?: typeof debuggerPayments) {
   return renderToStaticMarkup(
-    <GasDetailsCard message={message} blur={false} igpPayments={igpPayments} />,
+    <OriginGasPaymentDetails message={message} blur={false} igpPayments={igpPayments} />,
   );
 }
 
@@ -136,27 +139,8 @@ function labelWidths(html: string): Record<string, string | undefined> {
 }
 
 const mockUseIgpPayments = jest.mocked(useIgpPayments);
-
-it('renders the Tempo receipt fee in attodollars and its USD value', () => {
-  mockUseIgpPayments.mockReturnValue({
-    status: IgpPaymentsStatus.Disabled,
-    payments: undefined,
-    tokenMetadata: {},
-  });
-  const message: Message = {
-    ...makeMessage({ totalGasAmount: '468887', totalPayment: '174962388160380', numPayments: 1 }),
-    destinationChainId: 4217,
-    destinationDomainId: 4217,
-    destination: {
-      timestamp: 1_700_000_000_000,
-      hash: '0x',
-      gasUsed: 1629985,
-      effectiveGasPrice: 1600000000,
-    },
-  };
-  const text = textOf(renderCard(message));
-  expect(text).toContain('Gas cost:0.002608 pathUSD($0.002608)');
-  expect(text).not.toContain('2607976000 pathUSD');
+beforeEach(() => {
+  mockNativeDecimals = 18;
 });
 
 describe('with a token-denominated receipt', () => {
@@ -388,11 +372,11 @@ describe('when the receipt is not read', () => {
     });
   });
 
-  it('keeps the native display and payments table', () => {
+  it('does not assume native units when the receipt is unavailable', () => {
     const html = renderCard(stub, debuggerPayments);
-
-    expect(textOf(html)).toContain('Total paid:0.0003 ETH($0.60)');
-    expect(html).toContain('<table');
+    expect(textOf(html)).toContain('Total paid:300000000000000 raw units(unit unverified)');
+    expect(textOf(html)).not.toContain('ETH');
+    expect(html).not.toContain('<table');
   });
 
   it('renders no payments table without debugger payments', () => {
@@ -402,4 +386,47 @@ describe('when the receipt is not read', () => {
   it('keeps the label width of the native display', () => {
     expect(labelWidths(renderCard(stub, debuggerPayments))['Total paid:']).toBe('w-24');
   });
+});
+
+describe('funding availability', () => {
+  beforeEach(() => {
+    mockUseIgpPayments.mockReturnValue({
+      status: IgpPaymentsStatus.Disabled,
+      payments: undefined,
+      tokenMetadata: {},
+    });
+  });
+
+  it.each([IgpPaymentsStatus.Disabled, IgpPaymentsStatus.Pending, IgpPaymentsStatus.Error])(
+    'does not invent zero payment data while receipt status is %s',
+    (status) => {
+      mockUseIgpPayments.mockReturnValue({ status, payments: undefined, tokenMetadata: {} });
+      const text = textOf(renderCard(stub));
+      expect(text).toContain('Payment count:Not available');
+      expect(text).toContain('Total gas amount:Not available');
+      expect(text).not.toContain('0 ETH');
+      expect(text).not.toContain('0 raw units');
+    },
+  );
+
+  it('keeps known payment amounts distinct from missing count and gas fields', () => {
+    const text = textOf(renderCard({ ...stub, totalPayment: '10' } as Message));
+    expect(text).toContain('Total paid:10 raw units(unit unverified)');
+    expect(text).toContain('Payment count:Not available');
+    expect(text).toContain('Total gas amount:Not available');
+  });
+});
+
+it.each([0, undefined])('does not assume 18 decimals when native decimals are %s', (decimals) => {
+  mockNativeDecimals = decimals;
+  mockUseIgpPayments.mockReturnValue({
+    status: IgpPaymentsStatus.Ready,
+    payments: [{ ...nativePayment, paymentAmount: '3' }],
+    tokenMetadata: {},
+  });
+  const text = textOf(renderCard(stub));
+  expect(text).toContain(
+    decimals === 0 ? 'Paid at dispatch:3 ETH' : 'Paid at dispatch:3 raw units (ETH)',
+  );
+  expect(text).not.toContain('0.000000000000000003');
 });

@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
@@ -19,6 +19,7 @@ import {
   useExplorerBlockValue,
 } from './ExplorerEventsProvider';
 import {
+  useExplorerEvents,
   useExplorerMessageRows,
   useExplorerRefresh,
   useIsMessageLive,
@@ -93,6 +94,13 @@ function Probe({ observeHead = false }: { observeHead?: boolean }) {
     null,
     JSON.stringify({ messageRow, rows, progress, waiting, testnetLive, head }),
   );
+}
+
+function DiagnosticsProbe() {
+  const { subscribeDiagnostics } = useExplorerEvents();
+  const [event, setEvent] = useState<unknown>();
+  useEffect(() => subscribeDiagnostics(setEvent), [subscribeDiagnostics]);
+  return createElement('div', null, JSON.stringify(event));
 }
 const state = () => JSON.parse(container.textContent!);
 const render = (domains = [1, 10], observeHead = false) =>
@@ -293,6 +301,31 @@ it('keeps equivalent subscriptions stable and respects negotiated chain coverage
   await render([84532]);
   await emit({ type: 'ready', customDomains: [84532] });
   expect(state().testnetLive).toBe(true);
+});
+
+it('uses one message-detail stream for message updates and diagnostics', async () => {
+  const diagnosticsMessageId = `0x${'11'.repeat(32)}`;
+  await act(async () =>
+    root.render(
+      createElement(
+        ExplorerEventsProvider,
+        { domains: [1, 10], diagnosticsMessageId },
+        createElement(DiagnosticsProbe),
+      ),
+    ),
+  );
+  expect(sockets).toHaveLength(1);
+  const url = new URL(sockets[0].url);
+  expect(url.searchParams.get('blocks')).toBe('true');
+  expect(url.searchParams.get('messageIds')).toBe(diagnosticsMessageId);
+  expect(url.searchParams.get('diagnostics')).toBe('true');
+
+  const diagnostics = {
+    type: 'diagnostics',
+    data: { version: 1, message_id: diagnosticsMessageId, partial: false, activities: [] },
+  };
+  await emit(diagnostics);
+  expect(JSON.parse(container.textContent!)).toEqual(diagnostics);
 });
 
 it('validates wire data while accepting partial transaction enrichment', () => {
