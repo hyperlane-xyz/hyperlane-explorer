@@ -1,8 +1,14 @@
 import { MessageStatus, type MessageStub } from '../../../types';
-import { getActivityTimings, getMessageTimeline, hasPassedValidation } from './timeline';
+import {
+  getMessageTimeline,
+  hasPassedValidation,
+  parseObservationTime,
+  validTime,
+} from './timeline';
 import {
   describeDiagnosticActivity,
   diagnosticLabel,
+  mergeDiagnosticState,
   type DiagnosticActivity,
   type DiagnosticModule,
   type DiagnosticState,
@@ -74,7 +80,6 @@ export function buildMessageActivityTimeline({
         .sort(compareIds)
     : [];
   const reports = reconstructReports(selectedRows);
-  const timings = getActivityTimings(selectedRows, message.origin.timestamp);
   const supportedRows = selectedRows.filter(isSupported);
   const stages = getMessageTimeline(message, observation, supportedRows).stages;
   const pickedUp = stages.find((stage) => stage.id === 'picked_up');
@@ -122,7 +127,7 @@ export function buildMessageActivityTimeline({
   let previousReport: Report | undefined;
   for (const [index, report] of reports.entries()) {
     const { row, state } = report;
-    const timestamp = timings.get(row.id)?.timestamp;
+    const timestamp = parseObservationTime(row.observed_at);
     const signatureEntries = signatureEvents(report, seenSignatures, timestamp);
     entries.push(...signatureEntries);
     // Keep phase/failure transitions, but a signature row already contains its raw
@@ -194,7 +199,7 @@ export function buildMessageActivityTimeline({
   // the loaded pages, even when its update row is present. It proves a signature
   // exists, not when it was first collected. Never fabricate a history row.
   if (observation) {
-    const timestamp = observationTime(observation.observedAt);
+    const timestamp = parseObservationTime(observation.observedAt);
     entries.push(
       ...moduleSignatureEvents(
         observation.state.modules,
@@ -429,7 +434,7 @@ function firstRelayerObservation(
         : validTime(state.submission?.observed_at_millis);
     // A delayed delivered-phase report alone cannot recover the mailbox read time.
     const timestamp =
-      dedicated ?? (stage === 'delivered' ? undefined : observationTime(observedAt));
+      dedicated ?? (stage === 'delivered' ? undefined : parseObservationTime(observedAt));
     if (timestamp !== undefined && (!earliest || timestamp < earliest.timestamp)) {
       earliest = {
         timestamp,
@@ -471,10 +476,7 @@ function reconstructReports(rows: DiagnosticActivity[]): Report[] {
     }
     if (row.activity.type !== 'snapshot_update' || !state) return { row, partial: true };
     if (!anchor) return { row, state, partial: true };
-    const modules = new Map(anchor.modules.map((module) => [module.node_id, module]));
-    state.removed_modules?.forEach((id) => modules.delete(id));
-    state.modules.forEach((module) => modules.set(module.node_id, module));
-    return { row, state: { ...state, modules: [...modules.values()] }, partial: false };
+    return { row, state: mergeDiagnosticState(anchor, state), partial: false };
   });
 }
 
@@ -644,20 +646,4 @@ function addressKey(address: string) {
 
 function compareIds(a: DiagnosticActivity, b: DiagnosticActivity) {
   return BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0;
-}
-
-function validTime(timestamp?: number | null) {
-  return timestamp != null && Number.isFinite(timestamp) && timestamp > 0 && timestamp <= 8.64e15
-    ? timestamp
-    : undefined;
-}
-
-function observationTime(observedAt: string) {
-  const normalized = observedAt
-    .trim()
-    .replace(' ', 'T')
-    .replace(/([+-]\d{2})$/, '$1:00');
-  return validTime(
-    Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized) ? normalized : `${normalized}Z`),
-  );
 }

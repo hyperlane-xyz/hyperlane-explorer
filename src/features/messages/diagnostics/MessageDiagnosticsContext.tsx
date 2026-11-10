@@ -62,44 +62,30 @@ function DiagnosticsProvider({
   const [selectedRelayer, setSelectedRelayer] = useState('');
   const [automaticRelayer, setAutomaticRelayer] = useState('');
   const relayers = useMemo(() => {
-    const reduced = reduceMessageDiagnostics({
-      version: 1,
-      message_id: messageId,
-      partial: true,
-      activities,
-    });
     const pageStates = reduceMessageDiagnostics({
       version: 1,
       message_id: messageId,
       partial: true,
       activities: history.activityPage?.activities ?? [],
     });
-    const pageActivityIds = new Set(pageStates.relayers.map((relay) => relay.activityId));
-    const latest = new Map<string, DiagnosticActivity>();
-    // mergeActivityHistory sorts descending by database ID, including legacy rows.
-    for (const row of activities) {
-      if (!latest.has(row.relayer)) latest.set(row.relayer, row);
-    }
+    const pageRelayers = new Map(pageStates.relayers.map((relay) => [relay.relayer, relay]));
     const fallback = new Map<string, RelayerDiagnosticState>();
-    for (const row of latest.values()) {
+    // History is newest first. Reconstruct updates only within a contiguous page;
+    // a snapshot on a sparse older page may be an obsolete anchor.
+    for (const row of activities) {
+      if (fallback.has(row.relayer)) continue;
+      const pageRelay = pageRelayers.get(row.relayer);
       fallback.set(row.relayer, {
         relayer: row.relayer,
         activityId: row.id,
         observedAt: row.observed_at,
-        state: { phase: 'unknown', modules: [] },
+        state:
+          pageRelay?.activityId === row.id
+            ? pageRelay.state
+            : (row.version === undefined || row.version === 1) && row.activity.type === 'snapshot'
+              ? (row.activity.state ?? { phase: 'unknown', modules: [] })
+              : { phase: 'unknown', modules: [] },
       });
-    }
-    for (const relay of reduced.relayers) {
-      const row = latest.get(relay.relayer);
-      // A newer legacy/invalid report supersedes an older reconstructed state.
-      // Cumulative updates also need an anchor in the same contiguous page: an
-      // older cached page may precede an unseen replacement snapshot.
-      if (
-        row?.id === relay.activityId &&
-        (row.activity.type === 'snapshot' || pageActivityIds.has(relay.activityId))
-      ) {
-        fallback.set(relay.relayer, relay);
-      }
     }
     // Current diagnostics own current state; history supplies missing identities
     // and observations only, never overwrites a live endpoint's state.

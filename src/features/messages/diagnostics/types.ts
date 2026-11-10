@@ -189,7 +189,10 @@ export function reduceMessageDiagnostics(diagnostics: MessageDiagnostics): Diagn
   return { partial, relayers: [...relayers.values()].sort(compareRelayers) };
 }
 
-function mergeDiagnosticState(anchor: DiagnosticState, update: DiagnosticState): DiagnosticState {
+export function mergeDiagnosticState(
+  anchor: DiagnosticState,
+  update: DiagnosticState,
+): DiagnosticState {
   const modules = new Map(anchor.modules.map((module) => [module.node_id, module]));
   update.removed_modules?.forEach((nodeId) => modules.delete(nodeId));
   update.modules.forEach((module) => modules.set(module.node_id, module));
