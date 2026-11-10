@@ -54,6 +54,7 @@ export const diagnosticModuleSchema = z
     threshold: z.number().nullable().optional(),
     validators: z.array(z.string()).nullish(),
     signatures: signaturesSchema.nullish(),
+    merkle_leaf: z.object({ index: count, highest_known: count.nullish() }).nullish(),
     offchain_read: offchainReadSchema.nullish(),
     checks: z.record(z.string(), z.string().nullish()).nullish(),
   })

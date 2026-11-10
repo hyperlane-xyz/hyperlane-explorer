@@ -1,5 +1,4 @@
-import { formatMessage } from '@hyperlane-xyz/utils';
-import { BoxArrowIcon, CopyButton } from '@hyperlane-xyz/widgets';
+import { BoxArrowIcon, ChevronIcon, CopyButton } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import { useId, useMemo, useState, type ReactNode } from 'react';
@@ -7,14 +6,13 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { ChainLogo } from '../../../components/icons/ChainLogo';
 import { MessageIcon } from '../../../components/icons/MessageIcon';
 import { isAeroVoterMessage } from '../../../consts/aeroVoterRoutes';
-import { MAILBOX_VERSION } from '../../../consts/mailbox';
 import { useChainMetadataResolver } from '../../../metadataStore';
 import type { Message, MessageStub, WarpRouteDetails } from '../../../types';
 import { formatAddress } from '../../../utils/addresses';
-import { logger } from '../../../utils/logger';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
 import { isEcoMessage } from '../eco';
+import { getMessageEncoding } from '../messageEncoding';
 import { MessagePayload } from './MessagePayload';
 
 const WarpTransferDetails = dynamic(
@@ -32,162 +30,145 @@ interface Props {
   details?: ReactNode;
 }
 
-export function ContentDetailsCard({ message, blur, warpRouteDetails, details }: Props) {
-  return (
-    <ContentDetails
-      key={message.msgId}
-      message={message}
-      blur={blur}
-      warpRouteDetails={warpRouteDetails}
-      details={details}
-    />
-  );
+export function ContentDetailsCard({ message, ...props }: Props) {
+  return <ContentDetails key={message.msgId} message={message} {...props} />;
 }
 
 function ContentDetails({ message, blur, warpRouteDetails, details }: Props) {
-  const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient, body } = message;
+  const { msgId, nonce, originDomainId, destinationDomainId, sender, recipient } = message;
   const isEcoMsg = isEcoMessage(message);
   const [isRaw, setRaw] = useState(false);
   const contentId = useId();
-  const rawBytes = useMemo(() => {
-    try {
-      if (originDomainId < 0 || destinationDomainId < 0) return '';
-      return formatMessage(
-        MAILBOX_VERSION,
-        nonce,
-        originDomainId,
-        sender,
-        destinationDomainId,
-        recipient,
-        body,
-      );
-    } catch (error) {
-      logger.warn('Error formatting message', error);
-      return '';
-    }
-  }, [nonce, originDomainId, sender, destinationDomainId, recipient, body]);
+  const encoding = useMemo(() => getMessageEncoding(message), [message]);
+  const rawBytes = encoding?.raw ?? '';
 
   return (
-    <section
-      aria-label="Message details"
-      className="shadow-card min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white"
-    >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-150 px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2">
-          <MessageIcon width={18} height={18} className="text-primary-700" aria-hidden="true" />
-          <h2 className="text-sm font-medium text-gray-800">Message details</h2>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <fieldset className="flex rounded-md bg-gray-200/70 p-0.5">
-            <legend className="sr-only">Message representation</legend>
-            {(['Details', 'Raw'] as const).map((label) => (
-              <button
-                key={label}
-                type="button"
-                aria-pressed={isRaw === (label === 'Raw')}
-                aria-controls={contentId}
-                onClick={() => setRaw(label === 'Raw')}
-                className={clsx(
-                  'rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500',
-                  isRaw === (label === 'Raw')
-                    ? 'bg-white text-primary-800 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-800',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </fieldset>
-          <CopyButton
-            copyValue={rawBytes}
-            aria-label="Copy raw message"
-            title={rawBytes ? 'Copy raw message' : 'Raw message bytes unavailable'}
-            disabled={!rawBytes}
-            width={13}
-            height={13}
-            className="rounded p-2 text-gray-500 hover:text-gray-800 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 [&_rect]:stroke-current [&_path]:fill-current"
-          />
-        </div>
-      </header>
-      <div id={contentId} className={clsx('p-4 sm:p-5', blur && 'blur-xs')}>
-        <div hidden={isRaw} className="space-y-4">
-          <dl className="flex min-w-0 flex-wrap items-baseline gap-x-6 gap-y-3 border-b border-gray-200 pb-3">
-            <div className="flex min-w-0 flex-1 basis-64 flex-wrap items-baseline gap-x-4 gap-y-1.5">
-              <dt
-                className="shrink-0 text-xs text-gray-500"
-                title="Hash of the complete encoded message"
-              >
-                Message ID
-              </dt>
-              <dd className="min-w-0">
-                <CopyableValue label="message ID" value={msgId} />
-              </dd>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 text-xs">
-              <dt className="text-gray-500">Nonce</dt>
-              <dd className="flex items-center gap-2">
-                <span className="font-mono tabular-nums text-gray-800">{nonce}</span>
+    <MessagePayload
+      className={clsx(blur && 'blur-xs')}
+      message={message}
+      messageType={
+        warpRouteDetails
+          ? 'Warp message'
+          : isAeroVoterMessage(message)
+            ? 'Aero V3 message'
+            : isEcoMsg
+              ? 'Eco intent proof'
+              : undefined
+      }
+      details={
+        warpRouteDetails ? (
+          <WarpTransferDetails message={message} warpRouteDetails={warpRouteDetails} blur={blur} />
+        ) : (
+          (details ?? (isEcoMsg && !blur ? <EcoDetailsCard message={message} /> : undefined))
+        )
+      }
+      footer={
+        <details className="group border-t border-gray-200">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-gray-600 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <MessageIcon width={16} height={16} className="text-primary-700" aria-hidden="true" />
+            <h2 className="text-sm font-medium text-gray-800">Message details</h2>
+            <span className="hidden text-xs text-gray-500 sm:inline">
+              Envelope fields & raw message
+            </span>
+            <ChevronIcon
+              direction="s"
+              width={14}
+              height={14}
+              className="ml-auto transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div id={contentId} className="space-y-4 border-t border-gray-200 p-4 sm:p-5">
+            <div className="grid min-w-0 gap-4 border-b border-gray-200 pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+              <dl className="min-w-0 space-y-2.5 text-xs">
+                <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-3">
+                  <dt className="text-gray-500" title="uint8 · byte 0 of the encoded message">
+                    Version
+                  </dt>
+                  <dd className="font-mono tabular-nums text-gray-800">
+                    {encoding?.version ?? 'Unavailable'}
+                  </dd>
+                </div>
+                <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-3">
+                  <dt className="text-gray-500">Nonce</dt>
+                  <dd>
+                    <CopyableValue label="nonce" value={String(nonce)} />
+                  </dd>
+                </div>
+                <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-3">
+                  <dt className="text-gray-500" title="Hash of the complete encoded message">
+                    Message ID
+                  </dt>
+                  <dd className="min-w-0">
+                    <CopyableValue label="message ID" value={msgId} />
+                  </dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <fieldset className="flex rounded-md bg-gray-200/70 p-0.5">
+                  <legend className="sr-only">Message representation</legend>
+                  {(['Details', 'Raw'] as const).map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-pressed={isRaw === (label === 'Raw')}
+                      aria-controls={contentId}
+                      onClick={() => setRaw(label === 'Raw')}
+                      className={clsx(
+                        'rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500',
+                        isRaw === (label === 'Raw')
+                          ? 'bg-white text-primary-800 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </fieldset>
                 <CopyButton
-                  copyValue={String(nonce)}
-                  aria-label="Copy nonce"
-                  width={12}
-                  height={12}
-                  className="text-gray-500 [&_rect]:stroke-current [&_path]:fill-current"
+                  copyValue={rawBytes}
+                  aria-label="Copy raw message"
+                  title={rawBytes ? 'Copy raw message' : 'Raw message bytes unavailable'}
+                  disabled={!rawBytes}
+                  width={13}
+                  height={13}
+                  className="rounded p-2 text-gray-500 hover:text-gray-800 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 [&_rect]:stroke-current [&_path]:fill-current"
                 />
-              </dd>
+              </div>
             </div>
-          </dl>
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
-            <EnvelopeEndpoint
-              label="Origin"
-              addressLabel="Sender"
-              domainId={originDomainId}
-              address={sender}
-            />
-            <EnvelopeEndpoint
-              label="Destination"
-              addressLabel="Recipient"
-              domainId={destinationDomainId}
-              address={recipient}
-            />
-          </div>
-          <MessagePayload
-            message={message}
-            title={
-              warpRouteDetails
-                ? 'Warp message'
-                : isAeroVoterMessage(message)
-                  ? 'Aero V3 message'
-                  : isEcoMsg
-                    ? 'Eco intent proof'
-                    : 'Payload'
-            }
-            details={
-              warpRouteDetails ? (
-                <WarpTransferDetails
-                  message={message}
-                  warpRouteDetails={warpRouteDetails}
-                  blur={blur}
+            <div hidden={isRaw}>
+              <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
+                <EnvelopeEndpoint
+                  label="Origin"
+                  addressLabel="Sender"
+                  domainId={originDomainId}
+                  address={sender}
+                  wireAddress={encoding?.sender}
                 />
+                <EnvelopeEndpoint
+                  label="Destination"
+                  addressLabel="Recipient"
+                  domainId={destinationDomainId}
+                  address={recipient}
+                  wireAddress={encoding?.recipient}
+                />
+              </div>
+            </div>
+            {isRaw &&
+              (rawBytes ? (
+                <pre
+                  aria-label="Raw message bytes"
+                  className="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-gray-50 p-3 font-mono text-xs leading-5 text-gray-700"
+                >
+                  <code>{rawBytes}</code>
+                </pre>
               ) : (
-                (details ?? (isEcoMsg && !blur ? <EcoDetailsCard message={message} /> : undefined))
-              )
-            }
-          />
-        </div>
-        {isRaw &&
-          (rawBytes ? (
-            <pre
-              aria-label="Raw message bytes"
-              className="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-gray-50 p-3 font-mono text-xs leading-5 text-gray-700"
-            >
-              <code>{rawBytes}</code>
-            </pre>
-          ) : (
-            <p className="text-sm text-gray-500">Raw message bytes unavailable.</p>
-          ))}
-      </div>
-    </section>
+                <p className="text-sm text-gray-500">Raw message bytes unavailable.</p>
+              ))}
+          </div>
+        </details>
+      }
+    />
   );
 }
 
@@ -196,11 +177,13 @@ function EnvelopeEndpoint({
   addressLabel,
   domainId,
   address,
+  wireAddress,
 }: {
   label: string;
   addressLabel: string;
   domainId: number;
   address: string;
+  wireAddress?: string;
 }) {
   const metadata = useChainMetadataResolver();
   const chainName = metadata.tryGetChainName(domainId) ?? undefined;
@@ -223,11 +206,14 @@ function EnvelopeEndpoint({
         </div>
       </div>
       <dl className="mt-2">
-        <dt className="mb-0.5 text-xxs text-gray-500">{addressLabel}</dt>
+        <dt className="mb-0.5 text-xxs text-gray-500">
+          {addressLabel}
+          {wireAddress && ' · bytes32'}
+        </dt>
         <dd>
           <CopyableValue
             label={`${addressLabel.toLowerCase()} address`}
-            value={nativeAddress}
+            value={wireAddress ?? nativeAddress}
             href={link}
             linkLabel={`${addressLabel} application on ${displayName}`}
           />

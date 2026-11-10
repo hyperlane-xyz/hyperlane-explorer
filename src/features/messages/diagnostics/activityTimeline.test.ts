@@ -91,6 +91,38 @@ function timeline(
 }
 
 describe('message activity timeline', () => {
+  it.each([2, 3])('numbers %s signatures first observed in one batch individually', (threshold) => {
+    const row = activity(1, 'awaiting_signatures', 111_000, {
+      modules: [
+        module([validatorA, validatorB, validatorC].slice(0, threshold), 10, 'root', threshold),
+      ],
+    });
+    const signatures = timeline([row, row]).filter((entry) => entry.kind === 'signature');
+    expect(signatures.map((entry) => entry.title)).toEqual(
+      Array.from(
+        { length: threshold },
+        (_, index) => `Signature observed (${index + 1}/${threshold})`,
+      ),
+    );
+    expect(signatures.every((entry) => entry.timestamp === 111_000)).toBe(true);
+  });
+
+  it('numbers signatures in displayed timestamp order, separately per checkpoint', () => {
+    const rows = [
+      activity(1, 'awaiting_signatures', 113_000, { modules: [module([validatorA])] }),
+      activity(2, 'awaiting_signatures', 112_000, { modules: [module([validatorB, validatorA])] }),
+      activity(3, 'awaiting_signatures', 114_000, { modules: [module([validatorC], 11)] }),
+    ];
+    expect(
+      timeline(rows)
+        .filter((entry) => entry.kind === 'signature')
+        .map(({ title, validator }) => [title, validator]),
+    ).toEqual([
+      ['Signature observed (1/2)', validatorB],
+      ['Signature observed (2/2)', validatorA],
+      ['Signature observed (1/2)', validatorC],
+    ]);
+  });
   it('shows signature progress through the threshold while retaining the validation step', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, {
@@ -232,7 +264,7 @@ describe('message activity timeline', () => {
         timeline(rows.slice(0, 3), { message: deliveredMessage }).find(
           (entry) => entry.kind === 'delivery',
         )?.timestamp,
-      ).toBeUndefined();
+      ).toBe(message.destination?.timestamp);
     },
   );
 

@@ -6,14 +6,24 @@ import { MessageStatus, type MessageStub } from '../../types';
 import { CollateralInfo, CollateralStatus } from './collateral/types';
 import { MessageDetailsRuntime } from './MessageDetailsRuntime';
 
-jest.mock('next/dynamic', () => ({
-  __esModule: true,
-  default:
-    () =>
-    ({ onCollateralInfoChange }: { onCollateralInfoChange: (info: CollateralInfo) => void }) => {
-      mockOnCollateralInfoChange = onCollateralInfoChange;
-      return null;
-    },
+jest.mock('next/dynamic', () => ({ __esModule: true, default: () => () => null }));
+jest.mock('./cards/TransactionCard', () => ({
+  DestinationTransactionCard: ({
+    onCollateralInfoChange,
+  }: {
+    onCollateralInfoChange: (info: CollateralInfo) => void;
+  }) => {
+    if (mockSuspendCard) throw mockCardLoading;
+    mockOnCollateralInfoChange = onCollateralInfoChange;
+    return <div>Loaded transaction details</div>;
+  },
+}));
+jest.mock('./cards/OriginTransactionCard', () => ({
+  DestinationTransactionPreviewCard: ({
+    transaction,
+  }: {
+    transaction?: MessageStub['destination'];
+  }) => <div>{transaction?.hash}</div>,
 }));
 jest.mock('../deliveryStatus/useMessageDeliveryStatus', () => ({
   useMessageDeliveryStatus: ({ message }: { message: MessageStub }) => ({
@@ -23,7 +33,45 @@ jest.mock('../deliveryStatus/useMessageDeliveryStatus', () => ({
 }));
 
 let mockOnCollateralInfoChange: (info: CollateralInfo) => void;
+let mockSuspendCard = false;
+const mockCardLoading = new Promise<void>(() => {});
 const reactTestGlobal = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+
+it('keeps transaction data visible while the enriched card loads', async () => {
+  reactTestGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  mockSuspendCard = true;
+  const message = {
+    msgId: 'delivered',
+    status: MessageStatus.Delivered,
+    destination: { hash: '0x-delivery-from-websocket', timestamp: 123_000 },
+  } as MessageStub;
+  try {
+    await act(async () =>
+      root.render(
+        <MessageDetailsRuntime
+          messageId={message.msgId}
+          baseMessage={message}
+          baseIsMessageFound
+          hasInitialMessageDetails
+          hasGraphQlRun
+          isGraphQlMessageFound
+          destinationChainName="destination"
+          blur={false}
+          isOriginConfirming={false}
+          onStateChange={jest.fn()}
+        />,
+      ),
+    );
+    expect(container.textContent).toContain(message.destination!.hash);
+    expect(container.textContent).not.toContain('Loaded transaction details');
+  } finally {
+    mockSuspendCard = false;
+    await act(async () => root.unmount());
+    delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
+  }
+});
 
 it('isolates collateral status when navigating to another message, including late old callbacks', async () => {
   reactTestGlobal.IS_REACT_ACT_ENVIRONMENT = true;

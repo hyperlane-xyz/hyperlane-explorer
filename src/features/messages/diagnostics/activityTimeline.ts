@@ -43,6 +43,8 @@ export interface TimelineEntry {
   status: LifecycleStepStatus;
   relayer?: string;
   validator?: string;
+  signatureGroup?: string;
+  signatureThreshold?: number | null;
   /** Current-step semantics when a sparse history has no corresponding raw row. */
   phase?: string;
   submissionStage?: string;
@@ -232,23 +234,25 @@ export function buildMessageActivityTimeline({
         ? 'Awaiting indexed proof of destination execution. Transaction inclusion alone does not prove this message executed.'
         : deliveryObservation
           ? 'The selected relayer observed mailbox delivery. This is an upper bound on when delivery became visible. The destination block timestamp is shown separately.'
-          : 'The message was executed on the destination. The selected relayer’s mailbox delivery observation time is not recorded. Its block timestamp is shown separately.',
+          : 'The message was executed on the destination. When available, the time shown is the destination block timestamp. The selected relayer has not recorded a mailbox delivery observation; its delivery recheck can occur later.',
       delivered
         ? 'complete'
         : working && hasPassedValidation(observation?.state)
           ? 'active'
           : 'pending',
-      delivered ? deliveryObservation?.timestamp : undefined,
+      delivered ? (deliveryObservation?.timestamp ?? deliveryBlockTime) : undefined,
     ),
     summary: !delivered
       ? undefined
       : deliveryObservation
         ? 'Destination execution observed by relayer'
-        : 'Destination execution recorded; observation time unavailable',
+        : deliveryBlockTime !== undefined
+          ? 'Destination block time · relayer observation unavailable'
+          : 'Destination execution recorded; timing unavailable',
     blockTimestamp: deliveryBlockTime,
     orderTimestamp: !deliveryObservation ? deliveryOrderTime : undefined,
     timestampRaw: delivered ? deliveryObservation?.timestampRaw : undefined,
-    timeSource: 'relayer',
+    timeSource: deliveryObservation || !delivered ? 'relayer' : 'chain',
     relayer: observation?.relayer,
     rows: delivered && deliveryObservation?.row ? [deliveryObservation.row] : [],
   });
@@ -259,6 +263,14 @@ export function buildMessageActivityTimeline({
     if (bTime === undefined) return -1;
     return aTime - bTime || timelineRank(a.kind) - timelineRank(b.kind);
   });
+  // Number individual signatures in displayed order, including batches first seen together.
+  const signatureCounts = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.signatureGroup) continue;
+    const count = (signatureCounts.get(entry.signatureGroup) ?? 0) + 1;
+    signatureCounts.set(entry.signatureGroup, count);
+    entry.title = `Signature observed${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
+  }
   const grouped: TimelineEntry[] = [];
   let previousGroup: { fingerprint: string; index: number } | undefined;
   for (const entry of entries) {
@@ -514,13 +526,14 @@ function moduleSignatureEvents(
     const signatures = securityModule.signatures;
     if (!signatures) continue;
     for (const signer of signatures.signers) {
-      const key = `${relayer}:${securityModule.node_id}:${signatures.index ?? '?'}:${signatures.root ?? '?'}:${addressKey(signer.validator)}`;
+      const group = `${relayer}:${securityModule.node_id}:${signatures.index ?? '?'}:${signatures.root ?? '?'}`;
+      const key = `${group}:${addressKey(signer.validator)}`;
       if (seen.has(key)) continue;
       seen.add(key);
       entries.push({
         id: `signature:${activityId}:${key}`,
         kind: 'signature',
-        title: `Signature observed${signatures.threshold == null ? '' : ` (${signatures.signers.length}/${signatures.threshold})`}`,
+        title: 'Signature observed',
         detail: `First available relayer report containing this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. The signature existed by this time; its actual signing and upload times are not recorded.`,
         timestamp,
         timestampRaw,
@@ -528,6 +541,8 @@ function moduleSignatureEvents(
         status: 'complete',
         relayer,
         validator: signer.validator,
+        signatureGroup: group,
+        signatureThreshold: signatures.threshold,
         rows,
         repeatCount: 1,
       });

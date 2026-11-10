@@ -96,3 +96,25 @@ test('links only public signature locations', () => {
   for (const location of ['local', 'javascript:alert(1)', 'not a URL', undefined])
     expect(signatureLocationUrl(location)).toBeUndefined();
 });
+
+test('does not treat latest checkpoint discovery as a signature', () => {
+  expect(
+    getValidatorSignatures(
+      node({
+        validators: [a, b, c],
+        signatures: {
+          signers: [],
+          latest_indices: [
+            { validator: padded(a), index: 0 },
+            { validator: b, index: 12 },
+            { validator: c, index: null },
+          ],
+        },
+      }),
+    ),
+  ).toEqual([
+    { address: a, status: 'unknown', latestIndex: 0 },
+    { address: b, status: 'unknown', latestIndex: 12 },
+    { address: c, status: 'unknown' },
+  ]);
+});

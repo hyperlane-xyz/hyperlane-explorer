@@ -5,6 +5,7 @@ export interface ValidatorSignature {
   status: 'collected' | 'unavailable' | 'unknown';
   location?: string;
   reason?: string;
+  latestIndex?: number;
 }
 
 // Validator checkpoint signers use EVM addresses, independently of the ISM program's VM.
@@ -37,6 +38,9 @@ export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignatu
   const signers = new Map(
     (signatures?.signers ?? []).map((entry) => [key(entry.validator), entry.location ?? undefined]),
   );
+  const latestIndices = new Map(
+    (signatures?.latest_indices ?? []).map((entry) => [key(entry.validator), entry.index]),
+  );
   const addresses = [
     ...new Set([
       ...configured.map(key),
@@ -48,9 +52,12 @@ export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignatu
   ];
 
   return addresses.map((address) => {
+    const latestIndex = latestIndices.get(address);
+    const checkpoint = latestIndex != null ? { latestIndex } : {};
     if (signers.has(address)) {
       return {
         address,
+        ...checkpoint,
         status: 'collected',
         ...(signers.get(address) ? { location: signers.get(address) } : {}),
       };
@@ -58,12 +65,14 @@ export function getValidatorSignatures(node: DiagnosticModule): ValidatorSignatu
     if (unavailable.has(address)) {
       return {
         address,
+        ...checkpoint,
         status: 'unavailable',
         reason: checkpointReason(unavailable.get(address)),
       };
     }
     return {
       address,
+      ...checkpoint,
       status: 'unknown',
       ...(discovery.has(address) ? { reason: discoveryReason(discovery.get(address)) } : {}),
     };
