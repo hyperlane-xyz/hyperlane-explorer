@@ -123,12 +123,7 @@ export function buildMessageActivityTimeline({
   for (const [index, report] of reports.entries()) {
     const { row, state } = report;
     const timestamp = timings.get(row.id)?.timestamp;
-    const signatureEntries = signatureEvents(
-      report,
-      previousReport?.state,
-      seenSignatures,
-      timestamp,
-    );
+    const signatureEntries = signatureEvents(report, seenSignatures, timestamp);
     entries.push(...signatureEntries);
     // Keep phase/failure transitions, but a signature row already contains its raw
     // snapshot and fully describes an otherwise unchanged signature collection.
@@ -203,7 +198,6 @@ export function buildMessageActivityTimeline({
     entries.push(
       ...moduleSignatureEvents(
         observation.state.modules,
-        undefined,
         seenSignatures,
         observation.relayer,
         observation.activityId,
@@ -484,18 +478,12 @@ function reconstructReports(rows: DiagnosticActivity[]): Report[] {
   });
 }
 
-function signatureEvents(
-  report: Report,
-  previous: DiagnosticState | undefined,
-  seen: Set<string>,
-  timestamp?: number,
-): TimelineEntry[] {
-  const { row, state, partial } = report;
+function signatureEvents(report: Report, seen: Set<string>, timestamp?: number): TimelineEntry[] {
+  const { row, state } = report;
   if (!isSupported(row)) return [];
   if (state)
     return moduleSignatureEvents(
       state.modules,
-      partial ? undefined : previous,
       seen,
       row.relayer,
       row.id,
@@ -526,7 +514,7 @@ function signatureEvents(
     {
       id: `signature:${row.id}:${key}`,
       kind: 'signature',
-      title: 'Signature collected',
+      title: 'Signature observed',
       detail: `Relayer reported collecting a signature for checkpoint ${observation.index}. This is the relayer’s observation time, not the validator’s signing or upload time.`,
       timestamp,
       timestampRaw: row.observed_at,
@@ -542,7 +530,6 @@ function signatureEvents(
 
 function moduleSignatureEvents(
   modules: DiagnosticModule[],
-  previous: DiagnosticState | undefined,
   seen: Set<string>,
   relayer: string,
   activityId: string,
@@ -554,13 +541,6 @@ function moduleSignatureEvents(
   for (const securityModule of modules) {
     const signatures = securityModule.signatures;
     if (!signatures) continue;
-    const previousModule = previous?.modules.find(
-      (entry) => entry.node_id === securityModule.node_id,
-    );
-    const comparable =
-      previousModule?.signatures &&
-      previousModule.signatures.index === signatures.index &&
-      previousModule.signatures.root === signatures.root;
     for (const signer of signatures.signers) {
       const key = `${relayer}:${securityModule.node_id}:${signatures.index ?? '?'}:${signatures.root ?? '?'}:${addressKey(signer.validator)}`;
       if (seen.has(key)) continue;
@@ -568,7 +548,7 @@ function moduleSignatureEvents(
       entries.push({
         id: `signature:${activityId}:${key}`,
         kind: 'signature',
-        title: comparable ? 'Signature collected' : 'Signature observed',
+        title: `Signature observed${signatures.threshold == null ? '' : ` (${signatures.signers.length}/${signatures.threshold})`}`,
         detail: `First available relayer report containing this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. The signature existed by this time; its actual signing and upload times are not recorded.`,
         timestamp,
         timestampRaw,

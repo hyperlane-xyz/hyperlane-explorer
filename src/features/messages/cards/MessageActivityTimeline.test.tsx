@@ -82,7 +82,7 @@ const entries: TimelineEntry[] = [
   {
     id: 'signature',
     kind: 'signature',
-    title: 'Signature collected',
+    title: 'Signature observed (1/3)',
     detail: 'The relayer observed this signature; the validator signing time is unavailable.',
     timestamp: dispatchedAt + 4_000,
     timeSource: 'relayer',
@@ -164,7 +164,7 @@ it('shows cumulative and previous-activity intervals together, including time hi
       ),
     ).not.toBeNull();
 
-    const signature = eventRow(container, 'Signature collected');
+    const signature = eventRow(container, 'Signature observed (1/3)');
     expect(signature.querySelector('time')).toBeNull();
     expect(signature.textContent).toContain('+4s');
     expect(signature.textContent).toContain('+500ms since previous');

@@ -24,8 +24,9 @@ const message: MessageStub = {
 };
 const validatorA = '0x1111111111111111111111111111111111111111';
 const validatorB = '0x2222222222222222222222222222222222222222';
+const validatorC = '0x3333333333333333333333333333333333333333';
 
-function module(signers: string[], index = 10, root = 'root'): DiagnosticModule {
+function module(signers: string[], index = 10, root = 'root', threshold = 2): DiagnosticModule {
   return {
     node_id: 'root',
     ism: '0xism',
@@ -34,7 +35,7 @@ function module(signers: string[], index = 10, root = 'root'): DiagnosticModule 
     signatures: {
       index,
       root,
-      threshold: 2,
+      threshold,
       signers: signers.map((validator) => ({ validator })),
       unavailable: [],
     },
@@ -178,11 +179,51 @@ describe('message activity timeline', () => {
     expect(
       entries.map(({ validator, timestamp, title }) => ({ validator, timestamp, title })),
     ).toEqual([
-      { validator: validatorA, timestamp: 111_000, title: 'Signature observed' },
-      { validator: validatorB, timestamp: 113_000, title: 'Signature collected' },
-      { validator: validatorA, timestamp: 114_000, title: 'Signature observed' },
+      { validator: validatorA, timestamp: 111_000, title: 'Signature observed (1/2)' },
+      { validator: validatorB, timestamp: 113_000, title: 'Signature observed (2/2)' },
+      { validator: validatorA, timestamp: 114_000, title: 'Signature observed (1/2)' },
     ]);
     expect(entries[0].detail).toContain('actual signing and upload times are not recorded');
+  });
+
+  it('shows signature progress through the threshold while retaining the validation step', () => {
+    const rows = [
+      activity(1, 'awaiting_signatures', 111_000, {
+        modules: [module([validatorA], 10, 'root', 3)],
+      }),
+      activity(2, 'awaiting_signatures', 112_000, {
+        modules: [module([validatorA, validatorB], 10, 'root', 3)],
+      }),
+      activity(3, 'ready_to_submit', 113_000, {
+        modules: [module([validatorA, validatorB, validatorC], 10, 'root', 3)],
+      }),
+    ];
+    const entries = timeline(rows);
+    expect(
+      entries.filter((entry) => entry.kind === 'signature').map((entry) => entry.title),
+    ).toEqual(['Signature observed (1/3)', 'Signature observed (2/3)', 'Signature observed (3/3)']);
+    expect(entries.find((entry) => entry.kind === 'validation')?.status).toBe('complete');
+  });
+
+  it('uses the reported count when multiple signatures first appear in one snapshot', () => {
+    const entries = timeline([
+      activity(1, 'awaiting_signatures', 111_000, {
+        modules: [module([validatorA, validatorB], 10, 'root', 3)],
+      }),
+    ]);
+    expect(
+      entries.filter((entry) => entry.kind === 'signature').map((entry) => entry.title),
+    ).toEqual(['Signature observed (2/3)', 'Signature observed (2/3)']);
+  });
+
+  it.each([undefined, null])('omits the count when the signature threshold is %s', (threshold) => {
+    const securityModule = module([validatorA]);
+    if (!securityModule.signatures) throw new Error('Fixture must contain signatures');
+    securityModule.signatures.threshold = threshold;
+    const entries = timeline([
+      activity(1, 'awaiting_signatures', 111_000, { modules: [securityModule] }),
+    ]);
+    expect(entries.find((entry) => entry.kind === 'signature')?.title).toBe('Signature observed');
   });
 
   it('normalizes padded validator addresses when deduplicating', () => {
@@ -215,7 +256,7 @@ describe('message activity timeline', () => {
     partial.observed_at = '1970-01-01 00:01:54.123456+00';
     const signature = timeline([partial]).find((entry) => entry.kind === 'signature');
     expect(signature).toMatchObject({
-      title: 'Signature observed',
+      title: 'Signature observed (1/2)',
       timestamp: 114_123,
       timestampRaw: '1970-01-01 00:01:54.123456+00',
     });
@@ -300,7 +341,7 @@ describe('message activity timeline', () => {
     );
     expect(signatures).toHaveLength(1);
     expect(signatures[0]).toMatchObject({
-      title: 'Signature observed',
+      title: 'Signature observed (1/2)',
       rows: [],
       timestamp: 120_000,
     });
@@ -504,7 +545,7 @@ describe('message activity timeline', () => {
     expect(signatures).toHaveLength(1);
     expect(signatures[0]).toMatchObject({
       validator: validatorA,
-      title: 'Signature observed',
+      title: 'Signature observed (1/2)',
       timestamp: 112_000,
       rows: [],
     });
