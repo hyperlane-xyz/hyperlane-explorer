@@ -20,7 +20,9 @@ import { formatAddress, formatTxHash } from '../../../utils/addresses';
 import { truncateString } from '../../../utils/string';
 import { getBlockExplorerTxUrl } from '../../../utils/url';
 import { getChainDisplayName } from '../../chains/utils';
+import { formatUsd } from './gasPaymentSummary';
 import { AddressInline } from './ismRender/AddressInline';
+import { useTokenUsdPrices } from './useNativeTokenUsdPrice';
 
 interface Props {
   message: Message | MessageStub;
@@ -65,7 +67,12 @@ export function MessageOverviewCard({
           label="Source"
           domainId={message.originDomainId}
           token={warpRouteDetails?.originToken}
+          coinGeckoId={
+            warpRouteDetails?.originToken.coinGeckoId ??
+            warpRouteDetails?.destinationToken.coinGeckoId
+          }
           amount={warpRouteDetails?.amount}
+          timestamp={message.origin.timestamp}
           amountLabel="Transfer amount"
           address={warpRouteDetails ? message.origin.from : message.sender}
           addressLabel={warpRouteDetails ? 'Initiated by' : 'Sending application'}
@@ -83,10 +90,15 @@ export function MessageOverviewCard({
           label="Destination"
           domainId={message.destinationDomainId}
           token={warpRouteDetails?.destinationToken}
+          coinGeckoId={
+            warpRouteDetails?.destinationToken.coinGeckoId ??
+            warpRouteDetails?.originToken.coinGeckoId
+          }
           amount={
             warpRouteDetails ? (warpRouteDetails.destAmount ?? warpRouteDetails.amount) : undefined
           }
           amountLabel={delivered ? 'Bridged amount' : 'Expected amount'}
+          timestamp={delivered ? message.destination?.timestamp : undefined}
           address={warpRouteDetails?.transferRecipient ?? message.recipient}
           addressLabel={warpRouteDetails ? 'Transfer recipient' : 'Receiving application'}
         />
@@ -128,20 +140,35 @@ function RouteSide({
   label,
   domainId,
   token,
+  coinGeckoId,
   amount,
   amountLabel,
+  timestamp,
   address,
   addressLabel,
 }: {
   label: string;
   domainId: number;
   token?: TokenArgs;
+  coinGeckoId?: string;
   amount?: string;
   amountLabel: string;
+  timestamp?: number;
   address?: string;
   addressLabel: string;
 }) {
   const resolver = useChainMetadataResolver();
+  const prices = useTokenUsdPrices(
+    coinGeckoId ? [coinGeckoId] : [],
+    !!resolver.tryGetChainMetadata(domainId)?.isTestnet,
+    timestamp,
+  );
+  const price = coinGeckoId ? prices[coinGeckoId] : undefined;
+  const usdValue =
+    amount !== undefined && price != null && Number.isFinite(price) && price >= 0
+      ? new BigNumber(amount).times(price)
+      : undefined;
+  const usdDisplay = usdValue?.isFinite() ? formatUsd(usdValue) : undefined;
   const chainName = resolver.tryGetChainName(domainId) ?? undefined;
   const displayName = chainName ? getChainDisplayName(resolver, chainName) : `Domain ${domainId}`;
   // Warp recipients and transaction initiators are already native account addresses.
@@ -160,15 +187,26 @@ function RouteSide({
         <div className="mt-3">
           <p className="text-xs text-gray-500">{amountLabel}</p>
           <div
-            className="mt-1.5 flex min-w-0 items-center gap-2.5"
+            className="mt-1.5 flex min-w-0 items-start gap-2.5"
             title={`${amount} ${token.symbol ?? ''}`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full">
               <TokenIcon token={token} size={32} />
             </span>
-            <p className="min-w-0 break-words text-lg font-medium text-primary-900">
+            <p className="min-w-0 text-lg font-medium text-primary-900 [overflow-wrap:anywhere]">
               {new BigNumber(amount).toFormat()}{' '}
               <span className="text-base font-normal text-gray-600">{token.symbol}</span>
+              {usdDisplay && (
+                <>
+                  {' '}
+                  <span
+                    className="inline-block max-w-full align-baseline text-xs font-normal leading-5 text-gray-500"
+                    title="Approximate USD value using CoinGecko's daily price for the transaction date, or current price for today and undated transactions."
+                  >
+                    ({usdDisplay})
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
