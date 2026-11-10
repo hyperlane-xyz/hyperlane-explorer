@@ -4,7 +4,6 @@ import clsx from 'clsx';
 import Image from 'next/image';
 import { useState, type ReactNode } from 'react';
 
-import { SendIcon } from '../../../components/icons/SendIcon';
 import HubIcon from '../../../images/icons/hub.svg';
 
 export function MessageTechnicalDetails({
@@ -21,7 +20,7 @@ export function MessageTechnicalDetails({
   const [warpLoaded, setWarpLoaded] = useState(false);
   const tabs = [
     { label: 'Security', icon: <ShieldIcon width={14} height={14} color="currentColor" /> },
-    { label: 'Relayer activity', icon: <SendIcon size={12} /> },
+    { label: 'Relayer activity', icon: null },
     ...(warpRoute
       ? [{ label: 'Warp route', icon: <Image src={HubIcon} width={16} height={16} alt="" /> }]
       : []),
@@ -49,12 +48,14 @@ export function MessageTechnicalDetails({
                 index === 0 ? 'data-[selected]:text-green-800' : 'data-[selected]:text-primary-800',
               )}
             >
-              <span
-                aria-hidden="true"
-                className="flex h-4 w-4 shrink-0 items-center justify-center"
-              >
-                {icon}
-              </span>
+              {icon && (
+                <span
+                  aria-hidden="true"
+                  className="flex h-4 w-4 shrink-0 items-center justify-center"
+                >
+                  {icon}
+                </span>
+              )}
               {label}
             </Tab>
           ))}

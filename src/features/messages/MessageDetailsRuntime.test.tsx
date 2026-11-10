@@ -21,9 +21,6 @@ jest.mock('../deliveryStatus/useMessageDeliveryStatus', () => ({
     isDeliveryStatusFetching: false,
   }),
 }));
-jest.mock('./diagnostics/useOriginConfirmationTimestamp', () => ({
-  useOriginConfirmationTimestamp: () => undefined,
-}));
 
 let mockOnCollateralInfoChange: (info: CollateralInfo) => void;
 const reactTestGlobal = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };

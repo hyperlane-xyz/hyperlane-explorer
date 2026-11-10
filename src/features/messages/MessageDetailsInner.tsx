@@ -115,16 +115,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     originConfirmation.required === undefined
       ? null
       : { required: originConfirmation.required, current: originConfirmation.current ?? null };
-  const originTimestamp = activeRuntimeState?.originConfirmationTimestamp;
-  const timedOriginConfirmation = {
-    ...originConfirmation,
-    timestamp:
-      originConfirmation.timestamp ??
-      (originConfirmation.confirmed &&
-      originTimestamp?.blockNumber === originConfirmation.blockNumber
-        ? originTimestamp?.timestamp
-        : undefined),
-  };
   const isMessageFound = activeRuntimeState?.isMessageFound ?? baseIsMessageFound;
   const isOriginConfirming =
     isMessageFound &&
@@ -190,7 +180,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
             key={`progress-${messageId}`}
             message={message}
             confirmed={confirmed}
-            originConfirmation={timedOriginConfirmation}
+            originConfirmation={originConfirmation}
             messageKind={
               warpRouteDetails
                 ? 'Warp Transfer'
@@ -295,7 +285,6 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
                 destinationChainName={destinationChainName}
                 blur={blur}
                 isOriginConfirming={isOriginConfirming}
-                originConfirmation={originConfirmation}
                 warpRouteDetails={warpRouteDetails}
                 onStateChange={handleRuntimeStateChange}
               />
@@ -315,15 +304,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
               />
             )
           }
-          activity={
-            showLifecycle && (
-              <MessageRelayActivityPanel
-                message={message}
-                confirmed={confirmed}
-                originConfirmation={timedOriginConfirmation}
-              />
-            )
-          }
+          activity={showLifecycle && <MessageRelayActivityPanel message={message} />}
           warpRoute={
             warpRouteDetails &&
             warpVisualization && (
@@ -457,9 +438,7 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.collateralInfo.status === b.collateralInfo.status &&
     a.collateralInfo.available === b.collateralInfo.available &&
     a.collateralInfo.required === b.collateralInfo.required &&
-    a.collateralInfo.deficit === b.collateralInfo.deficit &&
-    a.originConfirmationTimestamp?.blockNumber === b.originConfirmationTimestamp?.blockNumber &&
-    a.originConfirmationTimestamp?.timestamp === b.originConfirmationTimestamp?.timestamp
+    a.collateralInfo.deficit === b.collateralInfo.deficit
   );
 }
 

@@ -1,0 +1,146 @@
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  position: relative;
+}
+.row:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 26px;
+  bottom: -1px;
+  border-left: 1px solid #dfe3e8;
+}
+.event {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+.node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  height: 28px;
+  border: 1px solid;
+  border-radius: 50%;
+  background: #f8f8ff;
+}
+.observed {
+  color: theme('colors.primary.600');
+  border-color: theme('colors.primary.50');
+  background: theme('colors.accent.25');
+}
+.success {
+  color: #236a45;
+  border-color: #bed5c9;
+  background: #edf5ef;
+}
+.failed {
+  color: #85120e;
+  border-color: #ebc7c5;
+  background: #fcf3f2;
+}
+.pending {
+  color: #9ca3af;
+  border-color: #dfe3e8;
+  border-style: dashed;
+}
+.active {
+  box-shadow: 0 0 0 3px #860fdc0d;
+}
+.active::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  border-radius: 50%;
+  animation: activity-loading 1.2s linear infinite;
+}
+@keyframes activity-loading {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.details {
+  min-width: 0;
+  flex: 1;
+}
+.summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 4px 8px 8px;
+  margin-left: -8px;
+  border-radius: 4px;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 150ms;
+}
+.summary::-webkit-details-marker {
+  display: none;
+}
+.summary:hover {
+  background: #ebedf066;
+}
+.summary:focus-visible {
+  outline: 2px solid #9a0dff;
+  outline-offset: 2px;
+}
+.description {
+  min-width: 0;
+  flex: 1;
+}
+.timing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  white-space: nowrap;
+}
+.chevron {
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 12px;
+  transition: transform 150ms;
+}
+.details[open] > .summary .chevron {
+  transform: rotate(90deg);
+}
+.expansion {
+  margin: 4px 0 10px;
+  border: 1px solid #dfe3e8;
+  border-radius: 6px;
+  background: #f3f4f680;
+  padding: 12px;
+}
+@media (max-width: 479px) {
+  .summary {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .timing {
+    align-items: flex-start;
+  }
+  .event {
+    gap: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .active::after {
+    animation: none;
+  }
+  .summary,
+  .chevron {
+    transition: none;
+  }
+}

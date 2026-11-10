@@ -214,7 +214,7 @@ export function computeFeeBps(fee: BigNumber, sentAmount: BigNumber): string | u
   // bps × 100 = fee / amount * 10_000 * 100. Stay in BigNumber land: fee and
   // sentAmount can both exceed Number.MAX_SAFE_INTEGER, so `.toNumber()` would
   // throw an ethers NUMERIC_FAULT. Format the fixed-point string by hand.
-  const bpsHundredths = fee.mul(1_000_000).div(sentAmount);
+  const bpsHundredths = fee.mul(1_000_000).add(sentAmount.div(2)).div(sentAmount);
   if (bpsHundredths.isZero()) return undefined;
   const whole = bpsHundredths.div(100).toString();
   const fractional = bpsHundredths.mod(100).toString().padStart(2, '0').replace(/0+$/, '');

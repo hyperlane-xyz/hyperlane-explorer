@@ -125,13 +125,7 @@ function parseEnrollment(
   }
 }
 
-/**
- * Hook to get warp route visualization data for a message.
- * Uses only registry data (no RPC calls) for token type information.
- */
-export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
-  visualization: WarpRouteVisualization | undefined;
-} {
+export function useWarpRouteConfig(warpRouteDetails: WarpRouteDetails | undefined) {
   const warpRouteConfigs = useStore((s) => s.warpRouteConfigs);
 
   // Find the matching warp route config
@@ -143,7 +137,7 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
   const preferredRouteId =
     warpRouteDetails?.originToken.warpRouteId || warpRouteDetails?.destinationToken.warpRouteId;
 
-  const warpRoute = useMemo(() => {
+  return useMemo(() => {
     if (!originTokenAddress) return undefined;
     return findWarpRouteConfig(
       warpRouteConfigs,
@@ -161,6 +155,13 @@ export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | u
     destinationChainName,
     preferredRouteId,
   ]);
+}
+
+/** Registry-only visualization data; no RPC calls. */
+export function useWarpRouteVisualization(warpRouteDetails: WarpRouteDetails | undefined): {
+  visualization: WarpRouteVisualization | undefined;
+} {
+  const warpRoute = useWarpRouteConfig(warpRouteDetails);
 
   // Build the visualization data directly from registry config
   const visualization = useMemo((): WarpRouteVisualization | undefined => {
