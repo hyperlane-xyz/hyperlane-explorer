@@ -16,26 +16,30 @@ export function WarpFeeDetails({
   if (!warpRouteDetails || !fees) return null;
 
   return (
-    <div className={`min-w-0 ${className}`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs">
-        <h4 className="text-gray-500">
-          Warp fee <span className="text-xxs">(inferred)</span>
-        </h4>
-        <p className={`break-all font-mono font-medium text-gray-800 ${blur ? 'blur-xs' : ''}`}>
+    <dl className={`grid min-w-0 gap-3 text-xs sm:grid-cols-2 sm:gap-6 ${className}`}>
+      <div className="min-w-0">
+        <dt
+          className="text-gray-500"
+          title="Inferred from origin transaction amounts. BPS is the effective fee divided by the transferred amount, rounded to two decimals; it is not the configured fee rate."
+        >
+          Warp fee
+        </dt>
+        <dd className={`mt-1 break-all font-mono text-gray-800 ${blur ? 'blur-xs' : ''}`}>
           {fees.bridgeFee} {fees.tokenSymbol}
-          {fees.bridgeFeeBps ? ` (${fees.bridgeFeeBps} bps)` : ''}
-        </p>
+          {fees.bridgeFeeBps ? ` (≈${fees.bridgeFeeBps} bps)` : ''}
+        </dd>
       </div>
-      <p
-        className="mt-1 text-xxs leading-relaxed text-gray-500"
-        title="Inferred from origin transaction amounts, excluding identified IGP payments. This is a transfer-token route fee, not an all-in transaction cost."
-      >
-        Transfer + Warp fee:{' '}
-        <span className={blur ? 'blur-xs' : ''}>
+      <div className="min-w-0">
+        <dt
+          className="text-gray-500"
+          title="Transfer amount plus Warp fee. Excludes IGP payments and transaction gas."
+        >
+          Total debited (excl. gas)
+        </dt>
+        <dd className={`mt-1 break-all font-mono text-gray-800 ${blur ? 'blur-xs' : ''}`}>
           {fees.totalSent} {fees.tokenSymbol}
-        </span>{' '}
-        · Excludes IGP payments.
-      </p>
-    </div>
+        </dd>
+      </div>
+    </dl>
   );
 }
