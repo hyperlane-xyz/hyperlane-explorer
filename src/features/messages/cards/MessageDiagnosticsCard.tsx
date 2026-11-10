@@ -200,10 +200,7 @@ function IsmTree({
   }
 
   return (
-    <ul
-      aria-label="ISM validation tree"
-      className="space-y-1 rounded-xl border border-gray-200 bg-gray-50/70 p-2 sm:p-3"
-    >
+    <ul aria-label="ISM validation tree" className="space-y-1.5">
       {roots.map((nodeId) => (
         <IsmTreeNode
           key={nodeId}
@@ -302,12 +299,11 @@ function IsmTreeNode({
       data-state={status}
       className={clsx('min-w-0', ancestors.length > 0 && styles.branch)}
     >
-      <details className="peer group/node rounded-xl open:bg-green-25/15 open:shadow-sm">
+      <details className="peer group/node overflow-hidden rounded-xl border border-gray-200 bg-white open:shadow-sm">
         <summary
           className={clsx(
-            'grid cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_0.5rem] items-center gap-x-2 gap-y-1 rounded-xl border border-gray-200 px-2 py-2 text-xs transition-colors hover:bg-gray-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-500 motion-reduce:transition-none sm:flex sm:gap-2 [&::-webkit-details-marker]:hidden',
-            complete && 'bg-gradient-to-r from-green-25/40 to-transparent',
-            working && 'bg-gradient-to-r from-gray-150 to-transparent',
+            'grid cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_0.5rem] items-center gap-x-2 gap-y-1 px-3 py-2.5 text-xs transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-green-500 group-open/node:bg-gray-50 motion-reduce:transition-none sm:flex sm:gap-2 [&::-webkit-details-marker]:hidden',
+            (working || unused) && 'bg-gray-50',
           )}
         >
           <span
@@ -359,7 +355,7 @@ function IsmTreeNode({
                 : status === 'failed'
                   ? 'border-red-100 bg-red-100/20 text-red-700'
                   : complete
-                    ? 'border-green-100 bg-green-25/50 text-green-600'
+                    ? 'border-green-100/60 bg-green-25/40 text-green-600'
                     : working
                       ? 'border-gray-200 bg-gray-100 text-gray-600'
                       : 'border-gray-200 bg-gray-100 text-gray-500',
@@ -374,7 +370,7 @@ function IsmTreeNode({
             ›
           </span>
         </summary>
-        <div className="space-y-3 px-3 py-3 text-xs leading-relaxed text-gray-600 sm:px-4">
+        <div className="space-y-3 border-t border-gray-200 px-3 py-3 text-xs leading-relaxed text-gray-600 sm:px-4">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <span className="text-xxs font-medium text-gray-500">ISM program</span>
             <ProgramAddress address={node.ism} chainName={chainName} />
@@ -458,7 +454,7 @@ function IsmProofDetails({
   if (signatures?.index == null && !signatures?.root && !leaf && !gateway && !verification)
     return null;
   return (
-    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-xl border border-green-100/40 bg-green-25/30 px-3 py-3">
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
       <ProofField label="Checkpoint index">{signatures?.index}</ProofField>
       {signatures?.root && (
         <ProofField label="Checkpoint root" className="flex items-start gap-2">
@@ -526,126 +522,111 @@ function ProofField({
 
 function ValidatorSignatures({ node, muted }: { node: DiagnosticModule; muted: boolean }) {
   const validators = getValidatorSignatures(node);
-  const collected = validators.filter(({ status }) => status === 'collected').length;
   const hasLatestIndices = validators.some(({ latestIndex }) => latestIndex != null);
   const hasUnknownSignatures = validators.some(({ status }) => status === 'unknown');
   const columns = hasLatestIndices
     ? 'sm:grid-cols-[minmax(0,1fr)_8rem_9rem]'
     : 'sm:grid-cols-[minmax(0,1fr)_9rem]';
   return (
-    <div className="overflow-hidden rounded-xl border border-green-100/40 bg-white/60">
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-green-25/30 px-3 py-2">
-        <h3 className="flex items-center gap-2 text-xs font-medium text-gray-800">
-          <PersonIcon width={15} height={15} className="text-green-600" aria-hidden="true" />
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div
+        className={clsx(
+          'grid items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xxs text-gray-500',
+          columns,
+        )}
+      >
+        <h3 className="flex items-center gap-2 font-medium text-gray-700">
+          <PersonIcon width={15} height={15} aria-hidden="true" />
           Validators
         </h3>
-        <span className="rounded-full border border-green-100/50 bg-white/70 px-2 py-0.5 text-xxs text-green-600">
-          {collected} {collected === 1 ? 'signature' : 'signatures'} observed
-        </span>
+        {hasLatestIndices && <span className="hidden text-right sm:block">Latest checkpoint</span>}
+        <span className="hidden text-right sm:block">Signature</span>
       </div>
       {!validators.length ? (
         <p className="px-3 py-3 text-gray-500">Validator addresses are not recorded.</p>
       ) : (
-        <>
-          <div
-            aria-hidden="true"
-            className={clsx(
-              'hidden gap-3 border-y border-green-100/30 bg-green-25/15 px-3 py-1.5 text-xxs text-gray-500 sm:grid',
-              columns,
-            )}
-          >
-            <span>Validator</span>
-            {hasLatestIndices && <span className="text-right">Latest checkpoint</span>}
-            <span className="text-right">Signature</span>
-          </div>
-          <ul className="divide-y divide-green-100/25" aria-label="Validator signatures">
-            {validators.map(({ address, status, location, reason, latestIndex }) => {
-              const locationUrl = signatureLocationUrl(location);
-              return (
-                <li
-                  key={address}
-                  data-validator-status={status}
-                  className={clsx(
-                    'grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-1.5 transition-colors hover:bg-green-25/40',
-                    columns,
-                  )}
-                >
-                  <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1">
-                    <span
-                      aria-hidden="true"
-                      className={clsx(
-                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border',
-                        !muted && status === 'collected'
-                          ? 'border-green-100/50 bg-green-25/60 text-green-600'
-                          : 'border-gray-200 bg-gray-100 text-gray-500',
-                      )}
-                    >
-                      <PersonIcon width={14} height={14} />
-                    </span>
-                    <span title={address} className="truncate font-mono text-xs text-gray-700">
-                      {truncateString(address, 8, 6)}
-                    </span>
-                    <CopyButton
-                      copyValue={address}
-                      width={12}
-                      height={12}
-                      aria-label="Copy validator address"
-                      className="shrink-0 text-gray-500 opacity-60 [&_rect]:stroke-current [&_path]:fill-current"
-                    />
-                  </div>
-                  {hasLatestIndices && (
-                    <div className="flex items-center gap-1.5 text-xxs sm:justify-end">
-                      <span className="text-gray-500 sm:hidden">Latest checkpoint</span>
-                      <span className="rounded-full border border-green-100/50 bg-green-25/30 px-2 py-0.5 font-mono text-gray-700">
-                        {latestIndex ?? '—'}
-                      </span>
-                    </div>
-                  )}
+        <ul className="divide-y divide-gray-200/70" aria-label="Validator signatures">
+          {validators.map(({ address, status, location, reason, latestIndex }) => {
+            const locationUrl = signatureLocationUrl(location);
+            return (
+              <li
+                key={address}
+                data-validator-status={status}
+                className={clsx(
+                  'grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-1.5 transition-colors even:bg-gray-50/60 hover:bg-gray-100/70',
+                  columns,
+                )}
+              >
+                <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1">
                   <span
-                    className={clsx(
-                      'justify-self-end rounded-full border px-2 py-0.5 text-xxs font-medium',
-                      !hasLatestIndices && 'col-span-2 sm:col-span-1',
-                      !muted && status === 'collected'
-                        ? 'border-green-100/50 bg-green-25/30 text-green-600'
-                        : 'border-gray-200 bg-gray-100/70 text-gray-500',
-                    )}
-                    title={reason}
+                    aria-hidden="true"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 text-gray-500"
                   >
-                    {locationUrl ? (
-                      <a
-                        href={locationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Open signature location for ${address}`}
-                        title={location}
-                        className="inline-flex items-center gap-1.5 leading-none transition-colors hover:text-green-800"
-                      >
-                        <span>✓ Observed</span>
-                        <BoxArrowIcon width={11} height={11} aria-hidden="true" />
-                      </a>
-                    ) : (
-                      <span>
-                        {status === 'collected'
-                          ? '✓ Observed'
-                          : status === 'unavailable'
-                            ? 'Unavailable'
-                            : 'Not reported'}
-                      </span>
-                    )}
+                    <PersonIcon width={14} height={14} />
                   </span>
-                  {reason && (
-                    <p className="col-span-full pl-8 text-xxs leading-relaxed text-gray-500">
-                      {reason}
-                    </p>
+                  <span title={address} className="truncate font-mono text-xs text-gray-700">
+                    {truncateString(address, 8, 6)}
+                  </span>
+                  <CopyButton
+                    copyValue={address}
+                    width={12}
+                    height={12}
+                    aria-label="Copy validator address"
+                    className="shrink-0 text-gray-500 opacity-60 [&_rect]:stroke-current [&_path]:fill-current"
+                  />
+                </div>
+                {hasLatestIndices && (
+                  <div className="flex items-center gap-1.5 text-xxs sm:justify-end">
+                    <span className="text-gray-500 sm:sr-only">Latest checkpoint</span>
+                    <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-gray-700">
+                      {latestIndex ?? '—'}
+                    </span>
+                  </div>
+                )}
+                <span
+                  className={clsx(
+                    'justify-self-end rounded-full border px-2 py-0.5 text-xxs font-medium',
+                    !hasLatestIndices && 'col-span-2 sm:col-span-1',
+                    !muted && status === 'collected'
+                      ? 'border-green-100/70 bg-green-25/60 text-green-600'
+                      : 'border-gray-200 bg-gray-100/70 text-gray-500',
                   )}
-                </li>
-              );
-            })}
-          </ul>
-        </>
+                  title={reason}
+                >
+                  {locationUrl ? (
+                    <a
+                      href={locationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open signature location for ${address}`}
+                      title={location}
+                      className="inline-flex items-center gap-1.5 leading-none transition-colors hover:text-green-800"
+                    >
+                      <span>✓ Observed</span>
+                      <BoxArrowIcon width={11} height={11} aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span>
+                      {status === 'collected'
+                        ? '✓ Observed'
+                        : status === 'unavailable'
+                          ? 'Unavailable'
+                          : 'Not reported'}
+                    </span>
+                  )}
+                </span>
+                {reason && (
+                  <p className="col-span-full pl-8 text-xxs leading-relaxed text-gray-500">
+                    {reason}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
       {(hasLatestIndices || hasUnknownSignatures) && (
-        <div className="space-y-0.5 border-t border-green-100/30 bg-green-25/15 px-3 py-1.5 text-xxs leading-relaxed text-gray-500">
+        <div className="space-y-0.5 border-t border-gray-200 bg-gray-50 px-3 py-1.5 text-xxs leading-relaxed text-gray-500">
           {hasLatestIndices && (
             <p>Checkpoint indices were observed by this relayer during proof collection.</p>
           )}

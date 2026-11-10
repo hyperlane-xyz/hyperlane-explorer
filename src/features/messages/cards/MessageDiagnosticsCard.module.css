@@ -16,11 +16,6 @@
   border-top-style: dashed;
 }
 
-.branch[data-state='verified']::before,
-.branch[data-state='ready']::before {
-  border-color: #93baa6;
-}
-
 .check {
   display: flex;
   animation: check-in 250ms ease-out;
