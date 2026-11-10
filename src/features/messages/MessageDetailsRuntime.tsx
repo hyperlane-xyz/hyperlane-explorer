@@ -1,23 +1,15 @@
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { Message, MessageStub, WarpRouteDetails } from '../../types';
 import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
+import { DestinationTransactionPreviewCard } from './cards/OriginTransactionCard';
 import { CollateralInfo, CollateralStatus } from './collateral/types';
-import { DetailSectionSkeleton } from './MessageDetailsLoading';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
-const DestinationTransactionCard = dynamic(
-  () => import('./cards/TransactionCard').then((mod) => mod.DestinationTransactionCard),
-  {
-    loading: () => (
-      <DetailSectionSkeleton
-        className="flex min-w-0 flex-1 basis-full flex-col sm:basis-0"
-        rows={5}
-      />
-    ),
-  },
+const DestinationTransactionCard = lazy(() =>
+  import('./cards/TransactionCard').then((mod) => ({ default: mod.DestinationTransactionCard })),
 );
 const PiMessageDetailsBridge = dynamic(() =>
   import('./PiMessageDetailsBridge').then((mod) => mod.PiMessageDetailsBridge),
@@ -107,6 +99,14 @@ export function MessageDetailsRuntime({
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
   const hasRun =
     hasInitialMessageDetails || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
+  const transactionProps = {
+    chainName: destinationChainName,
+    domainId: message?.destinationDomainId ?? queriedMessage.destinationDomainId,
+    status: message?.status ?? queriedMessage.status,
+    transaction: message?.destination,
+    blur,
+    isOriginConfirming,
+  };
 
   useEffect(() => {
     onStateChange({
@@ -138,20 +138,24 @@ export function MessageDetailsRuntime({
           onStateChange={handlePiStateChange}
         />
       )}
-      <DestinationTransactionCard
-        chainName={destinationChainName}
-        domainId={message?.destinationDomainId ?? queriedMessage.destinationDomainId}
-        status={message?.status ?? queriedMessage.status}
-        transaction={message?.destination}
-        debugResult={debugResult}
-        isStatusFetching={isDeliveryStatusFetching}
-        isOriginConfirming={isOriginConfirming}
-        isPiMsg={message?.isPiMsg}
-        blur={blur}
-        message={message || queriedMessage}
-        warpRouteDetails={warpRouteDetails}
-        onCollateralInfoChange={handleCollateralInfoChange}
-      />
+      <Suspense
+        fallback={
+          <DestinationTransactionPreviewCard
+            {...transactionProps}
+            isLiveDetailsPending={isDeliveryStatusFetching}
+          />
+        }
+      >
+        <DestinationTransactionCard
+          {...transactionProps}
+          debugResult={debugResult}
+          isStatusFetching={isDeliveryStatusFetching}
+          isPiMsg={message?.isPiMsg}
+          message={message ?? queriedMessage}
+          warpRouteDetails={warpRouteDetails}
+          onCollateralInfoChange={handleCollateralInfoChange}
+        />
+      </Suspense>
     </>
   );
 }

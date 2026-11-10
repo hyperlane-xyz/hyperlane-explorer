@@ -169,11 +169,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
   const pause = status !== MessageStatus.Delivered ? getMessagePause(message) : undefined;
 
   return (
-    <MessageDiagnosticsProvider
-      messageId={messageId}
-      live={showLifecycle && status !== MessageStatus.Delivered}
-      enabled={showLifecycle}
-    >
+    <MessageDiagnosticsProvider messageId={messageId} live={showLifecycle} enabled={showLifecycle}>
       <div className="mx-auto w-full min-w-0 max-w-5xl space-y-4 sm:space-y-5">
         {isMessageFound ? (
           <MessageLifecycleCard
@@ -245,6 +241,15 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           />
         )}
 
+        {showLifecycle && (
+          <MessageDiagnosticsCard
+            key={`security-${messageId}`}
+            originDomainId={originDomainId}
+            destinationChainName={destinationChainName}
+            delivered={status === MessageStatus.Delivered}
+          />
+        )}
+
         <div hidden={!isMessageFound}>
           <div className="flex min-w-0 flex-wrap gap-4">
             <OriginTransactionCard
@@ -292,30 +297,21 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
           </div>
         </div>
 
-        <MessageTechnicalDetails
-          key={`technical-${messageId}`}
-          hidden={!isMessageFound}
-          security={
-            showLifecycle && (
-              <MessageDiagnosticsCard
-                originDomainId={originDomainId}
-                destinationChainName={destinationChainName}
-                delivered={status === MessageStatus.Delivered}
-              />
-            )
-          }
-          activity={showLifecycle && <MessageRelayActivityPanel message={message} />}
-          warpRoute={
-            warpRouteDetails &&
-            warpVisualization && (
-              <WarpRouteVisualizationCard
-                warpRouteDetails={warpRouteDetails}
-                visualization={warpVisualization}
-                blur={blur}
-              />
-            )
-          }
-        />
+        {showLifecycle && (
+          <MessageTechnicalDetails
+            key={`activity-${messageId}`}
+            activity={<MessageRelayActivityPanel message={message} />}
+            warpRoute={
+              warpRouteDetails && warpVisualization ? (
+                <WarpRouteVisualizationCard
+                  warpRouteDetails={warpRouteDetails}
+                  visualization={warpVisualization}
+                  blur={blur}
+                />
+              ) : undefined
+            }
+          />
+        )}
       </div>
     </MessageDiagnosticsProvider>
   );

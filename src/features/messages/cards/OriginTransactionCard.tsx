@@ -25,7 +25,7 @@ export function OriginTransactionCard({
       domainId={domainId}
       transaction={transaction}
       blur={blur}
-      title="Origin transaction"
+      title="Origin transaction details"
       helpText={transactionHelpText.origin}
     >
       {children}
@@ -57,7 +57,7 @@ export function DestinationTransactionPreviewCard({
         domainId={domainId}
         transaction={transaction}
         blur={blur}
-        title="Delivery transaction"
+        title="Delivery transaction details"
         helpText={transactionHelpText.destination}
       />
     );
@@ -67,7 +67,7 @@ export function DestinationTransactionPreviewCard({
     <TransactionRecordCard
       chainName={chainName}
       domainId={domainId}
-      title="Delivery transaction"
+      title="Delivery transaction details"
       helpText={transactionHelpText.destination}
     >
       <div className="space-y-2">

@@ -2,6 +2,7 @@ import { CopyButton } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { useId, useMemo, useState, type ReactNode } from 'react';
 
+import { PayloadIcon } from '../../../components/icons/PayloadIcon';
 import type { Message, MessageStub } from '../../../types';
 import { tryUtf8DecodeBytes } from '../../../utils/string';
 
@@ -9,32 +10,23 @@ interface Props {
   message: Message | MessageStub;
   compact?: boolean;
   details?: ReactNode;
-  title?: string;
+  messageType?: string;
+  footer?: ReactNode;
+  className?: string;
 }
 
-export function MessagePayload({ message, compact, details, title = 'Payload' }: Props) {
-  return (
-    <Payload
-      key={message.msgId}
-      body={message.body}
-      compact={compact}
-      details={details}
-      title={title}
-    />
-  );
+export function MessagePayload({ message, ...props }: Props) {
+  return <Payload key={message.msgId} body={message.body} {...props} />;
 }
 
 function Payload({
   body,
   compact,
   details,
-  title,
-}: {
-  body: string;
-  compact?: boolean;
-  details?: ReactNode;
-  title: string;
-}) {
+  messageType,
+  footer,
+  className,
+}: Omit<Props, 'message'> & { body: string }) {
   const [selectedView, setView] = useState<'hex' | 'text' | 'details'>();
   const hasDetails = !!details;
   // Async decoding may choose the default, but must not replace an explicit view.
@@ -74,11 +66,18 @@ function Payload({
   return (
     <section
       aria-label="Message payload"
-      className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
+      className={clsx(
+        'shadow-card min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white',
+        className,
+      )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-150/70 px-4 py-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-800">{title}</h3>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            <PayloadIcon className="text-primary-700" aria-hidden="true" />
+            <h2 className="text-sm font-medium text-gray-800">Message payload</h2>
+          </div>
+          {messageType && <span className="text-xs text-gray-500">{messageType}</span>}
           <span className="rounded border border-gray-200 bg-white/70 px-1.5 py-0.5 text-xxs tabular-nums text-gray-500">
             {byteCount === undefined
               ? 'Byte count unavailable'
@@ -160,6 +159,7 @@ function Payload({
           )}
         </div>
       )}
+      {footer}
     </section>
   );
 }

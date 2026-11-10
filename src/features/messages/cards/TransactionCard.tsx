@@ -184,7 +184,7 @@ export function DestinationTransactionCard({
     <TransactionRecordCard
       chainName={chainName}
       domainId={domainId}
-      title="Delivery transaction"
+      title="Delivery transaction details"
       helpText={transactionHelpText.destination}
     >
       {content}
