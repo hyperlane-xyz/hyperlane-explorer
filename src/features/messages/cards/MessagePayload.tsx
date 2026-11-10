@@ -74,7 +74,9 @@ function Payload({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-150/70 px-4 py-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="flex shrink-0 items-center gap-2">
-            <PayloadIcon className="text-primary-700" aria-hidden="true" />
+            <span className="rounded-lg border border-gray-200 bg-white/70 p-1.5 text-gray-600">
+              <PayloadIcon aria-hidden="true" />
+            </span>
             <h2 className="text-sm font-medium text-gray-800">Message payload</h2>
           </div>
           {messageType && <span className="text-xs text-gray-500">{messageType}</span>}
