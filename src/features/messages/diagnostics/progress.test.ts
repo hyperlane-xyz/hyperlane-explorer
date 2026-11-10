@@ -1,5 +1,5 @@
 import { MessageStatus } from '../../../types';
-import { diagnosticsConnectionLabel, getMessageProgress } from './progress';
+import { diagnosticsConnectionLabel, getDeliveryRetryStatus, getMessageProgress } from './progress';
 
 const progress = (
   messageStatus: MessageStatus,
@@ -111,4 +111,30 @@ test('labels diagnostics connection state consistently', () => {
   expect(
     (['historical', 'connecting', 'live', 'disconnected'] as const).map(diagnosticsConnectionLabel),
   ).toEqual(['Recorded', 'Connecting', 'Live', 'Reconnecting']);
+});
+
+test.each([4, 5, '5', 57])(
+  'shows the retry warning at counter 5, including metadata retries: %s',
+  (count) => {
+    const state = {
+      phase: 'retrying',
+      retry: { count, reason: 'CouldNotFetchMetadata' },
+      modules: [],
+    };
+    expect(getDeliveryRetryStatus(state)).toEqual({
+      retryCount: Number(count),
+      showWarning: Number(count) >= 5,
+    });
+    expect(getDeliveryRetryStatus({ ...state, phase: 'submitting' }).showWarning).toBe(false);
+    expect(getDeliveryRetryStatus({ ...state, phase: 'delivered' }).showWarning).toBe(false);
+  },
+);
+
+test('handles missing retry data and applies the same threshold to signatures and stopped attempts', () => {
+  expect(getDeliveryRetryStatus(undefined).showWarning).toBe(false);
+  for (const phase of ['awaiting_signatures', 'dropped']) {
+    expect(getDeliveryRetryStatus({ phase, retry: { count: 5 }, modules: [] }).showWarning).toBe(
+      true,
+    );
+  }
 });

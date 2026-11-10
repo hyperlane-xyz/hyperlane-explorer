@@ -13,6 +13,7 @@ import {
   MessageTxStub,
   WarpRouteDetails,
 } from '../../../types';
+import { debugStatusToDesc } from '../../debugger/strings';
 import { MessageDebugResult } from '../../debugger/types';
 import { CollateralInfo } from '../collateral/types';
 import { useCollateralStatus } from '../collateral/useCollateralStatus';
@@ -115,6 +116,18 @@ export function DestinationTransactionCard({
         <div className="mt-3 flex items-center justify-center">
           <SpinnerIcon width={24} height={24} color={Color.primaryDark} />
         </div>
+      </DeliveryStatus>
+    );
+  } else if (status === MessageStatus.Failing && debugResult) {
+    // TODO: Deprecate this legacy debugger display once detailed error logs
+    // are available from the relayer.
+    content = (
+      <DeliveryStatus>
+        <p className="text-sm font-medium text-red-700">{debugStatusToDesc[debugResult.status]}</p>
+        {debugResult.description && (
+          <p className="mt-2 break-words text-sm text-gray-700">{debugResult.description}</p>
+        )}
+        <CallDataModal debugResult={debugResult} />
       </DeliveryStatus>
     );
   } else if ([MessageStatus.Pending, MessageStatus.Failing].includes(status)) {

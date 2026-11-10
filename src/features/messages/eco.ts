@@ -3,13 +3,23 @@ import type { MessageStub } from '../../types';
 // Eco Routes 2.12 HyperProver, verified via PORTAL(), getProofType() and version().
 // Match both endpoints; matching payload bytes alone does not identify the application.
 const hyperProver = /^(?:0x)?(?:0{24})?ec08fb4647f3f50d1162a578d481266687c60fc5$/i;
+// Eco SVM HyperProver's ["dispatcher"] PDA for EcoHjwFYKtiHp5ZuFQBc87GDikm9Lc5EYapKywjNAQQF.
+// Verified against the Base prover's isWhitelisted(bytes32) (2026-11-10).
+const solanaDomain = 1399811149;
+const solanaDispatcher = 'GpwQB7Tagvpy9L4maoBHyyLDJSULw2Jm8qrA2FUnpmTw';
+const solanaDispatcherHex =
+  /^(?:0x)?eb271c9835e07375ea946dd4ad71aefd2559cb5da27e7ece8c5b13d3147a8652$/i;
 // Low 20 bytes of keccak256("eco.portal.intent.cancelled"), from Eco's Intent.sol.
 const cancelledClaimant = '0xe685056aec77686a83e2a6bdf37c6f71dd2fdb5f';
 
-type EcoMessage = Pick<MessageStub, 'sender' | 'recipient' | 'body'>;
+type EcoMessage = Pick<MessageStub, 'originDomainId' | 'sender' | 'recipient' | 'body'>;
 
-export function isEcoMessage(message: Pick<EcoMessage, 'sender' | 'recipient'>) {
-  return hyperProver.test(message.sender) && hyperProver.test(message.recipient);
+export function isEcoMessage(message: Omit<EcoMessage, 'body'>) {
+  const knownSender =
+    hyperProver.test(message.sender) ||
+    (message.originDomainId === solanaDomain &&
+      (message.sender === solanaDispatcher || solanaDispatcherHex.test(message.sender)));
+  return knownSender && hyperProver.test(message.recipient);
 }
 
 export function decodeEcoMessage(message: EcoMessage) {

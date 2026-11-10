@@ -74,9 +74,6 @@ export function getMessageProgress({
     explanation = 'The earlier commitment is still pending. Relayers will continue automatically.';
   else if (waitingForAttestation)
     explanation = 'The offchain attestation is pending. Relayers will continue automatically.';
-  else if (messageStatus === MessageStatus.Failing)
-    explanation =
-      'The message remains pending while relayers retry. See the notice below for details.';
   else if (hasRelayIssue)
     explanation = 'The message remains pending while relayers retry automatically.';
   else if (originConfirming)
@@ -98,6 +95,18 @@ export function getMessageProgress({
       !delivered && (state?.phase === 'dropped' || messageStatus === MessageStatus.Unknown),
     status,
     waitingForCommit,
+  };
+}
+
+/** The persisted retry counter includes metadata and attestation delays. */
+export function getDeliveryRetryStatus(state?: DiagnosticState) {
+  const count = Number(state?.retry?.count);
+  const retryCount = Number.isSafeInteger(count) && count >= 0 ? count : 0;
+  return {
+    retryCount,
+    showWarning:
+      retryCount >= 5 &&
+      ['retrying', 'awaiting_signatures', 'dropped'].includes(state?.phase ?? ''),
   };
 }
 

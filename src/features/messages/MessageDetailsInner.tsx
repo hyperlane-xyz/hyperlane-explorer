@@ -21,6 +21,7 @@ import {
   MessageDiagnosticsProvider,
   useMessageDiagnosticsContext,
 } from './diagnostics/MessageDiagnosticsContext';
+import { getDeliveryRetryStatus } from './diagnostics/progress';
 import { diagnosticLabel } from './diagnostics/types';
 import { useOriginConfirmation } from './diagnostics/useOriginConfirmation';
 import { isEcoMessage } from './eco';
@@ -333,23 +334,30 @@ function DeliveryIssueNotice({
 }) {
   const { observation } = useMessageDiagnosticsContext();
   const state = observation?.state;
+  const deliveryFailure = getDeliveryRetryStatus(state);
   const insufficient = collateralInfo?.status === CollateralStatus.Insufficient;
-  if (!pause && !insufficient && status !== MessageStatus.Failing) return null;
+  const relayIssue = deliveryFailure.showWarning;
+  if (status === MessageStatus.Delivered || (!pause && !insufficient && !relayIssue)) return null;
 
+  const relayStopped = relayIssue && state?.phase === 'dropped';
   const title = pause
     ? 'Delivery is paused'
     : insufficient
       ? 'Destination liquidity required'
-      : 'Delivery attempt will retry';
+      : relayStopped
+        ? 'Relayer stopped this attempt'
+        : 'Delivery attempt will retry';
   const description = pause
     ? 'This route or chain is paused. The message remains pending until delivery can resume.'
     : insufficient
       ? 'The destination route does not currently have enough collateral. The message remains pending while relayers retry after liquidity is restored.'
-      : 'The latest attempt did not complete. The message remains pending while relayers retry automatically.';
+      : relayStopped
+        ? 'This relayer stopped attempting delivery. The message remains pending.'
+        : 'The latest attempt did not complete. The message remains pending while relayers retry automatically.';
   const retryReason = state?.retry?.reason;
   const failureReason = state?.failure?.reason;
   const failureStage = state?.failure?.stage;
-  const error = insufficient || status === MessageStatus.Failing;
+  const error = insufficient || (!pause && relayIssue);
 
   return (
     <aside
@@ -372,6 +380,9 @@ function DeliveryIssueNotice({
         <div className="min-w-0">
           <p className="font-medium">{title}</p>
           <p className="mt-1 text-xs leading-relaxed">{description}</p>
+          {!pause && !insufficient && relayIssue && (
+            <p className="mt-2 text-xs">Relayer retries: {deliveryFailure.retryCount}</p>
+          )}
           {insufficient && collateralInfo && (
             <div className="mt-2 text-xs">
               <CollateralDeficitDetails
