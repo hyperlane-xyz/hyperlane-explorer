@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 
 import { TokenIcon } from '../../../components/icons/TokenIcon';
 import { SectionCard } from '../../../components/layout/SectionCard';
-import { useChainMetadataResolver } from '../../../metadataStore';
+import { useChainMetadataResolver, useRegistry } from '../../../metadataStore';
 import {
   MessageStatus,
   type Message,
@@ -14,6 +14,7 @@ import {
   type WarpRouteDetails,
 } from '../../../types';
 import { getBlockExplorerAddressUrl } from '../../../utils/url';
+import { useWarpRouteConfig } from '../warpVisualization/useWarpRouteVisualization';
 import { formatUsd } from './gasPaymentSummary';
 import { useTokenUsdPrices } from './useNativeTokenUsdPrice';
 import { WarpFeeDetails } from './WarpFeeDetails';
@@ -26,6 +27,8 @@ interface Props {
 
 export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) {
   const chainMetadataResolver = useChainMetadataResolver();
+  const registry = useRegistry();
+  const warpRoute = useWarpRouteConfig(warpRouteDetails);
 
   const blockExplorerAddressUrls = useMemo(() => {
     if (!warpRouteDetails) {
@@ -72,6 +75,25 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
 
   return (
     <div className="space-y-4">
+      {warpRoute && (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-gray-200 pb-3">
+          <span className="text-xxs font-medium uppercase tracking-wide text-gray-500">Route</span>
+          <a
+            href={registry
+              .getUri(`deployments/warp_routes/${warpRoute.routeId}-config.yaml`)
+              .replace(
+                /^https:\/\/raw\.githubusercontent\.com\/([^/]+\/[^/]+)\//,
+                'https://github.com/$1/blob/',
+              )}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View route config on GitHub"
+            className="break-all text-xs font-medium text-primary-700 underline decoration-primary-200 underline-offset-4"
+          >
+            {warpRoute.routeId} ↗
+          </a>
+        </div>
+      )}
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6">
         <TokenDetails
           token={originToken}
@@ -142,6 +164,7 @@ export function WarpTransferDetails({ message, warpRouteDetails, blur }: Props) 
           </div>
         </div>
       </div>
+      <WarpFeeDetails message={message} warpRouteDetails={warpRouteDetails} blur={blur} />
     </div>
   );
 }
@@ -160,7 +183,6 @@ export function WarpTransferDetailsCard(props: Props) {
       }
     >
       <WarpTransferDetails {...props} />
-      <WarpFeeDetails {...props} />
     </SectionCard>
   );
 }
