@@ -431,9 +431,13 @@ describe('computeFeeBps', () => {
     expect(computeFeeBps(BigNumber.from(200000), BigNumber.from('1000000000'))).toBe('2');
   });
 
-  it('keeps 2 decimal places for near-bps amounts', () => {
-    // 1999999 / 1e9 = 19.99999 bps -> truncated to 19.99
-    expect(computeFeeBps(BigNumber.from(1999999), BigNumber.from('1000000000'))).toBe('19.99');
+  it.each([
+    [54330, 67913082, '8'], // ENI transfer: fee rounded down to token precision
+    [1999999, 1e9, '20'],
+    [1234000, 1e9, '12.34'],
+    [1234500, 1e9, '12.35'],
+  ])('rounds fee %s / amount %s to two decimal bps', (fee, amount, expected) => {
+    expect(computeFeeBps(BigNumber.from(fee), BigNumber.from(amount))).toBe(expected);
   });
 
   it('returns undefined when sent amount is zero', () => {
