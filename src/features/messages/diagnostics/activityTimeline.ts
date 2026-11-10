@@ -87,13 +87,8 @@ export function buildMessageActivityTimeline({
   const working =
     [MessageStatus.Pending, MessageStatus.Failing].includes(message.status) &&
     !['dropped', 'delivered'].includes(observation?.state.phase ?? '');
-  const finalityObservation = firstRelayerObservation(reports, observation, 'finalized');
-  const inclusionObservation = firstRelayerObservation(reports, observation, 'included');
-  // Finalized is also evidence of inclusion when no earlier inclusion was recorded.
-  const deliveryObservation =
-    inclusionObservation ??
-    finalityObservation ??
-    firstRelayerObservation(reports, observation, 'delivered');
+  // Inclusion may belong to a failed attempt or another transaction, not this delivery.
+  const deliveryObservation = firstDeliveryObservation(reports, observation);
   const deliveryBlockTime = delivered ? validTime(message.destination?.timestamp) : undefined;
   const deliveryOrderTime = delivered
     ? (deliveryObservation?.timestamp ?? deliveryBlockTime)
@@ -235,15 +230,9 @@ export function buildMessageActivityTimeline({
       'Delivered',
       !delivered
         ? 'Awaiting indexed proof of destination execution. Transaction inclusion alone does not prove this message executed.'
-        : deliveryObservation?.reportedOnly
-          ? 'First available relayer report of destination transaction inclusion. The actual inclusion observation may have been earlier; this time is an upper bound. The destination block timestamp is shown separately.'
-          : deliveryObservation?.stage === 'included'
-            ? 'The selected relayer observed the destination transaction included. The destination block timestamp is shown separately and is not used to order this event.'
-            : deliveryObservation?.stage === 'finalized'
-              ? 'The selected relayer observed the destination transaction finalized; no earlier inclusion observation is available. The destination block timestamp is shown separately.'
-              : deliveryObservation
-                ? 'The selected relayer observed mailbox delivery. No earlier transaction inclusion observation is available; this is an upper bound on when delivery became visible.'
-                : 'The message was executed on the destination. The selected relayer’s inclusion or delivery observation time is not recorded. Its block timestamp is shown separately.',
+        : deliveryObservation
+          ? 'The selected relayer observed mailbox delivery. This is an upper bound on when delivery became visible. The destination block timestamp is shown separately.'
+          : 'The message was executed on the destination. The selected relayer’s mailbox delivery observation time is not recorded. Its block timestamp is shown separately.',
       delivered
         ? 'complete'
         : working && hasPassedValidation(observation?.state)
@@ -254,9 +243,7 @@ export function buildMessageActivityTimeline({
     summary: !delivered
       ? undefined
       : deliveryObservation
-        ? deliveryObservation.reportedOnly
-          ? 'Inclusion reported; earlier observation unavailable'
-          : 'Destination execution observed by relayer'
+        ? 'Destination execution observed by relayer'
         : 'Destination execution recorded; observation time unavailable',
     blockTimestamp: deliveryBlockTime,
     orderTimestamp: !deliveryObservation ? deliveryOrderTime : undefined,
@@ -403,44 +390,27 @@ function timelineRank(kind: TimelineEntry['kind']) {
   ].indexOf(kind);
 }
 
-function firstRelayerObservation(
-  reports: Report[],
-  current: RelayerDiagnosticState | undefined,
-  stage: 'included' | 'finalized' | 'delivered',
-) {
+function firstDeliveryObservation(reports: Report[], current: RelayerDiagnosticState | undefined) {
   const candidates: Array<{
     state: DiagnosticState;
-    observedAt: string;
     row?: DiagnosticActivity;
-  }> = reports.flatMap(({ state, row }) =>
-    state ? [{ state, observedAt: row.observed_at, row }] : [],
-  );
-  if (current) candidates.push({ state: current.state, observedAt: current.observedAt });
+  }> = reports.flatMap(({ state, row }) => (state ? [{ state, row }] : []));
+  if (current) candidates.push({ state: current.state });
   let earliest:
     | {
         timestamp: number;
         timestampRaw: string;
-        stage: string;
-        reportedOnly: boolean;
         row?: DiagnosticActivity;
       }
     | undefined;
   for (const candidate of candidates) {
-    const { state, observedAt, row } = candidate;
-    if (stage !== 'delivered' && state.submission?.stage !== stage) continue;
-    const dedicated =
-      stage === 'delivered'
-        ? validTime(state.delivered_observed_at_millis)
-        : validTime(state.submission?.observed_at_millis);
+    const { state, row } = candidate;
     // A delayed delivered-phase report alone cannot recover the mailbox read time.
-    const timestamp =
-      dedicated ?? (stage === 'delivered' ? undefined : parseObservationTime(observedAt));
+    const timestamp = validTime(state.delivered_observed_at_millis);
     if (timestamp !== undefined && (!earliest || timestamp < earliest.timestamp)) {
       earliest = {
         timestamp,
-        timestampRaw: dedicated === undefined ? observedAt : new Date(dedicated).toISOString(),
-        stage,
-        reportedOnly: dedicated === undefined,
+        timestampRaw: new Date(timestamp).toISOString(),
         row,
       };
     }

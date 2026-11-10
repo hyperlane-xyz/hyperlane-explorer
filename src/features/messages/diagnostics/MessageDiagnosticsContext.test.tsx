@@ -139,3 +139,39 @@ it('prefers the current relayer state over historical snapshots', async () => {
   await render();
   expect(context.observation).toBe(diagnostics.relayers[0]);
 });
+
+it('retains reconstructed state when loading an older page without current diagnostics', async () => {
+  const anchor = row(100, 'snapshot', {
+    phase: 'preparing',
+    modules: [{ node_id: 'root', ism: 'ism', children: [] }],
+  });
+  const update = row(149, 'snapshot_update', { phase: 'awaiting_signatures', modules: [] });
+  history.activityPage = {
+    message_id: 'first',
+    activities: [update, anchor],
+    has_more: true,
+    next_before_id: '100',
+  };
+  await render();
+  const latest = context.observation;
+  expect(latest?.state).toEqual({
+    phase: 'awaiting_signatures',
+    modules: anchor.activity.state?.modules,
+  });
+
+  history.loadedActivities = [update, anchor];
+  history.activityPage = {
+    ...history.activityPage,
+    activities: [row(99)],
+    has_more: false,
+    next_before_id: null,
+  };
+  await render();
+  expect(context.observation).toEqual(latest);
+  expect(context.activities.map(({ id }) => id)).toEqual(['149', '100', '99']);
+
+  history.activityPage = null;
+  history.loadedActivities = [];
+  await render('next');
+  expect(context.observation).toBeUndefined();
+});

@@ -25,7 +25,7 @@ function entry(
   };
 }
 
-it('includes the full grouped wait in elapsed intervals and leaves missing times unknown', async () => {
+it('preserves grouped waits and distinguishes clock skew from missing times', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const container = document.createElement('div');
   const root = createRoot(container);
@@ -35,6 +35,7 @@ it('includes the full grouped wait in elapsed intervals and leaves missing times
         <MessageActivityTimeline
           dispatchedAt={100_000}
           entries={[
+            entry('signature', 99_000),
             entry('dispatch', 100_000),
             entry('activity', 101_000, { repeatCount: 3, endTimestamp: 103_500 }),
             entry('delivery', 104_567),
@@ -44,9 +45,17 @@ it('includes the full grouped wait in elapsed intervals and leaves missing times
       ),
     );
     const rows = container.querySelectorAll('ol[aria-label="Recorded message events"] > li');
-    expect(rows[1].textContent).toContain('+3.5s since previous');
-    expect(rows[2].textContent).toContain('+4.567s');
-    expect(rows[2].textContent).toContain('+1.067s since previous');
+    expect(rows[0].textContent).toContain('Before dispatch time');
+    expect(rows[0].textContent).not.toContain('Observation not recorded');
+    await act(async () => {
+      const details = rows[0].querySelector('details')!;
+      details.open = true;
+      details.dispatchEvent(new Event('toggle'));
+    });
+    expect(rows[0].textContent).toContain(new Date(99_000).toISOString());
+    expect(rows[2].textContent).toContain('+3.5s since previous');
+    expect(rows[3].textContent).toContain('+4.567s');
+    expect(rows[3].textContent).toContain('+1.067s since previous');
     const untimed = container.querySelector(
       'ol[aria-label="Milestones without recorded timestamps"]',
     );

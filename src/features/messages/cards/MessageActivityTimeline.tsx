@@ -184,7 +184,11 @@ function TimelineRow({
                 </>
               ) : (
                 <span className="text-xxs text-gray-500">
-                  {entry.status === 'complete' ? 'Observation not recorded' : '—'}
+                  {eventTime !== undefined
+                    ? 'Before dispatch time'
+                    : entry.status === 'complete'
+                      ? 'Observation not recorded'
+                      : '—'}
                 </span>
               )}
             </div>

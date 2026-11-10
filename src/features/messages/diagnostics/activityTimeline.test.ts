@@ -198,7 +198,7 @@ describe('message activity timeline', () => {
     ).toEqual([
       ['Mempool', 118_000],
       ['Included', 119_000],
-      ['Delivered', 119_000],
+      ['Delivered', 719_197],
     ]);
     expect(entries.find((entry) => entry.kind === 'delivery')).toMatchObject({
       blockTimestamp: 117_000,
@@ -208,6 +208,33 @@ describe('message activity timeline', () => {
       719_197,
     );
   });
+
+  it.each([true, false])(
+    'does not date delivery from an inclusion attempt (executed: %s)',
+    (executed) => {
+      const rows = [
+        activity(1, 'confirming', 110_000, {
+          submission: { stage: 'included', observed_at_millis: 110_000 },
+          transaction: { transaction_id: 'failed', executed: false },
+        }),
+        activity(2, 'retrying', 120_000),
+        activity(3, 'confirming', 130_000, {
+          submission: { stage: 'included', observed_at_millis: 130_000 },
+          transaction: { transaction_id: 'other', executed },
+        }),
+        activity(4, 'delivered', 140_000, { delivered_observed_at_millis: 140_000 }),
+      ];
+      const deliveredMessage = { ...message, status: MessageStatus.Delivered };
+      expect(
+        timeline(rows, { message: deliveredMessage }).find((entry) => entry.kind === 'delivery'),
+      ).toMatchObject({ timestamp: 140_000, rows: [rows[3]] });
+      expect(
+        timeline(rows.slice(0, 3), { message: deliveredMessage }).find(
+          (entry) => entry.kind === 'delivery',
+        )?.timestamp,
+      ).toBeUndefined();
+    },
+  );
 
   it('isolates selected relayer events and ignores observations newer than selected state', () => {
     const ours = activity(1, 'preparing', 111_000);

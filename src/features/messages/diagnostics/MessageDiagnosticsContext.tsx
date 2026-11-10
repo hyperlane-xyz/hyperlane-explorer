@@ -2,8 +2,10 @@ import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useSt
 
 import {
   DiagnosticActivity,
+  DiagnosticObservations,
   RelayerDiagnosticState,
   mergeActivityHistory,
+  reconcileDiagnosticObservations,
   reduceMessageDiagnostics,
   selectRelayObservation,
 } from './types';
@@ -61,14 +63,24 @@ function DiagnosticsProvider({
   );
   const [selectedRelayer, setSelectedRelayer] = useState('');
   const [automaticRelayer, setAutomaticRelayer] = useState('');
+  const [retainedPageStates, setRetainedPageStates] = useState<DiagnosticObservations>();
+  const pageStates = useMemo(
+    () =>
+      reduceMessageDiagnostics({
+        version: 1,
+        message_id: messageId,
+        partial: true,
+        activities: history.activityPage?.activities ?? [],
+      }),
+    [history.activityPage, messageId],
+  );
   const relayers = useMemo(() => {
-    const pageStates = reduceMessageDiagnostics({
-      version: 1,
-      message_id: messageId,
-      partial: true,
-      activities: history.activityPage?.activities ?? [],
-    });
-    const pageRelayers = new Map(pageStates.relayers.map((relay) => [relay.relayer, relay]));
+    const pageRelayers = new Map(
+      reconcileDiagnosticObservations(retainedPageStates, pageStates).relayers.map((relay) => [
+        relay.relayer,
+        relay,
+      ]),
+    );
     const fallback = new Map<string, RelayerDiagnosticState>();
     // History is newest first. Reconstruct updates only within a contiguous page;
     // a snapshot on a sparse older page may be an obsolete anchor.
@@ -91,12 +103,16 @@ function DiagnosticsProvider({
     // and observations only, never overwrites a live endpoint's state.
     for (const relay of diagnostics.relayers) fallback.set(relay.relayer, relay);
     return [...fallback.values()].sort((a, b) => a.relayer.localeCompare(b.relayer));
-  }, [activities, diagnostics.relayers, history.activityPage, messageId]);
+  }, [activities, diagnostics.relayers, pageStates, retainedPageStates]);
   const automatic = selectRelayObservation(relayers, automaticRelayer);
   const observation = selectedRelayer
     ? relayers.find((relay) => relay.relayer === selectedRelayer)
     : automatic;
   const automaticAddress = automatic?.relayer;
+  useEffect(() => {
+    // Preserve each page's reconstructed observations without merging across page gaps.
+    setRetainedPageStates((previous) => reconcileDiagnosticObservations(previous, pageStates));
+  }, [pageStates]);
   useEffect(() => {
     if (automaticAddress) setAutomaticRelayer(automaticAddress);
   }, [automaticAddress]);
