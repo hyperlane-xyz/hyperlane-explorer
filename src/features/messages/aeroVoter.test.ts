@@ -14,6 +14,23 @@ const outbound = {
 // Captured staging and current deployment payloads.
 const examples = [
   {
+    // Captured Base-to-Elysium message 0xa6458120083282b7173f636ff7943023ec2aae882f8fe2708ea3ef689f219e8d.
+    type: AeroVoterMessageType.AllocateChain,
+    message: {
+      originDomainId: 8453,
+      destinationDomainId: 99901,
+      sender: '0xc93eb34f4e893cbd6dc4f6530ff06cb1162cbe74',
+      recipient: '0x4aaff8cfb43e2cefbbbf4c133c934db6ba7e4c14',
+      body: '0x01000000000000000000000000000000000000000000000000000000000000003b00006af2dd660000000000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003039766d60000000000000000000000000000000000000000000000000c3663566a58000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001',
+    },
+    expected: {
+      messageTypeName: 'AllocateChain',
+      chainNonce: '59',
+      dispatchedAt: '1794301286',
+      payload: { tokenId: '17', allocationDelta: '0' },
+    },
+  },
+  {
     // 0x429abe35ce00c9bdcb434c430c0742d380b8e3ee67913efe040bf6231b89c00a
     type: AeroVoterMessageType.AllocateGauge,
     message: {
@@ -225,6 +242,8 @@ it('matches padded adapter addresses and both route directions', () => {
 });
 
 it.each([
+  { sender: outbound.sender },
+  { recipient: outbound.recipient },
   { sender: `0x${'1'.repeat(40)}` },
   { recipient: `0x${'1'.repeat(40)}` },
   { originDomainId: 1 },

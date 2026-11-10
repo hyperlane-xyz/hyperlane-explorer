@@ -67,6 +67,11 @@ export const aeroVoterRoutes: readonly AeroVoterRoute[] = [
     leafAdapter: '56632394f866761fd86873e96a567720ce865682',
   },
   {
+    leafDomain: 99901,
+    rootAdapter: 'c93eb34f4e893cbd6dc4f6530ff06cb1162cbe74',
+    leafAdapter: '4aaff8cfb43e2cefbbbf4c133c934db6ba7e4c14',
+  },
+  {
     leafDomain: 10,
     rootAdapter: '504e81562dafe4efe87a4b3025f805eb0e9c5c15',
     leafAdapter: '1733cd126a227066963e9b636ad49898d1224741',
