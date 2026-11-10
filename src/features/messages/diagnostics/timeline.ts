@@ -159,7 +159,7 @@ function earliest(timestamps: Array<number | undefined>) {
   return known.length ? Math.min(...known) : undefined;
 }
 
-function validTime(timestamp?: number | null) {
+export function validTime(timestamp?: number | null) {
   return timestamp != null && Number.isFinite(timestamp) && timestamp > 0 && timestamp <= 8.64e15
     ? timestamp
     : undefined;
@@ -169,7 +169,7 @@ function elapsed(from?: number, to?: number) {
   return from !== undefined && to !== undefined && to >= from ? to - from : undefined;
 }
 
-function parseObservationTime(value: string) {
+export function parseObservationTime(value: string) {
   const timestamp = value
     .trim()
     .replace(' ', 'T')
@@ -232,4 +232,17 @@ export function formatTimestamp(timestamp: number): string {
     fractionalSecondDigits: 3,
     hour12: false,
   });
+}
+
+/** Millisecond precision for diagnostic intervals, without rounding to tenths. */
+export function formatPreciseElapsed(milliseconds: number): string {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return 'Unknown';
+  const rounded = Math.round(milliseconds);
+  if (rounded < 1000) return `${rounded}ms`;
+  const hours = Math.floor(rounded / 3_600_000);
+  const minutes = Math.floor((rounded % 3_600_000) / 60_000);
+  const seconds = (rounded % 60_000) / 1000;
+  return [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '', seconds ? `${seconds}s` : '']
+    .filter(Boolean)
+    .join(' ');
 }
