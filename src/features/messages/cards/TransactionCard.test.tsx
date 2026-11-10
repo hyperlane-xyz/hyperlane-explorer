@@ -4,6 +4,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessageStatus, type MessageStub } from '../../../types';
+import { MessageDebugStatus, type MessageDebugResult } from '../../debugger/types';
 import { CollateralInfo, CollateralStatus } from '../collateral/types';
 import { DestinationTransactionCard } from './TransactionCard';
 
@@ -88,6 +89,47 @@ it('keeps the delivery card loading while delivery issues are shown elsewhere', 
   expect(container.textContent).not.toContain('Insufficient Collateral');
   expect(container.textContent).not.toContain('Delivery status is unknown.');
   await act(async () => root.unmount());
+});
+
+it('shows legacy debugger errors without relayer diagnostics and clears them on recovery or delivery', async () => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const debugResult: MessageDebugResult = {
+    status: MessageDebugStatus.HandleCallFailure,
+    description: 'Execution reverted: deadline expired',
+    calldataDetails: {
+      contract: '0x1111111111111111111111111111111111111111',
+      mailbox: '0x2222222222222222222222222222222222222222',
+      handleCalldata: '0x1234',
+    },
+  };
+  const render = (status: MessageStatus) =>
+    act(async () =>
+      root.render(
+        <DestinationTransactionCard
+          chainName="ethereum"
+          domainId={1}
+          status={status}
+          debugResult={debugResult}
+          isStatusFetching={false}
+          blur={false}
+        />,
+      ),
+    );
+  try {
+    await render(MessageStatus.Failing);
+    expect(container.textContent).toContain('Error calling handle on the recipient contract');
+    expect(container.textContent).toContain(debugResult.description);
+    expect(container.textContent).toContain('View calldata details');
+    expect(container.textContent).not.toContain('Relayer retries');
+    for (const status of [MessageStatus.Pending, MessageStatus.Delivered]) {
+      await render(status);
+      expect(container.textContent).not.toContain(debugResult.description);
+      expect(container.textContent).not.toContain('View calldata details');
+    }
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 it('reports existing collateral results only when the status or listener changes', async () => {
