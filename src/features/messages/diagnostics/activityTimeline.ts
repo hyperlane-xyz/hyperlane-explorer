@@ -8,6 +8,7 @@ import {
 import {
   describeDiagnosticActivity,
   diagnosticLabel,
+  isOffchainAttestationPending,
   mergeDiagnosticState,
   type DiagnosticActivity,
   type DiagnosticModule,
@@ -43,6 +44,7 @@ export interface TimelineEntry {
   status: LifecycleStepStatus;
   relayer?: string;
   validator?: string;
+  signatureModule?: string;
   signatureGroup?: string;
   signatureThreshold?: number | null;
   /** Current-step semantics when a sparse history has no corresponding raw row. */
@@ -544,6 +546,7 @@ function moduleSignatureEvents(
         id: `signature:${activityId}:${key}`,
         kind: 'signature',
         title: 'Signature observed',
+        summary: `${diagnosticLabel(securityModule.module_type ?? 'Security module')}${signatures.index == null ? '' : ` · checkpoint ${signatures.index}`}`,
         detail: `First available relayer report containing this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. The signature existed by this time; its actual signing and upload times are not recorded.`,
         timestamp,
         timestampRaw,
@@ -551,6 +554,7 @@ function moduleSignatureEvents(
         status: 'complete',
         relayer,
         validator: signer.validator,
+        signatureModule: securityModule.ism,
         signatureGroup: group,
         signatureThreshold: signatures.threshold,
         rows,
@@ -597,11 +601,14 @@ function reportFingerprint(
           .filter(([, value]) => value === 'failed')
           .map(([check]) => check)
           .sort(),
+        // Pending responses and exhausted per-attempt retries are the same wait.
         offchain_read: module.offchain_read
-          ? {
-              state: module.offchain_read.state,
-              http_status: module.offchain_read.http_status ?? null,
-            }
+          ? isOffchainAttestationPending(module)
+            ? { state: 'pending' }
+            : {
+                state: module.offchain_read.state,
+                http_status: module.offchain_read.http_status ?? null,
+              }
           : null,
         signatures:
           !omitSignatureProgress && module.signatures

@@ -75,7 +75,7 @@ export function MessageOverviewCard({
           timestamp={message.origin.timestamp}
           amountLabel="Transfer amount"
           address={warpRouteDetails ? message.origin.from : message.sender}
-          addressLabel={warpRouteDetails ? 'Initiated by' : 'Sending application'}
+          addressLabel={warpRouteDetails ? 'Sender' : 'Sending application'}
         />
         <div
           className="relative flex h-10 items-center justify-center text-primary-600 sm:h-auto"
@@ -100,7 +100,7 @@ export function MessageOverviewCard({
           amountLabel={delivered ? 'Bridged amount' : 'Expected amount'}
           timestamp={delivered ? message.destination?.timestamp : undefined}
           address={warpRouteDetails?.transferRecipient ?? message.recipient}
-          addressLabel={warpRouteDetails ? 'Transfer recipient' : 'Receiving application'}
+          addressLabel={warpRouteDetails ? 'Recipient' : 'Receiving application'}
         />
       </div>
 

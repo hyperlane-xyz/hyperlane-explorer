@@ -35,7 +35,11 @@ it('preserves grouped waits and distinguishes clock skew from missing times', as
         <MessageActivityTimeline
           dispatchedAt={100_000}
           entries={[
-            entry('signature', 99_000),
+            entry('signature', 99_000, {
+              validator: '0x1111111111111111111111111111111111111111',
+              summary: 'Merkle root multisig · checkpoint 103',
+              signatureModule: '0xmodule',
+            }),
             entry('dispatch', 100_000),
             entry('activity', 101_000, { repeatCount: 3, endTimestamp: 103_500 }),
             entry('delivery', 104_567),
@@ -47,12 +51,15 @@ it('preserves grouped waits and distinguishes clock skew from missing times', as
     const rows = container.querySelectorAll('ol[aria-label="Recorded message events"] > li');
     expect(rows[0].textContent).toContain('Before dispatch time');
     expect(rows[0].textContent).not.toContain('Observation not recorded');
+    expect(rows[0].textContent).toContain('Merkle root multisig · checkpoint 103');
+    expect(rows[0].querySelector('summary')?.textContent).not.toContain('0xmodule');
     await act(async () => {
       const details = rows[0].querySelector('details')!;
       details.open = true;
       details.dispatchEvent(new Event('toggle'));
     });
     expect(rows[0].textContent).toContain(new Date(99_000).toISOString());
+    expect(rows[0].textContent).toContain('ISM0xmodule');
     expect(rows[2].textContent).toContain('+3.5s since previous');
     expect(rows[3].textContent).toContain('+4.567s');
     expect(rows[3].textContent).toContain('+1.067s since previous');

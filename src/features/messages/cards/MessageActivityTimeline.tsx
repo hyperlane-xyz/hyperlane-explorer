@@ -149,7 +149,8 @@ function TimelineRow({
                         normalizeValidatorAddress(entry.validator) ?? entry.validator,
                       )}
                     </span>
-                    <span className="mx-1.5 text-gray-400">·</span>Validator signature observed
+                    <span className="mx-1.5 text-gray-400">·</span>
+                    {entry.summary ?? 'Validator signature observed'}
                   </>
                 ) : (
                   eventPreview(entry)
@@ -219,6 +220,7 @@ function TimelineRow({
                 )}
                 {entry.relayer && <Detail label="Reporting relayer" value={entry.relayer} />}
                 {entry.validator && <Detail label="Validator" value={entry.validator} />}
+                {entry.signatureModule && <Detail label="ISM" value={entry.signatureModule} />}
                 {entry.timestamp === undefined && (
                   <Detail
                     label="Relayer observation"
