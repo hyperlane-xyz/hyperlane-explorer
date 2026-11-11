@@ -142,6 +142,49 @@ describe('message activity timeline', () => {
     expect(entries.find((entry) => entry.kind === 'validation')?.status).toBe('complete');
   });
 
+  it('identifies separate modules sharing validators and checkpoint, with independent thresholds', () => {
+    const messageId = module([validatorA]);
+    const merkleRoot = {
+      ...module([validatorB, validatorA], 10, 'root', 3),
+      node_id: 'merkle',
+      ism: '0xmerkle',
+      module_type: 'MerkleRootMultisig',
+    };
+    const rows = [
+      activity(1, 'awaiting_signatures', 111_000, { modules: [messageId] }),
+      activity(2, 'awaiting_signatures', 112_000, { modules: [messageId, merkleRoot] }),
+    ];
+    expect(
+      timeline(rows)
+        .filter((entry) => entry.kind === 'signature')
+        .map(({ title, summary, signatureModule, validator }) => ({
+          title,
+          summary,
+          signatureModule,
+          validator,
+        })),
+    ).toEqual([
+      {
+        title: 'Signature observed (1/2)',
+        summary: 'Message ID multisig · checkpoint 10',
+        signatureModule: '0xism',
+        validator: validatorA,
+      },
+      {
+        title: 'Signature observed (1/3)',
+        summary: 'Merkle root multisig · checkpoint 10',
+        signatureModule: '0xmerkle',
+        validator: validatorB,
+      },
+      {
+        title: 'Signature observed (2/3)',
+        summary: 'Merkle root multisig · checkpoint 10',
+        signatureModule: '0xmerkle',
+        validator: validatorA,
+      },
+    ]);
+  });
+
   it('deduplicates signatures per module and checkpoint without claiming exact signing times', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] }),
@@ -244,6 +287,44 @@ describe('message activity timeline', () => {
       2,
     );
   });
+
+  it.each(['succeeded', 'request_timeout'])(
+    'groups pending gateway retry cycles while preserving a transition to %s',
+    (state) => {
+      const gateway: DiagnosticModule = {
+        node_id: 'ccip',
+        ism: '0xccip',
+        children: [],
+        module_type: 'CcipRead',
+        metadata_status: 'blocked',
+        metadata_error: 'Could not fetch metadata',
+        offchain_read: { state: 'pending_retries_exhausted', http_status: null },
+      };
+      const anchor = activity(1, 'preparing', 110_000, { modules: [gateway] });
+      const retries = Array.from({ length: 6 }, (_, i) => {
+        const row = activity(i + 2, 'retrying', 111_000 + i * 100, {
+          retry: { reason: 'CouldNotFetchMetadata', count: Math.floor(i / 3) + 1 },
+          modules:
+            i % 3 === 1
+              ? [{ ...gateway, offchain_read: { state: 'pending', http_status: 500 } }]
+              : [],
+        });
+        row.activity.type = 'snapshot_update';
+        return row;
+      });
+      const changed = activity(8, 'retrying', 112_000, {
+        retry: { reason: 'CouldNotFetchMetadata', count: 2 },
+        modules: [{ ...gateway, offchain_read: { state } }],
+      });
+      changed.activity.type = 'snapshot_update';
+      const entries = timeline([anchor, ...retries, changed]).filter(
+        (entry) => entry.kind === 'activity',
+      );
+      expect(entries).toHaveLength(3);
+      expect(entries[1]).toMatchObject({ repeatCount: 6, rows: retries, endTimestamp: 111_500 });
+      expect(entries[2].rows).toEqual([changed]);
+    },
+  );
 
   it('orders delivery after mempool and inclusion, never by an earlier block-header timestamp', () => {
     const rows = [
