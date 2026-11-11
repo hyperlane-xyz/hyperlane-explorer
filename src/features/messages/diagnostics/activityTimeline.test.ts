@@ -206,6 +206,45 @@ describe('message activity timeline', () => {
     expect(changed[1].rows[0].id).toBe('11');
   });
 
+  it('collapses partial retries when unchanged modules alternate in and out of updates', () => {
+    const routing: DiagnosticModule = {
+      node_id: 'routing',
+      ism: '0xrouting',
+      children: [{ node_id: 'root', ism: '0xism' }],
+      module_type: 'Routing',
+      metadata_status: 'blocked',
+      metadata_error: 'Awaiting validator signatures',
+    };
+    const rows = Array.from({ length: 10 }, (_, i) => {
+      const row = activity(i + 1, 'awaiting_signatures', 111_000 + i * 100, {
+        retry: { reason: 'AwaitingValidatorSignatures', count: i },
+        modules: [...(i % 3 === 0 ? [routing] : []), module([validatorA])],
+      });
+      row.activity.type = 'snapshot_update';
+      return row;
+    });
+    const entries = timeline(rows);
+    const waiting = entries.filter((entry) => entry.kind === 'activity');
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0]).toMatchObject({
+      repeatCount: 10,
+      timestamp: 111_000,
+      endTimestamp: 111_900,
+      rows,
+      status: 'active',
+    });
+    expect(entries.filter((entry) => entry.kind === 'signature')).toHaveLength(1);
+
+    const changed = activity(11, 'awaiting_signatures', 112_000, {
+      retry: { reason: 'AwaitingValidatorSignatures' },
+      modules: [{ ...routing, metadata_error: 'RPC request failed' }, module([validatorA])],
+    });
+    changed.activity.type = 'snapshot_update';
+    expect(timeline([...rows, changed]).filter((entry) => entry.kind === 'activity')).toHaveLength(
+      2,
+    );
+  });
+
   it('orders delivery after mempool and inclusion, never by an earlier block-header timestamp', () => {
     const rows = [
       activity(1, 'submitting', 118_100, {

@@ -12,7 +12,6 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
   const {
     history,
     activities,
-    diagnostics,
     observation,
     relayers,
     selectedRelayer,
@@ -27,18 +26,9 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
   const canLoadEarlier =
     !historyLimitReached &&
     !!(history.activityPage?.has_more && history.activityPage.next_before_id);
-  const historyIncomplete = canLoadEarlier || diagnostics?.partial || historyLimitReached;
 
   return (
     <section aria-label="Message timeline" className="min-w-0">
-      {historyIncomplete && (
-        <p className="mb-4 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xxs leading-relaxed text-gray-600">
-          {historyLimitReached
-            ? 'Timeline limited to the latest 1,000 reports. '
-            : 'Showing available history. '}
-          Earlier activity may contain additional steps or earlier signature observations.
-        </p>
-      )}
       {history.error && (
         <p role="alert" className="mb-4 text-xs text-red-700">
           Activity could not be loaded. Recorded chain milestones remain visible.

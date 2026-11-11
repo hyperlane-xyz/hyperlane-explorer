@@ -14,10 +14,7 @@ export function ActivityIcon({ width = 16, height = 16, ...props }: SVGProps<SVG
       strokeLinejoin="round"
       {...props}
     >
-      <path d="M3 4.5v2M3 9.5v2M6.5 3h7M6.5 8h5M6.5 13h7" />
-      <circle cx={3} cy={3} r={1.5} />
-      <circle cx={3} cy={8} r={1.5} />
-      <circle cx={3} cy={13} r={1.5} />
+      <path d="m3 4 4 4-4 4m6-8 4 4-4 4" />
     </svg>
   );
 }

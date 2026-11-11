@@ -65,6 +65,8 @@ interface Report {
   row: DiagnosticActivity;
   state?: DiagnosticState;
   partial: boolean;
+  /** Comparison only: omitted nodes are unknown when the anchor is not loaded. */
+  fingerprintModules?: DiagnosticModule[];
 }
 
 /** Recorded timestamps determine chronology. Missing timestamps are kept unknown. */
@@ -449,6 +451,7 @@ function newlyCompletedModules(state?: DiagnosticState, previous?: DiagnosticSta
 
 function reconstructReports(rows: DiagnosticActivity[]): Report[] {
   let anchor: DiagnosticState | undefined;
+  const knownModules = new Map<string, DiagnosticModule>();
   return rows.map((row) => {
     if (!isSupported(row)) return { row, partial: true };
     const state = row.activity.state;
@@ -457,7 +460,14 @@ function reconstructReports(rows: DiagnosticActivity[]): Report[] {
       return { row, state, partial: !state };
     }
     if (row.activity.type !== 'snapshot_update' || !state) return { row, partial: true };
-    if (!anchor) return { row, state, partial: true };
+    if (!anchor) {
+      // Cumulative updates may omit nodes restored to their unknown anchor values.
+      // Retain known nodes only for grouping; never use them to invent history,
+      // signatures, or a reconstructed state without the actual anchor.
+      state.removed_modules?.forEach((nodeId) => knownModules.delete(nodeId));
+      state.modules.forEach((module) => knownModules.set(module.node_id, module));
+      return { row, state, partial: true, fingerprintModules: [...knownModules.values()] };
+    }
     return { row, state: mergeDiagnosticState(anchor, state), partial: false };
   });
 }
@@ -551,7 +561,10 @@ function moduleSignatureEvents(
   return entries;
 }
 
-function reportFingerprint({ row, state, partial }: Report, omitSignatureProgress = false) {
+function reportFingerprint(
+  { row, state, partial, fingerprintModules }: Report,
+  omitSignatureProgress = false,
+) {
   if (!state) return `${row.version}:${stableJson(row.activity)}`;
   return stableJson({
     partial,
@@ -560,7 +573,8 @@ function reportFingerprint({ row, state, partial }: Report, omitSignatureProgres
     retry: state.retry?.reason,
     failure: state.failure,
     submission: state.submission?.stage,
-    modules: [...state.modules]
+    removed_modules: partial ? [...(state.removed_modules ?? [])].sort() : undefined,
+    modules: [...(fingerprintModules ?? state.modules)]
       .sort((a, b) => a.node_id.localeCompare(b.node_id))
       .map((module) => ({
         // Request bookkeeping (selected_children, latest_indices, discovery
