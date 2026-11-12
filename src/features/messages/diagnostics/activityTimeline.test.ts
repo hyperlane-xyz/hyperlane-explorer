@@ -102,9 +102,9 @@ describe('message activity timeline', () => {
     expect(
       entries.map(({ validator, timestamp, title }) => ({ validator, timestamp, title })),
     ).toEqual([
-      { validator: validatorA, timestamp: 111_000, title: 'Signature discovered (1/2)' },
-      { validator: validatorB, timestamp: 113_000, title: 'Signature discovered (2/2)' },
-      { validator: validatorA, timestamp: 114_000, title: 'Signature discovered (1/2)' },
+      { validator: validatorA, timestamp: 111_000, title: 'Signature collected (1/2)' },
+      { validator: validatorB, timestamp: 113_000, title: 'Signature collected (2/2)' },
+      { validator: validatorA, timestamp: 114_000, title: 'Signature collected (1/2)' },
     ]);
     expect(entries[0].detail).toContain('not validator signing or upload');
   });
@@ -175,7 +175,7 @@ describe('message activity timeline', () => {
     );
   });
 
-  it('does not assign discovery times to incomplete history', () => {
+  it('does not assign collection times to incomplete history', () => {
     const rows = [activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] })];
     const signatures = timeline(rows, { historyComplete: false }).filter(
       (entry) => entry.kind === 'signature',

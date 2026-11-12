@@ -19,7 +19,11 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
   } = useMessageDiagnosticsContext();
   const historyComplete = history.complete && activities.length < 1000;
   const entries = useMemo(
-    () => buildMessageActivityTimeline({ message, observation, activities, historyComplete }),
+    () =>
+      // Hide delivery until its timing can be represented consistently with relayer activity.
+      buildMessageActivityTimeline({ message, observation, activities, historyComplete }).filter(
+        (entry) => entry.kind !== 'delivery',
+      ),
     [message, observation, activities, historyComplete],
   );
   const historyLimitReached = activities.length >= 1000;
@@ -44,8 +48,8 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
       {!historyComplete && (
         <output className="mb-4 block text-xs text-gray-600">
           {history.error || historyLimitReached
-            ? 'History is incomplete. First signature discovery times are unknown.'
-            : 'Loading complete history to find the first signature discoveries…'}
+            ? 'History is incomplete. First signature collection times are unknown.'
+            : 'Loading complete history to find the first signature collection times…'}
         </output>
       )}
       <MessageActivityTimeline
@@ -76,9 +80,9 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
           </button>
         )}
         <p className="text-xxs leading-relaxed text-gray-500">
-          Times show the selected relayer’s first recorded discoveries. Purple shows time since
-          dispatch; gray shows time since the immediately previous activity. Signing and upload
-          times are not recorded.
+          Times reflect the selected relayer’s recorded activity. Purple shows time since dispatch;
+          gray shows time since the immediately previous activity. Signing and upload times are not
+          recorded.
         </p>
       </footer>
     </section>

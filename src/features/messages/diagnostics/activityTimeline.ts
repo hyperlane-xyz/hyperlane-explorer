@@ -129,7 +129,7 @@ export function buildMessageActivityTimeline({
   for (const report of reports) {
     const { row, state } = report;
     const observedAt = parseObservationTime(row.observed_at);
-    // Snapshot membership proves existence, not first discovery. Until history is
+    // Snapshot membership proves existence, not first collection. Until history is
     // complete, never assign an arbitrary later snapshot's time to a signature.
     const timestamp = historyComplete ? observedAt : undefined;
     entries.push(...signatureEvents(report, seenSignatures, timestamp));
@@ -348,8 +348,8 @@ export function buildMessageActivityTimeline({
     signatureCounts.set(entry.signatureGroup, count);
     entry.title =
       entry.timestamp === undefined
-        ? 'Signature available · discovery time unknown'
-        : `Signature discovered${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
+        ? 'Signature available · collection time unknown'
+        : `Signature collected${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
   }
   markCurrentStep(entries, observation, message.status);
   return entries;
@@ -537,7 +537,7 @@ function signatureEvents(report: Report, seen: Set<string>, timestamp?: number):
     {
       id: `signature:${row.id}:${key}`,
       kind: 'signature',
-      title: 'Signature observed',
+      title: 'Signature collected',
       detail: `Relayer reported collecting a signature for checkpoint ${observation.index}. This is the relayer’s observation time, not the validator’s signing or upload time.`,
       timestamp,
       timestampRaw: timestamp === undefined ? undefined : row.observed_at,
@@ -572,9 +572,9 @@ function moduleSignatureEvents(
       entries.push({
         id: `signature:${activityId}:${key}`,
         kind: 'signature',
-        title: 'Signature observed',
+        title: 'Signature collected',
         summary: `${diagnosticLabel(securityModule.module_type ?? 'Security module')}${signatures.index == null ? '' : ` · checkpoint ${signatures.index}`}`,
-        detail: `First recorded discovery by this relayer of this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. This records relayer discovery, not validator signing or upload. If history is incomplete, the discovery time is unknown.`,
+        detail: `First recorded collection of this signature by this relayer${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. This records relayer collection after downloading and checking the signature, not validator signing or upload. If history is incomplete, the collection time is unknown.`,
         timestamp,
         timestampRaw: timestamp === undefined ? undefined : timestampRaw,
         timeSource: 'relayer',
