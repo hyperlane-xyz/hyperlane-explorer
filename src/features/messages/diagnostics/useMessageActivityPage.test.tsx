@@ -67,7 +67,7 @@ it('uses the viewed cursor after a live refresh, keeps loaded timing history, an
   }
 });
 
-it('automatically loads earlier pages before declaring first-discovery history complete', async () => {
+it('automatically loads earlier pages before declaring first-collection history complete', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const root = createRoot(document.createElement('div'));
   const latest = response(null, '100', '51');
