@@ -37,7 +37,7 @@ function DiagnosticsProvider({
   children,
 }: PropsWithChildren<{ messageId: string; live: boolean; enabled: boolean }>) {
   const diagnostics = useMessageDiagnostics(messageId, live, enabled);
-  const history = useMessageActivityPage(messageId, enabled);
+  const history = useMessageActivityPage(messageId, enabled, true);
   const [liveHistory, setLiveHistory] = useState<DiagnosticActivity[]>([]);
   const liveActivities = live && enabled ? diagnostics.diagnostics?.activities : undefined;
   useEffect(() => {

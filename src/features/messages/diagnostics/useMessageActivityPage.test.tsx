@@ -66,3 +66,33 @@ it('uses the viewed cursor after a live refresh, keeps loaded timing history, an
     delete reactTestGlobal.IS_REACT_ACT_ENVIRONMENT;
   }
 });
+
+it('automatically loads earlier pages before declaring first-discovery history complete', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const root = createRoot(document.createElement('div'));
+  const latest = response(null, '100', '51');
+  const older = response('51', '50', null);
+  let pending = true;
+  query.mockImplementation(({ variables }) => {
+    const page = variables?.beforeId === '51' ? older : latest;
+    return [{ ...page, fetching: variables?.beforeId === '51' && pending }, refresh] as never;
+  });
+  let result: ReturnType<typeof useMessageActivityPage> | undefined;
+  function Harness() {
+    result = useMessageActivityPage(messageId, true, true);
+    return null;
+  }
+  try {
+    await act(async () => root.render(<Harness />));
+    // Even if a query library exposes stale data while fetching, it cannot complete history.
+    expect(result?.fetching).toBe(true);
+    pending = false;
+    await act(async () => root.render(<Harness />));
+    expect(result?.complete).toBe(true);
+    expect(result?.loadedActivities.map((row) => row.id)).toEqual(['100', '50']);
+    expect(result?.page).toBe(1);
+  } finally {
+    await act(async () => root.unmount());
+    Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
+  }
+});

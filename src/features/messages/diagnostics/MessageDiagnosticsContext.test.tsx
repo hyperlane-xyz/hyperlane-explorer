@@ -61,6 +61,8 @@ beforeEach(() => {
   history = {
     activityPage: null,
     loadedActivities: [],
+    complete: false,
+    retry: jest.fn(),
     page: 0,
     fetching: false,
     error: undefined,

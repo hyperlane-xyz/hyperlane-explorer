@@ -145,22 +145,29 @@ export function useMessageDiagnostics(
   };
 }
 
-export function useMessageActivityPage(messageId: string, enabled = true) {
+export function useMessageActivityPage(messageId: string, enabled = true, loadHistory = false) {
   const [pagination, setPagination] = useState<{
     messageId: string;
     page: number;
     cursors: Array<string | null>;
   }>({ messageId, page: 0, cursors: [null] });
-  const [history, setHistory] = useState<{ messageId: string; rows: DiagnosticActivity[] }>({
+  const [history, setHistory] = useState<{
+    messageId: string;
+    rows: DiagnosticActivity[];
+    complete: boolean;
+  }>({
     messageId,
     rows: [],
+    complete: false,
   });
   const current =
     pagination.messageId === messageId ? pagination : { messageId, page: 0, cursors: [null] };
   const beforeId = current.cursors[current.page] ?? null;
-  const [{ data, fetching, error, operation }] = useQuery<{ message_activity: unknown }>({
+  const [{ data, fetching, error, operation }, refreshHistory] = useQuery<{
+    message_activity: unknown;
+  }>({
     query: ACTIVITY_QUERY,
-    variables: { messageId, beforeId, limit: HISTORY_PAGE_SIZE },
+    variables: { messageId, beforeId, limit: loadHistory ? 500 : HISTORY_PAGE_SIZE },
     requestPolicy: 'network-only',
     pause: !enabled,
   });
@@ -179,15 +186,19 @@ export function useMessageActivityPage(messageId: string, enabled = true) {
   }, [beforeId, data, messageId, operation]);
   const activityPage = activityResult.page;
   useEffect(() => {
-    if (!activityPage) return;
-    setHistory((previous) => ({
-      messageId,
-      rows: mergeActivityHistory(
-        previous.messageId === messageId ? previous.rows : [],
-        activityPage.activities,
-      ),
-    }));
-  }, [activityPage, messageId]);
+    if (!activityPage || fetching) return;
+    setHistory((previous) => {
+      const previousRows = previous.messageId === messageId ? previous.rows : [];
+      const ids = new Set([...previousRows, ...activityPage.activities].map((row) => row.id));
+      return {
+        messageId,
+        rows: mergeActivityHistory(previousRows, activityPage.activities),
+        complete:
+          ids.size <= 1000 &&
+          ((previous.messageId === messageId && previous.complete) || !activityPage.has_more),
+      };
+    });
+  }, [activityPage, fetching, messageId]);
   useEffect(() => {
     setPagination({ messageId, page: 0, cursors: [null] });
   }, [messageId]);
@@ -212,9 +223,46 @@ export function useMessageActivityPage(messageId: string, enabled = true) {
     () => setPagination({ messageId, page: 0, cursors: [null] }),
     [messageId],
   );
+  const loadedActivities = history.messageId === messageId ? history.rows : [];
+  const complete = history.messageId === messageId && history.complete;
+  const loadedCount = new Set(
+    [...loadedActivities, ...(activityPage?.activities ?? [])].map((row) => row.id),
+  ).size;
+  const retry = useCallback(
+    () => refreshHistory({ requestPolicy: 'network-only' }),
+    [refreshHistory],
+  );
+  useEffect(() => {
+    const cursor = activityPage?.next_before_id;
+    if (
+      enabled &&
+      loadHistory &&
+      !fetching &&
+      !error &&
+      !complete &&
+      activityPage?.has_more &&
+      loadedCount < 1000 &&
+      cursor &&
+      !current.cursors.includes(cursor)
+    ) {
+      next(cursor);
+    }
+  }, [
+    enabled,
+    loadHistory,
+    fetching,
+    error,
+    complete,
+    activityPage,
+    loadedCount,
+    current.cursors,
+    next,
+  ]);
   return {
     activityPage,
-    loadedActivities: history.messageId === messageId ? history.rows : [],
+    loadedActivities,
+    complete,
+    retry,
     page: current.page,
     fetching: enabled && fetching,
     error: error?.message ?? activityResult.error,
