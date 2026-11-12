@@ -216,3 +216,35 @@ test('does not combine signatures across conflicting roots to invent quorum', ()
     timeline(rows).filter((entry) => entry.title.startsWith('Signature threshold reached')),
   ).toHaveLength(0);
 });
+
+// Confirmation is a chain block timestamp, not a relayer observation or an estimate.
+it.each([
+  { confirmed: true, timestamp: 106_000, expected: 106_000 },
+  { confirmed: true, timestamp: undefined, expected: undefined },
+  { confirmed: false, timestamp: 106_000, expected: undefined },
+])('uses only a confirmed origin block timestamp: %j', ({ confirmed, timestamp, expected }) => {
+  const entries = timeline([], {
+    originConfirmation: {
+      confirmed,
+      tracked: true,
+      blockNumber: 105,
+      required: 5,
+      timestamp,
+    },
+  });
+  expect(entries.find((entry) => entry.kind === 'origin_confirmed')).toMatchObject({
+    title: 'Origin confirmed',
+    summary: 'Block 105 · 5 blocks after dispatch',
+    timestamp: expected,
+    blockTimestamp: expected,
+    timeSource: 'chain',
+    rows: [],
+    status: confirmed ? 'complete' : 'active',
+  });
+  if (expected !== undefined) {
+    expect(entries.slice(0, 2).map((entry) => entry.kind)).toEqual([
+      'dispatch',
+      'origin_confirmed',
+    ]);
+  }
+});

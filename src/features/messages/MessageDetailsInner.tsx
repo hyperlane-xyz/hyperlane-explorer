@@ -110,7 +110,17 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
     baseMessage.status === MessageStatus.Delivered
       ? baseMessage
       : activeRuntimeState?.message || baseMessage;
-  const originConfirmation = useOriginConfirmation(message, chainMetadataResolver);
+  const originConfirmationState = useOriginConfirmation(message, chainMetadataResolver);
+  const originConfirmationBlock = activeRuntimeState?.originConfirmationBlock;
+  const originConfirmation = {
+    ...originConfirmationState,
+    timestamp:
+      originConfirmationState.timestamp ??
+      (originConfirmationState.confirmed &&
+      originConfirmationBlock?.blockNumber === originConfirmationState.blockNumber
+        ? originConfirmationBlock?.timestamp
+        : undefined),
+  };
   const confirmationProgress =
     originConfirmation.required === undefined
       ? null
@@ -290,6 +300,7 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
                 destinationChainName={destinationChainName}
                 blur={blur}
                 isOriginConfirming={isOriginConfirming}
+                originConfirmation={originConfirmationState}
                 warpRouteDetails={warpRouteDetails}
                 onStateChange={handleRuntimeStateChange}
               />
@@ -300,7 +311,12 @@ export function MessageDetailsInner({ messageId, message: initialMessage }: Prop
         {showLifecycle && (
           <MessageTechnicalDetails
             key={`activity-${messageId}`}
-            activity={<MessageRelayActivityPanel message={message} />}
+            activity={
+              <MessageRelayActivityPanel
+                message={message}
+                originConfirmation={originConfirmation}
+              />
+            }
             warpRoute={
               warpRouteDetails && warpVisualization ? (
                 <WarpRouteVisualizationCard
@@ -431,6 +447,8 @@ function isRuntimeStateEqual(a: MessageDetailsRuntimeState, b: MessageDetailsRun
     a.isMessageFound === b.isMessageFound &&
     a.message === b.message &&
     a.debugResult === b.debugResult &&
+    a.originConfirmationBlock?.blockNumber === b.originConfirmationBlock?.blockNumber &&
+    a.originConfirmationBlock?.timestamp === b.originConfirmationBlock?.timestamp &&
     a.collateralInfo.status === b.collateralInfo.status &&
     a.collateralInfo.available === b.collateralInfo.available &&
     a.collateralInfo.required === b.collateralInfo.required &&

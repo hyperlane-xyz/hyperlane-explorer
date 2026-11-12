@@ -15,12 +15,14 @@ import {
   type LifecycleStepStatus,
   type RelayerDiagnosticState,
 } from './types';
+import type { OriginConfirmation } from './useOriginConfirmation';
 import { normalizeValidatorAddress } from './validatorSignatures';
 
 export interface TimelineEntry {
   id: string;
   kind:
     | 'dispatch'
+    | 'origin_confirmed'
     | 'pickup'
     | 'signature'
     | 'security'
@@ -62,6 +64,7 @@ interface TimelineOptions {
   activities: DiagnosticActivity[];
   /** True only after every retained history page has been loaded. */
   historyComplete?: boolean;
+  originConfirmation?: OriginConfirmation;
 }
 
 interface Report {
@@ -76,6 +79,7 @@ export function buildMessageActivityTimeline({
   observation,
   activities,
   historyComplete = false,
+  originConfirmation,
 }: TimelineOptions): TimelineEntry[] {
   const selectedRows = observation
     ? [...new Map(activities.map((row) => [row.id, row])).values()]
@@ -122,6 +126,27 @@ export function buildMessageActivityTimeline({
       relayer: observation?.relayer,
     },
   ];
+
+  if (originConfirmation) {
+    const { blockNumber, required, confirmed, tracked } = originConfirmation;
+    const timestamp = confirmed ? validTime(originConfirmation.timestamp) : undefined;
+    entries.push({
+      ...milestone(
+        'origin_confirmed',
+        'Origin confirmed',
+        blockNumber !== undefined && required !== undefined
+          ? `Origin confirmation block ${blockNumber.toLocaleString('en-US')} is dispatch block ${message.origin.blockNumber?.toLocaleString('en-US')} plus ${required} confirmation blocks. This uses the configured reorg period, with confirmations as the fallback. The time is this block’s timestamp, not when a relayer observed it.`
+          : 'The origin confirmation block cannot be derived from the configured finality policy. Its block time is unavailable.',
+        confirmed ? 'complete' : tracked ? 'active' : 'pending',
+        timestamp,
+      ),
+      summary:
+        blockNumber !== undefined
+          ? `Block ${blockNumber.toLocaleString('en-US')} · ${required} blocks after dispatch`
+          : 'Origin confirmation block unavailable',
+      blockTimestamp: timestamp,
+    });
+  }
 
   const seenSignatures = new Set<string>();
   const milestones = new Set<string>();
@@ -446,6 +471,7 @@ function isSupported(row: DiagnosticActivity) {
 function timelineRank(kind: TimelineEntry['kind']) {
   return [
     'dispatch',
+    'origin_confirmed',
     'pickup',
     'signature',
     'security',

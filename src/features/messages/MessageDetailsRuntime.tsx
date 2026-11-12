@@ -6,6 +6,11 @@ import { MessageDebugResult } from '../debugger/types';
 import { useMessageDeliveryStatus } from '../deliveryStatus/useMessageDeliveryStatus';
 import { DestinationTransactionPreviewCard } from './cards/OriginTransactionCard';
 import { CollateralInfo, CollateralStatus } from './collateral/types';
+import type { OriginConfirmation } from './diagnostics/useOriginConfirmation';
+import {
+  useOriginConfirmationTimestamp,
+  type OriginConfirmationTimestamp,
+} from './diagnostics/useOriginConfirmationTimestamp';
 import { DEFAULT_PI_MESSAGE_DETAILS_STATE, PiMessageDetailsState } from './piMessageDetailsState';
 
 const DestinationTransactionCard = lazy(() =>
@@ -24,6 +29,7 @@ export interface MessageDetailsRuntimeState {
   message?: Message | MessageStub;
   debugResult?: MessageDebugResult;
   collateralInfo: CollateralInfo;
+  originConfirmationBlock?: OriginConfirmationTimestamp;
 }
 
 interface Props {
@@ -36,6 +42,7 @@ interface Props {
   destinationChainName: string;
   blur: boolean;
   isOriginConfirming: boolean;
+  originConfirmation?: OriginConfirmation;
   warpRouteDetails?: WarpRouteDetails;
   onStateChange: (state: MessageDetailsRuntimeState) => void;
 }
@@ -50,6 +57,7 @@ export function MessageDetailsRuntime({
   destinationChainName,
   blur,
   isOriginConfirming,
+  originConfirmation,
   warpRouteDetails,
   onStateChange,
 }: Props) {
@@ -97,6 +105,10 @@ export function MessageDetailsRuntime({
       enabled: isMessageFound,
     });
   const message = isMessageFound ? messageWithDeliveryStatus : undefined;
+  const originConfirmationBlock = useOriginConfirmationTimestamp(
+    message ?? queriedMessage,
+    isMessageFound ? originConfirmation : undefined,
+  );
   const hasRun =
     hasInitialMessageDetails || isGraphQlMessageFound || baseIsMessageFound || activePiState.hasRun;
   const transactionProps = {
@@ -117,9 +129,11 @@ export function MessageDetailsRuntime({
       message,
       debugResult,
       collateralInfo,
+      originConfirmationBlock,
     });
   }, [
     collateralInfo,
+    originConfirmationBlock,
     debugResult,
     hasRun,
     isMessageFound,

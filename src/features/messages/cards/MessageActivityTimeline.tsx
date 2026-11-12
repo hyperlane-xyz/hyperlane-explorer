@@ -88,7 +88,7 @@ function TimelineRow({
   const sincePrevious = elapsed(previousAt, eventTime);
   const repeated = entry.repeatCount > 1;
   const clock =
-    entry.kind === 'dispatch'
+    entry.kind === 'dispatch' || entry.kind === 'origin_confirmed'
       ? (entry.blockTimestamp ?? entry.timestamp)
       : entry.kind === 'delivery'
         ? (entry.blockTimestamp ?? (entry.timeSource === 'chain' ? entry.timestamp : undefined))

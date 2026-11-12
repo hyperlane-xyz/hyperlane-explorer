@@ -6,6 +6,10 @@ import { MessageStatus, type MessageStub } from '../../types';
 import { CollateralInfo, CollateralStatus } from './collateral/types';
 import { MessageDetailsRuntime } from './MessageDetailsRuntime';
 
+jest.mock('./diagnostics/useOriginConfirmationTimestamp', () => ({
+  useOriginConfirmationTimestamp: () => undefined,
+}));
+
 jest.mock('next/dynamic', () => ({ __esModule: true, default: () => () => null }));
 jest.mock('./cards/TransactionCard', () => ({
   DestinationTransactionCard: ({
