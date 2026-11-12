@@ -41,6 +41,7 @@ it('preserves grouped waits and distinguishes clock skew from missing times', as
               signatureModule: '0xmodule',
             }),
             entry('dispatch', 100_000),
+            entry('origin_confirmed', 100_500, { blockTimestamp: 100_500, timeSource: 'chain' }),
             entry('activity', 101_000, { repeatCount: 3, endTimestamp: 103_500 }),
             entry('delivery', 104_567),
             entry('validation'),
@@ -60,9 +61,13 @@ it('preserves grouped waits and distinguishes clock skew from missing times', as
     });
     expect(rows[0].textContent).toContain(new Date(99_000).toISOString());
     expect(rows[0].textContent).toContain('ISM0xmodule');
-    expect(rows[2].textContent).toContain('+3.5s since previous');
-    expect(rows[3].textContent).toContain('+4.567s');
-    expect(rows[3].textContent).toContain('+1.067s since previous');
+    expect(rows[2].querySelector<HTMLTimeElement>('summary time')?.dateTime).toBe(
+      new Date(100_500).toISOString(),
+    );
+    expect(rows[2].textContent).toContain('UTC');
+    expect(rows[3].textContent).toContain('+3s since previous');
+    expect(rows[4].textContent).toContain('+4.567s');
+    expect(rows[4].textContent).toContain('+1.067s since previous');
     const untimed = container.querySelector(
       'ol[aria-label="Milestones without recorded timestamps"]',
     );

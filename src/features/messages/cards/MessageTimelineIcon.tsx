@@ -27,6 +27,8 @@ function iconFor(entry: TimelineEntry): keyof typeof paths {
   switch (entry.kind) {
     case 'dispatch':
       return 'dispatch';
+    case 'origin_confirmed':
+      return 'confirmed';
     case 'pickup':
       return 'pickup';
     case 'signature':

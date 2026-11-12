@@ -4,10 +4,17 @@ import type { Message, MessageStub } from '../../../types';
 import { buildMessageActivityTimeline } from '../diagnostics/activityTimeline';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
 import { diagnosticsConnectionLabel } from '../diagnostics/progress';
+import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
 import { MessageActivityTimeline } from './MessageActivityTimeline';
 import { RelayerSelector } from './RelayerSelector';
 
-export function MessageRelayActivityPanel({ message }: { message: Message | MessageStub }) {
+export function MessageRelayActivityPanel({
+  message,
+  originConfirmation,
+}: {
+  message: Message | MessageStub;
+  originConfirmation?: OriginConfirmation;
+}) {
   const {
     history,
     activities,
@@ -21,10 +28,14 @@ export function MessageRelayActivityPanel({ message }: { message: Message | Mess
   const entries = useMemo(
     () =>
       // Hide delivery until its timing can be represented consistently with relayer activity.
-      buildMessageActivityTimeline({ message, observation, activities, historyComplete }).filter(
-        (entry) => entry.kind !== 'delivery',
-      ),
-    [message, observation, activities, historyComplete],
+      buildMessageActivityTimeline({
+        message,
+        observation,
+        activities,
+        historyComplete,
+        originConfirmation,
+      }).filter((entry) => entry.kind !== 'delivery'),
+    [message, observation, activities, historyComplete, originConfirmation],
   );
   const historyLimitReached = activities.length >= 1000;
   const canLoadEarlier =
