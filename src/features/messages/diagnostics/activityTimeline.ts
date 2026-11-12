@@ -8,7 +8,6 @@ import {
 import {
   describeDiagnosticActivity,
   diagnosticLabel,
-  isOffchainAttestationPending,
   mergeDiagnosticState,
   type DiagnosticActivity,
   type DiagnosticModule,
@@ -61,14 +60,14 @@ interface TimelineOptions {
   message: MessageStub;
   observation?: RelayerDiagnosticState;
   activities: DiagnosticActivity[];
+  /** True only after every retained history page has been loaded. */
+  historyComplete?: boolean;
 }
 
 interface Report {
   row: DiagnosticActivity;
   state?: DiagnosticState;
   partial: boolean;
-  /** Comparison only: omitted nodes are unknown when the anchor is not loaded. */
-  fingerprintModules?: DiagnosticModule[];
 }
 
 /** Recorded timestamps determine chronology. Missing timestamps are kept unknown. */
@@ -76,6 +75,7 @@ export function buildMessageActivityTimeline({
   message,
   observation,
   activities,
+  historyComplete = false,
 }: TimelineOptions): TimelineEntry[] {
   const selectedRows = observation
     ? [...new Map(activities.map((row) => [row.id, row])).values()]
@@ -124,90 +124,163 @@ export function buildMessageActivityTimeline({
   ];
 
   const seenSignatures = new Set<string>();
-  const reportGroups = new Map<string, { fingerprint: string; index: number }>();
-  let previousReport: Report | undefined;
-  for (const [index, report] of reports.entries()) {
+  const milestones = new Set<string>();
+  let previousState: DiagnosticState | undefined;
+  for (const report of reports) {
     const { row, state } = report;
-    const timestamp = parseObservationTime(row.observed_at);
-    const signatureEntries = signatureEvents(report, seenSignatures, timestamp);
-    entries.push(...signatureEntries);
-    // Keep phase/failure transitions, but a signature row already contains its raw
-    // snapshot and fully describes an otherwise unchanged signature collection.
-    const signatureOnly =
-      signatureEntries.length > 0 &&
-      (!state ||
-        (previousReport !== undefined &&
-          reportFingerprint(report, true) === reportFingerprint(previousReport, true)));
-    if (!signatureOnly) {
-      const description = describeDiagnosticActivity(
-        state ? { ...row, activity: { ...row.activity, state } } : row,
-      );
-      const phase = state?.phase;
-      const completedModules = newlyCompletedModules(state, previousReport?.state);
-      const progressTitle = completedModules.some((module) => module.node_id === state?.tree_root)
-        ? 'Security requirements satisfied'
-        : completedModules.length > 1
-          ? `${completedModules.length} security modules ready`
-          : completedModules.length === 1
-            ? `${diagnosticLabel(completedModules[0].module_type ?? 'Security module')} ${completedModules[0].verification === 'succeeded' ? 'verified' : 'ready'}`
-            : description.label;
-      const kind =
-        phase === 'ready_to_submit'
-          ? 'validation'
-          : phase === 'submitting' || phase === 'confirming'
-            ? 'submission'
-            : completedModules.length
-              ? 'security'
-              : 'activity';
-      const preciseTime =
-        phase === 'delivered'
-          ? validTime(state?.delivered_observed_at_millis)
-          : kind === 'submission'
-            ? validTime(state?.submission?.observed_at_millis)
-            : kind === 'validation'
-              ? validTime(state?.phase_started_at_millis)
-              : undefined;
-      const entry: TimelineEntry = {
-        id: `activity:${row.id}`,
+    const observedAt = parseObservationTime(row.observed_at);
+    // Snapshot membership proves existence, not first discovery. Until history is
+    // complete, never assign an arbitrary later snapshot's time to a signature.
+    const timestamp = historyComplete ? observedAt : undefined;
+    entries.push(...signatureEvents(report, seenSignatures, timestamp));
+    if (!isSupported(row)) continue;
+    if (!state) continue;
+
+    const add = (
+      key: string,
+      kind: TimelineEntry['kind'],
+      title: string,
+      detail: string,
+      time = timestamp,
+      status: LifecycleStepStatus = 'complete',
+    ) => {
+      if (milestones.has(key)) return;
+      milestones.add(key);
+      entries.push({
+        id: `${key}:${row.id}`,
         kind,
-        title: isSupported(row)
-          ? phase === 'delivered'
-            ? 'Relayer rechecked delivery'
-            : progressTitle
-          : 'Unrecognized relayer update',
-        summary: completedModules.length ? 'Security verification progressed' : undefined,
-        detail: isSupported(row)
-          ? phase === 'delivered'
-            ? 'The relayer rechecked the destination mailbox and confirmed the message was processed. This scheduled delivery recheck can occur well after inclusion; it is not a chain-finality observation.'
-            : description.detail
-          : 'This record uses an unsupported diagnostics version. Its raw data is available below.',
-        timestamp: preciseTime ?? timestamp,
-        timestampRaw:
-          preciseTime === undefined ? row.observed_at : new Date(preciseTime).toISOString(),
+        title,
+        detail,
+        timestamp: time,
+        timestampRaw: time === undefined ? undefined : new Date(time).toISOString(),
         timeSource: 'relayer',
-        status: phase === 'dropped' || state?.failure ? 'failed' : 'complete',
+        status,
         relayer: row.relayer,
         rows: [row],
         repeatCount: 1,
-      };
-      entries.push(entry);
-      reportGroups.set(entry.id, { fingerprint: reportFingerprint(report), index });
+        phase: state.phase,
+        submissionStage: state.submission?.stage,
+      });
+    };
+
+    for (const securityModule of state.modules) {
+      const signatures = securityModule.signatures;
+      const identity = `${securityModule.node_id}:${signatures?.index ?? '?'}:${signatures?.root ?? '?'}`;
+      if (
+        signatures?.threshold != null &&
+        signatures.threshold > 0 &&
+        new Set(signatures.signers.map((signer) => addressKey(signer.validator))).size >=
+          signatures.threshold
+      ) {
+        add(
+          `quorum:${identity}`,
+          'security',
+          `Signature threshold reached (${signatures.threshold}/${signatures.threshold})`,
+          `The relayer first reported enough matching signatures for ${diagnosticLabel(securityModule.module_type ?? 'this security module')}, checkpoint ${signatures.index}. Other security modules and metadata checks may still be pending.`,
+        );
+      }
+      if (securityModule.metadata_status === 'ready') {
+        add(
+          `metadata:${identity}`,
+          'security',
+          securityModule.node_id === state.tree_root
+            ? 'All metadata ready'
+            : `${diagnosticLabel(securityModule.module_type ?? 'Security module')} metadata ready`,
+          'The relayer completed metadata construction for this security module. Transaction simulation and submission follow separately.',
+        );
+      }
+      const before = previousState?.modules.find((item) => item.node_id === securityModule.node_id);
+      if (securityModule.verification === 'failed' && before?.verification !== 'failed') {
+        add(
+          `verification-failed:${identity}:${row.id}`,
+          'security',
+          'Security verification failed',
+          'The relayer reported unsuccessful security-module verification.',
+          timestamp,
+          'failed',
+        );
+      }
+      if (
+        securityModule.offchain_read &&
+        securityModule.offchain_read.state !== before?.offchain_read?.state &&
+        !['pending', 'pending_retries_exhausted'].includes(securityModule.offchain_read.state)
+      ) {
+        add(
+          `offchain:${identity}:${securityModule.offchain_read.state}`,
+          'security',
+          `${diagnosticLabel(securityModule.module_type ?? 'Offchain read')}: ${diagnosticLabel(securityModule.offchain_read.state)}`,
+          'The relayer reported this offchain response. Receiving metadata does not establish successful verification.',
+          timestamp,
+          securityModule.offchain_read.state === 'succeeded' ? 'complete' : 'failed',
+        );
+      }
+      if (securityModule.verification === 'succeeded') {
+        add(
+          `verified:${identity}`,
+          'security',
+          `${diagnosticLabel(securityModule.module_type ?? 'Security module')} verified`,
+          'The relayer reported successful security-module verification.',
+        );
+      }
     }
-    previousReport = report;
+
+    const phase = state.phase;
+    const description = describeDiagnosticActivity({
+      ...row,
+      activity: { ...row.activity, state },
+    });
+    const phaseTime = validTime(state.phase_started_at_millis);
+    if (phase === 'ready_to_submit') {
+      add(
+        `ready:${phaseTime ?? phase}`,
+        'validation',
+        'Simulation passed · ready to submit',
+        'Metadata preparation and the process transaction simulation completed successfully.',
+        phaseTime ?? timestamp,
+      );
+    } else if (phase === 'submitting' || phase === 'confirming') {
+      const submission = state.submission;
+      const submissionTime = validTime(submission?.observed_at_millis);
+      const stage = submission?.stage ?? phase;
+      add(
+        `submission:${stage}:${submissionTime ?? phaseTime ?? ''}`,
+        'submission',
+        diagnosticLabel(stage),
+        description.detail,
+        submissionTime ?? phaseTime ?? timestamp,
+      );
+    }
+    // Routine polling and cached checkpoint rereads are not milestones. Retain
+    // real retry/failure changes; all original observations remain in raw reports.
+    if (
+      (phase === 'retrying' || phase === 'dropped' || state.failure) &&
+      (phase !== previousState?.phase ||
+        JSON.stringify(state.retry) !== JSON.stringify(previousState?.retry) ||
+        JSON.stringify(state.failure) !== JSON.stringify(previousState?.failure))
+    ) {
+      add(
+        `failure:${row.id}`,
+        'activity',
+        description.label,
+        description.detail,
+        timestamp,
+        phase === 'dropped' || state.failure ? 'failed' : 'complete',
+      );
+    }
+    previousState = state;
   }
 
   // The current observation may include unchanged nodes from an anchor outside
   // the loaded pages, even when its update row is present. It proves a signature
   // exists, not when it was first collected. Never fabricate a history row.
   if (observation) {
-    const timestamp = parseObservationTime(observation.observedAt);
     entries.push(
       ...moduleSignatureEvents(
         observation.state.modules,
         seenSignatures,
         observation.relayer,
         observation.activityId,
-        timestamp,
+        undefined,
         observation.observedAt,
         [],
       ),
@@ -218,7 +291,7 @@ export function buildMessageActivityTimeline({
     entries.push({
       ...milestone(
         'validation',
-        'Validated',
+        'Ready to submit',
         'Verification data prepared for the destination security module. An exact validation time is shown only when recorded.',
         hasPassedValidation(observation?.state) || (!observation && delivered)
           ? 'complete'
@@ -273,36 +346,13 @@ export function buildMessageActivityTimeline({
     if (!entry.signatureGroup) continue;
     const count = (signatureCounts.get(entry.signatureGroup) ?? 0) + 1;
     signatureCounts.set(entry.signatureGroup, count);
-    entry.title = `Signature observed${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
+    entry.title =
+      entry.timestamp === undefined
+        ? 'Signature available · discovery time unknown'
+        : `Signature discovered${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
   }
-  const grouped: TimelineEntry[] = [];
-  let previousGroup: { fingerprint: string; index: number } | undefined;
-  for (const entry of entries) {
-    const group = reportGroups.get(entry.id);
-    const previous = grouped[grouped.length - 1];
-    // Group after chronological ordering so a chain or signer milestone always
-    // splits the range. Also require adjacency in the source reports: out-of-order
-    // clocks must not hide an intervening change to the relayer's state.
-    if (
-      group &&
-      previousGroup &&
-      previous &&
-      group.fingerprint === previousGroup.fingerprint &&
-      group.index === previousGroup.index + 1 &&
-      entry.timestamp !== undefined &&
-      previous.timestamp !== undefined &&
-      entry.timestamp >= (previous.endTimestamp ?? previous.timestamp)
-    ) {
-      previous.rows.push(...entry.rows);
-      previous.repeatCount += entry.repeatCount;
-      previous.endTimestamp = entry.timestamp;
-    } else {
-      grouped.push(entry);
-    }
-    previousGroup = group;
-  }
-  markCurrentStep(grouped, observation, message.status);
-  return grouped;
+  markCurrentStep(entries, observation, message.status);
+  return entries;
 }
 
 /** Historical facts stay complete; only the selected relayer's current work animates. */
@@ -434,26 +484,8 @@ function firstDeliveryObservation(reports: Report[], current: RelayerDiagnosticS
   return earliest;
 }
 
-function newlyCompletedModules(state?: DiagnosticState, previous?: DiagnosticState) {
-  if (
-    !state ||
-    !previous ||
-    state.phase !== previous.phase ||
-    !['preparing', 'awaiting_signatures'].includes(state.phase ?? '')
-  )
-    return [];
-  return state.modules.filter((module) => {
-    const before = previous.modules.find((item) => item.node_id === module.node_id);
-    return (
-      (module.verification === 'succeeded' && before?.verification !== 'succeeded') ||
-      (module.metadata_status === 'ready' && before?.metadata_status !== 'ready')
-    );
-  });
-}
-
 function reconstructReports(rows: DiagnosticActivity[]): Report[] {
   let anchor: DiagnosticState | undefined;
-  const knownModules = new Map<string, DiagnosticModule>();
   return rows.map((row) => {
     if (!isSupported(row)) return { row, partial: true };
     const state = row.activity.state;
@@ -463,12 +495,7 @@ function reconstructReports(rows: DiagnosticActivity[]): Report[] {
     }
     if (row.activity.type !== 'snapshot_update' || !state) return { row, partial: true };
     if (!anchor) {
-      // Cumulative updates may omit nodes restored to their unknown anchor values.
-      // Retain known nodes only for grouping; never use them to invent history,
-      // signatures, or a reconstructed state without the actual anchor.
-      state.removed_modules?.forEach((nodeId) => knownModules.delete(nodeId));
-      state.modules.forEach((module) => knownModules.set(module.node_id, module));
-      return { row, state, partial: true, fingerprintModules: [...knownModules.values()] };
+      return { row, state, partial: true };
     }
     return { row, state: mergeDiagnosticState(anchor, state), partial: false };
   });
@@ -513,7 +540,7 @@ function signatureEvents(report: Report, seen: Set<string>, timestamp?: number):
       title: 'Signature observed',
       detail: `Relayer reported collecting a signature for checkpoint ${observation.index}. This is the relayer’s observation time, not the validator’s signing or upload time.`,
       timestamp,
-      timestampRaw: row.observed_at,
+      timestampRaw: timestamp === undefined ? undefined : row.observed_at,
       timeSource: 'relayer',
       status: 'complete',
       relayer: row.relayer,
@@ -547,9 +574,9 @@ function moduleSignatureEvents(
         kind: 'signature',
         title: 'Signature observed',
         summary: `${diagnosticLabel(securityModule.module_type ?? 'Security module')}${signatures.index == null ? '' : ` · checkpoint ${signatures.index}`}`,
-        detail: `First available relayer report containing this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. The signature existed by this time; its actual signing and upload times are not recorded.`,
+        detail: `First recorded discovery by this relayer of this signature${signatures.index == null ? '' : ` for checkpoint ${signatures.index}`}. ${signatures.signers.length}${signatures.threshold == null ? '' : ` / ${signatures.threshold}`} signatures reported for this security module. This records relayer discovery, not validator signing or upload. If history is incomplete, the discovery time is unknown.`,
         timestamp,
-        timestampRaw,
+        timestampRaw: timestamp === undefined ? undefined : timestampRaw,
         timeSource: 'relayer',
         status: 'complete',
         relayer,
@@ -563,87 +590,6 @@ function moduleSignatureEvents(
     }
   }
   return entries;
-}
-
-function reportFingerprint(
-  { row, state, partial, fingerprintModules }: Report,
-  omitSignatureProgress = false,
-) {
-  if (!state) return `${row.version}:${stableJson(row.activity)}`;
-  return stableJson({
-    partial,
-    phase: state.phase,
-    tree_root: state.tree_root,
-    retry: state.retry?.reason,
-    failure: state.failure,
-    submission: state.submission?.stage,
-    removed_modules: partial ? [...(state.removed_modules ?? [])].sort() : undefined,
-    modules: [...(fingerprintModules ?? state.modules)]
-      .sort((a, b) => a.node_id.localeCompare(b.node_id))
-      .map((module) => ({
-        // Request bookkeeping (selected_children, latest_indices, discovery
-        // attempts, storage URLs) can change on every retry without new progress.
-        // Group by visible security/progress semantics; retain all raw records.
-        node_id: module.node_id,
-        ism: module.ism,
-        type: module.module_type,
-        children: module.children.map((child) => child.node_id).sort(),
-        validators: module.validators?.map(addressKey).sort(),
-        threshold: module.threshold ?? null,
-        verified: module.verified ?? null,
-        verification:
-          module.verification === 'succeeded' || module.verification === 'failed'
-            ? module.verification
-            : null,
-        metadata_error: module.metadata_error ?? null,
-        metadata_status: module.metadata_status ?? null,
-        failed_checks: Object.entries(module.checks ?? {})
-          .filter(([, value]) => value === 'failed')
-          .map(([check]) => check)
-          .sort(),
-        // Pending responses and exhausted per-attempt retries are the same wait.
-        offchain_read: module.offchain_read
-          ? isOffchainAttestationPending(module)
-            ? { state: 'pending' }
-            : {
-                state: module.offchain_read.state,
-                http_status: module.offchain_read.http_status ?? null,
-              }
-          : null,
-        signatures:
-          !omitSignatureProgress && module.signatures
-            ? {
-                index: module.signatures.index ?? null,
-                root: module.signatures.root ?? null,
-                threshold: module.signatures.threshold ?? null,
-                signers: module.signatures.signers
-                  .map((signer) => addressKey(signer.validator))
-                  .sort(),
-                rejected: module.signatures.unavailable
-                  .filter((entry) =>
-                    ['invalid_signature', 'signer_mismatch', 'index_mismatch'].includes(
-                      entry.reason ?? '',
-                    ),
-                  )
-                  .map((entry) => ({
-                    validator: addressKey(entry.validator),
-                    reason: entry.reason,
-                  }))
-                  .sort((a, b) => a.validator.localeCompare(b.validator)),
-              }
-            : undefined,
-      })),
-  });
-}
-
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${JSON.stringify(key)}:${stableJson(value)}`)
-      .join(',')}}`;
-  return JSON.stringify(value) ?? 'undefined';
 }
 
 function addressKey(address: string) {

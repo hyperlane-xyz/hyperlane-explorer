@@ -2,6 +2,7 @@ import { shortenAddress } from '@hyperlane-xyz/utils';
 import clsx from 'clsx';
 import { useState, type ReactNode } from 'react';
 
+import { getRelayerLabel } from '../../../consts/relayers';
 import type { TimelineEntry } from '../diagnostics/activityTimeline';
 import { formatPreciseElapsed } from '../diagnostics/timeline';
 import {
@@ -78,8 +79,7 @@ function TimelineRow({
 }) {
   const [open, setOpen] = useState(false);
   const success =
-    (entry.kind === 'delivery' || entry.kind === 'signature' || entry.kind === 'validation') &&
-    entry.status === 'complete';
+    (entry.kind === 'delivery' || entry.kind === 'signature') && entry.status === 'complete';
   const active = entry.status === 'active';
   // A collapsed run ends at its last report. Its elapsed time must include the
   // waiting hidden inside the group, not make that time disappear on expansion.
@@ -87,9 +87,12 @@ function TimelineRow({
   const sinceDispatch = elapsed(dispatchedAt, eventTime);
   const sincePrevious = elapsed(previousAt, eventTime);
   const repeated = entry.repeatCount > 1;
-  const clock = entry.kind === 'dispatch' ? entry.timestamp : undefined;
-  const clockSource =
-    entry.timestamp === undefined || entry.timeSource === 'chain' ? 'Block time' : 'Observed';
+  const clock =
+    entry.kind === 'dispatch'
+      ? (entry.blockTimestamp ?? entry.timestamp)
+      : entry.kind === 'delivery'
+        ? (entry.blockTimestamp ?? (entry.timeSource === 'chain' ? entry.timestamp : undefined))
+        : undefined;
   return (
     <li className={styles.row} aria-current={active ? 'step' : undefined} aria-busy={active}>
       <div className={styles.event}>
@@ -144,7 +147,7 @@ function TimelineRow({
               >
                 {entry.validator ? (
                   <>
-                    <span className="text-green-800">
+                    <span className={success ? 'text-green-800' : 'text-gray-800'}>
                       {shortenAddress(
                         normalizeValidatorAddress(entry.validator) ?? entry.validator,
                       )}
@@ -158,7 +161,7 @@ function TimelineRow({
               </p>
               {clock !== undefined && (
                 <p className="mt-1 text-xxs text-gray-500">
-                  {clockSource}{' '}
+                  Block time{' '}
                   <time dateTime={new Date(clock).toISOString()}>
                     {utcDate(clock)} · {utcTime(clock)} UTC
                   </time>
@@ -298,7 +301,7 @@ function eventPreview(entry: TimelineEntry): string {
       return 'Message emitted on the origin chain';
     case 'pickup':
       return entry.relayer
-        ? `${shortenAddress(entry.relayer)} · first seen`
+        ? `${getRelayerLabel(entry.relayer)} · first seen`
         : 'Awaiting a relayer observation';
     case 'delivery':
       return entry.status === 'complete'

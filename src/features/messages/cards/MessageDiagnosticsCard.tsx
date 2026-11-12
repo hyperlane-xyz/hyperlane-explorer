@@ -5,6 +5,7 @@ import { useMemo, type ReactNode } from 'react';
 import { CheckmarkIcon } from '../../../components/icons/CheckmarkIcon';
 import { LockIcon } from '../../../components/icons/LockIcon';
 import { PersonIcon } from '../../../components/icons/PersonIcon';
+import { getRelayerLabel, getRelayerName } from '../../../consts/relayers';
 import { useChainMetadata } from '../../../metadataStore';
 import { logger } from '../../../utils/logger';
 import { truncateString } from '../../../utils/string';
@@ -155,7 +156,12 @@ export function MessageDiagnosticsCard({ originDomainId, destinationChainName, d
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-2 text-xxs text-gray-500">
               <span title={observation.relayer}>
-                Relayer {truncateString(observation.relayer, 8, 6)}
+                <span className="block text-gray-700">{getRelayerLabel(observation.relayer)}</span>
+                {getRelayerName(observation.relayer) && (
+                  <span className="block font-mono">
+                    {truncateString(observation.relayer, 8, 6)}
+                  </span>
+                )}
               </span>
               <span>
                 {diagnostics?.partial

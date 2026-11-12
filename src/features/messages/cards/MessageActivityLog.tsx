@@ -1,7 +1,7 @@
-import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyButton } from '@hyperlane-xyz/widgets';
 import { useMemo, useState, type ReactNode } from 'react';
 
+import { getRelayerLabel, getRelayerName } from '../../../consts/relayers';
 import { formatElapsed, formatTimestamp, getActivityTimings } from '../diagnostics/timeline';
 import {
   describeDiagnosticActivity,
@@ -228,7 +228,7 @@ export function MessageActivityLog({
                           <span aria-hidden="true">·</span>
                           <span className="break-all" title={`Reporting relayer: ${row.relayer}`}>
                             <span className="sr-only">Reporting relayer: </span>
-                            {shortenAddress(row.relayer)}
+                            {getRelayerLabel(row.relayer)}
                           </span>
                         </span>
                       </span>
@@ -250,7 +250,14 @@ export function MessageActivityLog({
                         <div className="min-w-0">
                           <dt className="text-gray-500">Reporting relayer</dt>
                           <dd className="mt-1 flex items-center gap-2 break-all text-gray-800">
-                            {row.relayer}
+                            <span className="min-w-0">
+                              {getRelayerName(row.relayer) && (
+                                <span className="block font-medium">
+                                  {getRelayerName(row.relayer)}
+                                </span>
+                              )}
+                              <span className="block font-mono text-gray-500">{row.relayer}</span>
+                            </span>
                             <CopyButton
                               copyValue={row.relayer}
                               width={12}

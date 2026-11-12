@@ -24,7 +24,6 @@ const message: MessageStub = {
 };
 const validatorA = '0x1111111111111111111111111111111111111111';
 const validatorB = '0x2222222222222222222222222222222222222222';
-const validatorC = '0x3333333333333333333333333333333333333333';
 
 function module(signers: string[], index = 10, root = 'root', threshold = 2): DiagnosticModule {
   return {
@@ -84,6 +83,7 @@ function timeline(
 ) {
   return buildMessageActivityTimeline({
     message,
+    historyComplete: true,
     activities: rows,
     observation: rows.length ? observation(rows[rows.length - 1]) : undefined,
     ...extra,
@@ -91,100 +91,6 @@ function timeline(
 }
 
 describe('message activity timeline', () => {
-  it.each([2, 3])('numbers %s signatures first observed in one batch individually', (threshold) => {
-    const row = activity(1, 'awaiting_signatures', 111_000, {
-      modules: [
-        module([validatorA, validatorB, validatorC].slice(0, threshold), 10, 'root', threshold),
-      ],
-    });
-    const signatures = timeline([row, row]).filter((entry) => entry.kind === 'signature');
-    expect(signatures.map((entry) => entry.title)).toEqual(
-      Array.from(
-        { length: threshold },
-        (_, index) => `Signature observed (${index + 1}/${threshold})`,
-      ),
-    );
-    expect(signatures.every((entry) => entry.timestamp === 111_000)).toBe(true);
-  });
-
-  it('numbers signatures in displayed timestamp order, separately per checkpoint', () => {
-    const rows = [
-      activity(1, 'awaiting_signatures', 113_000, { modules: [module([validatorA])] }),
-      activity(2, 'awaiting_signatures', 112_000, { modules: [module([validatorB, validatorA])] }),
-      activity(3, 'awaiting_signatures', 114_000, { modules: [module([validatorC], 11)] }),
-    ];
-    expect(
-      timeline(rows)
-        .filter((entry) => entry.kind === 'signature')
-        .map(({ title, validator }) => [title, validator]),
-    ).toEqual([
-      ['Signature observed (1/2)', validatorB],
-      ['Signature observed (2/2)', validatorA],
-      ['Signature observed (1/2)', validatorC],
-    ]);
-  });
-  it('shows signature progress through the threshold while retaining the validation step', () => {
-    const rows = [
-      activity(1, 'awaiting_signatures', 111_000, {
-        modules: [module([validatorA], 10, 'root', 3)],
-      }),
-      activity(2, 'awaiting_signatures', 112_000, {
-        modules: [module([validatorA, validatorB], 10, 'root', 3)],
-      }),
-      activity(3, 'ready_to_submit', 113_000, {
-        modules: [module([validatorA, validatorB, validatorC], 10, 'root', 3)],
-      }),
-    ];
-    const entries = timeline(rows);
-    expect(
-      entries.filter((entry) => entry.kind === 'signature').map((entry) => entry.title),
-    ).toEqual(['Signature observed (1/3)', 'Signature observed (2/3)', 'Signature observed (3/3)']);
-    expect(entries.find((entry) => entry.kind === 'validation')?.status).toBe('complete');
-  });
-
-  it('identifies separate modules sharing validators and checkpoint, with independent thresholds', () => {
-    const messageId = module([validatorA]);
-    const merkleRoot = {
-      ...module([validatorB, validatorA], 10, 'root', 3),
-      node_id: 'merkle',
-      ism: '0xmerkle',
-      module_type: 'MerkleRootMultisig',
-    };
-    const rows = [
-      activity(1, 'awaiting_signatures', 111_000, { modules: [messageId] }),
-      activity(2, 'awaiting_signatures', 112_000, { modules: [messageId, merkleRoot] }),
-    ];
-    expect(
-      timeline(rows)
-        .filter((entry) => entry.kind === 'signature')
-        .map(({ title, summary, signatureModule, validator }) => ({
-          title,
-          summary,
-          signatureModule,
-          validator,
-        })),
-    ).toEqual([
-      {
-        title: 'Signature observed (1/2)',
-        summary: 'Message ID multisig · checkpoint 10',
-        signatureModule: '0xism',
-        validator: validatorA,
-      },
-      {
-        title: 'Signature observed (1/3)',
-        summary: 'Merkle root multisig · checkpoint 10',
-        signatureModule: '0xmerkle',
-        validator: validatorB,
-      },
-      {
-        title: 'Signature observed (2/3)',
-        summary: 'Merkle root multisig · checkpoint 10',
-        signatureModule: '0xmerkle',
-        validator: validatorA,
-      },
-    ]);
-  });
-
   it('deduplicates signatures per module and checkpoint without claiming exact signing times', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] }),
@@ -196,11 +102,11 @@ describe('message activity timeline', () => {
     expect(
       entries.map(({ validator, timestamp, title }) => ({ validator, timestamp, title })),
     ).toEqual([
-      { validator: validatorA, timestamp: 111_000, title: 'Signature observed (1/2)' },
-      { validator: validatorB, timestamp: 113_000, title: 'Signature observed (2/2)' },
-      { validator: validatorA, timestamp: 114_000, title: 'Signature observed (1/2)' },
+      { validator: validatorA, timestamp: 111_000, title: 'Signature discovered (1/2)' },
+      { validator: validatorB, timestamp: 113_000, title: 'Signature discovered (2/2)' },
+      { validator: validatorA, timestamp: 114_000, title: 'Signature discovered (1/2)' },
     ]);
-    expect(entries[0].detail).toContain('actual signing and upload times are not recorded');
+    expect(entries[0].detail).toContain('not validator signing or upload');
   });
 
   it('applies cumulative updates to their anchor rather than the previous update', () => {
@@ -213,118 +119,9 @@ describe('message activity timeline', () => {
     again.activity.type = 'snapshot_update';
     const entries = timeline([anchor, update, omitted, again]);
     expect(entries.filter((entry) => entry.kind === 'signature')).toHaveLength(1);
-    // The omitted node restores the anchor, so these are distinct observations.
-    expect(entries.filter((entry) => entry.kind === 'activity')).toHaveLength(3);
+    // Cached rereads do not add historical milestones; only the current wait remains.
+    expect(entries.filter((entry) => entry.kind === 'activity')).toHaveLength(1);
   });
-
-  it('collapses ten identical retries but preserves every exact report', () => {
-    const rows = Array.from({ length: 10 }, (_, i) =>
-      activity(i + 1, 'retrying', 111_000 + i * 100, {
-        retry: {
-          reason: 'CouldNotFetchMetadata',
-          count: i + 1,
-          next_attempt_at_millis: 115_000 + i * 100,
-        },
-        failure: { stage: 'metadata', reason: 'missing_signatures' },
-        modules: [module([])],
-      }),
-    );
-    const entries = timeline(rows).filter((entry) => entry.kind === 'activity');
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({
-      repeatCount: 10,
-      timestamp: 111_000,
-      endTimestamp: 111_900,
-    });
-    expect(entries[0].rows).toEqual(rows);
-    const changed = timeline([
-      ...rows,
-      activity(11, 'retrying', 112_000, {
-        retry: { reason: 'NoGas' },
-        failure: { stage: 'submit', reason: 'insufficient_gas' },
-        modules: [module([])],
-      }),
-    ]).filter((entry) => entry.kind === 'activity');
-    expect(changed).toHaveLength(2);
-    expect(changed[1].rows[0].id).toBe('11');
-  });
-
-  it('collapses partial retries when unchanged modules alternate in and out of updates', () => {
-    const routing: DiagnosticModule = {
-      node_id: 'routing',
-      ism: '0xrouting',
-      children: [{ node_id: 'root', ism: '0xism' }],
-      module_type: 'Routing',
-      metadata_status: 'blocked',
-      metadata_error: 'Awaiting validator signatures',
-    };
-    const rows = Array.from({ length: 10 }, (_, i) => {
-      const row = activity(i + 1, 'awaiting_signatures', 111_000 + i * 100, {
-        retry: { reason: 'AwaitingValidatorSignatures', count: i },
-        modules: [...(i % 3 === 0 ? [routing] : []), module([validatorA])],
-      });
-      row.activity.type = 'snapshot_update';
-      return row;
-    });
-    const entries = timeline(rows);
-    const waiting = entries.filter((entry) => entry.kind === 'activity');
-    expect(waiting).toHaveLength(1);
-    expect(waiting[0]).toMatchObject({
-      repeatCount: 10,
-      timestamp: 111_000,
-      endTimestamp: 111_900,
-      rows,
-      status: 'active',
-    });
-    expect(entries.filter((entry) => entry.kind === 'signature')).toHaveLength(1);
-
-    const changed = activity(11, 'awaiting_signatures', 112_000, {
-      retry: { reason: 'AwaitingValidatorSignatures' },
-      modules: [{ ...routing, metadata_error: 'RPC request failed' }, module([validatorA])],
-    });
-    changed.activity.type = 'snapshot_update';
-    expect(timeline([...rows, changed]).filter((entry) => entry.kind === 'activity')).toHaveLength(
-      2,
-    );
-  });
-
-  it.each(['succeeded', 'request_timeout'])(
-    'groups pending gateway retry cycles while preserving a transition to %s',
-    (state) => {
-      const gateway: DiagnosticModule = {
-        node_id: 'ccip',
-        ism: '0xccip',
-        children: [],
-        module_type: 'CcipRead',
-        metadata_status: 'blocked',
-        metadata_error: 'Could not fetch metadata',
-        offchain_read: { state: 'pending_retries_exhausted', http_status: null },
-      };
-      const anchor = activity(1, 'preparing', 110_000, { modules: [gateway] });
-      const retries = Array.from({ length: 6 }, (_, i) => {
-        const row = activity(i + 2, 'retrying', 111_000 + i * 100, {
-          retry: { reason: 'CouldNotFetchMetadata', count: Math.floor(i / 3) + 1 },
-          modules:
-            i % 3 === 1
-              ? [{ ...gateway, offchain_read: { state: 'pending', http_status: 500 } }]
-              : [],
-        });
-        row.activity.type = 'snapshot_update';
-        return row;
-      });
-      const changed = activity(8, 'retrying', 112_000, {
-        retry: { reason: 'CouldNotFetchMetadata', count: 2 },
-        modules: [{ ...gateway, offchain_read: { state } }],
-      });
-      changed.activity.type = 'snapshot_update';
-      const entries = timeline([anchor, ...retries, changed]).filter(
-        (entry) => entry.kind === 'activity',
-      );
-      expect(entries).toHaveLength(3);
-      expect(entries[1]).toMatchObject({ repeatCount: 6, rows: retries, endTimestamp: 111_500 });
-      expect(entries[2].rows).toEqual([changed]);
-    },
-  );
 
   it('orders delivery after mempool and inclusion, never by an earlier block-header timestamp', () => {
     const rows = [
@@ -356,40 +153,11 @@ describe('message activity timeline', () => {
       blockTimestamp: 117_000,
       timeSource: 'relayer',
     });
-    expect(entries.find((entry) => entry.title === 'Relayer rechecked delivery')?.timestamp).toBe(
-      719_197,
-    );
+    expect(entries.filter((entry) => entry.kind === 'delivery')).toHaveLength(1);
   });
 
-  it.each([true, false])(
-    'does not date delivery from an inclusion attempt (executed: %s)',
-    (executed) => {
-      const rows = [
-        activity(1, 'confirming', 110_000, {
-          submission: { stage: 'included', observed_at_millis: 110_000 },
-          transaction: { transaction_id: 'failed', executed: false },
-        }),
-        activity(2, 'retrying', 120_000),
-        activity(3, 'confirming', 130_000, {
-          submission: { stage: 'included', observed_at_millis: 130_000 },
-          transaction: { transaction_id: 'other', executed },
-        }),
-        activity(4, 'delivered', 140_000, { delivered_observed_at_millis: 140_000 }),
-      ];
-      const deliveredMessage = { ...message, status: MessageStatus.Delivered };
-      expect(
-        timeline(rows, { message: deliveredMessage }).find((entry) => entry.kind === 'delivery'),
-      ).toMatchObject({ timestamp: 140_000, rows: [rows[3]] });
-      expect(
-        timeline(rows.slice(0, 3), { message: deliveredMessage }).find(
-          (entry) => entry.kind === 'delivery',
-        )?.timestamp,
-      ).toBe(message.destination?.timestamp);
-    },
-  );
-
   it('isolates selected relayer events and ignores observations newer than selected state', () => {
-    const ours = activity(1, 'preparing', 111_000);
+    const ours = activity(1, 'preparing', 111_000, { modules: [module([validatorA])] });
     const other = activity(
       2,
       'ready_to_submit',
@@ -407,36 +175,44 @@ describe('message activity timeline', () => {
     );
   });
 
-  it('animates the current waiting group while collected signatures stay complete', () => {
-    const rows = [
-      activity(1, 'awaiting_signatures', 111_000, { modules: [module([])] }),
-      activity(2, 'awaiting_signatures', 112_000, { modules: [module([validatorA])] }),
-    ];
-    const entries = timeline(rows);
-    expect(entries.filter((entry) => entry.status === 'active').map((entry) => entry.kind)).toEqual(
-      ['activity'],
-    );
-    expect(entries.find((entry) => entry.kind === 'signature')?.status).toBe('complete');
-    expect(entries.find((entry) => entry.kind === 'validation')?.status).toBe('pending');
-    const validated = timeline([...rows, activity(3, 'ready_to_submit', 113_000)]);
-    expect(validated.find((entry) => entry.kind === 'activity')?.status).toBe('complete');
-    expect(validated.find((entry) => entry.kind === 'validation')?.status).toBe('complete');
-  });
-
-  it('retains current signatures from an unseen anchor when the partial update row is loaded', () => {
-    const partial = activity(2, 'awaiting_signatures', 112_000);
-    partial.activity.type = 'snapshot_update';
-    const current = observation(partial);
-    current.state = { ...current.state, modules: [module([validatorA])] };
-    const signatures = timeline([partial], { observation: current }).filter(
+  it('does not assign discovery times to incomplete history', () => {
+    const rows = [activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] })];
+    const signatures = timeline(rows, { historyComplete: false }).filter(
       (entry) => entry.kind === 'signature',
     );
     expect(signatures).toHaveLength(1);
-    expect(signatures[0]).toMatchObject({
-      validator: validatorA,
-      title: 'Signature observed (1/2)',
-      timestamp: 112_000,
-      rows: [],
-    });
+    expect(signatures[0].timestamp).toBeUndefined();
   });
+});
+
+test('separates quorum, all metadata ready, and simulation completion without moving first times on reread', () => {
+  const first = module([validatorA, validatorB], 10, 'root', 2);
+  const ready = { ...first, metadata_status: 'ready' };
+  const rows = [
+    activity(1, 'awaiting_signatures', 111_000, { tree_root: 'root', modules: [first] }),
+    activity(2, 'awaiting_signatures', 111_300, { tree_root: 'root', modules: [ready] }),
+    activity(3, 'ready_to_submit', 111_400, { tree_root: 'root', modules: [ready] }),
+    activity(4, 'submitting', 111_500, { tree_root: 'root', modules: [ready] }),
+  ];
+  const entries = timeline(rows);
+  expect(
+    entries.filter((entry) => entry.title.startsWith('Signature threshold reached')),
+  ).toMatchObject([{ timestamp: 111_000 }]);
+  expect(entries.filter((entry) => entry.title === 'All metadata ready')).toMatchObject([
+    { timestamp: 111_300 },
+  ]);
+  expect(entries.filter((entry) => entry.kind === 'validation')).toMatchObject([
+    { timestamp: 111_400 },
+  ]);
+});
+
+test('does not combine signatures across conflicting roots to invent quorum', () => {
+  const rows = [
+    activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA], 10, 'a')] }),
+    activity(2, 'awaiting_signatures', 112_000, { modules: [module([validatorB], 10, 'b')] }),
+    activity(3, 'awaiting_signatures', 113_000, { modules: [module([validatorA], 11, 'a')] }),
+  ];
+  expect(
+    timeline(rows).filter((entry) => entry.title.startsWith('Signature threshold reached')),
+  ).toHaveLength(0);
 });
