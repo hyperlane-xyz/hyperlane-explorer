@@ -335,9 +335,8 @@ export function useMessageSearchQuery(
     [warpRouteAddresses, chainMetadataResolver],
   );
 
-  // For pending filter, we use client-side filtering because the DB query for
-  // is_delivered=false is slow (no index on absence of delivered_message record).
-  // Instead, we fetch more messages and filter client-side.
+  // Filter both delivery states on canonical pages. Pending is sparse enough
+  // to warrant a larger candidate page.
   const isPendingFilter = statusFilter === 'pending';
 
   const queryLimit = isPendingFilter ? PENDING_FILTER_BATCH_SIZE : MESSAGE_PAGE_SIZE + 1;
