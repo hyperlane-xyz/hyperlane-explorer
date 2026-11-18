@@ -163,7 +163,7 @@ export function buildMessageSearchQuery(
         ${destinationDomainWhereClause}
         ${startTimeFilter ? '{send_occurred_at: {_gte: $startTime}},' : ''}
         ${endTimeFilter ? '{send_occurred_at: {_lte: $endTime}},' : ''}
-        ${statusFilter === 'delivered' ? '{is_delivered: {_eq: true}},' : ''}
+        ${provisional && statusFilter === 'delivered' ? '{is_delivered: {_eq: true}},' : ''}
         ${provisional && statusFilter === 'pending' ? '{is_delivered: {_eq: false}},' : ''}
         ${warpAddressesBytea.length ? '{_or: [{sender: {_in: $warpAddresses}}, {recipient: {_in: $warpAddresses}}]},' : ''}
         ${whereClause}

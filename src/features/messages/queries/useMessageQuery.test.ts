@@ -187,6 +187,16 @@ it('keeps canonical data when only the provisional selection fails', () => {
 });
 
 describe('message query caching', () => {
+  it.each(['pending', 'delivered'] as const)(
+    'filters canonical %s pages in the browser',
+    (status) => {
+      const { query } = buildMessageSearchQuery('', null, null, null, null, 51, true, [], status);
+      const [canonical, provisional] = query.split('provisional: message_view');
+      expect(canonical).not.toContain('is_delivered:');
+      expect(provisional).toContain(`is_delivered: {_eq: ${status === 'delivered'}}`);
+    },
+  );
+
   it('opts details into zero confirmations and limits provisional search to the first page', () => {
     expect(buildMessageQuery(MessageIdentifierType.Id, '0x01', 1).query).not.toContain(
       'confirmations: 0',
