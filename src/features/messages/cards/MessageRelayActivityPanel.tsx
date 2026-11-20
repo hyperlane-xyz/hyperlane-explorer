@@ -59,8 +59,8 @@ export function MessageRelayActivityPanel({
       {!historyComplete && (
         <output className="mb-4 block text-xs text-gray-600">
           {history.error || historyLimitReached
-            ? 'History is incomplete. First signature collection times are unknown.'
-            : 'Loading complete history to find the first signature collection times…'}
+            ? 'History is incomplete. Some activity times are unknown.'
+            : 'Loading earlier history to determine activity times…'}
         </output>
       )}
       <MessageActivityTimeline

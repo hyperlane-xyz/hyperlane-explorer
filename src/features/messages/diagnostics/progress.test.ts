@@ -45,6 +45,26 @@ test('keeps expected commit delays pending and active', () => {
   });
 });
 
+test.each(['safe', 'finalized'] as const)(
+  'names the pending %s block in the overview',
+  (blockTag) => {
+    const originConfirmation = { tracked: true, confirmed: false, blockTag };
+    expect(progress(MessageStatus.Pending, undefined, { originConfirmation })).toMatchObject({
+      status: `Waiting for a ${blockTag} block on origin`,
+      explanation: `The origin chain’s ${blockTag} block must reach the dispatch block.`,
+    });
+    expect(progress(MessageStatus.Pending, 'preparing', { originConfirmation })).toMatchObject({
+      status: 'Validating message',
+      explanation: expect.stringContaining(`origin chain’s ${blockTag} block`),
+    });
+    expect(
+      progress(MessageStatus.Pending, undefined, {
+        originConfirmation: { ...originConfirmation, confirmed: true },
+      }).status,
+    ).toBe('Pending relayer pickup');
+  },
+);
+
 test('keeps pending offchain attestations active and explains the delay', () => {
   expect(
     progress(MessageStatus.Pending, 'retrying', {

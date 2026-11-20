@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const count = z.number().int().nonnegative();
+const checksSchema = z.record(z.string(), z.string().nullish()).nullish();
 
 const diagnosticChildSchema = z.object({
   ism: z.string(),
@@ -60,7 +61,10 @@ export const diagnosticModuleSchema = z
     signatures: signaturesSchema.nullish(),
     merkle_leaf: z.object({ index: count, highest_known: count.nullish() }).nullish(),
     offchain_read: offchainReadSchema.nullish(),
-    checks: z.record(z.string(), z.string().nullish()).nullish(),
+    checks: checksSchema,
+    reorg_checks: z
+      .array(z.object({ validator: z.string(), states: z.array(z.string()) }))
+      .optional(),
   })
   .passthrough();
 
@@ -93,6 +97,7 @@ export const diagnosticStateSchema = z
     failure: failureSchema.nullable().optional(),
     submission: submissionSchema.nullable().optional(),
     tree_root: z.string().nullable().optional(),
+    checks: checksSchema,
     modules: z.array(diagnosticModuleSchema).default([]),
     removed_modules: z.array(z.string()).optional(),
     relayer_first_seen_at_millis: count.nullish(),

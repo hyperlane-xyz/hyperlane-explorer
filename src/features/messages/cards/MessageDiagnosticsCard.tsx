@@ -460,18 +460,18 @@ function IsmProofDetails({
   if (signatures?.index == null && !signatures?.root && !leaf && !gateway && !verification)
     return null;
   return (
-    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+    <dl
+      className={clsx(
+        'grid gap-x-4 gap-y-2',
+        gateway
+          ? 'grid-cols-[minmax(0,7rem)_minmax(0,1fr)] sm:grid-cols-[auto_minmax(0,1fr)]'
+          : 'grid-cols-[auto_minmax(0,1fr)] rounded-xl border border-gray-200 bg-gray-50 px-3 py-3',
+      )}
+    >
       <ProofField label="Checkpoint index">{signatures?.index}</ProofField>
       {signatures?.root && (
         <ProofField label="Checkpoint root" className="flex items-start gap-2">
-          <code className="min-w-0 break-all text-xxs">{signatures.root}</code>
-          <CopyButton
-            copyValue={signatures.root}
-            width={12}
-            height={12}
-            aria-label="Copy checkpoint root"
-            className="mt-0.5 shrink-0 opacity-60"
-          />
+          <CopyableHash value={signatures.root} label="Copy checkpoint root" />
         </ProofField>
       )}
       <ProofField label="Message leaf index">{leaf?.index}</ProofField>
@@ -495,6 +495,16 @@ function IsmProofDetails({
               gateway.hostname ??
               (gateway.endpoint != null ? `Endpoint ${gateway.endpoint + 1}` : undefined)}
           </ProofField>
+          {gateway.result && (
+            <>
+              <ProofField label="Proof size">
+                {gateway.result.bytes} {gateway.result.bytes === 1 ? 'byte' : 'bytes'}
+              </ProofField>
+              <ProofField label="Proof hash (Keccak-256)" className="flex items-start gap-2">
+                <CopyableHash value={gateway.result.keccak256} label="Copy proof hash" />
+              </ProofField>
+            </>
+          )}
         </>
       )}
       <ProofField
@@ -507,6 +517,21 @@ function IsmProofDetails({
         {verification ? diagnosticLabel(verification) : undefined}
       </ProofField>
     </dl>
+  );
+}
+
+function CopyableHash({ value, label }: { value: string; label: string }) {
+  return (
+    <>
+      <code className="min-w-0 break-all text-xxs">{value}</code>
+      <CopyButton
+        copyValue={value}
+        width={12}
+        height={12}
+        aria-label={label}
+        className="mt-0.5 shrink-0 opacity-60"
+      />
+    </>
   );
 }
 

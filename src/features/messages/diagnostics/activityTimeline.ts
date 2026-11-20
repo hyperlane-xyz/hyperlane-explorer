@@ -27,6 +27,7 @@ export interface TimelineEntry {
     | 'origin_confirmed'
     | 'pickup'
     | 'signature'
+    | 'offchain_read'
     | 'security'
     | 'validation'
     | 'submission'
@@ -47,6 +48,8 @@ export interface TimelineEntry {
   status: LifecycleStepStatus;
   relayer?: string;
   validator?: string;
+  offchainRead?: NonNullable<DiagnosticModule['offchain_read']>;
+  reorgResults?: { validator: string; result: string }[];
   ism?: string;
   signatureGroup?: string;
   signatureThreshold?: number | null;
@@ -151,7 +154,13 @@ export function buildMessageActivityTimeline({
   }
 
   const seenSignatures = new Set<string>();
-  const milestones = new Set<string>();
+  const milestones = new Map<string, TimelineEntry>();
+  const validatorSets = new Map<
+    string,
+    { identity?: string; resolvedAttempt?: string; reorgOutcomes: Map<string, TimelineEntry> }
+  >();
+  const groupedChecks = new Set<TimelineEntry>();
+  let prepareStartedAt: number | undefined;
   let previousState: DiagnosticState | undefined;
   for (const report of reports) {
     const { row, state } = report;
@@ -170,11 +179,11 @@ export function buildMessageActivityTimeline({
       detail: string,
       time: number | undefined,
       status: LifecycleStepStatus = 'complete',
-      context?: Pick<TimelineEntry, 'summary' | 'ism'>,
+      context?: Pick<TimelineEntry, 'summary' | 'validator' | 'ism' | 'offchainRead'>,
     ) => {
-      if (milestones.has(key)) return;
-      milestones.add(key);
-      entries.push({
+      const existing = milestones.get(key);
+      if (existing) return existing;
+      const entry: TimelineEntry = {
         id: `${key}:${row.id}`,
         kind,
         title,
@@ -189,10 +198,133 @@ export function buildMessageActivityTimeline({
         repeatCount: 1,
         phase: state.phase,
         submissionStage: state.submission?.stage,
-      });
+      };
+      milestones.set(key, entry);
+      entries.push(entry);
+      return entry;
     };
 
+    const phase = state.phase;
+    const phaseTime = validTime(state.phase_started_at_millis);
+    const priorPrepareStartedAt = prepareStartedAt;
+    if (phase === 'preparing' && state.checks?.prepare === 'started' && phaseTime !== undefined) {
+      prepareStartedAt = phaseTime;
+      add(
+        `prepare:${phaseTime}`,
+        'activity',
+        'Prepare started',
+        'The relayer started preparing this delivery attempt.',
+        historyComplete ? phaseTime : undefined,
+      );
+    }
+    // A retained cumulative report can show a completed check on the first
+    // visible start row. Only a later report can establish its observation time.
+    const checkTime =
+      priorPrepareStartedAt !== undefined &&
+      priorPrepareStartedAt === prepareStartedAt &&
+      !report.partial
+        ? timestamp
+        : undefined;
+    const attempt = String(prepareStartedAt ?? 'unknown');
+    if (state.checks?.gas_preflight === 'succeeded') {
+      add(
+        `gas-preflight:${attempt}`,
+        'activity',
+        'Gas preflight passed',
+        'The relayer’s initial gas payment requirement check passed.',
+        checkTime,
+      );
+    }
+
     for (const securityModule of state.modules) {
+      const nodeId = securityModule.node_id;
+      const moduleLabel = diagnosticLabel(securityModule.module_type ?? 'Security module');
+      const validators = securityModule.validators
+        ? [...new Set(securityModule.validators.map(addressKey))]
+        : undefined;
+      const setIdentity = validators
+        ? JSON.stringify([validators, securityModule.threshold])
+        : undefined;
+      let nodeChecks = validatorSets.get(nodeId);
+      // Missing node data may be a partial report. An observed set change
+      // invalidates its resolution and prior reorg results.
+      if (!nodeChecks || (setIdentity !== undefined && nodeChecks.identity !== setIdentity)) {
+        nodeChecks = { identity: setIdentity, reorgOutcomes: new Map() };
+        validatorSets.set(nodeId, nodeChecks);
+      }
+      if (
+        securityModule.checks?.validator_set === 'succeeded' &&
+        nodeChecks.resolvedAttempt !== attempt
+      ) {
+        nodeChecks.resolvedAttempt = attempt;
+        add(
+          `validator-set:${nodeId}:${row.id}`,
+          'security',
+          'Validator set resolved',
+          'The relayer obtained the validator set and verified that its signature threshold is within bounds.',
+          checkTime,
+          'complete',
+          {
+            ism: securityModule.ism,
+            summary:
+              securityModule.threshold != null && securityModule.validators
+                ? `${moduleLabel} · ${securityModule.threshold} of ${securityModule.validators.length} signatures required`
+                : moduleLabel,
+          },
+        );
+      }
+      const clearChecks = new Map<string, TimelineEntry>();
+      const checks = securityModule.reorg_checks ?? [];
+      for (const { validator, states } of checks) {
+        const outcome = describeReorgCheck(states);
+        if (!outcome) continue;
+        const key = addressKey(validator);
+        let entry = nodeChecks.reorgOutcomes.get(key);
+        if (entry?.title !== outcome.title) {
+          entry = add(
+            `reorg:${nodeId}:${key}:${outcome.title}:${row.id}`,
+            'security',
+            outcome.title,
+            outcome.detail,
+            report.partial ? undefined : timestamp,
+            outcome.status,
+            { summary: moduleLabel, validator, ism: securityModule.ism },
+          );
+          nodeChecks.reorgOutcomes.set(key, entry);
+        }
+        if (outcome.title === clearReorgTitle) clearChecks.set(key, entry);
+      }
+      // Only the current report can confirm the entire set is clear.
+      if (
+        validators?.length &&
+        clearChecks.size === checks.length &&
+        validators.length === clearChecks.size &&
+        validators.every((validator) => clearChecks.has(validator)) &&
+        [...clearChecks.values()].some((entry) => !groupedChecks.has(entry))
+      ) {
+        const group = add(
+          `reorg-passed:${nodeId}:${row.id}`,
+          'security',
+          'Reorg checks passed',
+          'The relayer found no reorg flag for any validator in this set.',
+          report.partial ? undefined : timestamp,
+          'complete',
+          {
+            summary: `${validators.length} ${validators.length === 1 ? 'validator' : 'validators'} checked · ${moduleLabel}`,
+            ism: securityModule.ism,
+          },
+        );
+        group.reorgResults = validators.map((validator) => ({
+          validator,
+          result: clearReorgTitle,
+        }));
+        const sources = new Map([[row.id, row]]);
+        for (const entry of clearChecks.values()) {
+          groupedChecks.add(entry);
+          for (const source of entry.rows) sources.set(source.id, source);
+        }
+        group.rows = [...sources.values()].sort(compareIds);
+      }
       const signatures = securityModule.signatures;
       const identity = `${securityModule.node_id}:${signatures?.index ?? '?'}:${signatures?.root ?? '?'}`;
       if (
@@ -254,21 +386,13 @@ export function buildMessageActivityTimeline({
           .join(' · ');
         const label = offchainReadLabel(read.state);
         add(
-          `offchain:${securityModule.node_id}:${read.endpoint ?? 'lookup'}:${row.id}`,
-          'security',
+          `offchain:${nodeId}:${read.endpoint ?? 'lookup'}:${row.id}`,
+          'offchain_read',
           label,
-          [
-            read.url_template,
-            read.result && `Decoded metadata Keccak-256: ${read.result.keccak256}`,
-          ]
-            .filter(Boolean)
-            .join(' · ') || label,
+          label,
           validTime(read.observed_at_millis) ?? (report.partial ? undefined : timestamp),
           offchainReadStatus(read.state),
-          {
-            summary: context || diagnosticLabel(securityModule.module_type ?? 'Security module'),
-            ism: securityModule.ism,
-          },
+          { summary: context || moduleLabel, ism: securityModule.ism, offchainRead: read },
         );
       }
       if (securityModule.verification === 'succeeded') {
@@ -282,12 +406,10 @@ export function buildMessageActivityTimeline({
       }
     }
 
-    const phase = state.phase;
     const description = describeDiagnosticActivity({
       ...row,
       activity: { ...row.activity, state },
     });
-    const phaseTime = validTime(state.phase_started_at_millis);
     if (phase === 'ready_to_submit') {
       add(
         `ready:${phaseTime ?? phase}`,
@@ -391,16 +513,18 @@ export function buildMessageActivityTimeline({
     relayer: observation?.relayer,
     rows: delivered && deliveryObservation?.row ? [deliveryObservation.row] : [],
   });
-  entries.sort((a, b) => {
-    const aTime = a.orderTimestamp ?? a.timestamp;
-    const bTime = b.orderTimestamp ?? b.timestamp;
-    if (aTime === undefined) return bTime === undefined ? 0 : 1;
-    if (bTime === undefined) return -1;
-    return aTime - bTime || timelineRank(a.kind) - timelineRank(b.kind);
-  });
+  const visibleEntries = entries
+    .filter((entry) => !groupedChecks.has(entry))
+    .sort((a, b) => {
+      const aTime = a.orderTimestamp ?? a.timestamp;
+      const bTime = b.orderTimestamp ?? b.timestamp;
+      if (aTime === undefined) return bTime === undefined ? 0 : 1;
+      if (bTime === undefined) return -1;
+      return aTime - bTime || timelineRank(a.kind) - timelineRank(b.kind);
+    });
   // Number individual signatures in displayed order, including batches first seen together.
   const signatureCounts = new Map<string, number>();
-  for (const entry of entries) {
+  for (const entry of visibleEntries) {
     if (!entry.signatureGroup) continue;
     const count = (signatureCounts.get(entry.signatureGroup) ?? 0) + 1;
     signatureCounts.set(entry.signatureGroup, count);
@@ -409,8 +533,8 @@ export function buildMessageActivityTimeline({
         ? 'Signature available · collection time unknown'
         : `Signature collected${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
   }
-  markCurrentStep(entries, observation, message.status);
-  return entries;
+  markCurrentStep(visibleEntries, observation, message.status);
+  return visibleEntries;
 }
 
 /** Historical facts stay complete; only the selected relayer's current work animates. */
@@ -435,7 +559,7 @@ function markCurrentStep(
   const submissionPhase = phase === 'submitting' || phase === 'confirming';
   const candidates = entries
     .flatMap((entry) =>
-      entry.kind === 'activity' || entry.kind === 'submission'
+      entry.id.startsWith('failure:') || entry.kind === 'submission'
         ? entry.rows
             .filter(
               (row) =>
@@ -477,6 +601,43 @@ function markCurrentStep(
   if (delivery) delivery.status = 'pending';
 }
 
+const clearReorgTitle = 'No reorg reported';
+
+function describeReorgCheck(
+  states: string[],
+): Pick<TimelineEntry, 'title' | 'detail' | 'status'> | undefined {
+  if (states.includes('reorg_reported')) {
+    return states.includes('reorg_ignored')
+      ? {
+          title: 'Reorg reported · ignored',
+          detail:
+            'The validator published a reorg flag. The relayer continued the metadata attempt with that validator excluded.',
+          status: 'complete',
+        }
+      : {
+          title: 'Reorg reported',
+          detail: 'The validator published a reorg flag. The relayer vetoed this metadata attempt.',
+          status: 'failed',
+        };
+  }
+  if (states.includes('reorg_check_failed')) {
+    return {
+      title: 'Reorg check failed',
+      detail:
+        'The relayer could not read the validator’s reorg flag. The validator remained eligible for this metadata attempt.',
+      status: 'failed',
+    };
+  }
+  if (states.includes('reorg_not_found')) {
+    return {
+      title: clearReorgTitle,
+      detail: 'The relayer checked the validator’s checkpoint storage and found no reorg flag.',
+      status: 'complete',
+    };
+  }
+  return undefined;
+}
+
 function milestone(
   kind: TimelineEntry['kind'],
   title: string,
@@ -512,7 +673,7 @@ function timelineRank(kind: TimelineEntry['kind']) {
     'validation',
     'submission',
     'delivery',
-  ].indexOf(kind);
+  ].indexOf(kind === 'offchain_read' ? 'security' : kind);
 }
 
 function firstDeliveryObservation(reports: Report[], current: RelayerDiagnosticState | undefined) {

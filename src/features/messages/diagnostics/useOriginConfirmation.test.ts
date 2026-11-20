@@ -60,6 +60,7 @@ test.each(['safe', 'finalized'])(
         200,
       ),
     ).toEqual({
+      blockTag: tag,
       blockNumber: undefined,
       required: undefined,
       current: undefined,

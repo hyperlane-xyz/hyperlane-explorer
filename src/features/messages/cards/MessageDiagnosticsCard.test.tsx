@@ -77,13 +77,22 @@ test('shows validator checkpoint observations and availability without implying 
 });
 
 test('shows CCIP response evidence without inferring successful verification', () => {
+  const hash = `0x${'ab'.repeat(32)}`;
   const html = renderModule({
     module_type: 'CcipRead',
-    offchain_read: { state: 'succeeded', http_status: 200, endpoint: 0 },
+    offchain_read: {
+      state: 'succeeded',
+      http_status: 200,
+      endpoint: 0,
+      result: { bytes: 0, keccak256: hash },
+    },
   });
   expect(html).toContain('Proof data received and decoded');
   expect(html).toContain('HTTP status</dt><dd class="min-w-0 font-mono">200</dd>');
   expect(html).toContain('Endpoint 1');
+  expect(html).toContain('0 bytes');
+  expect(html).toContain('Proof hash (Keccak-256)');
+  expect(html).toContain(`data-copy="${hash}"`);
   expect(html).not.toContain('Verification dry run');
 });
 
@@ -96,5 +105,7 @@ test('keeps pending CCIP responses distinct from received proof data', () => {
   expect(html).toContain('Waiting for offchain attestation');
   expect(html).toContain('HTTP status</dt><dd class="min-w-0 font-mono">404</dd>');
   expect(html).not.toContain('Proof data received and decoded');
+  expect(html).not.toContain('Proof size');
+  expect(html).not.toContain('Proof hash');
   expect(html).not.toContain('Endpoint ');
 });
