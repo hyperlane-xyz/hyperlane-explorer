@@ -490,8 +490,10 @@ function IsmProofDetails({
               : offchainReadLabel(gateway.state)}
           </ProofField>
           <ProofField label="HTTP status">{gateway.http_status}</ProofField>
-          <ProofField label="Gateway">
-            {gateway.endpoint != null ? `Endpoint ${gateway.endpoint + 1}` : undefined}
+          <ProofField label="Gateway" className="break-all">
+            {gateway.url_template ??
+              gateway.hostname ??
+              (gateway.endpoint != null ? `Endpoint ${gateway.endpoint + 1}` : undefined)}
           </ProofField>
         </>
       )}

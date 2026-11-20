@@ -223,7 +223,7 @@ function TimelineRow({
                 )}
                 {entry.relayer && <Detail label="Reporting relayer" value={entry.relayer} />}
                 {entry.validator && <Detail label="Validator" value={entry.validator} />}
-                {entry.signatureModule && <Detail label="ISM" value={entry.signatureModule} />}
+                {entry.ism && <Detail label="ISM" value={entry.ism} />}
                 {entry.timestamp === undefined && (
                   <Detail
                     label="Relayer observation"

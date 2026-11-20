@@ -170,6 +170,21 @@ describe('diagnosticModuleStatus', () => {
     ).toBe('ready');
   });
 
+  it.each(['domain_not_allowed', 'request_failed', 'no_endpoints'])(
+    'shows a failed CCIP attempt for %s even with a generic metadata error',
+    (state) => {
+      expect(
+        diagnosticModuleStatus({
+          ism: 'ccip',
+          node_id: 'ccip',
+          children: [],
+          metadata_error: 'Could not fetch metadata',
+          offchain_read: { state },
+        }),
+      ).toBe('failed');
+    },
+  );
+
   it('keeps a pending CCIP Read request in progress', () => {
     expect(
       diagnosticModuleStatus({

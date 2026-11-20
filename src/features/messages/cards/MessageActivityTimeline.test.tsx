@@ -38,7 +38,7 @@ it('preserves grouped waits and distinguishes clock skew from missing times', as
             entry('signature', 99_000, {
               validator: '0x1111111111111111111111111111111111111111',
               summary: 'Merkle root multisig · checkpoint 103',
-              signatureModule: '0xmodule',
+              ism: '0xmodule',
             }),
             entry('dispatch', 100_000),
             entry('origin_confirmed', 100_500, { blockTimestamp: 100_500, timeSource: 'chain' }),

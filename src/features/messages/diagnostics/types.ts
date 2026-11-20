@@ -34,8 +34,12 @@ const offchainReadSchema = z
   .object({
     state: z.string(),
     attempt: count.nullish(),
+    observed_at_millis: count.nullish(),
     endpoint: z.number().nullable().optional(),
     http_status: z.number().nullable().optional(),
+    hostname: z.string().nullish(),
+    url_template: z.string().nullish(),
+    result: z.object({ bytes: count, keccak256: z.string() }).nullish(),
   })
   .passthrough();
 
@@ -240,6 +244,29 @@ export function isWaitingForCommit(state?: DiagnosticState) {
 
 const pendingOffchainReadStates = new Set(['pending', 'pending_retries_exhausted']);
 
+const failedOffchainReadStates = new Set([
+  'failed',
+  'ism_build_failed',
+  'lookup_returned_normally',
+  'lookup_failed',
+  'invalid_lookup_revert',
+  'url_rejected',
+  'domain_not_allowed',
+  'client_failed',
+  'signing_failed',
+  'request_timeout',
+  'request_failed',
+  'body_read_failed',
+  'invalid_response',
+  'no_endpoints',
+]);
+
+export function offchainReadStatus(state: string) {
+  if (state === 'succeeded') return 'complete';
+  if (failedOffchainReadStates.has(state)) return 'failed';
+  return 'pending';
+}
+
 export function isOffchainAttestationPending(module: DiagnosticModule) {
   return pendingOffchainReadStates.has(module.offchain_read?.state ?? '');
 }
@@ -252,7 +279,24 @@ export function offchainReadLabel(state: string) {
   if (state === 'pending') return 'Waiting for offchain attestation';
   if (state === 'pending_retries_exhausted')
     return 'Offchain attestation is still pending after the latest gateway checks';
-  return `Gateway: ${diagnosticLabel(state)}`;
+  switch (state) {
+    case 'succeeded':
+      return 'Proof data received and decoded';
+    case 'domain_not_allowed':
+      return 'Gateway hostname denied by ccipReadAllowedDomains';
+    case 'url_rejected':
+      return 'Gateway URL rejected before the request';
+    case 'ism_build_failed':
+      return 'Could not initialize the CCIP ISM';
+    case 'lookup_returned_normally':
+      return 'ISM returned without the expected OffchainLookup revert';
+    case 'invalid_lookup_revert':
+      return 'Could not decode the OffchainLookup revert';
+    case 'lookup_failed':
+      return 'Could not obtain lookup instructions from the ISM';
+    default:
+      return `Gateway: ${diagnosticLabel(state)}`;
+  }
 }
 
 const phaseRank: Record<string, number> = {
@@ -297,7 +341,7 @@ export function diagnosticModuleStatus(
   if (
     module.verification === 'failed' ||
     Object.values(module.checks ?? {}).includes('failed') ||
-    module.offchain_read?.state === 'failed'
+    (module.offchain_read && offchainReadStatus(module.offchain_read.state) === 'failed')
   )
     return failure;
   const waitingForMetadata =

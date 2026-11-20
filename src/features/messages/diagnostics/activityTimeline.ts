@@ -9,6 +9,8 @@ import {
   describeDiagnosticActivity,
   diagnosticLabel,
   mergeDiagnosticState,
+  offchainReadLabel,
+  offchainReadStatus,
   type DiagnosticActivity,
   type DiagnosticModule,
   type DiagnosticState,
@@ -45,7 +47,7 @@ export interface TimelineEntry {
   status: LifecycleStepStatus;
   relayer?: string;
   validator?: string;
-  signatureModule?: string;
+  ism?: string;
   signatureGroup?: string;
   signatureThreshold?: number | null;
   /** Current-step semantics when a sparse history has no corresponding raw row. */
@@ -166,8 +168,9 @@ export function buildMessageActivityTimeline({
       kind: TimelineEntry['kind'],
       title: string,
       detail: string,
-      time = timestamp,
+      time: number | undefined,
       status: LifecycleStepStatus = 'complete',
+      context?: Pick<TimelineEntry, 'summary' | 'ism'>,
     ) => {
       if (milestones.has(key)) return;
       milestones.add(key);
@@ -176,6 +179,7 @@ export function buildMessageActivityTimeline({
         kind,
         title,
         detail,
+        ...context,
         timestamp: time,
         timestampRaw: time === undefined ? undefined : new Date(time).toISOString(),
         timeSource: 'relayer',
@@ -202,6 +206,7 @@ export function buildMessageActivityTimeline({
           'security',
           `Signature threshold reached (${signatures.threshold}/${signatures.threshold})`,
           `The relayer first reported enough matching signatures for ${diagnosticLabel(securityModule.module_type ?? 'this security module')}, checkpoint ${signatures.index}. Other security modules and metadata checks may still be pending.`,
+          timestamp,
         );
       }
       if (securityModule.metadata_status === 'ready') {
@@ -212,6 +217,7 @@ export function buildMessageActivityTimeline({
             ? 'All metadata ready'
             : `${diagnosticLabel(securityModule.module_type ?? 'Security module')} metadata ready`,
           'The relayer completed metadata construction for this security module. Transaction simulation and submission follow separately.',
+          timestamp,
         );
       }
       const before = previousState?.modules.find((item) => item.node_id === securityModule.node_id);
@@ -225,18 +231,44 @@ export function buildMessageActivityTimeline({
           'failed',
         );
       }
+      const read = securityModule.offchain_read;
+      const prior = before?.offchain_read;
       if (
-        securityModule.offchain_read &&
-        securityModule.offchain_read.state !== before?.offchain_read?.state &&
-        !['pending', 'pending_retries_exhausted'].includes(securityModule.offchain_read.state)
+        read &&
+        (prior?.state !== read.state ||
+          prior.observed_at_millis !== read.observed_at_millis ||
+          prior.endpoint !== read.endpoint ||
+          prior.hostname !== read.hostname ||
+          prior.url_template !== read.url_template ||
+          prior.attempt !== read.attempt ||
+          prior.http_status !== read.http_status ||
+          prior.result?.keccak256 !== read.result?.keccak256)
       ) {
+        const context = [
+          read.hostname ?? (read.endpoint != null && `Endpoint ${read.endpoint + 1}`),
+          read.attempt != null && read.attempt > 0 && `Attempt ${read.attempt}`,
+          read.http_status != null && `HTTP ${read.http_status}`,
+          read.result && `${read.result.bytes} bytes`,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        const label = offchainReadLabel(read.state);
         add(
-          `offchain:${identity}:${securityModule.offchain_read.state}`,
+          `offchain:${securityModule.node_id}:${read.endpoint ?? 'lookup'}:${row.id}`,
           'security',
-          `${diagnosticLabel(securityModule.module_type ?? 'Offchain read')}: ${diagnosticLabel(securityModule.offchain_read.state)}`,
-          'The relayer reported this offchain response. Receiving metadata does not establish successful verification.',
-          timestamp,
-          securityModule.offchain_read.state === 'succeeded' ? 'complete' : 'failed',
+          label,
+          [
+            read.url_template,
+            read.result && `Decoded metadata Keccak-256: ${read.result.keccak256}`,
+          ]
+            .filter(Boolean)
+            .join(' · ') || label,
+          validTime(read.observed_at_millis) ?? (report.partial ? undefined : timestamp),
+          offchainReadStatus(read.state),
+          {
+            summary: context || diagnosticLabel(securityModule.module_type ?? 'Security module'),
+            ism: securityModule.ism,
+          },
         );
       }
       if (securityModule.verification === 'succeeded') {
@@ -245,6 +277,7 @@ export function buildMessageActivityTimeline({
           'security',
           `${diagnosticLabel(securityModule.module_type ?? 'Security module')} verified`,
           'The relayer reported successful security-module verification.',
+          timestamp,
         );
       }
     }
@@ -607,7 +640,7 @@ function moduleSignatureEvents(
         status: 'complete',
         relayer,
         validator: signer.validator,
-        signatureModule: securityModule.ism,
+        ism: securityModule.ism,
         signatureGroup: group,
         signatureThreshold: signatures.threshold,
         rows,

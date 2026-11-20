@@ -91,6 +91,58 @@ function timeline(
 }
 
 describe('message activity timeline', () => {
+  it('shows successive CCIP outcomes from snapshots and deduplicates unchanged reads', () => {
+    const denied = {
+      state: 'domain_not_allowed',
+      observed_at_millis: 110_900,
+      endpoint: 0,
+      attempt: 1,
+      hostname: 'lookup.example',
+      url_template: 'https://lookup.example/proof/{data}',
+    };
+    const success = {
+      state: 'succeeded',
+      endpoint: 0,
+      attempt: 3,
+      http_status: 200,
+      result: { bytes: 2, keccak256: '0xdigest' },
+    };
+    const node = {
+      node_id: 'root',
+      ism: '0xism',
+      children: [],
+      module_type: 'CcipRead',
+      offchain_read: success,
+    };
+    const entries = timeline([
+      activity(1, 'preparing', 111_000, { modules: [{ ...node, offchain_read: denied }] }),
+      activity(2, 'preparing', 111_300, {
+        modules: [{ ...node, offchain_read: { ...denied, observed_at_millis: 111_200 } }],
+      }),
+      activity(3, 'preparing', 111_500, { modules: [node] }),
+      activity(4, 'ready_to_submit', 112_000, { modules: [node] }),
+    ]).filter((entry) => entry.id.startsWith('offchain:'));
+    expect(entries).toHaveLength(3);
+    expect(
+      entries.filter((entry) => entry.status === 'failed').map((entry) => entry.timestamp),
+    ).toEqual(expect.arrayContaining([110_900, 111_200]));
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'failed',
+          title: expect.stringContaining('ccipReadAllowedDomains'),
+          summary: 'lookup.example · Attempt 1',
+          detail: 'https://lookup.example/proof/{data}',
+        }),
+        expect.objectContaining({
+          status: 'complete',
+          summary: 'Endpoint 1 · Attempt 3 · HTTP 200 · 2 bytes',
+          detail: expect.stringContaining('0xdigest'),
+        }),
+      ]),
+    );
+  });
+
   it('deduplicates signatures per module and checkpoint without claiming exact signing times', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] }),
