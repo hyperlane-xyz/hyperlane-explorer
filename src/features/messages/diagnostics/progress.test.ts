@@ -65,6 +65,16 @@ test.each(['safe', 'finalized'] as const)(
   },
 );
 
+test('names the origin finality policy while delivery is retrying or already observed', () => {
+  const originConfirmation = { tracked: true, confirmed: false, blockTag: 'finalized' } as const;
+  expect(progress(MessageStatus.Pending, 'retrying', { originConfirmation }).explanation).toBe(
+    'The message remains pending while relayers retry automatically. The origin chain’s finalized block must reach the dispatch block.',
+  );
+  expect(progress(MessageStatus.Delivered, undefined, { originConfirmation }).explanation).toBe(
+    'Delivery succeeded. Waiting for confirmations on the destination chain. The origin chain’s finalized block must reach the dispatch block.',
+  );
+});
+
 test('keeps pending offchain attestations active and explains the delay', () => {
   expect(
     progress(MessageStatus.Pending, 'retrying', {

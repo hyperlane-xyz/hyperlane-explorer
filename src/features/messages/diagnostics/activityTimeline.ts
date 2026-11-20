@@ -157,7 +157,12 @@ export function buildMessageActivityTimeline({
   const milestones = new Map<string, TimelineEntry>();
   const validatorSets = new Map<
     string,
-    { identity?: string; resolvedAttempt?: string; reorgOutcomes: Map<string, TimelineEntry> }
+    {
+      identity?: string;
+      resolvedAttempt?: string;
+      inheritedReorgOutcomes?: Map<string, string>;
+      reorgOutcomes: Map<string, TimelineEntry>;
+    }
   >();
   const groupedChecks = new Set<TimelineEntry>();
   let prepareStartedAt: number | undefined;
@@ -217,6 +222,8 @@ export function buildMessageActivityTimeline({
         historyComplete ? phaseTime : undefined,
       );
     }
+    const startsNewAttempt = prepareStartedAt !== priorPrepareStartedAt;
+    if (startsNewAttempt) validatorSets.clear();
     // A retained cumulative report can show a completed check on the first
     // visible start row. Only a later report can establish its observation time.
     const checkTime =
@@ -238,6 +245,7 @@ export function buildMessageActivityTimeline({
 
     for (const securityModule of state.modules) {
       const nodeId = securityModule.node_id;
+      const before = previousState?.modules.find((item) => item.node_id === nodeId);
       const moduleLabel = diagnosticLabel(securityModule.module_type ?? 'Security module');
       const validators = securityModule.validators
         ? [...new Set(securityModule.validators.map(addressKey))]
@@ -275,10 +283,27 @@ export function buildMessageActivityTimeline({
       }
       const clearChecks = new Map<string, TimelineEntry>();
       const checks = securityModule.reorg_checks ?? [];
+      // Cumulative reports can retain checks when the relayer starts a new attempt.
+      // Keep those outcomes out of the new attempt until the report changes or clears them.
+      const baselineChecks =
+        before?.reorg_checks ?? (observedAt === phaseTime ? checks : undefined);
+      const inherited = startsNewAttempt
+        ? new Map(
+            baselineChecks?.map(({ validator, states }) => [
+              addressKey(validator),
+              describeReorgCheck(states)?.title,
+            ]),
+          )
+        : nodeChecks.inheritedReorgOutcomes;
+      const stillInherited = inherited?.size ? new Map<string, string>() : undefined;
       for (const { validator, states } of checks) {
         const outcome = describeReorgCheck(states);
         if (!outcome) continue;
         const key = addressKey(validator);
+        if (inherited?.get(key) === outcome.title) {
+          stillInherited?.set(key, outcome.title);
+          continue;
+        }
         let entry = nodeChecks.reorgOutcomes.get(key);
         if (entry?.title !== outcome.title) {
           entry = add(
@@ -294,6 +319,7 @@ export function buildMessageActivityTimeline({
         }
         if (outcome.title === clearReorgTitle) clearChecks.set(key, entry);
       }
+      nodeChecks.inheritedReorgOutcomes = stillInherited?.size ? stillInherited : undefined;
       // Only the current report can confirm the entire set is clear.
       if (
         validators?.length &&
@@ -352,7 +378,6 @@ export function buildMessageActivityTimeline({
           timestamp,
         );
       }
-      const before = previousState?.modules.find((item) => item.node_id === securityModule.node_id);
       if (securityModule.verification === 'failed' && before?.verification !== 'failed') {
         add(
           `verification-failed:${identity}:${row.id}`,
@@ -380,7 +405,7 @@ export function buildMessageActivityTimeline({
           read.hostname ?? (read.endpoint != null && `Endpoint ${read.endpoint + 1}`),
           read.attempt != null && read.attempt > 0 && `Attempt ${read.attempt}`,
           read.http_status != null && `HTTP ${read.http_status}`,
-          read.result && `${read.result.bytes} bytes`,
+          read.result && `${read.result.bytes} ${read.result.bytes === 1 ? 'byte' : 'bytes'}`,
         ]
           .filter(Boolean)
           .join(' · ');

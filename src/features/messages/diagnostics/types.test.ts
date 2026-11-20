@@ -314,6 +314,12 @@ describe('snapshot boundaries and selection', () => {
     expect(diagnosticModuleStatus({ ...node('ccip'), offchain_read: { state: 'succeeded' } })).toBe(
       'waiting',
     );
+    expect(
+      diagnosticModuleStatus({
+        ...node('ccip'),
+        offchain_read: { state: 'origin_transaction_lookup_failed' },
+      }),
+    ).toBe('waiting');
   });
 
   it('accepts nullable snapshot fields and legacy string-state rows', () => {

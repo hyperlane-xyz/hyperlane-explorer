@@ -143,6 +143,28 @@ describe('message activity timeline', () => {
     );
   });
 
+  it('distinguishes a failed origin lookup from a successful gateway response', () => {
+    const node = { node_id: 'root', ism: '0xism', children: [], module_type: 'CcipRead' };
+    const entries = timeline([
+      activity(1, 'preparing', 111_000, {
+        modules: [{ ...node, offchain_read: { state: 'origin_transaction_lookup_failed' } }],
+      }),
+      activity(2, 'preparing', 111_100, {
+        modules: [
+          {
+            ...node,
+            offchain_read: { state: 'succeeded', result: { bytes: 1, keccak256: '0xproof' } },
+          },
+        ],
+      }),
+    ]).filter((entry) => entry.kind === 'offchain_read');
+
+    expect(entries).toEqual([
+      expect.objectContaining({ title: 'Origin transaction hash lookup failed', status: 'failed' }),
+      expect.objectContaining({ summary: '1 byte', status: 'complete' }),
+    ]);
+  });
+
   it('deduplicates signatures per module and checkpoint without claiming exact signing times', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] }),
@@ -432,6 +454,91 @@ it('does not infer prepare checks or reorg outcomes from unmarked legacy snapsho
   expect(
     timeline(rows).filter((entry) => [...preparationTitles, ...reorgTitles].includes(entry.title)),
   ).toHaveLength(0);
+});
+
+it('keeps partial checks and groups separate when the same validators are checked again', () => {
+  const clearA = { validator: validatorA, states: ['reorg_not_found'] };
+  const clearB = { validator: validatorB, states: ['reorg_not_found'] };
+  const prepare = (
+    id: number,
+    at: number,
+    ...reorg_checks: NonNullable<DiagnosticModule['reorg_checks']>
+  ) =>
+    update(id, at, {
+      phase_started_at_millis: id <= 3 ? 111_000 : 112_000,
+      checks: { prepare: 'started' },
+      modules: [{ ...validatorSet, reorg_checks }],
+    });
+  const rows = [
+    activity(1, 'preparing', 111_000, {
+      checks: { prepare: 'started' },
+      modules: [validatorSet],
+    }),
+    prepare(2, 111_100, clearA),
+    prepare(3, 111_200, clearA, clearB),
+    prepare(4, 112_000),
+    prepare(5, 112_100, clearA),
+    prepare(6, 112_200, clearA, clearB),
+    prepare(7, 112_300, clearA, clearB),
+  ];
+  const reorgEntries = (reports: DiagnosticActivity[]) =>
+    timeline(reports).filter((entry) => reorgTitles.includes(entry.title));
+
+  expect(reorgEntries(rows.slice(0, 5)).map(({ title, timestamp }) => [title, timestamp])).toEqual([
+    ['Reorg checks passed', 111_200],
+    ['No reorg reported', 112_100],
+  ]);
+  expect(reorgEntries(rows).map(({ rows }) => rows.map(({ id }) => id))).toEqual([
+    ['2', '3'],
+    ['5', '6'],
+  ]);
+});
+
+it('does not count retained checks from a prior attempt in a new all-clear group', () => {
+  const clearA = { validator: validatorA, states: ['reorg_not_found'] };
+  const failedB = { validator: validatorB, states: ['reorg_check_failed'] };
+  const clearB = { validator: validatorB, states: ['reorg_not_found'] };
+  const state = (
+    at: number,
+    ...reorg_checks: NonNullable<DiagnosticModule['reorg_checks']>
+  ): Partial<DiagnosticState> => ({
+    phase_started_at_millis: at,
+    checks: { prepare: 'started' },
+    modules: [{ ...validatorSet, reorg_checks }],
+  });
+  const rows = [
+    activity(1, 'preparing', 111_000, state(111_000)),
+    update(2, 111_100, state(111_000, clearA, failedB)),
+    update(3, 112_000, state(112_000, clearA, failedB)),
+    update(4, 112_100, state(112_000, clearA, clearB)),
+  ];
+  const entries = timeline(rows).filter((entry) => reorgTitles.includes(entry.title));
+  expect(entries.map(({ title, validator, timestamp }) => [title, validator, timestamp])).toEqual([
+    ['No reorg reported', validatorA, 111_100],
+    ['Reorg check failed', validatorB, 111_100],
+    ['No reorg reported', validatorB, 112_100],
+  ]);
+});
+
+it('does not attribute checks on a prepare start to the new attempt when earlier history is missing', () => {
+  const rows = [
+    update(1, 111_000, { phase: 'retrying' }),
+    update(2, 112_000, {
+      checks: { prepare: 'started' },
+      modules: [
+        {
+          ...validatorSet,
+          reorg_checks: [
+            { validator: validatorA, states: ['reorg_not_found'] },
+            { validator: validatorB, states: ['reorg_not_found'] },
+          ],
+        },
+      ],
+    }),
+  ];
+
+  const entries = timeline(rows, { historyComplete: false });
+  expect(entries.some((entry) => reorgTitles.includes(entry.title))).toBe(false);
 });
 
 it('records a returning validator set and rechecks its shared validator', () => {
