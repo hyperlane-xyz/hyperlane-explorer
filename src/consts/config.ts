@@ -34,8 +34,6 @@ export const config: Config = Object.freeze({
 // Based on https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/typescript/infra/config/environments/testnet4/agent.ts
 export const unscrapedChainsInDb = ['proteustestnet'];
 
-export const debugIgnoredChains = ['treasure', 'treasuretopaz'];
-
 export function resolveWsUrl(override: string | undefined, graphqlUrl: string): string | null {
   const normalizedOverride = override?.trim() || undefined;
   const url = normalizedOverride ?? graphqlUrl;
