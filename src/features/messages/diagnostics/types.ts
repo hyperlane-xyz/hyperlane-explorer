@@ -268,7 +268,8 @@ const failedOffchainReadStates = new Set([
 
 export function offchainReadStatus(state: string) {
   if (state === 'succeeded') return 'complete';
-  if (failedOffchainReadStates.has(state)) return 'failed';
+  if (state === 'origin_transaction_lookup_failed' || failedOffchainReadStates.has(state))
+    return 'failed';
   return 'pending';
 }
 
@@ -299,6 +300,10 @@ export function offchainReadLabel(state: string) {
       return 'Could not decode the OffchainLookup revert';
     case 'lookup_failed':
       return 'Could not obtain lookup instructions from the ISM';
+    case 'origin_transaction_missing':
+      return 'Origin transaction hash unavailable';
+    case 'origin_transaction_lookup_failed':
+      return 'Origin transaction hash lookup failed';
     default:
       return `Gateway: ${diagnosticLabel(state)}`;
   }
@@ -346,7 +351,7 @@ export function diagnosticModuleStatus(
   if (
     module.verification === 'failed' ||
     Object.values(module.checks ?? {}).includes('failed') ||
-    (module.offchain_read && offchainReadStatus(module.offchain_read.state) === 'failed')
+    failedOffchainReadStates.has(module.offchain_read?.state ?? '')
   )
     return failure;
   const waitingForMetadata =
