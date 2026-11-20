@@ -1,5 +1,6 @@
 import { MessageStatus, type MessageStub } from '../../../types';
 import {
+  elapsed,
   getMessageTimeline,
   hasPassedValidation,
   parseObservationTime,
@@ -85,7 +86,7 @@ export function buildMessageActivityTimeline({
   activities,
   historyComplete = false,
   originConfirmation,
-}: TimelineOptions): TimelineEntry[] {
+}: TimelineOptions) {
   const selectedRows = observation
     ? [...new Map(activities.map((row) => [row.id, row])).values()]
         .filter(
@@ -96,7 +97,14 @@ export function buildMessageActivityTimeline({
     : [];
   const reports = reconstructReports(selectedRows);
   const supportedRows = selectedRows.filter(isSupported);
-  const stages = getMessageTimeline(message, observation, supportedRows).stages;
+  const { stages, totalElapsed, pickupToSubmission } = getMessageTimeline(
+    message,
+    observation,
+    supportedRows,
+    {
+      historyComplete,
+    },
+  );
   const pickedUp = stages.find((stage) => stage.id === 'picked_up');
   const delivered = message.status === MessageStatus.Delivered;
   const working =
@@ -570,7 +578,12 @@ export function buildMessageActivityTimeline({
         : `Signature collected${entry.signatureThreshold == null ? '' : ` (${count}/${entry.signatureThreshold})`}`;
   }
   markCurrentStep(visibleEntries, observation, message.status);
-  return visibleEntries;
+  return {
+    entries: visibleEntries,
+    totalElapsed,
+    pickupToSubmission,
+    ismValidationTime: historyComplete ? getIsmValidationTime(reports) : undefined,
+  };
 }
 
 /** Historical facts stay complete; only the selected relayer's current work animates. */
@@ -710,6 +723,32 @@ function timelineRank(kind: TimelineEntry['kind']) {
     'submission',
     'delivery',
   ].indexOf(kind === 'offchain_read' ? 'security' : kind);
+}
+
+function getIsmValidationTime(reports: Report[]) {
+  let resolution: { nodeId: string; moduleType: string; observedAt?: number } | undefined;
+  for (const { state, row, partial } of reports) {
+    if (!state || partial) continue;
+    const root = state.modules.find((module) => module.node_id === state.tree_root);
+    const sameIsm =
+      resolution?.nodeId === root?.node_id && resolution?.moduleType === root?.module_type;
+    if (root?.metadata_status === 'ready') {
+      // A snapshot that first reports both milestones cannot establish the interval.
+      return sameIsm
+        ? elapsed(resolution?.observedAt, parseObservationTime(row.observed_at))
+        : undefined;
+    }
+    if (!root?.module_type || root.discovered === false) {
+      resolution = undefined;
+    } else if (!sameIsm) {
+      resolution = {
+        nodeId: root.node_id,
+        moduleType: root.module_type,
+        observedAt: parseObservationTime(row.observed_at),
+      };
+    }
+  }
+  return undefined;
 }
 
 function firstDeliveryObservation(reports: Report[], current: RelayerDiagnosticState | undefined) {
