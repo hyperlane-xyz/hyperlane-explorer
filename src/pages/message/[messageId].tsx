@@ -6,7 +6,11 @@ import { useEffect } from 'react';
 import { OGHead } from '../../components/OGHead';
 import { APP_DESCRIPTION, APP_NAME } from '../../consts/appMetadata';
 import { MessageDetailsLoading } from '../../features/messages/MessageDetailsLoading';
-import { fetchDomainNames, fetchMessageForOG } from '../../features/messages/queries/serverFetch';
+import {
+  fetchDomainNames,
+  fetchMessageHeaderForOG,
+  isOGMessageId,
+} from '../../features/messages/queries/serverFetch';
 import { logger } from '../../utils/logger';
 import { fetchChainMetadata, getChainDisplayName } from '../../utils/yamlParsing';
 
@@ -87,10 +91,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  if (messageId && typeof messageId === 'string') {
+  if (typeof messageId === 'string' && isOGMessageId(messageId)) {
     try {
       const [messageData, domainNames, chainMetadata] = await Promise.all([
-        fetchMessageForOG(messageId),
+        fetchMessageHeaderForOG(messageId),
         fetchDomainNames(),
         fetchChainMetadata(),
       ]);

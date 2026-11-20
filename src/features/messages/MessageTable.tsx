@@ -15,7 +15,6 @@ import { Color } from '../../styles/Color';
 import { MessageStatus, MessageStub, WarpRouteDetails } from '../../types';
 import { formatAddress } from '../../utils/addresses';
 import { formatAmountCompact } from '../../utils/amount';
-import { scheduleWhenIdle } from '../../utils/scheduleWhenIdle';
 import { getHumanReadableTimeString, getRelativeTimeRefreshInterval } from '../../utils/time';
 import { useVisibleInterval } from '../../utils/useVisibleInterval';
 import { getChainDisplayName } from '../chains/utils';
@@ -26,8 +25,6 @@ import { prefetchMessageStub } from './queries/prefetch';
 import type { SwapApplication } from './swapMessages';
 import { useSwapMessageApplications } from './useSwapMessageApplications';
 import { parseWarpRouteMessageDetails } from './utils';
-
-const BACKGROUND_PREFETCH_COUNT = 5;
 
 export function MessageTable({
   messageList,
@@ -62,41 +59,6 @@ export function MessageTable({
   const deliveredMessageTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [insertedMessageIds, setInsertedMessageIds] = useState<Set<string>>(() => new Set());
   const [deliveredMessageIds, setDeliveredMessageIds] = useState<Set<string>>(() => new Set());
-  const backgroundPrefetchKey = useMemo(() => {
-    if (isFetching) return '';
-    return messageList
-      .slice(0, BACKGROUND_PREFETCH_COUNT)
-      .map((message) => message.msgId.toLowerCase())
-      .join(',');
-  }, [isFetching, messageList]);
-
-  useEffect(() => {
-    if (!backgroundPrefetchKey) return;
-
-    const messagesToPrefetch = messageList.slice(0, BACKGROUND_PREFETCH_COUNT);
-    let cancelled = false;
-
-    const prefetchTopRows = async () => {
-      await prefetchMessageDetailShell();
-      for (const message of messagesToPrefetch) {
-        if (cancelled) return;
-        prefetchMessageNavigation(router, message);
-      }
-    };
-
-    const cancelIdleSchedule = scheduleWhenIdle(
-      () => {
-        void prefetchTopRows();
-      },
-      { timeout: 1_000, fallbackDelay: 250 },
-    );
-
-    return () => {
-      cancelled = true;
-      cancelIdleSchedule();
-    };
-  }, [backgroundPrefetchKey, messageList, router]);
-
   useEffect(() => {
     const currentIds = new Set(messageList.map((message) => message.msgId));
     const currentStatuses = new Map(messageList.map((message) => [message.msgId, message.status]));

@@ -28,13 +28,13 @@ let mockProviderVersion = 1;
 let mockProviderReady = true;
 
 jest.mock('../../metadataStore', () => ({
+  useRegistry: () => mockRegistry,
   useChainMetadataResolver: () => ({
     tryGetChainName: (domain: number) => (domain === 8453 ? 'base' : 'arbitrum'),
     tryGetProtocol: () => ProtocolType.Ethereum,
   }),
 }));
 jest.mock('../../store', () => ({
-  useRegistry: () => mockRegistry,
   useMultiProviderVersion: () => mockProviderVersion,
   useReadyMultiProvider: () =>
     mockProviderReady

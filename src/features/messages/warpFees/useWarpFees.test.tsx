@@ -12,11 +12,15 @@ jest.mock('../../../store', () => ({
   useMultiProviderVersion: () => 1,
 }));
 jest.mock('./fetchWarpFees', () => ({ fetchWarpFees: jest.fn() }));
+jest.mock('@hyperlane-xyz/utils', () => ({ ProtocolType: { Ethereum: 'ethereum', Tron: 'tron' } }));
 
-const mockProvider = {};
+const mockProvider = {
+  tryGetChainMetadata: () => ({ protocol: 'ethereum' }),
+  getEthersV5Provider: () => ({ getTransactionReceipt: async () => ({ logs: [] }) }),
+};
 const route = {
-  originToken: { addressOrDenom: `0x${'aa'.repeat(20)}` },
-} as WarpRouteDetails;
+  originToken: { addressOrDenom: `0x${'aa'.repeat(20)}`, decimals: 18 },
+} as unknown as WarpRouteDetails;
 const first = {
   id: '',
   isPiMsg: true,
@@ -38,7 +42,7 @@ it('isolates PI transfer fees despite empty database IDs and retains each comple
   const root = createRoot(document.createElement('div'));
   const firstFee = { totalSent: '10', bridgeFee: '1', tokenSymbol: 'TOKEN' };
   const secondFee = { totalSent: '20', bridgeFee: '2', tokenSymbol: 'TOKEN' };
-  let resolveSecond: (fee: WarpFeeBreakdown) => void;
+  let resolveSecond: ((fee: WarpFeeBreakdown) => void) | undefined;
   jest
     .mocked(fetchWarpFees)
     .mockResolvedValueOnce(firstFee)
@@ -53,10 +57,13 @@ it('isolates PI transfer fees despite empty database IDs and retains each comple
     result = useWarpFees(message, route);
     return null;
   }
-  const settle = () =>
-    act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+  const settle = async (ready: () => boolean) => {
+    for (let i = 0; i < 20 && !ready(); i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+  };
   const render = async (message: MessageStub) => {
     await act(async () =>
       root.render(
@@ -65,15 +72,16 @@ it('isolates PI transfer fees despite empty database IDs and retains each comple
         </QueryClientProvider>,
       ),
     );
-    await settle();
   };
   try {
     await render(first);
+    await settle(() => result !== null);
     expect(result).toEqual(firstFee);
     await render(second);
+    await settle(() => resolveSecond !== undefined);
     expect(result).toBeNull();
     await act(async () => resolveSecond!(secondFee));
-    await settle();
+    await settle(() => result !== null);
     expect(result).toEqual(secondFee);
     await render(first);
     expect(result).toEqual(firstFee);

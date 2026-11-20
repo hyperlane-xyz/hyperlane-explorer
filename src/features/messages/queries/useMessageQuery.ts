@@ -32,7 +32,7 @@ import {
 import {
   type ExplorerConnectionState,
   useExplorerEvents,
-  useExplorerMessageRows,
+  useExplorerSearchRows,
   useExplorerRefresh,
   filterLatestMessageRows,
   useMessageRowSubscription,
@@ -46,6 +46,7 @@ const MSG_AUTO_REFRESH_DELAY = 10_000;
 // Larger batch size for pending filter since most messages are delivered quickly,
 // so we need to fetch more to find pending ones.
 const PENDING_FILTER_BATCH_SIZE = 500;
+const EMPTY_WARP_ROUTE_ADDRESSES: Array<{ chainName: string; address: string }> = [];
 
 export function getMessagePage(
   filteredMessages: MessageStub[],
@@ -200,19 +201,39 @@ export function messageMatchesSearchFilters(
   message: MessageStub,
   filters: MessageSearchFilters,
 ): boolean {
-  if (filters.searchInput && !messageMatchesSearchInput(message, filters.searchInput)) return false;
-  if (filters.originDomainId && message.originDomainId !== filters.originDomainId) return false;
-  if (filters.destinationDomainId && message.destinationDomainId !== filters.destinationDomainId) {
-    return false;
-  }
+  return createMessageSearchFilter(filters)(message);
+}
 
+function createMessageSearchFilter(filters: MessageSearchFilters) {
+  const { searchInput, originDomainId, destinationDomainId, status } = filters;
+  const identifier = searchInput ? normalizeIdentifier(searchInput) : '';
+  const matchesAddress = !!searchInput && isAddress(searchInput);
+  const matchesTxHash = !!searchInput && isPotentiallyTransactionHash(searchInput);
   const startTime = filters.startTime ? Date.parse(adjustToUtcTime(filters.startTime)) : null;
   const endTime = filters.endTime ? Date.parse(adjustToUtcTime(filters.endTime)) : null;
-  if (startTime && message.origin.timestamp < startTime) return false;
-  if (endTime && message.origin.timestamp > endTime) return false;
-  if (filters.status === 'delivered' && message.status !== MessageStatus.Delivered) return false;
-  if (filters.status === 'pending' && message.status !== MessageStatus.Pending) return false;
-  return true;
+  return (message: MessageStub) => {
+    if (originDomainId && message.originDomainId !== originDomainId) return false;
+    if (destinationDomainId && message.destinationDomainId !== destinationDomainId) return false;
+    if (startTime && message.origin.timestamp < startTime) return false;
+    if (endTime && message.origin.timestamp > endTime) return false;
+    if (status === 'delivered' && message.status !== MessageStatus.Delivered) return false;
+    if (status === 'pending' && message.status !== MessageStatus.Pending) return false;
+    if (!searchInput || normalizeIdentifier(message.msgId) === identifier) return true;
+    if (
+      matchesAddress &&
+      [message.sender, message.recipient, message.origin.from, message.destination?.from].some(
+        (address) => address && eqAddress(address, searchInput),
+      )
+    ) {
+      return true;
+    }
+    return (
+      matchesTxHash &&
+      [message.origin.hash, message.destination?.hash].some(
+        (hash) => hash && normalizeIdentifier(hash) === identifier,
+      )
+    );
+  };
 }
 
 export function getMessageCandidates(
@@ -221,30 +242,12 @@ export function getMessageCandidates(
   filters: MessageSearchFilters,
   warpRouteDomainAddresses: Array<{ domainId: number; address: string }>,
 ): MessageStub[] {
+  const matchesSearchFilters = createMessageSearchFilter(filters);
   return mergeMessageLists(liveMessages, queryMessages).filter(
     (message) =>
-      messageMatchesSearchFilters(message, filters) &&
+      matchesSearchFilters(message) &&
       (!warpRouteDomainAddresses.length ||
         messageMatchesWarpRoute(message, warpRouteDomainAddresses)),
-  );
-}
-
-function messageMatchesSearchInput(message: MessageStub, searchInput: string): boolean {
-  const identifier = normalizeIdentifier(searchInput);
-  if (normalizeIdentifier(message.msgId) === identifier) return true;
-  if (
-    isAddress(searchInput) &&
-    [message.sender, message.recipient, message.origin.from, message.destination?.from].some(
-      (address) => address && eqAddress(address, searchInput),
-    )
-  ) {
-    return true;
-  }
-  return (
-    isPotentiallyTransactionHash(searchInput) &&
-    [message.origin.hash, message.destination?.hash].some(
-      (hash) => hash && normalizeIdentifier(hash) === identifier,
-    )
   );
 }
 
@@ -259,14 +262,15 @@ export function useMessageSearchQuery(
   startTimeFilter: number | null,
   endTimeFilter: number | null,
   statusFilter: MessageStatusFilter = 'all',
-  warpRouteAddresses: Array<{ chainName: string; address: string }> = [],
+  warpRouteAddresses = EMPTY_WARP_ROUTE_ADDRESSES,
   cursor: MessagePageCursor = {},
 ) {
-  if (cursor.after && cursor.before) {
+  const { after, before } = cursor;
+  if (after && before) {
     throw new Error('Message search cannot use both before and after cursors');
   }
-  const cursorValue = cursor.before || cursor.after || null;
-  const isBeforeQuery = !!cursor.before;
+  const cursorValue = before || after || null;
+  const isBeforeQuery = !!before;
   const chainMetadataResolver = useChainMetadataResolver();
   const {
     chains,
@@ -275,7 +279,6 @@ export function useMessageSearchQuery(
     hasRun: hasSearchMetadataRun,
     retry: retrySearchMetadata,
   } = useScrapedChains(chainMetadataResolver);
-  const liveMessageRows = useExplorerMessageRows();
   const mainnetDomainIds = useMemo(
     () =>
       Object.values(chains)
@@ -304,8 +307,6 @@ export function useMessageSearchQuery(
   // Validating filters
   const isValidOrigin = !originChainNameFilter || originDomainId !== null;
   const isValidDestination = !destinationChainNameFilter || destDomainId !== null;
-
-  const warpAddresses = warpRouteAddresses.map((a) => a.address);
 
   // Resolve each warp route token to its domain for client-side filtering.
   // The DB filter matches on address bytes alone (sender OR recipient), so a
@@ -349,19 +350,34 @@ export function useMessageSearchQuery(
     ].filter((domainId): domainId is number => domainId !== null);
     return getMessageSearchDomainIds(mainnetDomainIds, hasInput, selectedDomainIds);
   }, [destDomainId, hasInput, mainnetDomainIds, originDomainId, warpRouteDomainAddresses]);
-  const { query, variables } = buildMessageSearchQuery(
+  const { query, variables, requestKey } = useMemo(() => {
+    const { query, variables } = buildMessageSearchQuery(
+      sanitizedInput,
+      originDomainId,
+      destDomainId,
+      startTimeFilter,
+      endTimeFilter,
+      queryLimit,
+      true,
+      searchDomainIds,
+      statusFilter,
+      warpRouteAddresses.map(({ address }) => address),
+      { ...(before ? { before } : after ? { after } : {}), cached: !!(after || before) },
+    );
+    return { query, variables, requestKey: createRequest(query, variables).key };
+  }, [
     sanitizedInput,
-    isValidOrigin ? originDomainId : null,
-    isValidDestination ? destDomainId : null,
+    originDomainId,
+    destDomainId,
     startTimeFilter,
     endTimeFilter,
     queryLimit,
-    true,
     searchDomainIds,
     statusFilter,
-    warpAddresses,
-    { ...cursor, cached: !!cursorValue },
-  );
+    warpRouteAddresses,
+    after,
+    before,
+  ]);
 
   // Execute query
   const [result, reexecuteQuery] = useQuery<MessagesStubQueryResult>({
@@ -377,8 +393,7 @@ export function useMessageSearchQuery(
     }
   }, [data, error]);
   const hasCurrentQueryResult =
-    !!data &&
-    doesQueryResultMatchRequest(createRequest(query, variables).key, result.operation?.key);
+    !!data && doesQueryResultMatchRequest(requestKey, result.operation?.key);
   const isFetching = isValidInput && !isSearchMetadataError && (!isSearchMetadataReady || fetching);
   const refresh = useCallback(() => {
     if (!query || !isValidInput) return;
@@ -401,22 +416,21 @@ export function useMessageSearchQuery(
     () => getRawMessageRows(data, isBeforeQuery),
     [data, isBeforeQuery],
   );
+  const parseSearchMessage = useCallback(
+    (row: MessageStubEntry) => parseMessageStubEntry(chainMetadataResolver, scrapedChains, row),
+    [chainMetadataResolver, scrapedChains],
+  );
+  const liveMessageRows = useExplorerSearchRows(
+    liveSearchEnabled && !cursorValue,
+    parseSearchMessage,
+  );
+  const searchDomainSet = useMemo(
+    () => new Set(searchDomainIds.map((domain) => domain >>> 0)),
+    [searchDomainIds],
+  );
   const liveMessageList = useMemo(
-    () =>
-      filterLatestMessageRows(
-        liveSearchEnabled && !cursorValue ? liveMessageRows : [],
-        searchDomainIds,
-      )
-        .map((message) => parseMessageStubEntry(chainMetadataResolver, scrapedChains, message))
-        .filter((message): message is MessageStub => !!message),
-    [
-      chainMetadataResolver,
-      scrapedChains,
-      liveMessageRows,
-      liveSearchEnabled,
-      cursorValue,
-      searchDomainIds,
-    ],
+    () => filterLatestMessageRows(liveMessageRows, searchDomainSet),
+    [liveMessageRows, searchDomainSet],
   );
   // Filter before pagination so unrelated live rows cannot evict query matches.
   // Raw query metadata controls cursor continuation.

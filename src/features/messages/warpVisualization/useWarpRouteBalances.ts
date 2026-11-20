@@ -1,4 +1,3 @@
-import { createEvmHypAdapter } from '@hyperlane-xyz/sdk/token/adapters/evmHyp';
 import type {
   EvmHypVSXERC20LockboxAdapter,
   EvmHypXERC20LockboxAdapter,
@@ -82,7 +81,7 @@ async function fetchTokenBalance(
       return balance === undefined ? undefined : { balance };
     }
 
-    const adapter = createEvmHypAdapter(multiProvider, token);
+    const adapter = await multiProvider.createEvmTokenAdapter(token);
     if (!adapter) {
       return undefined;
     }

@@ -1,13 +1,8 @@
 import { fromWei } from '@hyperlane-xyz/utils';
-import { ErrorIcon, Modal, RefreshIcon, useModal } from '@hyperlane-xyz/widgets';
-import Link from 'next/link';
 
-import { TextButton } from '../../../components/buttons/TextButton';
-import { Color } from '../../../styles/Color';
 import { WarpRouteDetails } from '../../../types';
 import { formatAmountWithCommas } from '../../../utils/amount';
-import { CollateralInfo, CollateralStatus, RebalanceInfo } from '../collateral/types';
-import { useActiveRebalances } from '../collateral/useActiveRebalances';
+import { CollateralInfo } from '../collateral/types';
 
 const DEFAULT_DECIMALS = 18;
 const DEFAULT_SYMBOL = 'tokens';
@@ -21,30 +16,6 @@ function formatCollateralAmount(amount: bigint | undefined, decimals: number) {
   return amount === undefined
     ? 'N/A'
     : formatAmountWithCommas(fromWei(amount.toString(), decimals));
-}
-
-export function InsufficientCollateralWarning({
-  warpRouteDetails,
-  collateralInfo,
-}: CollateralCardsProps) {
-  if (collateralInfo.status !== CollateralStatus.Insufficient) return null;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <ErrorIcon width={20} height={20} color={Color.red} />
-        <h3 className="text-sm font-medium text-red-600">Insufficient Collateral</h3>
-      </div>
-      <div className="text-sm text-gray-700">
-        <p className="mb-2">This transfer cannot be completed due to insufficient collateral.</p>
-        <CollateralDeficitDetails
-          warpRouteDetails={warpRouteDetails}
-          collateralInfo={collateralInfo}
-        />
-        <ActiveRebalanceModal warpRouteDetails={warpRouteDetails} collateralInfo={collateralInfo} />
-      </div>
-    </div>
-  );
 }
 
 export function CollateralDeficitDetails({
@@ -67,66 +38,6 @@ export function CollateralDeficitDetails({
           {symbol}
         </div>
       ))}
-    </div>
-  );
-}
-
-export function ActiveRebalanceModal({ warpRouteDetails }: CollateralCardsProps) {
-  const activeRebalances = useActiveRebalances(warpRouteDetails);
-  const { isOpen, open, close } = useModal();
-
-  if (!activeRebalances || !activeRebalances.rebalances.length) return null;
-
-  // Show active rebalances if collateral is sufficient
-  return (
-    <div className="space-y-3">
-      <TextButton
-        classes="flex gap-1 cursor-pointer text-sm text-primary-600 underline underline-offset-1 transition-all hover:text-primary-700 active:text-primary-800"
-        onClick={open}
-      >
-        <RefreshIcon width={20} height={20} color={Color.primary} />
-        View Active Rebalance
-      </TextButton>
-
-      <Modal isOpen={isOpen} close={close} panelClassname="max-w-lg p-4 sm:p-5">
-        <div className="text-sm text-gray-700">
-          <RebalanceList rebalances={activeRebalances.rebalances} />
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-function RebalanceList({ rebalances }: { rebalances: RebalanceInfo[] }) {
-  const pendingRebalances = rebalances.filter((r) => !r.isDelivered);
-  const count = pendingRebalances.length;
-
-  if (count === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      <p className="font-medium">
-        {count} rebalance transaction{count > 1 ? 's' : ''} in progress:
-      </p>
-      <ul className="space-y-2">
-        {pendingRebalances.slice(0, 3).map((rebalance, idx) => (
-          <li key={idx} className="flex items-center space-x-2 text-xs">
-            <span className="rounded bg-white font-mono">{rebalance.txHash.slice(0, 12)}...</span>
-            {rebalance.messageId && (
-              <Link
-                href={`/message/${rebalance.messageId}`}
-                className="text-primary-600 hover:text-primary-800 underline"
-                target="_blank"
-              >
-                View message →
-              </Link>
-            )}
-          </li>
-        ))}
-        {pendingRebalances.length > 3 && (
-          <li className="text-xs italic">And {pendingRebalances.length - 3} more...</li>
-        )}
-      </ul>
     </div>
   );
 }

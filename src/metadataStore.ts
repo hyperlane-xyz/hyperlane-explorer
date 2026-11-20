@@ -13,22 +13,20 @@ import {
   type WarpRouteIdToAddressesMap,
 } from '@hyperlane-xyz/sdk/warp/read';
 import { objFilter } from '@hyperlane-xyz/utils';
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { config } from './consts/config';
 import type { LoadedChainMetadata } from './features/chains/loadChainMetadata';
-import { DomainsEntry } from './features/chains/queries/fragments';
 import { clearPrefetchedMessages } from './features/messages/queries/prefetch';
 import { logger } from './utils/logger';
 
 const PERSIST_STATE_VERSION = 2;
+const EMPTY_METADATA = createChainMetadataResolver({});
 
 interface MetadataState {
-  scrapedDomains: Array<DomainsEntry>;
-  setScrapedDomains: (chains: Array<DomainsEntry>) => void;
   chainMetadata: ChainMap<ChainMetadata>;
+  chainMetadataResolver: ChainMetadataResolver;
   chainMetadataOverrides: ChainMap<Partial<ChainMetadata>>;
   setChainMetadataOverrides: (
     overrides?: ChainMap<Partial<ChainMetadata> | undefined>,
@@ -64,9 +62,8 @@ let warpRouteDataRequest: {
 export const useStore = create<MetadataState>()(
   persist(
     (set, get) => ({
-      scrapedDomains: [],
-      setScrapedDomains: (domains: Array<DomainsEntry>) => set({ scrapedDomains: domains }),
-      chainMetadata: {},
+      chainMetadata: EMPTY_METADATA.metadata,
+      chainMetadataResolver: EMPTY_METADATA,
       chainMetadataOverrides: {},
       setChainMetadataOverrides: async (
         overrides: ChainMap<Partial<ChainMetadata> | undefined> = {},
@@ -115,6 +112,7 @@ export const useStore = create<MetadataState>()(
 
           set({
             chainMetadata: metadata,
+            chainMetadataResolver: createChainMetadataResolver(metadata),
             chainMetadataOverrides: overrides,
             isChainMetadataLoaded: true,
             chainMetadataError: null,
@@ -146,7 +144,8 @@ export const useStore = create<MetadataState>()(
         warpRouteDataRequest = null;
         clearPrefetchedMessages();
         set({
-          chainMetadata: {},
+          chainMetadata: EMPTY_METADATA.metadata,
+          chainMetadataResolver: EMPTY_METADATA,
           isChainMetadataLoaded: false,
           chainMetadataError: null,
           registry,
@@ -219,9 +218,7 @@ export function useRegistry() {
 }
 
 export function useChainMetadata(chainName?: ChainName) {
-  const chainMetadata = useStore((s) => s.chainMetadata);
-  if (!chainName) return undefined;
-  return chainMetadata[chainName];
+  return useStore((s) => (chainName ? s.chainMetadata[chainName] : undefined));
 }
 
 export function useChainMetadataMap() {
@@ -235,8 +232,7 @@ export function useChainMetadataReady() {
 }
 
 export function useChainMetadataResolver(): ChainMetadataResolver {
-  const chainMetadata = useChainMetadataMap();
-  return useMemo(() => createChainMetadataResolver(chainMetadata), [chainMetadata]);
+  return useStore((s) => s.chainMetadataResolver);
 }
 
 export function useWarpRouteIdToAddressesMap() {

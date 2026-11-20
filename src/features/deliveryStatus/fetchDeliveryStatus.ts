@@ -7,7 +7,6 @@ import { Message, MessageStatus, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
 import { toDecimalNumber } from '../../utils/number';
 import { getMailboxAddress } from '../chains/utils';
-import { debugMessage } from '../debugger/debugMessage';
 import { MessageDebugStatus } from '../debugger/types';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import { checkIsMessageDelivered } from '../messages/deliveryUtils';
@@ -70,7 +69,8 @@ export async function fetchDeliveryStatus(
     };
     return result;
   } else {
-    const debugResult = await debugMessage(multiProvider, registry, overrideChainMetadata, message);
+    const { debugMessage } = await import('../debugger/debugMessage');
+    const debugResult = await debugMessage(multiProvider, registry, destMailboxAddr, message);
     const messageStatus =
       debugResult.status === MessageDebugStatus.NoErrorsFound
         ? MessageStatus.Pending

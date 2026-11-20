@@ -58,13 +58,27 @@ export function MessageLifecycleCard({
 }: Props) {
   const { diagnostics, activities, connectionState, observation } = useMessageDiagnosticsContext();
   const metadata = useChainMetadataResolver();
-  const destinationHead = useExplorerBlockValue(
-    message.status === MessageStatus.Delivered && !confirmed
+  const confirmationTracked = !message.isPiMsg || confirmed;
+  const destinationBlocks = metadata.tryGetChainMetadata(message.destinationDomainId)?.blocks;
+  const destinationRequired = confirmationTracked
+    ? getRequiredConfirmations(destinationBlocks)
+    : undefined;
+  const destinationCurrent = useExplorerBlockValue(
+    message.status === MessageStatus.Delivered &&
+      !confirmed &&
+      destinationRequired &&
+      message.destination?.blockNumber !== undefined
       ? message.destinationDomainId
       : undefined,
-    (head) => (head ? Number(head.headHeight) : undefined),
+    (head) =>
+      destinationRequired === undefined
+        ? null
+        : calculateConfirmationCount(
+            message.destination?.blockNumber,
+            head ? Number(head.headHeight) : undefined,
+            destinationRequired,
+          ),
   );
-  const confirmationTracked = !message.isPiMsg || confirmed;
   const timeline = useMemo(
     () =>
       getMessageTimeline(message, observation, activities, {
@@ -83,18 +97,6 @@ export function MessageLifecycleCard({
     originConfirmation,
   });
 
-  const destinationBlocks = metadata.tryGetChainMetadata(message.destinationDomainId)?.blocks;
-  const destinationRequired = confirmationTracked
-    ? getRequiredConfirmations(destinationBlocks)
-    : undefined;
-  const destinationCurrent =
-    destinationRequired === undefined
-      ? null
-      : calculateConfirmationCount(
-          message.destination?.blockNumber,
-          destinationHead,
-          destinationRequired,
-        );
   const estimatedSeconds = delivered
     ? !confirmed && confirmationTracked
       ? estimateConfirmationSeconds(

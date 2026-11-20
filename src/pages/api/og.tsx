@@ -6,7 +6,7 @@ import { links } from '../../consts/links';
 import {
   fetchDomainNames,
   fetchMessageForOG,
-  type MessageOGData,
+  isOGMessageId,
 } from '../../features/messages/queries/serverFetch';
 import { formatAmountWithCommas } from '../../utils/amount';
 import {
@@ -76,27 +76,20 @@ function sanitizeSymbol(symbol: string): string {
 }
 
 /**
- * Parse warp route message body to extract recipient and amount.
+ * Read the amount in the second 32-byte word of a warp route message body.
  * Edge-compatible implementation matching @hyperlane-xyz/utils parseWarpRouteMessage.
  *
  * Wire amount = `localAmount * scale`; scale defaults to identity when unset,
  * so the wire amount is in the origin token's native-decimal space.
  */
-function parseWarpMessageBody(body: string): { recipient: string; amount: bigint } | null {
+function parseWarpMessageAmount(body: string): bigint | null {
   try {
     // Remove 0x prefix if present
     const hex = body.startsWith('0x') ? body.slice(2) : body;
     // Need at least 64 bytes (128 hex chars) for recipient (32) + amount (32)
     if (hex.length < 128) return null;
 
-    // First 32 bytes (64 hex chars) = recipient (kept as full 32-byte hex)
-    const recipient = '0x' + hex.slice(0, 64);
-
-    // Next 32 bytes = amount (uint256)
-    const amountHex = hex.slice(64, 128);
-    const amount = BigInt('0x' + amountHex);
-
-    return { recipient, amount };
+    return BigInt('0x' + hex.slice(64, 128));
   } catch {
     return null;
   }
@@ -123,26 +116,21 @@ function formatTokenAmount(amountWei: bigint, decimals: number): string {
   return `${integerPart}.${trimmed}`;
 }
 function getWarpTransferDetails(
-  messageData: MessageOGData,
+  sender: string,
+  amount: bigint,
   originChainName: string,
   warpRouteMap: WarpRouteMap,
 ): WarpTransferDetails | null {
-  if (!messageData.body) return null;
-
   const originChainTokens = warpRouteMap.get(originChainName);
   if (!originChainTokens) return null;
 
-  // Sender/recipient are bytes32 hex; warp route map keys are also normalized hex
-  const normalizedSender = normalizeAddressToHex(messageData.sender);
+  const normalizedSender = normalizeAddressToHex(sender);
 
   const originToken = originChainTokens.get(normalizedSender);
   if (!originToken) return null;
 
-  const parsed = parseWarpMessageBody(messageData.body);
-  if (!parsed) return null;
-
   try {
-    const amountParts = getWarpRouteAmountParts(parsed.amount, {
+    const amountParts = getWarpRouteAmountParts(amount, {
       decimals: originToken.decimals,
       scale: originToken.scale,
     });
@@ -189,35 +177,36 @@ export default async function handler(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const messageId = searchParams.get('messageId');
 
-  const fonts = await loadFonts(origin);
-
-  const imageOptions = {
+  const fonts = loadFonts(origin);
+  const imageOptions = fonts.then(({ mono }) => ({
     width: 1200,
     height: 630,
     fonts: [
       {
         name: 'PPFraktionMono',
-        data: fonts.mono,
+        data: mono,
         style: 'normal' as const,
         weight: 400 as const,
       },
     ],
-  };
+  }));
 
-  if (!messageId) {
-    return new ImageResponse(<DefaultOGImage origin={origin} />, imageOptions);
+  if (!messageId || !isOGMessageId(messageId)) {
+    return new ImageResponse(<DefaultOGImage origin={origin} />, await imageOptions);
   }
 
-  const [messageData, domainNames, chainMetadata, warpRouteMap] = await Promise.all([
-    fetchMessageForOG(messageId),
-    fetchDomainNames(),
-    fetchChainMetadata(),
-    fetchWarpRouteMap(),
-  ]);
+  const message = fetchMessageForOG(messageId);
+  const chainInfo = Promise.all([fetchDomainNames(), fetchChainMetadata()]);
+  const messageData = await message;
 
   if (!messageData) {
-    return new ImageResponse(<DefaultOGImage origin={origin} />, imageOptions);
+    const [options] = await Promise.all([imageOptions, chainInfo]);
+    return new ImageResponse(<DefaultOGImage origin={origin} />, options);
   }
+
+  const warpAmount = messageData.body ? parseWarpMessageAmount(messageData.body) : null;
+  const warpRoutes = warpAmount === null ? null : fetchWarpRouteMap();
+  const [domainNames, chainMetadata] = await chainInfo;
 
   const originChainName =
     domainNames.get(messageData.originDomainId) || `Domain ${messageData.originDomainId}`;
@@ -228,12 +217,11 @@ export default async function handler(req: NextRequest) {
   const originDisplayName = getChainDisplayName(originChainName, chainMetadata);
   const destDisplayName = getChainDisplayName(destChainName, chainMetadata);
 
-  const warpTransfer = getWarpTransferDetails(messageData, originChainName, warpRouteMap);
-
   const shortMsgId = `${messageData.msgId.slice(0, 10)}...${messageData.msgId.slice(-8)}`;
-  const statusColor = messageData.status === 'Delivered' ? '#10b981' : '#f59e0b';
-  const statusBgColor =
-    messageData.status === 'Delivered' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+  const statusColor = messageData.isDelivered ? '#10b981' : '#f59e0b';
+  const statusBgColor = messageData.isDelivered
+    ? 'rgba(16, 185, 129, 0.15)'
+    : 'rgba(245, 158, 11, 0.15)';
   const formattedDate = new Date(messageData.timestamp)
     .toLocaleDateString('en-US', {
       year: 'numeric',
@@ -257,10 +245,16 @@ export default async function handler(req: NextRequest) {
   const destChainLogo = getChainLogoUrl(destChainName);
 
   // Extract colors from chain logos in parallel
-  const [originColorsRaw, destColorsRaw] = await Promise.all([
+  const [originColorsRaw, destColorsRaw, warpRouteMap, options] = await Promise.all([
     extractChainColors(originChainLogo, originChainName),
     extractChainColors(destChainLogo, destChainName),
+    warpRoutes,
+    imageOptions,
   ]);
+  const warpTransfer =
+    warpAmount !== null && warpRouteMap
+      ? getWarpTransferDetails(messageData.sender, warpAmount, originChainName, warpRouteMap)
+      : null;
 
   // Adjust colors for dark background visibility
   const originColors: ChainColors = originColorsRaw
@@ -366,7 +360,7 @@ export default async function handler(req: NextRequest) {
             }}
           />
           <span style={{ color: statusColor, fontSize: '28px', fontWeight: 500 }}>
-            {messageData.status}
+            {messageData.isDelivered ? 'Delivered' : 'Pending'}
           </span>
         </div>
       </div>
@@ -590,7 +584,7 @@ export default async function handler(req: NextRequest) {
         </div>
       </div>
     </div>,
-    imageOptions,
+    options,
   );
 }
 

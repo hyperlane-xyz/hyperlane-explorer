@@ -485,7 +485,6 @@ describe('fetchWarpFees separates IGP funding', () => {
       makeGasPaymentLog(MSG_ID_1, 2, BigNumber.from(1000), BigNumber.from(10), IGP),
     ];
     const provider = {
-      getTransactionReceipt: jest.fn(async () => ({ logs })),
       getTransaction: jest.fn(async () => ({ value: BigNumber.from(120) })),
     };
     const multiProvider = {
@@ -509,7 +508,7 @@ describe('fetchWarpFees separates IGP funding', () => {
       destAmount: '100',
       transferRecipient: RECIPIENT,
     };
-    return { route, multiProvider };
+    return { route, multiProvider, logs };
   }
 
   it.each([
@@ -519,23 +518,23 @@ describe('fetchWarpFees separates IGP funding', () => {
   ])(
     'does not report an overlapping token IGP payment as a separate fee for %s',
     async (standard) => {
-      const { route, multiProvider } = setup(standard, [
+      const { route, multiProvider, logs } = setup(standard, [
         standard === TokenStandard.EvmHypSynthetic ? ROUTER : TOKEN,
       ]);
-      expect(await fetchWarpFees(message, route, multiProvider)).toBeNull();
+      expect(await fetchWarpFees(message, route, multiProvider, logs)).toBeNull();
     },
   );
 
   it('omits a separate fee when the IGP payment denomination is ambiguous', async () => {
-    const { route, multiProvider } = setup(TokenStandard.EvmHypCollateral, [TOKEN, ROUTER]);
-    expect(await fetchWarpFees(message, route, multiProvider)).toBeNull();
+    const { route, multiProvider, logs } = setup(TokenStandard.EvmHypCollateral, [TOKEN, ROUTER]);
+    expect(await fetchWarpFees(message, route, multiProvider, logs)).toBeNull();
   });
 
   it.each([TokenStandard.EvmHypCollateral, TokenStandard.EvmHypNative])(
     'preserves fee inference with native IGP on %s',
     async (standard) => {
-      const { route, multiProvider } = setup(standard, []);
-      expect(await fetchWarpFees(message, route, multiProvider)).toMatchObject({
+      const { route, multiProvider, logs } = setup(standard, []);
+      expect(await fetchWarpFees(message, route, multiProvider, logs)).toMatchObject({
         bridgeFee: '10',
         totalSent: '110',
         tokenSymbol: 'TOK',

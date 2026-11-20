@@ -9,7 +9,7 @@ import {
   ERC4626_COLLATERAL_STANDARDS,
   LOCKBOX_STANDARDS,
   PROTOCOL_TO_HYP_NATIVE_STANDARD,
-} from '@hyperlane-xyz/sdk';
+} from '@hyperlane-xyz/sdk/token/TokenStandard';
 import { ProtocolType, fromWei, isEVMLike, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
 import { BigNumber, constants, providers } from 'ethers';
 
@@ -18,6 +18,7 @@ import { logger } from '../../../utils/logger';
 import { getWarpRouteAmountParts } from '../../../utils/warpRouteAmounts';
 import type { ExplorerMultiProvider } from '../../hyperlane/sdkRuntime';
 import { IgpPaymentDenomKind, parseIgpPayments } from '../igpPayments';
+import type { OriginTransactionLog } from '../useOriginTransactionLogs';
 
 export interface WarpFeeBreakdown {
   bridgeFee: string;
@@ -37,8 +38,10 @@ const erc20Iface = IERC20__factory.createInterface();
 const mailboxIface = Mailbox__factory.createInterface();
 // eslint-disable-next-line camelcase
 const igpIface = InterchainGasPaymaster__factory.createInterface();
+const dispatchIdEvent = mailboxIface.getEvent('DispatchId');
+const dispatchIdTopic = mailboxIface.getEventTopic(dispatchIdEvent);
 
-type RawLog = { address: string; topics: Array<string>; data: string };
+type RawLog = OriginTransactionLog;
 
 // All HypNative standards across protocols, from the SDK (matches Token.isHypNative()).
 const HYP_NATIVE_STANDARDS = new Set<string>(Object.values(PROTOCOL_TO_HYP_NATIVE_STANDARD));
@@ -90,6 +93,7 @@ export async function fetchWarpFees(
   message: Message | MessageStub,
   warpRouteDetails: WarpRouteDetails,
   multiProvider: ExplorerMultiProvider,
+  logs: RawLog[],
 ): Promise<WarpFeeBreakdown | null> {
   const chainMetadata = multiProvider.tryGetChainMetadata(message.originDomainId);
   if (!chainMetadata || !isEVMLike(chainMetadata.protocol)) return null;
@@ -105,14 +109,10 @@ export async function fetchWarpFees(
       ? multiProvider.getTronProvider(message.originDomainId)
       : multiProvider.getEthersV5Provider(message.originDomainId);
 
-  const receipt = await provider.getTransactionReceipt(message.origin.hash);
-  // Receipt not yet indexed — throw so React Query retries instead of caching null forever.
-  if (!receipt) throw new Error(`No receipt for tx ${message.origin.hash}`);
-
   // Token-paid IGP may be included in the router's token pull. Without payer attribution,
   // a separate route fee cannot be isolated; native subtraction also needs known units.
   if (
-    parseIgpPayments(receipt.logs, message.msgId).some(
+    parseIgpPayments(logs, message.msgId).some(
       (payment) =>
         payment.denom.kind !== IgpPaymentDenomKind.Native &&
         !BigNumber.from(payment.paymentAmount).isZero(),
@@ -129,16 +129,13 @@ export async function fetchWarpFees(
     // Only attribute when the tx holds exactly one same-chain swap (one
     // ReceivedTransferRemote) and no cross-chain dispatch, so summing the
     // user's token pull across the full receipt stays unambiguous.
-    if (
-      countReceivedTransferRemotes(receipt.logs) !== 1 ||
-      countSentTransferRemotes(receipt.logs) !== 0
-    ) {
+    if (countReceivedTransferRemotes(logs) !== 1 || countSentTransferRemotes(logs) !== 0) {
       return null;
     }
-    messageLogs = receipt.logs;
+    messageLogs = logs;
     sentAmountWire = parseSwapAmountFromBody(message.body);
   } else {
-    messageLogs = sliceLogsForMessage(receipt.logs, message.msgId);
+    messageLogs = sliceLogsForMessage(logs, message.msgId);
     if (!messageLogs) return null;
     sentAmountWire = parseSentTransferRemoteAmount(messageLogs, routerAddress);
   }
@@ -148,7 +145,7 @@ export async function fetchWarpFees(
 
   const isNative = HYP_NATIVE_STANDARDS.has(warpRouteDetails.originToken.standard);
   const totalTransferred = isNative
-    ? await parseTotalNativePulledFromUser(provider, receipt.logs, message)
+    ? await parseTotalNativePulledFromUser(provider, logs, message)
     : parseTotalTokenPulledFromUser(
         messageLogs,
         routerAddress,
@@ -249,10 +246,10 @@ export function sliceLogsForMessage(logs: Array<RawLog>, msgId: string): RawLog[
 }
 
 function parseDispatchIdLog(log: RawLog): string | null {
+  if (log.topics[0]?.toLowerCase() !== dispatchIdTopic) return null;
   try {
-    const parsed = mailboxIface.parseLog(log);
-    if (parsed.name !== 'DispatchId') return null;
-    return parsed.args.messageId as string;
+    const { messageId } = mailboxIface.decodeEventLog(dispatchIdEvent, log.data, log.topics);
+    return messageId as string;
   } catch {
     return null;
   }

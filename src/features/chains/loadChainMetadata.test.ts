@@ -68,6 +68,20 @@ describe('loadChainMetadata', () => {
     expect(overrides.ethereum?.domainId).toBe(1);
   });
 
+  it('uses the validated canonical metadata when a known chain override is invalid', async () => {
+    const error = jest.spyOn(logger, 'error').mockImplementation();
+    try {
+      const { metadata, overrides } = await loadChainMetadata(fakeRegistry(CANONICAL), {
+        ethereum: { rpcUrls: [{ http: 'not-a-url' }] },
+      });
+
+      expect(metadata.ethereum?.rpcUrls).toEqual(CANONICAL.ethereum.rpcUrls);
+      expect(overrides.ethereum).toBeUndefined();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it('preserves canonical owner when a canonical override steals its domainId', async () => {
     const override: ChainMap<Partial<ChainMetadata>> = {
       ethereum: { domainId: 42161 },

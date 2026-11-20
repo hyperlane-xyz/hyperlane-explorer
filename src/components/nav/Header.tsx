@@ -1,6 +1,5 @@
-import { WideChevronIcon } from '@hyperlane-xyz/widgets';
+import { WideChevronIcon } from '@hyperlane-xyz/widgets/icons/WideChevron';
 import clsx from 'clsx';
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
@@ -9,14 +8,7 @@ import LogoLockup from '../../../public/images/hyperlane-explorer-logo.svg';
 import { docLinks, links } from '../../consts/links';
 import { Color } from '../../styles/Color';
 import { useScrollThresholdListener } from '../../utils/useScrollListener';
-
-const MiniSearchBar = dynamic(
-  () => import('../search/MiniSearchBar').then((mod) => mod.MiniSearchBar),
-  {
-    loading: () => <div className="h-10 w-44 rounded bg-white/10" />,
-    ssr: false,
-  },
-);
+import { MiniSearchBar } from '../search/MiniSearchBar';
 
 const PAGES_EXCLUDING_SEARCH = ['/', '/debugger'];
 

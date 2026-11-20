@@ -1,5 +1,5 @@
-import { scalesEqual } from '@hyperlane-xyz/sdk';
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
+import { scalesEqual } from '@hyperlane-xyz/sdk/utils/decimals';
 import type { WarpRouteChainAddressMap } from '@hyperlane-xyz/sdk/warp/read';
 import { bytesToProtocolAddress, fromHexString, parseWarpRouteMessage } from '@hyperlane-xyz/utils';
 import { utils as ethersUtils } from 'ethers';

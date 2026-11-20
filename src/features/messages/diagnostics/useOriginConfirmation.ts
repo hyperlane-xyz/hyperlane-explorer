@@ -19,14 +19,20 @@ export function useOriginConfirmation(
   message: MessageStub,
   chainMetadataResolver: ChainMetadataResolver,
 ): OriginConfirmation {
-  const headHeight = useExplorerBlockValue(message.originDomainId, (head) =>
-    head ? Number(head.headHeight) : undefined,
+  const blocks = chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks;
+  const required = getRequiredConfirmations(blocks);
+  const blockNumber = message.origin.blockNumber;
+  const provisional = message.isOriginProvisional ?? message.isProvisional;
+  const tracksHead =
+    provisional !== false && required !== undefined && required > 0 && blockNumber !== undefined;
+  const headHeight = useExplorerBlockValue(
+    tracksHead ? message.originDomainId : undefined,
+    (head) =>
+      head && required !== undefined && blockNumber !== undefined
+        ? Math.min(blockNumber + required, Math.max(blockNumber, Number(head.headHeight)))
+        : undefined,
   );
-  return getOriginConfirmation(
-    message,
-    chainMetadataResolver.tryGetChainMetadata(message.originDomainId)?.blocks,
-    headHeight,
-  );
+  return getOriginConfirmation(message, blocks, headHeight);
 }
 
 export function getOriginConfirmation(

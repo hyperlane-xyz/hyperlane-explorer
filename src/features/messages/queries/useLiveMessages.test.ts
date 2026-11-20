@@ -8,9 +8,19 @@ import type { MessageEntry } from './fragments';
 import { filterLatestMessageRows, preserveMessageTransactionFields } from './useLiveMessages';
 
 it('excludes testnet messages from mainnet searches', () => {
-  const mainnet = { origin_domain_id: 0xffffffff, destination_domain_id: 10 } as MessageEntry;
-  const testnet = { origin_domain_id: 84532, destination_domain_id: 11155111 } as MessageEntry;
-  expect(filterLatestMessageRows([testnet, mainnet], [-1, 10])).toEqual([mainnet]);
+  const mainnetRow = { origin_domain_id: 0xffffffff, destination_domain_id: 10 } as MessageEntry;
+  const testnetRow = { origin_domain_id: 84532, destination_domain_id: 11155111 } as MessageEntry;
+  const mainnet = { originDomainId: 0xffffffff, destinationDomainId: 10 } as MessageStub;
+  const testnet = { originDomainId: 84532, destinationDomainId: 11155111 } as MessageStub;
+  expect(
+    filterLatestMessageRows(
+      [
+        { row: testnetRow, searchMessage: testnet },
+        { row: mainnetRow, searchMessage: mainnet },
+      ],
+      new Set([0xffffffff, 10]),
+    ),
+  ).toEqual([mainnet]);
 });
 
 it('retains transaction enrichment, but never restores rolled-back delivery state', () => {

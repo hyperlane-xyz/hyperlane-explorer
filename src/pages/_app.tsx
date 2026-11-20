@@ -14,15 +14,13 @@ import {
 import '@hyperlane-xyz/widgets/styles.css';
 import { AppLayout } from '../AppLayout';
 import { AppErrorBoundary } from '../components/errors/AppErrorBoundary';
-import { AppLoadingShell } from '../components/layout/AppLoadingShell';
 import { config } from '../consts/config';
+import { useScrapedDomainsStore } from '../features/chains/queries/scrapedDomainsStore';
 import { MessageDetailsLoading } from '../features/messages/MessageDetailsLoading';
-import { MessageSearchLoading } from '../features/messages/MessageSearchLoading';
 import {
   ExplorerEventsProvider,
   shouldEnableExplorerEvents,
 } from '../features/messages/queries/ExplorerEventsProvider';
-import { useStore } from '../metadataStore';
 
 import '../styles/global.css';
 
@@ -45,23 +43,9 @@ const reactQueryClient = new QueryClient({
   },
 });
 
-// Simple SSR check hook to avoid importing from @hyperlane-xyz/widgets during SSR
-// which triggers pino-pretty initialization
-function useIsSsr() {
-  const [isSsr, setIsSsr] = useState(true);
-  useEffect(() => {
-    setIsSsr(false);
-  }, []);
-  return isSsr;
-}
-
 export default function App({ Component, router, pageProps }: AppProps) {
-  // Disable app SSR for now as it's not needed and
-  // complicates graphql integration. However, we still need to render
-  // the page's Head component for OG meta tags to work with social crawlers.
-  const isSsr = useIsSsr();
-  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
-  const scrapedDomains = useStore((state) => state.scrapedDomains);
+  const [isMessageRoutePending, setIsMessageRoutePending] = useState(false);
+  const scrapedDomains = useScrapedDomainsStore((state) => state.scrapedDomains);
   const scrapedDomainIds = useMemo(
     () => scrapedDomains.filter((domain) => !domain.is_test_net).map(({ id }) => id),
     [scrapedDomains],
@@ -72,11 +56,11 @@ export default function App({ Component, router, pageProps }: AppProps) {
       : undefined;
 
   const onRouteChangeStart = useCallback((url: string) => {
-    setPendingRoute(isMessageRoute(url) ? url : null);
+    setIsMessageRoutePending(isMessageRoute(url));
   }, []);
 
   const onRouteChangeEnd = useCallback(() => {
-    setPendingRoute(null);
+    setIsMessageRoutePending(false);
   }, []);
 
   useEffect(() => {
@@ -91,67 +75,26 @@ export default function App({ Component, router, pageProps }: AppProps) {
     };
   }, [onRouteChangeEnd, onRouteChangeStart, router.events]);
 
-  // Note, the font definition is required both here and in _document.tsx
-  // Otherwise Next.js will not load the font
-
-  // During SSR, render the page component with providers for its Head/meta tags
-  // but hide body content to avoid flash of unstyled content.
-  // The Component is rendered (for Head/OG tags) but visually hidden.
-  if (isSsr) {
-    return (
-      <div className="font-sans text-black">
-        {/* Render page component hidden during SSR so its <Head> OG tags are emitted for crawlers */}
-        <div className="hidden" aria-hidden="true">
-          <QueryClientProvider client={reactQueryClient}>
-            <UrqlProvider value={urqlClient}>
-              <Component {...pageProps} />
-            </UrqlProvider>
-          </QueryClientProvider>
-        </div>
-        <AppLoadingShell>{getSsrLoadingContent(router.pathname)}</AppLoadingShell>
-      </div>
-    );
-  }
-
-  const appContent = (
-    <QueryClientProvider client={reactQueryClient}>
-      <UrqlProvider value={urqlClient}>
-        <ExplorerEventsProvider
-          domains={scrapedDomainIds}
-          diagnosticsMessageId={diagnosticsMessageId}
-          enabled={shouldEnableExplorerEvents(router.pathname)}
-        >
-          <AppLayout pathName={router.pathname}>
-            {pendingRoute ? (
-              getRouteLoadingContent(pendingRoute) || <Component {...pageProps} />
-            ) : (
-              <Component {...pageProps} />
-            )}
-          </AppLayout>
-        </ExplorerEventsProvider>
-      </UrqlProvider>
-    </QueryClientProvider>
-  );
-
   return (
     <div className="font-sans text-black">
       <AppErrorBoundary>
-        {appContent}
+        <QueryClientProvider client={reactQueryClient}>
+          <UrqlProvider value={urqlClient}>
+            <ExplorerEventsProvider
+              domains={scrapedDomainIds}
+              diagnosticsMessageId={diagnosticsMessageId}
+              enabled={shouldEnableExplorerEvents(router.pathname)}
+            >
+              <AppLayout pathName={router.pathname}>
+                {isMessageRoutePending ? <MessageDetailsLoading /> : <Component {...pageProps} />}
+              </AppLayout>
+            </ExplorerEventsProvider>
+          </UrqlProvider>
+        </QueryClientProvider>
         <AppClientOverlays />
       </AppErrorBoundary>
     </div>
   );
-}
-
-function getSsrLoadingContent(pathName: string) {
-  if (pathName === '/') return <MessageSearchLoading />;
-  if (isMessageRoute(pathName)) return <MessageDetailsLoading />;
-  return <div className="min-h-[20rem]" />;
-}
-
-function getRouteLoadingContent(pathName: string) {
-  if (isMessageRoute(pathName)) return <MessageDetailsLoading />;
-  return null;
 }
 
 function isMessageRoute(pathName: string) {

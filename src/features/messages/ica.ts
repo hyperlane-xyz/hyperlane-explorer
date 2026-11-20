@@ -11,14 +11,13 @@ import { BigNumber, Contract, providers, utils } from 'ethers';
 import { useMemo } from 'react';
 import { useQuery as useUrqlQuery } from 'urql';
 
-import { useChainMetadataResolver } from '../../metadataStore';
-import { useMultiProviderVersion, useReadyMultiProvider, useRegistry } from '../../store';
+import { useChainMetadataResolver, useRegistry } from '../../metadataStore';
+import { useMultiProviderVersion, useReadyMultiProvider } from '../../store';
 import { IcaCall } from '../../types';
 import { logger } from '../../utils/logger';
 import { useScrapedDomains } from '../chains/queries/useScrapedChains';
 import { isPiChain } from '../chains/utils';
 import type { ExplorerMultiProvider } from '../hyperlane/sdkRuntime';
-import { PiQueryType, fetchMessagesFromPiChain } from './pi-queries/fetchPiChainMessages';
 import { MessageIdentifierType, buildMessageQuery } from './queries/build';
 import { MessagesStubQueryResult } from './queries/fragments';
 import { parseMessageStubResult } from './queries/parse';
@@ -888,6 +887,8 @@ export function useRelatedIcaMessage(
       if (!originTxHash || originDomainId === undefined || !multiProvider) return [];
       const originMetadata = chainMetadataResolver.tryGetChainMetadata(originDomainId);
       if (!originMetadata) return [];
+      const { PiQueryType, fetchMessagesFromPiChain } =
+        await import('./pi-queries/fetchPiChainMessages');
       return fetchMessagesFromPiChain(
         originMetadata,
         { input: originTxHash },

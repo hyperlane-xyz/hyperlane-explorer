@@ -29,7 +29,7 @@ export function AppLayout({ pathName, children }: PropsWithChildren<Props>) {
         />
         <Header pathName={pathName} />
         <div className="relative z-10 mx-auto max-w-5xl grow">
-          <main style={appShellMainStyle} className="relative min-h-full pt-3">
+          <main style={appShellMainStyle} className="relative min-h-[20rem] pt-3">
             {children}
           </main>
         </div>
