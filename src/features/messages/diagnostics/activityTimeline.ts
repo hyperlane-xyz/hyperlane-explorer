@@ -166,7 +166,7 @@ export function buildMessageActivityTimeline({
   >();
   const groupedChecks = new Set<TimelineEntry>();
   let prepareStartedAt: number | undefined;
-  let previousState: DiagnosticState | undefined;
+  let previousReport: Report | undefined;
   for (const report of reports) {
     const { row, state } = report;
     const observedAt = parseObservationTime(row.observed_at);
@@ -176,6 +176,7 @@ export function buildMessageActivityTimeline({
     entries.push(...signatureEvents(report, seenSignatures, timestamp));
     if (!isSupported(row)) continue;
     if (!state) continue;
+    const previousState = previousReport?.state;
 
     const add = (
       key: string,
@@ -257,7 +258,11 @@ export function buildMessageActivityTimeline({
       // Missing node data may be a partial report. An observed set change
       // invalidates its resolution and prior reorg results.
       if (!nodeChecks || (setIdentity !== undefined && nodeChecks.identity !== setIdentity)) {
-        nodeChecks = { identity: setIdentity, reorgOutcomes: new Map() };
+        nodeChecks = {
+          identity: setIdentity,
+          inheritedReorgOutcomes: nodeChecks?.inheritedReorgOutcomes,
+          reorgOutcomes: new Map(),
+        };
         validatorSets.set(nodeId, nodeChecks);
       }
       if (
@@ -285,8 +290,14 @@ export function buildMessageActivityTimeline({
       const checks = securityModule.reorg_checks ?? [];
       // Cumulative reports can retain checks when the relayer starts a new attempt.
       // Keep those outcomes out of the new attempt until the report changes or clears them.
-      const baselineChecks =
-        before?.reorg_checks ?? (observedAt === phaseTime ? checks : undefined);
+      const hasPriorBaseline = !!before || previousReport?.partial === false;
+      const mayContainRetainedChecks =
+        !historyComplete || report.partial || observedAt === phaseTime;
+      const baselineChecks = hasPriorBaseline
+        ? before?.reorg_checks
+        : mayContainRetainedChecks
+          ? checks
+          : undefined;
       const inherited = startsNewAttempt
         ? new Map(
             baselineChecks?.map(({ validator, states }) => [
@@ -472,7 +483,7 @@ export function buildMessageActivityTimeline({
         phase === 'dropped' || state.failure ? 'failed' : 'complete',
       );
     }
-    previousState = state;
+    previousReport = report;
   }
 
   // The current observation may include unchanged nodes from an anchor outside

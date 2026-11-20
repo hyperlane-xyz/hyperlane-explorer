@@ -78,9 +78,7 @@ export function getMessageProgress({
     explanation = 'The offchain attestation is pending. Relayers will continue automatically.';
   else if (hasRelayIssue)
     explanation = 'The message remains pending while relayers retry automatically.';
-  else if (originConfirming && blockTag)
-    explanation = state ? 'The relayer is processing this message.' : '';
-  else if (originConfirming)
+  else if (originConfirming && !blockTag)
     explanation = `${originConfirmation.current ?? '—'} / ${originConfirmation.required ?? '—'} origin confirmations${state ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`;
   else if (state?.phase === 'submitting')
     explanation = 'The relayer is sending the delivery transaction to the destination chain.';
@@ -88,6 +86,8 @@ export function getMessageProgress({
     explanation = 'Waiting for on-chain delivery to appear in the explorer.';
   else if (['preparing', 'awaiting_signatures', 'ready_to_submit'].includes(state?.phase ?? ''))
     explanation = 'The relayer has picked up the message and is preparing it for delivery.';
+  else if (originConfirming && blockTag)
+    explanation = state ? 'The relayer is processing this message.' : '';
 
   if (originConfirming && blockTag) {
     const originWait = `The origin chain’s ${blockTag} block must reach the dispatch block.`;

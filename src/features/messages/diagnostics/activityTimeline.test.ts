@@ -520,25 +520,71 @@ it('does not count retained checks from a prior attempt in a new all-clear group
   ]);
 });
 
-it('does not attribute checks on a prepare start to the new attempt when earlier history is missing', () => {
-  const rows = [
-    update(1, 111_000, { phase: 'retrying' }),
-    update(2, 112_000, {
-      checks: { prepare: 'started' },
-      modules: [
-        {
-          ...validatorSet,
-          reorg_checks: [
-            { validator: validatorA, states: ['reorg_not_found'] },
-            { validator: validatorB, states: ['reorg_not_found'] },
-          ],
-        },
-      ],
-    }),
-  ];
+it.each([112_000, 112_001])(
+  'does not attribute retained checks on a partial prepare start observed at %s',
+  (observedAt) => {
+    const rows = [
+      update(1, 111_000, { phase: 'retrying' }),
+      update(2, observedAt, {
+        phase_started_at_millis: 112_000,
+        checks: { prepare: 'started' },
+        modules: [
+          {
+            ...validatorSet,
+            reorg_checks: [
+              { validator: validatorA, states: ['reorg_not_found'] },
+              { validator: validatorB, states: ['reorg_not_found'] },
+            ],
+          },
+        ],
+      }),
+    ];
 
-  const entries = timeline(rows, { historyComplete: false });
-  expect(entries.some((entry) => reorgTitles.includes(entry.title))).toBe(false);
+    const entries = timeline(rows, { historyComplete: false });
+    expect(entries.some((entry) => reorgTitles.includes(entry.title))).toBe(false);
+  },
+);
+
+it('records new checks when the previous module had no reorg checks', () => {
+  const prepare = { checks: { prepare: 'started' } };
+  const checked = {
+    ...validatorSet,
+    reorg_checks: [validatorA, validatorB].map((validator) => ({
+      validator,
+      states: ['reorg_not_found'],
+    })),
+  };
+  const entries = timeline([
+    activity(1, 'retrying', 111_000, { modules: [validatorSet] }),
+    update(2, 112_000, { ...prepare, modules: [checked] }),
+    update(3, 112_001, { ...prepare, phase_started_at_millis: 112_000, modules: [checked] }),
+  ]).filter((entry) => reorgTitles.includes(entry.title));
+  expect(entries.map(({ title, rows }) => [title, rows.map(({ id }) => id)])).toEqual([
+    ['Reorg checks passed', ['2']],
+  ]);
+});
+
+it('keeps inherited checks suppressed when a validator set is reordered', () => {
+  const unchanged = {
+    ...validatorSet,
+    reorg_checks: [validatorA, validatorB].map((validator) => ({
+      validator,
+      states: ['reorg_not_found'],
+    })),
+  };
+  const reordered = { ...unchanged, validators: [validatorB, validatorA] };
+  const prepare = { phase_started_at_millis: 112_000, checks: { prepare: 'started' } };
+  const entries = timeline([
+    activity(1, 'retrying', 111_000, { modules: [unchanged] }),
+    update(2, 112_000, { ...prepare, modules: [unchanged] }),
+    update(3, 112_001, { ...prepare, modules: [reordered] }),
+    update(4, 112_002, { ...prepare, modules: [{ ...reordered, reorg_checks: [] }] }),
+    update(5, 112_003, { ...prepare, modules: [reordered] }),
+  ]).filter((entry) => reorgTitles.includes(entry.title));
+  expect(entries.map(({ title, rows }) => [title, rows.map(({ id }) => id)])).toEqual([
+    ['Reorg checks passed', ['1']],
+    ['Reorg checks passed', ['5']],
+  ]);
 });
 
 it('records a returning validator set and rechecks its shared validator', () => {

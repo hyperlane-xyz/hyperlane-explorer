@@ -55,7 +55,7 @@ test.each(['safe', 'finalized'] as const)(
     });
     expect(progress(MessageStatus.Pending, 'preparing', { originConfirmation })).toMatchObject({
       status: 'Validating message',
-      explanation: expect.stringContaining(`origin chain’s ${blockTag} block`),
+      explanation: `The relayer has picked up the message and is preparing it for delivery. The origin chain’s ${blockTag} block must reach the dispatch block.`,
     });
     expect(
       progress(MessageStatus.Pending, undefined, {
@@ -64,6 +64,24 @@ test.each(['safe', 'finalized'] as const)(
     ).toBe('Pending relayer pickup');
   },
 );
+
+test.each([
+  ['submitting', 'The relayer is sending the delivery transaction to the destination chain.'],
+  ['confirming', 'Waiting for on-chain delivery to appear in the explorer.'],
+  ['delivered', 'Waiting for on-chain delivery to appear in the explorer.'],
+])('explains %s while origin finality is pending', (phase, explanation) => {
+  const originConfirmation = { tracked: true, confirmed: false, blockTag: 'safe' } as const;
+  expect(progress(MessageStatus.Pending, phase, { originConfirmation }).explanation).toBe(
+    `${explanation} The origin chain’s safe block must reach the dispatch block.`,
+  );
+});
+
+test('reports numerical origin confirmation progress while the relayer prepares delivery', () => {
+  const originConfirmation = { tracked: true, confirmed: false, current: 3, required: 8 };
+  expect(progress(MessageStatus.Pending, 'preparing', { originConfirmation }).explanation).toBe(
+    '3 / 8 origin confirmations · the relayer is also processing this message.',
+  );
+});
 
 test('names the origin finality policy while delivery is retrying or already observed', () => {
   const originConfirmation = { tracked: true, confirmed: false, blockTag: 'finalized' } as const;
