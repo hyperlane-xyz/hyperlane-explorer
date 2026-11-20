@@ -32,6 +32,7 @@ export interface MessageTimelineOptions {
   confirmed?: boolean;
   confirmationTracked?: boolean;
   originConfirmation?: OriginConfirmation;
+  historyComplete?: boolean;
 }
 
 /** Current evidence controls progress; recorded history supplies timing, never completion. */
@@ -40,7 +41,11 @@ export function getMessageTimeline(
   observation: RelayerDiagnosticState | undefined,
   activities: DiagnosticActivity[],
   options: MessageTimelineOptions = {},
-): { stages: MessageTimelineStage[]; totalElapsed?: number } {
+): {
+  stages: MessageTimelineStage[];
+  totalElapsed?: number;
+  pickupToSubmission?: number;
+} {
   const delivered = message.status === MessageStatus.Delivered;
   const confirmed = delivered && options.confirmed === true;
   const state = observation?.state;
@@ -85,6 +90,13 @@ export function getMessageTimeline(
   const firstSeen = earliest(
     history.map((row) => validTime(row.state.relayer_first_seen_at_millis)),
   );
+  const firstSubmittedAt = options.historyComplete
+    ? earliest(
+        history.map(({ state: { submission } }) =>
+          submission?.stage === 'submitted' ? validTime(submission.observed_at_millis) : undefined,
+        ),
+      )
+    : undefined;
   const dispatchedAt = validTime(message.origin.timestamp);
   const deliveredAt = delivered ? validTime(message.destination?.timestamp) : undefined;
   const originConfirmedAt = originConfirmation?.confirmed
@@ -133,6 +145,7 @@ export function getMessageTimeline(
   return {
     stages: timeline,
     totalElapsed: elapsed(dispatchedAt, deliveredAt),
+    pickupToSubmission: elapsed(firstSeen, firstSubmittedAt),
   };
 }
 
@@ -165,7 +178,7 @@ export function validTime(timestamp?: number | null) {
     : undefined;
 }
 
-function elapsed(from?: number, to?: number) {
+export function elapsed(from?: number, to?: number) {
   return from !== undefined && to !== undefined && to >= from ? to - from : undefined;
 }
 

@@ -87,10 +87,117 @@ function timeline(
     activities: rows,
     observation: rows.length ? observation(rows[rows.length - 1]) : undefined,
     ...extra,
-  });
+  }).entries;
 }
 
 describe('message activity timeline', () => {
+  it('measures indexed delivery and the selected relayer’s first pickup and submission', () => {
+    const included = activity(5, 'confirming', 125_000, {
+      submission: { stage: 'included', observed_at_millis: 125_000 },
+      delivered_observed_at_millis: 130_000,
+    });
+    const options = {
+      message: { ...message, status: MessageStatus.Delivered },
+      observation: observation(included),
+      historyComplete: true,
+      activities: [
+        activity(1, 'submitting', 111_000, {
+          submission: { stage: 'submitting', observed_at_millis: 111_000 },
+        }),
+        activity(
+          2,
+          'submitting',
+          112_000,
+          {
+            submission: { stage: 'submitted', observed_at_millis: 112_000 },
+          },
+          'other',
+        ),
+        activity(3, 'submitting', 115_000, {
+          submission: { stage: 'submitted', observed_at_millis: 114_250 },
+        }),
+        activity(4, 'submitting', 120_000, {
+          submission: { stage: 'submitted', observed_at_millis: 120_000 },
+        }),
+        included,
+        activity(6, 'submitting', 126_000, {
+          submission: { stage: 'submitted', observed_at_millis: 113_000 },
+        }),
+      ],
+    } satisfies Parameters<typeof buildMessageActivityTimeline>[0];
+    expect(buildMessageActivityTimeline(options)).toMatchObject({
+      totalElapsed: 25_000,
+      pickupToSubmission: 4_250,
+    });
+  });
+
+  it('requires a timestamped submission and complete history for relayer processing time', () => {
+    const submitted = activity(1, 'submitting', 115_000, { submission: { stage: 'submitted' } });
+    const timed = activity(2, 'submitting', 116_000, {
+      submission: { stage: 'submitted', observed_at_millis: 114_000 },
+    });
+    expect(
+      buildMessageActivityTimeline({
+        message,
+        observation: observation(submitted),
+        activities: [submitted],
+        historyComplete: true,
+      }).pickupToSubmission,
+    ).toBeUndefined();
+    expect(
+      buildMessageActivityTimeline({
+        message,
+        observation: observation(timed),
+        activities: [timed],
+      }).pickupToSubmission,
+    ).toBeUndefined();
+  });
+
+  it('times the root ISM from its first observed resolution to its first ready metadata report', () => {
+    const root = { node_id: 'root', ism: '0xism', children: [], module_type: 'Aggregation' };
+    const child = { ...module([validatorA]), node_id: 'child', metadata_status: 'ready' };
+    const resolved = activity(1, 'preparing', 111_000, { tree_root: 'root', modules: [root] });
+    const childReady = activity(2, 'awaiting_signatures', 112_000, {
+      tree_root: 'root',
+      modules: [child],
+    });
+    childReady.activity.type = 'snapshot_update';
+    const ready = activity(3, 'awaiting_signatures', 114_000, {
+      tree_root: 'root',
+      modules: [{ ...root, metadata_status: 'ready' }, child],
+    });
+    ready.activity.type = 'snapshot_update';
+    const submitted = activity(4, 'submitting', 116_000, {
+      tree_root: 'root',
+      modules: [{ ...root, metadata_status: 'ready' }, child],
+    });
+    const options = {
+      message,
+      observation: observation(submitted),
+      activities: [resolved, childReady, ready, submitted],
+    };
+    expect(
+      buildMessageActivityTimeline({ ...options, historyComplete: true }).ismValidationTime,
+    ).toBe(3_000);
+    expect(buildMessageActivityTimeline(options).ismValidationTime).toBeUndefined();
+    expect(
+      buildMessageActivityTimeline({ ...options, activities: [submitted], historyComplete: true })
+        .ismValidationTime,
+    ).toBeUndefined();
+    const differentRoot = activity(4, 'submitting', 116_000, {
+      tree_root: 'other',
+      modules: [{ ...root, node_id: 'other', metadata_status: 'ready' }],
+    });
+    expect(
+      buildMessageActivityTimeline({
+        ...options,
+        observation: observation(differentRoot),
+        activities: [resolved, differentRoot],
+        historyComplete: true,
+      }).ismValidationTime,
+    ).toBeUndefined();
+  });
+
   it('shows successive CCIP outcomes from snapshots and deduplicates unchanged reads', () => {
     const denied = {
       state: 'domain_not_allowed',

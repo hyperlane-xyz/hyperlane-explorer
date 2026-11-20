@@ -4,6 +4,7 @@ import type { Message, MessageStub } from '../../../types';
 import { buildMessageActivityTimeline } from '../diagnostics/activityTimeline';
 import { useMessageDiagnosticsContext } from '../diagnostics/MessageDiagnosticsContext';
 import { diagnosticsConnectionLabel } from '../diagnostics/progress';
+import { formatPreciseElapsed } from '../diagnostics/timeline';
 import type { OriginConfirmation } from '../diagnostics/useOriginConfirmation';
 import { MessageActivityTimeline } from './MessageActivityTimeline';
 import { RelayerSelector } from './RelayerSelector';
@@ -25,25 +26,55 @@ export function MessageRelayActivityPanel({
     connectionState,
   } = useMessageDiagnosticsContext();
   const historyComplete = history.complete && activities.length < 1000;
-  const entries = useMemo(
-    () =>
+  const { entries, totalElapsed, pickupToSubmission, ismValidationTime } = useMemo(() => {
+    const timeline = buildMessageActivityTimeline({
+      message,
+      observation,
+      activities,
+      historyComplete,
+      originConfirmation,
+    });
+    return {
+      ...timeline,
       // Hide delivery until its timing can be represented consistently with relayer activity.
-      buildMessageActivityTimeline({
-        message,
-        observation,
-        activities,
-        historyComplete,
-        originConfirmation,
-      }).filter((entry) => entry.kind !== 'delivery'),
-    [message, observation, activities, historyComplete, originConfirmation],
-  );
+      entries: timeline.entries.filter((entry) => entry.kind !== 'delivery'),
+    };
+  }, [message, observation, activities, historyComplete, originConfirmation]);
   const historyLimitReached = activities.length >= 1000;
   const canLoadEarlier =
     !historyLimitReached &&
     !!(history.activityPage?.has_more && history.activityPage.next_before_id);
+  const metrics = [
+    {
+      label: 'Total message time',
+      elapsed: totalElapsed,
+      detail: 'Origin dispatch → destination delivery',
+    },
+    {
+      label: 'Relayer processing time',
+      elapsed: pickupToSubmission,
+      detail: 'First seen → first recorded submission',
+    },
+    {
+      label: 'ISM validation time',
+      elapsed: ismValidationTime,
+      detail: 'ISM resolution observed → metadata ready',
+    },
+  ];
 
   return (
     <section aria-label="Message timeline" className="min-w-0">
+      <dl aria-label="Message timing metrics" className="mb-4 grid gap-2 sm:grid-cols-3 sm:gap-3">
+        {metrics.map(({ label, elapsed, detail }) => (
+          <div key={label} className="min-w-0 rounded-lg border border-gray-200 bg-gray-150/60 p-3">
+            <dt className="text-xs font-medium text-gray-600">{label}</dt>
+            <dd className="mt-1 break-words text-lg font-semibold tabular-nums text-primary-800">
+              {elapsed === undefined ? 'Unavailable' : formatPreciseElapsed(elapsed)}
+            </dd>
+            <dd className="mt-0.5 text-xxs text-gray-500">{detail}</dd>
+          </div>
+        ))}
+      </dl>
       {history.error && (
         <p role="alert" className="mb-4 text-xs text-red-700">
           Activity could not be loaded. Recorded chain milestones remain visible.
