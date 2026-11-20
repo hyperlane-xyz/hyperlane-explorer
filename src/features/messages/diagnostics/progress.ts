@@ -36,6 +36,7 @@ export function getMessageProgress({
   const hasRelayIssue = !!state?.failure || ['retrying', 'dropped'].includes(state?.phase ?? '');
   const active = [MessageStatus.Pending, MessageStatus.Failing].includes(messageStatus);
   const originConfirming = !!originConfirmation?.tracked && !originConfirmation.confirmed;
+  const blockTag = originConfirmation?.blockTag;
 
   let status = 'Pending relayer pickup';
   if (delivered)
@@ -47,7 +48,8 @@ export function getMessageProgress({
   else if (messageStatus === MessageStatus.Unknown) status = 'Delivery status unavailable';
   else if (waitingForCommit || waitingForAttestation || hasRelayIssue) status = 'Delivery pending';
   else if (state?.phase) status = phaseLabels[state.phase] ?? 'Delivery pending';
-  else if (originConfirming) status = 'Confirming on origin';
+  else if (originConfirming)
+    status = blockTag ? `Waiting for a ${blockTag} block on origin` : 'Confirming on origin';
 
   let activityStatus = 'Relayer pickup pending';
   if (
@@ -76,7 +78,10 @@ export function getMessageProgress({
     explanation = 'The offchain attestation is pending. Relayers will continue automatically.';
   else if (hasRelayIssue)
     explanation = 'The message remains pending while relayers retry automatically.';
-  else if (originConfirming)
+  else if (originConfirming && blockTag) {
+    explanation = `The origin chain’s ${blockTag} block must reach the dispatch block.`;
+    if (state) explanation += ' The relayer is also processing this message.';
+  } else if (originConfirming)
     explanation = `${originConfirmation.current ?? '—'} / ${originConfirmation.required ?? '—'} origin confirmations${state ? ' · the relayer is also processing this message.' : ' · waiting for the source chain to confirm.'}`;
   else if (state?.phase === 'submitting')
     explanation = 'The relayer is sending the delivery transaction to the destination chain.';

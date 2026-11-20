@@ -3,7 +3,7 @@ import type { TimelineEntry } from '../diagnostics/activityTimeline';
 const paths = {
   dispatch: 'm3 3 19 9-19 9 4-9-4-9Zm4 9h15',
   pickup: 'M5 4H3v16h18V4h-2M3 15h5l2 3h4l2-3h5M12 3v10m-4-4 4 4 4-4',
-  signature: 'm5 12 4 4L19 6',
+  checkmark: 'm5 12 4 4L19 6',
   preparing:
     'M13 21H4V3h10l5 5v4M14 3v5h5M7 7h3M7 11h3M20 17a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-1 3 3 3',
   waiting: 'M6 3h12M6 21h12M7 3v4l10 10v4M17 3v4L7 17v4M7 7h10M7 17h10',
@@ -32,7 +32,9 @@ function iconFor(entry: TimelineEntry): keyof typeof paths {
     case 'pickup':
       return 'pickup';
     case 'signature':
-      return 'signature';
+      return 'checkmark';
+    case 'offchain_read':
+      return entry.status === 'complete' ? 'checkmark' : 'security';
     case 'security':
       return 'security';
     case 'delivery':

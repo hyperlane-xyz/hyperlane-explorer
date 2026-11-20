@@ -79,7 +79,8 @@ function TimelineRow({
 }) {
   const [open, setOpen] = useState(false);
   const success =
-    (entry.kind === 'delivery' || entry.kind === 'signature') && entry.status === 'complete';
+    entry.status === 'complete' &&
+    (entry.kind === 'delivery' || entry.kind === 'signature' || entry.kind === 'offchain_read');
   const active = entry.status === 'active';
   // A collapsed run ends at its last report. Its elapsed time must include the
   // waiting hidden inside the group, not make that time disappear on expansion.
@@ -198,8 +199,26 @@ function TimelineRow({
             </div>
           </summary>
           {open && (
-            <div className={styles.expansion}>
-              <p className="text-xs leading-relaxed text-gray-700">{entry.detail}</p>
+            <div
+              className={
+                entry.offchainRead ? 'mb-3 mt-1 border-t border-gray-200 pt-3' : styles.expansion
+              }
+            >
+              {entry.offchainRead ? (
+                <CcipReadDetails read={entry.offchainRead} />
+              ) : (
+                <p className="text-xs leading-relaxed text-gray-700">{entry.detail}</p>
+              )}
+              {entry.reorgResults && (
+                <dl aria-label="Validator reorg results" className="mt-3 space-y-1 text-xxs">
+                  {entry.reorgResults.map(({ validator, result }) => (
+                    <div key={validator} className="flex flex-wrap justify-between gap-x-3">
+                      <dt className="break-all font-mono text-gray-800">{validator}</dt>
+                      <dd className="text-gray-600">{result}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               <dl className="mt-3 grid gap-3 text-xxs sm:grid-cols-2">
                 {entry.timestamp !== undefined && (
                   <Detail
@@ -223,7 +242,7 @@ function TimelineRow({
                 )}
                 {entry.relayer && <Detail label="Reporting relayer" value={entry.relayer} />}
                 {entry.validator && <Detail label="Validator" value={entry.validator} />}
-                {entry.signatureModule && <Detail label="ISM" value={entry.signatureModule} />}
+                {entry.ism && <Detail label="ISM" value={entry.ism} />}
                 {entry.timestamp === undefined && (
                   <Detail
                     label="Relayer observation"
@@ -278,11 +297,54 @@ function ActivityRecord({ row }: { row: DiagnosticActivity }) {
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function CcipReadDetails({ read }: { read: NonNullable<TimelineEntry['offchainRead']> }) {
   return (
-    <div className="min-w-0">
+    <dl
+      aria-label="CCIP Read details"
+      className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-gray-200 pb-3 text-xs empty:hidden sm:grid-cols-4"
+    >
+      {read.endpoint != null && <Detail label="Endpoint" value={read.endpoint + 1} />}
+      {read.attempt != null && read.attempt > 0 && <Detail label="Attempt" value={read.attempt} />}
+      {read.http_status != null && <Detail label="HTTP status" value={read.http_status} />}
+      {read.result && (
+        <Detail
+          label="Proof size"
+          value={`${read.result.bytes} ${read.result.bytes === 1 ? 'byte' : 'bytes'}`}
+        />
+      )}
+      {read.hostname && <Detail label="Gateway" value={read.hostname} fullWidth />}
+      {read.url_template && (
+        <Detail label="Gateway URL template" value={<code>{read.url_template}</code>} fullWidth />
+      )}
+      {read.result && (
+        <Detail
+          label="Proof hash (Keccak-256)"
+          value={<code>{read.result.keccak256}</code>}
+          fullWidth
+        />
+      )}
+    </dl>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  fullWidth,
+}: {
+  label: string;
+  value: ReactNode;
+  fullWidth?: boolean;
+}) {
+  return (
+    <div
+      className={clsx(
+        'min-w-0',
+        fullWidth && 'col-span-full sm:grid sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-x-3',
+      )}
+    >
       <dt className="text-gray-500">{label}</dt>
-      <dd className="mt-1 break-all text-gray-800">{value}</dd>
+      <dd className={clsx('mt-1 break-all text-gray-800', fullWidth && 'sm:mt-0')}>{value}</dd>
     </div>
   );
 }

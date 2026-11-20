@@ -6,6 +6,7 @@ import { useExplorerBlockValue } from '../queries/ExplorerEventsProvider';
 import { calculateConfirmationCount, getRequiredConfirmations } from '../useConfirmationProgress';
 
 export interface OriginConfirmation {
+  blockTag?: 'safe' | 'finalized';
   timestamp?: number;
   required?: number;
   blockNumber?: number;
@@ -34,6 +35,7 @@ export function getOriginConfirmation(
   headHeight?: number,
 ): OriginConfirmation {
   const provisional = message.isOriginProvisional ?? message.isProvisional;
+  const reorgPeriod = blocks?.reorgPeriod;
   const required = getRequiredConfirmations(blocks);
   const blockNumber =
     required !== undefined && message.origin.blockNumber !== undefined
@@ -48,6 +50,7 @@ export function getOriginConfirmation(
       (required === 0 ||
         (blockNumber !== undefined && headHeight !== undefined && headHeight >= blockNumber)));
   return {
+    blockTag: reorgPeriod === 'safe' || reorgPeriod === 'finalized' ? reorgPeriod : undefined,
     required,
     blockNumber,
     confirmed,

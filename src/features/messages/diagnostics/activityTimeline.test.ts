@@ -91,6 +91,58 @@ function timeline(
 }
 
 describe('message activity timeline', () => {
+  it('shows successive CCIP outcomes from snapshots and deduplicates unchanged reads', () => {
+    const denied = {
+      state: 'domain_not_allowed',
+      observed_at_millis: 110_900,
+      endpoint: 0,
+      attempt: 1,
+      hostname: 'lookup.example',
+      url_template: 'https://lookup.example/proof/{data}',
+    };
+    const success = {
+      state: 'succeeded',
+      endpoint: 0,
+      attempt: 3,
+      http_status: 200,
+      result: { bytes: 2, keccak256: '0xdigest' },
+    };
+    const node = {
+      node_id: 'root',
+      ism: '0xism',
+      children: [],
+      module_type: 'CcipRead',
+      offchain_read: success,
+    };
+    const entries = timeline([
+      activity(1, 'preparing', 111_000, { modules: [{ ...node, offchain_read: denied }] }),
+      activity(2, 'preparing', 111_300, {
+        modules: [{ ...node, offchain_read: { ...denied, observed_at_millis: 111_200 } }],
+      }),
+      activity(3, 'preparing', 111_500, { modules: [node] }),
+      activity(4, 'ready_to_submit', 112_000, { modules: [node] }),
+    ]).filter((entry) => entry.kind === 'offchain_read');
+    expect(entries).toHaveLength(3);
+    expect(
+      entries.filter((entry) => entry.status === 'failed').map((entry) => entry.timestamp),
+    ).toEqual(expect.arrayContaining([110_900, 111_200]));
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'failed',
+          title: expect.stringContaining('ccipReadAllowedDomains'),
+          summary: 'lookup.example · Attempt 1',
+          offchainRead: denied,
+        }),
+        expect.objectContaining({
+          status: 'complete',
+          summary: 'Endpoint 1 · Attempt 3 · HTTP 200 · 2 bytes',
+          offchainRead: success,
+        }),
+      ]),
+    );
+  });
+
   it('deduplicates signatures per module and checkpoint without claiming exact signing times', () => {
     const rows = [
       activity(1, 'awaiting_signatures', 111_000, { modules: [module([validatorA])] }),
@@ -247,4 +299,171 @@ it.each([
       'origin_confirmed',
     ]);
   }
+});
+
+const preparationTitles = ['Prepare started', 'Gas preflight passed', 'Validator set resolved'];
+const reorgTitles = [
+  'Reorg checks passed',
+  'No reorg reported',
+  'Reorg reported',
+  'Reorg reported · ignored',
+  'Reorg check failed',
+];
+
+const validatorSet: DiagnosticModule = {
+  node_id: 'root/0:0xism',
+  ism: '0xism',
+  children: [],
+  module_type: 'MessageIdMultisig',
+  validators: [validatorA, validatorB],
+  threshold: 2,
+};
+
+function update(id: number, timestamp: number, state: Partial<DiagnosticState>) {
+  const row = activity(id, 'preparing', timestamp, state);
+  row.activity.type = 'snapshot_update';
+  return row;
+}
+
+it('times explicit prepare checks at distinct observations and repeats them on a new attempt', () => {
+  const preparing = { phase_started_at_millis: 111_000, checks: { prepare: 'started' } };
+  const gasPassed = {
+    ...preparing,
+    checks: { prepare: 'started', gas_preflight: 'succeeded' },
+  };
+  const resolved = { ...validatorSet, checks: { validator_set: 'succeeded' } };
+  const retry = {
+    ...preparing,
+    phase_started_at_millis: 112_000,
+    retry: { count: 1, reason: 'GasPaymentRequirementNotMet' },
+  };
+  const retryGasPassed = { ...retry, checks: gasPassed.checks };
+  const rows = [
+    activity(1, 'preparing', 111_000, preparing),
+    update(2, 111_100, gasPassed),
+    update(3, 111_200, { ...gasPassed, modules: [resolved] }),
+    update(4, 111_300, gasPassed),
+    update(5, 111_400, { ...gasPassed, modules: [resolved] }),
+    update(6, 111_500, {
+      ...gasPassed,
+      phase: 'retrying',
+      phase_started_at_millis: 111_500,
+      modules: [resolved],
+      retry: retry.retry,
+    }),
+    update(7, 112_000, { ...retry, modules: [validatorSet] }),
+    update(8, 112_100, { ...retryGasPassed, modules: [validatorSet] }),
+    update(9, 112_200, { ...retryGasPassed, modules: [resolved] }),
+  ];
+  const entries = (historyComplete: boolean) =>
+    timeline(rows, { historyComplete }).filter((entry) => preparationTitles.includes(entry.title));
+  expect(entries(true).map(({ title, timestamp }) => [title, timestamp])).toEqual([
+    ['Prepare started', 111_000],
+    ['Gas preflight passed', 111_100],
+    ['Validator set resolved', 111_200],
+    ['Prepare started', 112_000],
+    ['Gas preflight passed', 112_100],
+    ['Validator set resolved', 112_200],
+  ]);
+  expect(entries(false).map(({ title, timestamp }) => [title, timestamp])).toEqual(
+    entries(true).map(({ title }) => [title, undefined]),
+  );
+});
+
+it('groups a fully clear set at the final check and keeps exceptional outcomes visible', () => {
+  const clearA = { validator: validatorA, states: ['reorg_not_found'] };
+  const clearB = {
+    validator: `0x${'0'.repeat(24)}${validatorB.slice(2)}`,
+    states: ['reorg_not_found'],
+  };
+  const reportedA = { validator: validatorA, states: ['reorg_reported'] };
+  const ignoredA = { validator: validatorA, states: ['reorg_reported', 'reorg_ignored'] };
+  const failedB = { validator: validatorB, states: ['reorg_check_failed'] };
+  const withChecks = (...reorg_checks: { validator: string; states: string[] }[]) => ({
+    modules: [{ ...validatorSet, reorg_checks }],
+  });
+  const rows = [
+    activity(1, 'preparing', 111_000, { modules: [validatorSet] }),
+    update(2, 111_100, withChecks(clearA)),
+    update(3, 111_200, withChecks(clearA, clearB)),
+    update(4, 111_300, withChecks(reportedA, clearB)),
+    update(5, 111_400, withChecks(ignoredA, clearB)),
+    update(6, 111_500, withChecks(ignoredA, failedB)),
+    update(7, 111_600, withChecks(clearA, failedB)),
+    update(8, 111_700, withChecks(clearA, clearB)),
+    update(9, 111_800, withChecks(clearA, clearB)),
+  ];
+  const entries = (historyComplete: boolean) =>
+    timeline(rows, { historyComplete })
+      .filter((entry) => reorgTitles.includes(entry.title))
+      .map(({ title, validator, timestamp }) => ({ title, validator, timestamp }));
+  expect(entries(true)).toEqual([
+    { title: 'Reorg checks passed', validator: undefined, timestamp: 111_200 },
+    { title: 'Reorg reported', validator: validatorA, timestamp: 111_300 },
+    { title: 'Reorg reported · ignored', validator: validatorA, timestamp: 111_400 },
+    { title: 'Reorg check failed', validator: validatorB, timestamp: 111_500 },
+    { title: 'Reorg checks passed', validator: undefined, timestamp: 111_700 },
+  ]);
+  expect(entries(false)).toEqual(
+    entries(true).map((entry) => ({ ...entry, timestamp: undefined })),
+  );
+  const groups = timeline(rows).filter((entry) => entry.reorgResults);
+  expect(groups.map((entry) => entry.rows.map((row) => row.id))).toEqual([
+    ['2', '3'],
+    ['7', '8'],
+  ]);
+  expect(groups[0].reorgResults).toEqual([
+    { validator: validatorA, result: 'No reorg reported' },
+    { validator: validatorB, result: 'No reorg reported' },
+  ]);
+  expect(timeline(rows.slice(0, 2)).filter((entry) => reorgTitles.includes(entry.title))).toEqual([
+    expect.objectContaining({ title: 'No reorg reported', validator: validatorA }),
+  ]);
+});
+
+it('does not infer prepare checks or reorg outcomes from unmarked legacy snapshots', () => {
+  const rows = [
+    activity(1, 'preparing', 111_000, { modules: [validatorSet] }),
+    activity(2, 'awaiting_signatures', 112_000, {
+      modules: [{ ...validatorSet, signatures: module([validatorA]).signatures }],
+    }),
+    activity(3, 'ready_to_submit', 113_000, { modules: [validatorSet] }),
+  ];
+  expect(
+    timeline(rows).filter((entry) => [...preparationTitles, ...reorgTitles].includes(entry.title)),
+  ).toHaveLength(0);
+});
+
+it('records a returning validator set and rechecks its shared validator', () => {
+  const preparing = { phase_started_at_millis: 111_000, checks: { prepare: 'started' } };
+  const original = { ...validatorSet, checks: { validator_set: 'succeeded' } };
+  const replacement = {
+    ...original,
+    validators: [validatorA, '0x3333333333333333333333333333333333333333'],
+  };
+  const reorgChecks = [{ validator: validatorA, states: ['reorg_not_found'] }];
+  const rows = [
+    activity(1, 'preparing', 111_000, preparing),
+    update(2, 111_100, { ...preparing, modules: [original] }),
+    update(3, 111_200, { ...preparing, modules: [{ ...original, reorg_checks: reorgChecks }] }),
+    update(4, 111_300, { ...preparing, modules: [replacement] }),
+    update(5, 111_400, { ...preparing, modules: [{ ...replacement, reorg_checks: reorgChecks }] }),
+    update(6, 111_500, { ...preparing, modules: [original] }),
+    update(7, 111_600, { ...preparing, modules: [{ ...original, reorg_checks: reorgChecks }] }),
+  ];
+  const entries = timeline(rows);
+  expect(
+    entries
+      .filter((entry) => entry.title === 'Validator set resolved')
+      .map((entry) => entry.timestamp),
+  ).toEqual([111_100, 111_300, 111_500]);
+  expect(
+    entries
+      .filter((entry) => entry.title === 'No reorg reported')
+      .map(({ validator, timestamp }) => [validator, timestamp]),
+  ).toEqual([
+    [validatorA, 111_200],
+    [validatorA, 111_400],
+    [validatorA, 111_600],
+  ]);
 });
