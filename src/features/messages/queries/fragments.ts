@@ -14,17 +14,14 @@ export const messageStubFragment = `
   is_provisional
   send_occurred_at
   delivery_occurred_at
-  delivery_latency
   origin_chain_id
   origin_block_height
   origin_domain_id
-  origin_tx_id
   origin_tx_hash
   origin_tx_sender
   origin_tx_recipient
   destination_chain_id
   destination_domain_id
-  destination_tx_id
   destination_tx_hash
   destination_tx_sender
   destination_tx_recipient
@@ -80,16 +77,13 @@ export interface MessageStubEntry {
   is_delivered: boolean;
   send_occurred_at: string; // e.g. "2022-08-28T17:30:15"
   delivery_occurred_at: string | null; // e.g. "2022-08-28T17:30:15"
-  delivery_latency: string | null; // e.g. "00:00:32"
   origin_chain_id: number;
   origin_domain_id: number;
-  origin_tx_id: number; // database id
   origin_tx_hash: string; // binary e.g. \\x123
   origin_tx_sender: string | null; // binary e.g. \\x123
   origin_tx_recipient: string | null; // binary e.g. \\x123
   destination_chain_id: number;
   destination_domain_id: number;
-  destination_tx_id: number | null; // database id
   destination_tx_hash: string | null; // binary e.g. \\x123
   destination_tx_sender: string | null; // binary e.g. \\x123
   destination_tx_recipient: string | null; // binary e.g. \\x123
@@ -97,6 +91,7 @@ export interface MessageStubEntry {
 }
 
 export interface MessageEntry extends MessageStubEntry {
+  delivery_latency?: string | null; // optional on live rows
   origin_block_hash: string; // binary e.g. \\x123
   origin_block_height: number | string;
   origin_block_id: number; // database id

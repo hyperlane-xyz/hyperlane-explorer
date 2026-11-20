@@ -6,13 +6,7 @@ import {
   IMultisigIsm__factory as MultisigIsmFactory,
 } from '@hyperlane-xyz/core';
 import { IRegistry } from '@hyperlane-xyz/registry';
-import {
-  ChainMap,
-  ChainMetadata,
-  isProxy,
-  ModuleType,
-  proxyImplementation,
-} from '@hyperlane-xyz/sdk';
+import { isProxy, ModuleType, proxyImplementation } from '@hyperlane-xyz/sdk';
 import {
   addressToBytes32,
   errorToString,
@@ -31,7 +25,6 @@ import { debugIgnoredChains } from '../../consts/config';
 import { MAILBOX_VERSION } from '../../consts/mailbox';
 import { Message, MessageStub } from '../../types';
 import { logger } from '../../utils/logger';
-import { getMailboxAddress } from '../chains/utils';
 import type { ExplorerMultiProvider as MultiProtocolProvider } from '../hyperlane/sdkRuntime';
 import {
   computeIcaAddress,
@@ -50,7 +43,7 @@ const IGP_PAYMENT_CHECK_DELAY = 60_000; // 60 seconds
 export async function debugMessage(
   multiProvider: MultiProtocolProvider,
   registry: IRegistry,
-  overrideChainMetadata: ChainMap<Partial<ChainMetadata>>,
+  destMailbox: Address,
   message: Message | MessageStub,
 ): Promise<MessageDebugResult> {
   const {
@@ -89,10 +82,6 @@ export async function debugMessage(
 
   const recipInvalid = await isInvalidRecipient(destProvider, recipient);
   if (recipInvalid) return recipInvalid;
-
-  const destMailbox = await getMailboxAddress(destName, overrideChainMetadata, registry);
-  if (!destMailbox)
-    throw new Error(`Cannot debug message, no mailbox address provided for chain ${destName}`);
 
   const deliveryResult = await debugMessageDelivery(
     originDomain,

@@ -1,11 +1,17 @@
-import { useContext, useEffect, useEffectEvent, useState } from 'react';
+import { useContext, useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
 import { useStore } from 'zustand';
 
 import type { MessageStub, MessageTxStub } from '../../../types';
-import { ExplorerEventsContext, ExplorerStreamContext } from './ExplorerEventsProvider';
+import {
+  ExplorerEventsContext,
+  ExplorerStreamContext,
+  type ExplorerMessageRow,
+} from './ExplorerEventsProvider';
 import type { MessageEntry } from './fragments';
 
 export type { ExplorerConnectionState } from './ExplorerEventsProvider';
+
+const EMPTY_MESSAGE_ROWS: ExplorerMessageRow[] = [];
 
 export function useExplorerEvents() {
   const context = useContext(ExplorerEventsContext);
@@ -13,8 +19,21 @@ export function useExplorerEvents() {
   return context;
 }
 
-export function useExplorerMessageRows() {
-  return useStore(useContext(ExplorerStreamContext), (state) => state.messageRows);
+export function useExplorerSearchRows(
+  enabled: boolean,
+  parse: (row: MessageEntry) => MessageStub | null,
+) {
+  const stream = useContext(ExplorerStreamContext);
+  useLayoutEffect(() => {
+    if (!enabled) return;
+    const { setSearchMessageParser } = stream.getState();
+    setSearchMessageParser(parse);
+    return () => setSearchMessageParser(undefined);
+  }, [enabled, parse, stream]);
+
+  return useStore(stream, (state) =>
+    enabled && state.searchMessageParser === parse ? state.messageRows : EMPTY_MESSAGE_ROWS,
+  );
 }
 
 export function isExplorerMessageCovered(
@@ -46,13 +65,19 @@ export function useExplorerRefresh(enabled: boolean, refresh: () => void, domain
   }, [enabled, subscribeRefresh]);
 }
 
-export function filterLatestMessageRows(messageRows: MessageEntry[], domains: number[]) {
-  const domainIds = new Set(domains.map((domain) => domain >>> 0));
-  return messageRows.filter(
-    (row) =>
-      domainIds.size === 0 ||
-      (domainIds.has(row.origin_domain_id >>> 0) && domainIds.has(row.destination_domain_id >>> 0)),
-  );
+export function filterLatestMessageRows(messageRows: ExplorerMessageRow[], domainIds: Set<number>) {
+  const matching: MessageStub[] = [];
+  for (const { row, searchMessage } of messageRows) {
+    if (
+      searchMessage &&
+      (domainIds.size === 0 ||
+        (domainIds.has(row.origin_domain_id >>> 0) &&
+          domainIds.has(row.destination_domain_id >>> 0)))
+    ) {
+      matching.push(searchMessage);
+    }
+  }
+  return matching;
 }
 
 export function useMessageRowSubscription(

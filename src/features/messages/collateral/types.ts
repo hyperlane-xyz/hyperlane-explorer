@@ -12,21 +12,6 @@ export interface CollateralInfo {
   deficit?: bigint;
 }
 
-export interface RebalanceInfo {
-  messageId: string;
-  amount: bigint;
-  originChain: string;
-  destinationChain: string;
-  timestamp: number;
-  txHash: string;
-  isDelivered: boolean;
-}
-
-export interface ActiveRebalance {
-  rebalances: RebalanceInfo[];
-  totalInFlight: bigint;
-}
-
 // CCTP (Circle Cross-Chain Transfer Protocol) warp route IDs
 // These routes use Circle's CCTP burn/mint mechanism instead of traditional collateral
 export const CCTP_WARP_ROUTE_IDS = [

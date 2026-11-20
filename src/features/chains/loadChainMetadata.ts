@@ -5,7 +5,7 @@ import {
   type ChainMetadata,
 } from '@hyperlane-xyz/sdk/metadata/chainMetadataTypes';
 import type { ChainMap } from '@hyperlane-xyz/sdk/types';
-import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
+import { objMap } from '@hyperlane-xyz/utils';
 
 import { links } from '../../consts/links';
 import { logger } from '../../utils/logger';
@@ -28,48 +28,42 @@ export async function loadChainMetadata(
   logger.debug('Loading chain metadata from registry');
 
   const registryChainMetadata = await registry.getMetadata();
-  const metadataWithLogos = await promiseObjAll(
-    objMap(registryChainMetadata, async (chainName, metadata): Promise<ChainMetadata> => ({
-      ...metadata,
-      logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
-    })),
-  );
+  const metadataWithLogos = objMap(registryChainMetadata, (chainName, metadata) => ({
+    ...metadata,
+    logoURI: `${links.imgPath}/chains/${chainName}/logo.svg`,
+  }));
 
   const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
   // Only persist overrides whose merged metadata passed validation. Registry
   // fallback keeps the app usable, but should not preserve the invalid input.
   const validMergedChains = new Set<string>();
+  const parsedMetadata: ChainMap<ChainMetadata> = Object.create(null);
+  const parsedRegistryMetadata: ChainMap<ChainMetadata> = Object.create(null);
 
-  const parsedMetadata = objFilter(
-    objMap(mergedMetadata, (chain, metadata) => {
-      const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
-      if (parsedMetadata.success) {
-        validMergedChains.add(chain);
-        return parsedMetadata.data;
-      }
+  for (const [chain, metadata] of Object.entries(mergedMetadata)) {
+    const parsed = ChainMetadataSchema.safeParse(metadata);
+    const canonical = metadataWithLogos[chain];
+    // The SDK merge preserves untouched entries by reference.
+    const parsedCanonical =
+      canonical && (canonical === metadata ? parsed : ChainMetadataSchema.safeParse(canonical));
+    if (parsedCanonical?.success) parsedRegistryMetadata[chain] = parsedCanonical.data;
 
-      const fallbackMetadata = metadataWithLogos[chain];
-      const parsedFallbackMetadata = ChainMetadataSchema.safeParse(fallbackMetadata);
-      const overrideAction = overrideChainMetadata[chain]
-        ? 'removing its invalid stored override and '
-        : '';
-      logger.error(
-        `Failed to parse metadata for ${chain}, ${overrideAction}${
-          parsedFallbackMetadata.success ? 'falling back to registry metadata' : 'skipping'
-        }`,
-      );
-      return parsedFallbackMetadata.success ? parsedFallbackMetadata.data : undefined;
-    }),
-    (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
-  );
+    if (parsed.success) {
+      validMergedChains.add(chain);
+      parsedMetadata[chain] = parsed.data;
+      continue;
+    }
 
-  const parsedRegistryMetadata = objFilter(
-    objMap(metadataWithLogos, (_chain, metadata) => {
-      const parsedMetadata = ChainMetadataSchema.safeParse(metadata);
-      return parsedMetadata.success ? parsedMetadata.data : undefined;
-    }),
-    (_chain, metadata): metadata is ChainMetadata => Boolean(metadata),
-  );
+    const overrideAction = overrideChainMetadata[chain]
+      ? 'removing its invalid stored override and '
+      : '';
+    logger.error(
+      `Failed to parse metadata for ${chain}, ${overrideAction}${
+        parsedCanonical?.success ? 'falling back to registry metadata' : 'skipping'
+      }`,
+    );
+    if (parsedCanonical?.success) parsedMetadata[chain] = parsedCanonical.data;
+  }
 
   return enforceDomainIdOwnership(
     parsedMetadata,

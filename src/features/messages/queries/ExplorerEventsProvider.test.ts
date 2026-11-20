@@ -1,8 +1,9 @@
 /** @jest-environment jsdom */
 
 import type { ChainMetadataResolver } from '@hyperlane-xyz/sdk/metadata/ChainMetadataResolver';
-import { act, createElement, useEffect, useState } from 'react';
+import { act, createElement, useContext, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useStore } from 'zustand';
 
 import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import { MessageStatus, type MessageStub } from '../../../types';
@@ -14,13 +15,14 @@ import {
 } from '../useConfirmationProgress';
 import {
   ExplorerEventsProvider,
+  ExplorerStreamContext,
   parseExplorerEvent,
   partitionExplorerDomains,
   useExplorerBlockValue,
 } from './ExplorerEventsProvider';
 import {
   useExplorerEvents,
-  useExplorerMessageRows,
+  useExplorerSearchRows,
   useExplorerRefresh,
   useIsMessageLive,
   useMessageRowSubscription,
@@ -75,7 +77,7 @@ let root: ReturnType<typeof createRoot>;
 function Probe({ observeHead = false }: { observeHead?: boolean }) {
   renders++;
   const { messageRow } = useMessageRowSubscription('0xab', true, refresh, snapshot);
-  const rows = useExplorerMessageRows();
+  const rows = useStore(useContext(ExplorerStreamContext), (state) => state.messageRows);
   const head = useExplorerBlockValue(observeHead ? 1 : undefined, (block) => block?.headHeight);
   const message = {
     ...snapshot,
@@ -92,7 +94,14 @@ function Probe({ observeHead = false }: { observeHead?: boolean }) {
   return createElement(
     'div',
     null,
-    JSON.stringify({ messageRow, rows, progress, waiting, testnetLive, head }),
+    JSON.stringify({
+      messageRow,
+      rows: rows.map(({ row }) => row),
+      progress,
+      waiting,
+      testnetLive,
+      head,
+    }),
   );
 }
 
@@ -217,6 +226,56 @@ it('refreshes the unscoped search only when a rollback changes its rows', async 
   expect(refresh).not.toHaveBeenCalled();
   await emit(rollback);
   expect(refresh).toHaveBeenCalledTimes(1);
+});
+
+it('projects the live search buffer per change and skips updates on history pages', async () => {
+  const other = { ...row, msg_id: '\\xcd', origin_domain_id: 10 };
+  const parse = jest.fn((message) => ({ msgId: message.msg_id }) as MessageStub);
+  const updatedParse = jest.fn(
+    (message) => ({ msgId: message.msg_id.toUpperCase() }) as MessageStub,
+  );
+  let searchRenders = 0;
+  function Search({ firstPage, project }: { firstPage: boolean; project: typeof parse }) {
+    searchRenders++;
+    const rows = useExplorerSearchRows(firstPage, project);
+    return createElement(
+      'div',
+      null,
+      rows.map(({ searchMessage }) => searchMessage?.msgId).join(' '),
+    );
+  }
+  const renderSearch = (firstPage: boolean, project = parse) =>
+    act(async () =>
+      root.render(
+        createElement(ExplorerEventsProvider, null, createElement(Search, { firstPage, project })),
+      ),
+    );
+
+  await renderSearch(true);
+  await emit({ type: 'message_upsert', data: row });
+  await emit({ type: 'message_upsert', data: other });
+  expect(parse).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toBe('\\xcd \\xab');
+  await emit({ type: 'message_upsert', data: { ...row, is_delivered: true } });
+  expect(parse).toHaveBeenCalledTimes(3);
+  expect(container.textContent).toBe('\\xab \\xcd');
+
+  await renderSearch(true, updatedParse);
+  expect(updatedParse).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toBe('\\XAB \\XCD');
+  await emit(rollback);
+  expect(updatedParse).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toBe('\\XCD');
+
+  await renderSearch(false, updatedParse);
+  const historyRenders = searchRenders;
+  await emit({ type: 'message_upsert', data: row });
+  expect(searchRenders).toBe(historyRenders);
+  expect(updatedParse).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toBe('');
+  await renderSearch(true, updatedParse);
+  expect(updatedParse).toHaveBeenCalledTimes(4);
+  expect(container.textContent).toBe('\\XAB \\XCD');
 });
 
 it('refreshes snapshot-only details only on their affected chains', async () => {

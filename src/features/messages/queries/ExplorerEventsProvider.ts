@@ -15,6 +15,7 @@ import { createStore } from 'zustand/vanilla';
 
 import { LIVE_MESSAGE_LIMIT } from '../../../consts/api';
 import { config } from '../../../consts/config';
+import type { MessageStub } from '../../../types';
 import { logger } from '../../../utils/logger';
 import type { MessageEntry } from './fragments';
 
@@ -92,10 +93,36 @@ export interface ExplorerEventsContextValue {
 }
 
 export const ExplorerEventsContext = createContext<ExplorerEventsContextValue | null>(null);
+
+type SearchMessageParser = (row: MessageEntry) => MessageStub | null;
+export type ExplorerMessageRow = { row: MessageEntry; searchMessage?: MessageStub | null };
+
+interface ExplorerStream {
+  messageRows: ExplorerMessageRow[];
+  blockHeads: Record<number, ExplorerBlock>;
+  searchMessageParser?: SearchMessageParser;
+  setSearchMessageParser: (parse?: SearchMessageParser) => void;
+  upsertMessage: (row: MessageEntry) => void;
+}
+
 export function createExplorerStream() {
-  return createStore(() => ({
-    messageRows: [] as MessageEntry[],
-    blockHeads: {} as Record<number, ExplorerBlock>,
+  return createStore<ExplorerStream>((set) => ({
+    messageRows: [],
+    blockHeads: {},
+    setSearchMessageParser: (parse) =>
+      set((state) => ({
+        searchMessageParser: parse,
+        messageRows: state.messageRows.map(({ row }) => ({ row, searchMessage: parse?.(row) })),
+      })),
+    // Decode at intake while search is using the live buffer. Block-head changes
+    // and unrelated message upserts preserve the existing row representations.
+    upsertMessage: (row) =>
+      set((state) => ({
+        messageRows: [
+          { row, searchMessage: state.searchMessageParser?.(row) },
+          ...state.messageRows.filter((entry) => entry.row.msg_id !== row.msg_id),
+        ].slice(0, LIVE_MESSAGE_LIMIT),
+      })),
   }));
 }
 export const ExplorerStreamContext = createContext(createExplorerStream());
@@ -144,14 +171,14 @@ export function ExplorerEventsProvider({
 
   const subscribe = useCallback(
     (messageId: string, listener: MessageListener, domains: number[] = []) => {
+      const normalizedId = normalizeId(messageId);
       const subscription: MessageSubscription = {
-        messageId: normalizeId(messageId),
+        messageId: normalizedId,
         listener,
         domains: domains.map((domain) => domain >>> 0),
         row:
-          stream
-            .getState()
-            .messageRows.find((row) => normalizeId(row.msg_id) === normalizeId(messageId)) ?? null,
+          stream.getState().messageRows.find(({ row }) => normalizeId(row.msg_id) === normalizedId)
+            ?.row ?? null,
       };
       listenersRef.current.add(subscription);
       listener(subscription.row);
@@ -273,25 +300,24 @@ export function ExplorerEventsProvider({
               : undefined,
             live_received_at: Date.now(),
           };
+          const messageId = normalizeId(messageRow.msg_id);
           listenersRef.current.forEach((subscription) => {
-            if (normalizeId(messageRow.msg_id) !== subscription.messageId) return;
+            if (messageId !== subscription.messageId) return;
             subscription.row = messageRow;
             subscription.domains = [messageRow.origin_domain_id, messageRow.destination_domain_id];
             subscription.listener(messageRow);
           });
-          const nextRows = [
-            messageRow,
-            ...stream.getState().messageRows.filter((row) => row.msg_id !== messageRow.msg_id),
-          ].slice(0, LIVE_MESSAGE_LIMIT);
-          stream.setState({ messageRows: nextRows });
+          stream.getState().upsertMessage(messageRow);
         } else if (message?.type === 'diagnostics' || message?.type === 'diagnostics_unavailable') {
           diagnosticsListenersRef.current.forEach((listener) => listener(message));
         } else if (message?.type === 'rollback') {
           let changed = false;
-          const nextRows = stream.getState().messageRows.flatMap((row) => {
-            const next = applyExplorerRollback(row, message);
-            changed ||= next !== row;
-            return next ? [next] : [];
+          const { messageRows, searchMessageParser } = stream.getState();
+          const nextRows = messageRows.flatMap((entry) => {
+            const next = applyExplorerRollback(entry.row, message);
+            if (next === entry.row) return [entry];
+            changed = true;
+            return next ? [{ row: next, searchMessage: searchMessageParser?.(next) }] : [];
           });
           listenersRef.current.forEach((subscription) => {
             if (subscription.domains.includes(message.domain)) changed = true;

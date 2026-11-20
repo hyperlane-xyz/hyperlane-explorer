@@ -1,7 +1,3 @@
-import {
-  InterchainGasPaymaster__factory as InterchainGasPaymasterFactory,
-  IERC20__factory as Erc20Factory,
-} from '@hyperlane-xyz/core';
 import { BigNumber, utils } from 'ethers';
 
 import { GasPayment } from '../debugger/types';
@@ -60,9 +56,11 @@ export interface IgpPayment extends GasPayment {
   denom: IgpPaymentDenom;
 }
 
-const igpIface = InterchainGasPaymasterFactory.createInterface();
+const igpIface = new utils.Interface([
+  'event GasPayment(bytes32 indexed messageId, uint32 indexed destinationDomain, uint256 gasAmount, uint256 payment)',
+]);
 const GAS_PAYMENT_TOPIC = igpIface.getEventTopic('GasPayment');
-const TRANSFER_TOPIC = Erc20Factory.createInterface().getEventTopic('Transfer');
+const TRANSFER_TOPIC = utils.id('Transfer(address,address,uint256)');
 // topic0 + indexed `from` + indexed `to`. ERC721 Transfer has a 4th (tokenId) topic.
 const ERC20_TRANSFER_TOPIC_COUNT = 3;
 

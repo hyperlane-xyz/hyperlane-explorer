@@ -2,17 +2,14 @@
 import { act, createElement, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { useStore } from '../../../metadataStore';
 import type { MessageStub } from '../../../types';
 import { useRetainedMessage } from '../../messages/queries/useLiveMessages';
 import type { DomainsEntry } from './fragments';
+import { useScrapedDomainsStore } from './scrapedDomainsStore';
 import { retryScrapedChains, useScrapedDomains } from './useScrapedChains';
 
 jest.mock('../../../metadataStore', () => ({
-  useStore: jest.requireActual('zustand').create(() => ({
-    scrapedDomains: [],
-    setScrapedDomains: jest.fn(),
-  })),
+  useStore: jest.fn(),
 }));
 jest.mock('@hyperlane-xyz/utils', () => ({ objFilter: jest.fn() }));
 jest.mock('urql', () => ({ useQuery: () => [{ fetching: true }, jest.fn()] }));
@@ -36,8 +33,8 @@ describe('retryScrapedChains', () => {
 
 test('keeps unresolved domains stable when retaining a message across parent renders', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-  const previousDomains = useStore.getState().scrapedDomains;
-  useStore.setState({ scrapedDomains: [] });
+  const previousDomains = useScrapedDomainsStore.getState().scrapedDomains;
+  useScrapedDomainsStore.setState({ scrapedDomains: [] });
   const root = createRoot(document.createElement('div'));
   const seen: DomainsEntry[][] = [];
   const message = {
@@ -66,7 +63,7 @@ test('keeps unresolved domains stable when retaining a message across parent ren
     expect(seen[1]).toBe(seen[0]);
   } finally {
     await act(async () => root.unmount());
-    useStore.setState({ scrapedDomains: previousDomains });
+    useScrapedDomainsStore.setState({ scrapedDomains: previousDomains });
     Reflect.deleteProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT');
   }
 });

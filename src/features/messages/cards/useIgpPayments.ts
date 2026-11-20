@@ -1,6 +1,6 @@
-import { IERC20Metadata__factory as Erc20MetadataFactory } from '@hyperlane-xyz/core';
-import { skipToken, useQueries, useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { ProtocolType } from '@hyperlane-xyz/utils';
+import { skipToken, useQueries } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { useChainMetadataReady, useChainMetadataResolver, useStore } from '../../../metadataStore';
 import {
@@ -21,6 +21,7 @@ import {
   IgpPaymentsStatusValue,
   parseIgpPayments,
 } from '../igpPayments';
+import { useOriginTransactionLogs, type OriginTransactionLog } from '../useOriginTransactionLogs';
 import { TokenMetadata } from './gasPaymentSummary';
 
 /**
@@ -52,23 +53,17 @@ export function useIgpPayments(
   const { originDomainId, origin, msgId } = message;
   const isEnabled = enabled && !!origin.hash;
   const isEvmOrigin = isEvmChain(chainMetadataResolver, originDomainId);
-  const canQuery = isEnabled && isEvmOrigin;
-
-  const { data, error } = useQuery({
-    queryKey: ['igpPayments', originDomainId, origin.hash, msgId, multiProviderVersion],
-    queryFn:
-      canQuery && multiProvider
-        ? async () => {
-            const provider = multiProvider.getEthersV5Provider(originDomainId);
-            const receipt = await provider.getTransactionReceipt(origin.hash);
-            // Receipt not yet available - throw so React Query retries
-            if (!receipt) throw new Error(`No receipt for tx ${origin.hash}`);
-            return parseIgpPayments(receipt.logs, msgId);
-          }
-        : skipToken,
-    // Receipts are immutable once mined
-    staleTime: Infinity,
-  });
+  const selectPayments = useCallback(
+    (logs: OriginTransactionLog[]) => parseIgpPayments(logs, msgId),
+    [msgId],
+  );
+  const { data, error } = useOriginTransactionLogs(
+    message,
+    multiProvider,
+    multiProviderVersion,
+    isEnabled && isEvmOrigin ? ProtocolType.Ethereum : undefined,
+    selectPayments,
+  );
 
   useEffect(() => {
     if (error) logger.warn('Error fetching IGP payments from origin tx receipt', error);
@@ -135,6 +130,7 @@ async function fetchErc20Metadata(
   address: Address,
 ): Promise<TokenMetadata> {
   try {
+    const { IERC20Metadata__factory: Erc20MetadataFactory } = await import('@hyperlane-xyz/core');
     const token = Erc20MetadataFactory.connect(
       address,
       multiProvider.getEthersV5Provider(domainId),

@@ -8,12 +8,13 @@ import { unscrapedChainsInDb } from '../../../consts/config';
 import { useStore } from '../../../metadataStore';
 import { isPiChain } from '../utils';
 import { type DomainsEntry, DOMAINS_QUERY } from './fragments';
+import { useScrapedDomainsStore } from './scrapedDomainsStore';
 
 const EMPTY_DOMAINS: DomainsEntry[] = [];
 
 export function useScrapedDomains() {
-  const scrapedDomains = useStore((s) => s.scrapedDomains);
-  const setScrapedDomains = useStore((s) => s.setScrapedDomains);
+  const scrapedDomains = useScrapedDomainsStore((s) => s.scrapedDomains);
+  const setScrapedDomains = useScrapedDomainsStore((s) => s.setScrapedDomains);
 
   const [result, reexecuteQuery] = useQuery<{ domain: Array<DomainsEntry> }>({
     query: DOMAINS_QUERY,
